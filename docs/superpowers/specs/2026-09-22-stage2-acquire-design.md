@@ -231,63 +231,16 @@ ignore it. **No flag overrides the floor** (invariant 3). The only ways past it 
 obtain more sources or to lower `acquisition_floor` in `sources.yaml`, where the change is
 visible in a diff.
 
-## 9. The dashboard (`dashboard.py`)
+## 9. The dashboard
 
-`claimstone serve <project>` starts a read-only local HTTP view over the ledger. Its reason
-to exist is that a round over 26 sources, with timeouts and multi-step cascades, takes
-minutes: watching it move is a different thing from reading its summary afterwards.
+Specified separately in `2026-09-22-dashboard-design.md`: it grew from a stage-2 appendix
+into a view over the whole round, organised around the question registry, and has its own
+lifecycle.
 
-### Constraints it must satisfy
-
-- **Read-only.** Only `GET` is routed; anything else answers 405. The dashboard never
-  triggers a fetch and never writes. It is a derived view (D9), not a control plane — a
-  browser tab that can start requests against publishers is a way to blow the per-domain
-  budget by refreshing.
-- **Loopback by default.** Binds `127.0.0.1`. A non-loopback `--host` is accepted only when
-  passed explicitly and prints a warning naming the privacy rule: the ledger carries the
-  consuming system's reading list.
-- **Self-contained page.** Inline CSS and inline JS in one module-level template. No CDN, no
-  web font, no chart library. Works offline and discloses nothing to a third party, which is
-  the point given what the data is. Bars and meters are CSS, readable in light and dark.
-- **Stateless per request.** Every request re-reads `candidates.jsonl` and
-  `acquisitions.jsonl` from disk and recomputes through `admissibility.py`. No cache, no
-  in-memory model. This is what makes it safe to run while `acquire` is writing: the writer
-  appends, the reader re-reads, and append-only removes the need for a lock.
-- **Tolerates a torn tail.** The last line may be half-written at the moment of reading. The
-  dashboard's reader skips a final line that does not parse and reports the row count it
-  actually read. `acquire` and `admissibility` do **not** tolerate this: a line that fails to
-  parse mid-file is an error there, because a silently dropped row is a silently wrong
-  denominator.
-
-### Routes
-
-| route | returns |
-|---|---|
-| `GET /` | the page: one self-contained HTML document |
-| `GET /api/report` | the same object as `report --json` |
-| `GET /api/sources` | one entry per candidate: identity, class, ledger status, attempts |
-| `GET /api/state` | `{ledger_mtime, rows, running}` — cheap, for the poll |
-
-The page polls `/api/state` every 2 seconds and refetches the other two only when
-`ledger_mtime` changed. On 26 rows this is free; the guard exists so the pattern still holds
-at a few thousand.
-
-`running` is inferred from the ledger mtime being within the last 30 seconds and is labelled
-as an inference in the UI ("last write 4s ago"), never as a claim that a process is alive.
-
-### What the page shows
-
-1. **Admissibility banner** — rate against floor, with the status word spelled out:
-   `INSUFFICIENT_ACQUISITION` or `OK`. An empty ledger renders "no attempts recorded", never
-   `0.00`; a rate that does not exist and a rate that is zero are different facts.
-2. **Per class, before the aggregate** (D3): class, obtained/found, rate.
-3. **Source table** — `source_id`, class, title, status badge, `oa_status`, licence,
-   `failure_class`. A row expands to its attempt cascade: url, provenance, `http_status`,
-   `failure_class`, gate verdict, elapsed.
-4. **Failure breakdown** by class and by host — the host column is what tells you a campaign
-   is being eaten by one publisher.
-5. **Gate parameters in force**, with `gate_version`. A page showing a rate without showing
-   the thresholds that produced it invites comparing two incomparable numbers.
+Two of its properties are load-bearing for this stage and are restated here: it is
+**read-only** — no route mutates anything and no button starts a fetch, so a browser refresh
+can never spend the per-domain budget — and it computes **statelessly per request** by
+re-reading the ledger, which is what makes it safe to watch while `acquire` is appending.
 
 ## 10. Known divergences from the drafts
 
