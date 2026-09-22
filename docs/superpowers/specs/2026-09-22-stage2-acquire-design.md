@@ -80,8 +80,8 @@ wrote it down".
 
 `classify(body, content_type, url, thresholds) -> FullText(kind, chars, reason)`
 
-`kind` is one of `PDF_FULLTEXT`, `HTML_FULLTEXT`, `LANDING_PAGE_ONLY`, `TOO_SHORT`,
-`CORRUPT_PDF`, `NOT_TEXT`. Only the first two count as acquired.
+`kind` is one of `PDF_FULLTEXT`, `HTML_FULLTEXT`, `LANDING_PAGE_ONLY`, `ABSTRACT_ONLY`,
+`TOO_SHORT`, `CORRUPT_PDF`, `NOT_TEXT`. Only the first two count as acquired.
 
 **Why this exists.** The draft counts any HTTP 200 with an acceptable content type as a
 success. A ScienceDirect landing page answers 200 `text/html`. Without this gate the
@@ -116,22 +116,61 @@ XML is treated identically to HTML here; structured parsing belongs to stage 3.
 Visible text is extracted with the stdlib `html.parser`, dropping `<script>`, `<style>`,
 `<nav>`, `<header>`, `<footer>` and `<aside>`. Then:
 
+Checked in this order, and the order carries a decision:
+
 | condition | verdict |
 |---|---|
-| `chars < min_text_chars` (3000) | `TOO_SHORT` |
-| `3000 ≤ chars < paywall_doubt_chars` (12000) **and** a paywall phrase is present | `LANDING_PAGE_ONLY` |
+| a paywall phrase is present and `chars < paywall_doubt_chars` (12000) | `LANDING_PAGE_ONLY` |
+| no structural signal and `chars < fulltext_chars` (15000) | `ABSTRACT_ONLY` |
+| `chars < min_text_chars` (3000), but it does cite | `TOO_SHORT` |
 | otherwise | `HTML_FULLTEXT` |
+
+The structural check comes **before** the length check on purpose. A 2473-character summary page
+is both short and a summary, and `ABSTRACT_ONLY` is the more useful of the two labels: it says a
+full text may exist elsewhere and is worth another attempt, where `TOO_SHORT` says the document
+itself is thin. `TOO_SHORT` therefore ends up meaning something precise — a document that *does*
+cite and is still tiny, which is a truncation, not a summary.
 
 Paywall phrases (`get access`, `purchase pdf`, `buy article`, `rent this article`,
 `sign in to continue`, `institutional access`, `add to cart`, `subscribe to continue`,
-`you do not have access`) are matched case-folded against the extracted text.
+`you do not have access`) are matched case-folded against the extracted text. **A phrase
+alone is never sufficient**: a legitimate open-access article also contains "sign in".
 
-**A phrase alone is never sufficient.** A legitimate open-access article also contains
-"sign in". Above `paywall_doubt_chars` the text is there whatever the menu says.
+A **structural signal** is a reference list — a heading matching `references`,
+`bibliography` or `works cited`, or ten or more citation-shaped patterns. A document that
+argues from evidence cites; a page that summarises one does not.
+
+### Why `ABSTRACT_ONLY` exists — measured, 2026-09-22
+
+The rule above was length-only in the first draft of this spec. Running that draft's gate over
+the 25 artifacts a real round had already stored showed why length is the wrong instrument.
+
+Six of the 25 came back as HTML. Four were `ravenpack.com/research/…` pages, one an LSEG
+product page, one a MarketPsych overview. **All six are abstract or product pages; none is a
+full text.** The length-only rule accepted three of them (5981, 4820 and 4190 characters) and
+rejected two (2526 and 2473) — *the same kind of page, opposite verdicts, decided by how much
+prose the summary happened to contain.* Raising `min_text_chars` would not have fixed it: one of
+the six runs to 9243 characters, so any threshold that caught it would have thrown away
+legitimate short documents.
+
+The revised rule was then run over the same 25 artifacts: **12 `PDF_FULLTEXT`, 6
+`ABSTRACT_ONLY`, nothing else** — every HTML artifact recognised, no PDF disturbed.
+
+What does separate them, checked on those same bytes: **none of the six contains a reference
+list, and none links to a PDF.** A full text of a paper essentially always cites.
+
+So the honest figure for that round is not the 0.72 recorded in its commit message, and not the
+0.64 the length-only gate produced. With all six HTML artifacts recognised for what they are it
+is **12 of 25 = 0.48** — twelve PDFs. The inflation mechanism was precisely the one this gate
+exists to stop, and the first draft of the gate did not stop it.
+
+`ABSTRACT_ONLY` is a distinct verdict rather than a flavour of `TOO_SHORT` because "we obtained
+the summary page" and "the document is short" are different facts, and only the first tells you
+a full text may exist elsewhere and is worth another attempt.
 
 ### Recorded parameters
 
-`gate_version` and the thresholds in force are written onto every ledger row. A rate
+`gate_version` (2 — the HTML rule changed on measurement before anything shipped) and the thresholds in force are written onto every ledger row. A rate
 computed under different thresholds is not comparable to one computed under these, and
 without recording them the difference would be invisible. Thresholds are overridable per
 project under an `acquisition:` key in `sources.yaml`; the defaults are the values above.
@@ -188,7 +227,7 @@ this run", and the previous row stands.
  "gate": {"kind": "PDF_FULLTEXT", "chars": null, "bytes": 412839,
           "gate_version": 1,
           "thresholds": {"min_pdf_bytes": 10000, "min_text_chars": 3000,
-                         "paywall_doubt_chars": 12000}},
+                         "paywall_doubt_chars": 12000, "fulltext_chars": 15000}},
  "sha256": "…", "stored_path": "store/alembic-s4/raw/….pdf",
  "url": "https://…", "provenance": "unpaywall", "version": "acceptedVersion",
  "licence": "cc-by", "oa_status": "green", "host_type": "repository",
@@ -343,6 +382,10 @@ re-reading the ledger, which is what makes it safe to watch while `acquire` is a
    §6 rule 2 replaces this.
 3. No campaign concept: `run()` skips only `acquired=True`, so every re-run knocks on every
    wall — §7 replaces this.
+4. The round committed in `630ca52` reports **0.72**, measured before any content gate existed.
+   Re-gating its stored bytes gives 0.64 under a length-only rule and **0.48** once abstract
+   pages are recognised (§5). That figure must be restated when this plan lands; it is not a
+   regression, it is the same corpus measured with an instrument that works.
 
 ## 11. Manifest — the fourth project file
 

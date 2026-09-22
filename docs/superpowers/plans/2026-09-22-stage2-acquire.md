@@ -109,6 +109,7 @@ Insert immediately after the line `EMPTY = "EMPTY_RESPONSE"` (currently line 37)
 # Set by the content gate in fulltext.py rather than by HTTP: a 200 that carries a
 # landing page is a failure of acquisition even though the transfer succeeded.
 LANDING = "LANDING_PAGE_ONLY"
+ABSTRACT = "ABSTRACT_ONLY"
 TOO_SHORT = "TOO_SHORT"
 CORRUPT_PDF = "CORRUPT_PDF"
 NOT_TEXT = "NOT_TEXT"
@@ -118,8 +119,8 @@ NO_LOCATIONS = "NO_LOCATIONS"
 # Terminal: retrying changes nothing until the world changes, so a retry needs a named
 # campaign. Transient: the next run should try again on its own.
 TERMINAL = frozenset(
-    {PAYWALL, ROBOTS, EXCLUDED, NOT_FOUND, BAD_TYPE, LANDING, TOO_SHORT, CORRUPT_PDF,
-     NOT_TEXT, NO_LOCATIONS}
+    {PAYWALL, ROBOTS, EXCLUDED, NOT_FOUND, BAD_TYPE, LANDING, ABSTRACT, TOO_SHORT,
+     CORRUPT_PDF, NOT_TEXT, NO_LOCATIONS}
 )
 TRANSIENT = frozenset(
     {TIMEOUT, CONNECTION, SERVER_ERROR, RATE_LIMITED, BUDGET, EMPTY, WAYBACK_MISS}
@@ -302,9 +303,35 @@ def test_a_long_article_is_accepted_despite_a_sign_in_link():
     assert verdict.kind == fulltext.HTML_FULLTEXT
 
 
-def test_short_markup_is_too_short():
-    verdict = fulltext.classify(page(2), "text/html", "https://x.org/a")
+def cited(paragraphs: int) -> bytes:
+    """A document that argues from evidence: it has a reference list."""
+    body = "".join(f"<p>Paragraph {i} (Fama and French, 1993) shows an effect.</p>"
+                   for i in range(paragraphs))
+    return f"<html><body>{body}<h2>References</h2><p>Fama, E. 1993.</p></body></html>".encode()
+
+
+def test_a_summary_page_without_a_reference_list_is_abstract_only():
+    # Measured case: 4190-9243 chars of vendor research summary, no citations. A
+    # length-only rule accepted these, which is what ABSTRACT_ONLY exists to stop.
+    verdict = fulltext.classify(page(60), "text/html", "https://vendor.example/research/x")
+    assert verdict.kind == fulltext.ABSTRACT_ONLY
+    assert "no reference list" in verdict.reason
+
+
+def test_a_short_summary_is_abstract_only_not_too_short():
+    verdict = fulltext.classify(page(12), "text/html", "https://vendor.example/research/x")
+    assert verdict.kind == fulltext.ABSTRACT_ONLY
+
+
+def test_a_cited_document_below_the_fulltext_bar_is_accepted():
+    verdict = fulltext.classify(cited(60), "text/html", "https://repo.example/a")
+    assert verdict.kind == fulltext.HTML_FULLTEXT
+
+
+def test_too_short_now_means_a_truncated_document_that_cites():
+    verdict = fulltext.classify(cited(3), "text/html", "https://repo.example/a")
     assert verdict.kind == fulltext.TOO_SHORT
+    assert "truncation" in verdict.reason
 
 
 def test_script_and_style_do_not_count_as_text():
@@ -345,6 +372,7 @@ occurs: an HTML error page wearing a PDF content type.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from html.parser import HTMLParser
 from typing import Any
@@ -352,6 +380,7 @@ from typing import Any
 PDF_FULLTEXT = "PDF_FULLTEXT"
 HTML_FULLTEXT = "HTML_FULLTEXT"
 LANDING_PAGE_ONLY = "LANDING_PAGE_ONLY"
+ABSTRACT_ONLY = "ABSTRACT_ONLY"
 TOO_SHORT = "TOO_SHORT"
 CORRUPT_PDF = "CORRUPT_PDF"
 NOT_TEXT = "NOT_TEXT"
@@ -360,7 +389,9 @@ ACCEPTED = (PDF_FULLTEXT, HTML_FULLTEXT)
 
 # Bumped whenever a rule below changes. Written onto every ledger row, because a rate
 # computed under different thresholds is not comparable to one computed under these.
-GATE_VERSION = 1
+# Version 2: the HTML rule gained the structural signal after a length-only rule was
+# measured against 25 real artifacts and accepted three abstract pages out of six.
+GATE_VERSION = 2
 
 DEFAULT_THRESHOLDS: dict[str, int] = {
     # Low on purpose: a short conference note can be a legitimate 12 KB PDF, and a false
@@ -368,6 +399,8 @@ DEFAULT_THRESHOLDS: dict[str, int] = {
     "min_pdf_bytes": 10000,
     "min_text_chars": 3000,
     "paywall_doubt_chars": 12000,
+    # Above this, accept without a structural signal: a document this long is a document.
+    "fulltext_chars": 15000,
 }
 
 PAYWALL_PHRASES = (
@@ -377,6 +410,13 @@ PAYWALL_PHRASES = (
 )
 
 _SKIP_TAGS = frozenset({"script", "style", "nav", "header", "footer", "aside"})
+
+_REFERENCE_HEADING = re.compile(r">\s*(references|bibliography|works cited)\s*<", re.I)
+# "(Author, 2019)" / "(Author and Other, 2019)" — enough of these is a reference list even
+# when the heading is missing or styled unrecognisably.
+_CITATION = re.compile(r"\(\s*[A-Z][A-Za-z'\-]+(?:\s+(?:and|&|et al\.?)\s+[A-Z][A-Za-z'\-]+)?"
+                       r"(?:\s*,)?\s*(?:19|20)\d{2}[a-z]?\s*\)")
+_MIN_CITATIONS = 10
 
 
 @dataclass(frozen=True)
@@ -442,18 +482,45 @@ def _classify_pdf(body: bytes, th: dict[str, int]) -> FullText:
     return FullText(PDF_FULLTEXT, None, "")
 
 
+def cites(markup: str, text: str) -> bool:
+    """Does this document argue from evidence, or summarise something that did?
+
+    A full text essentially always carries a reference list. An abstract page, a vendor
+    research summary and a product page carry none — which is the signal that separates
+    them, because length does not: measured on 25 real artifacts, a length-only rule
+    accepted three abstract pages of 4190-5981 characters and rejected two of 2473-2526,
+    the same kind of page either side of the line.
+    """
+    if _REFERENCE_HEADING.search(markup):
+        return True
+    return len(_CITATION.findall(text)) >= _MIN_CITATIONS
+
+
 def _classify_markup(body: bytes, th: dict[str, int]) -> FullText:
+    markup = body.decode("utf-8", "replace")
     text = visible_text(body)
     count = len(text)
+
+    folded = text.lower()
+    hit = next((phrase for phrase in PAYWALL_PHRASES if phrase in folded), None)
+    if hit and count < th["paywall_doubt_chars"]:
+        # A phrase alone is never sufficient: a legitimate open-access article also
+        # contains "sign in". Above the doubt threshold the text is there whatever the
+        # menu says.
+        return FullText(LANDING_PAGE_ONLY, count, f"{count} chars and the phrase {hit!r}")
+
+    # The structural check precedes the length check deliberately. A 2473-character summary
+    # is both short and a summary, and the second is the more useful thing to record: it
+    # says a full text may exist elsewhere. TOO_SHORT then means something precise.
+    if count < th["fulltext_chars"] and not cites(markup, text):
+        return FullText(
+            ABSTRACT_ONLY, count,
+            f"{count} chars and no reference list: a summary of a document, not the document",
+        )
+
     if count < th["min_text_chars"]:
-        return FullText(TOO_SHORT, count, f"{count} chars below min_text_chars {th['min_text_chars']}")
-    if count < th["paywall_doubt_chars"]:
-        folded = text.lower()
-        hit = next((phrase for phrase in PAYWALL_PHRASES if phrase in folded), None)
-        if hit:
-            return FullText(LANDING_PAGE_ONLY, count, f"{count} chars and the phrase {hit!r}")
-    # Above the doubt threshold the text is there, whatever the menu says. A legitimate
-    # open-access article also contains "sign in", so a phrase alone is never sufficient.
+        return FullText(TOO_SHORT, count, f"{count} chars, and it does cite: a truncation")
+
     return FullText(HTML_FULLTEXT, count, "")
 
 
@@ -470,7 +537,7 @@ def classify(
 - [ ] **Step 4: Run to verify it passes**
 
 Run: `.venv/bin/pytest tests/test_fulltext.py -q`
-Expected: PASS, 9 passed
+Expected: PASS, 12 passed
 
 - [ ] **Step 5: Commit**
 
