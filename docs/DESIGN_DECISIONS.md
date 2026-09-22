@@ -32,6 +32,12 @@ against 12**, on both test sources, with no new question covered. The explanatio
 the window reduces the number of calls and therefore reduces the harvest. Consequence:
 "one JSON per document" is the worst available call shape, and is not used.
 
+**Perimeter (2026-09-22).** Everything above is the operating point of *that machine* at
+that quantisation. It is not a general result about language models, and it does not govern
+the pipeline — see D13. In particular, the constant-harvest-per-call finding was measured on
+one local model; the optimal window for any other backend is unmeasured and must not be
+inherited from here. D4 still governs whenever the local backend is the one serving a lane.
+
 ## D5 — The frontier model does selection and the decisive sources
 Reading the whole corpus with a frontier model would cost on the order of tens of dollars;
 the local path costs weeks and carries a measured error rate. On the existing corpus the
@@ -39,6 +45,12 @@ adversarial reader marked **54 of 292 claims OVERSTATED and 21 AMBIGUOUS — 25.
 they had already passed the mechanical quote gate**. Self-reported confidence is therefore
 not used for routing: mechanical gates first, adversarial reader second, and review
 stratified by consequence rather than sampled at random.
+
+**Revised by D13 (2026-09-22).** The routing conclusion stands — mechanical gates first,
+adversarial reader second, review stratified by consequence. The *cost* premise does not: the
+adversarial reader's input is compact by construction, which puts the whole corpus at ~$1.30
+on a frontier model. "Reserved for the decisive sources" was a budget constraint that no
+longer binds; the reader now runs over every claim, and D5's 25.7% figure is why.
 
 ## D6 — Statistics delegated to R across a file boundary
 Meta-analysis tooling is overwhelmingly R (`metafor` is the reference implementation;
@@ -95,3 +107,33 @@ criterion it was using would have declared it saturated.
 `SUPPORTED` / `CONTRADICTED` / `UNANSWERED_IN_LITERATURE` / `NEVER_ASKED` are four states,
 not three. Two questions in the existing registry sit at zero claims and the existing
 system cannot say which of the last two they are in.
+
+## D13 — One model boundary, several interchangeable backends
+Adopted 2026-09-22, replacing the assumption that the local `llama.cpp` server was the model.
+
+The stages that need a model write **work units to JSONL and read results from JSONL**. A
+backend is whatever consumes that queue: the local server, a CLI already installed on the
+machine (`claude -p --output-format json`, `codex exec`, `opencode`), a subscription endpoint
+with an API key (Ollama Cloud), or a metered API. Every result row records `backend`,
+`model`, `harness_version` and `prompt_sha256`.
+
+**What decided it.** The local operating point (D4) implied weeks of wall-clock for a corpus
+of a few hundred documents, which forced a corpus ceiling — a limit on the science imposed by
+one machine. Measured against real rates instead: extraction of the 26-source manifest is
+~130 calls, and of a 300-source corpus ~1,500. On Ollama Cloud's hosted open models at
+$0.30/$1.20 per MTok that is **$0.23 and $2.63** respectively, inside the $60 of monthly
+credit a $20 plan includes; the adversarial reader of stage 5, whose input is compact by
+construction, is **~$1.30 for the whole corpus** on a frontier model. The ceiling was never
+a property of the problem.
+
+**Why a file boundary rather than an SDK.** It is D7's shape, it keeps the engine free of a
+vendor dependency, and it is the only arrangement under which "does backend A extract better
+than backend B" is answerable **by measurement** rather than by preference: the same work
+units can be served by two backends and the results compared. Lane assignment is therefore
+deliberately deferred — it is a finding, not a design decision.
+
+**Consequence.** A CLI's harness (its own system prompt, tools and context management) sits
+between the prompt and the model and changes with its version, which is why
+`harness_version` is recorded and why the metered API is preferred wherever a result must be
+exactly reproducible. High-volume lanes go where throughput is priced per token; interactive
+subscription plans are not batch infrastructure and are not used as though they were.

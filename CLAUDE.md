@@ -97,21 +97,49 @@ Per project under `store/<project>/`:
 - Idempotent and resumable by content hash. Never re-fetch or re-extract the same bytes.
 - Run `.venv/bin/pytest -q` and `.venv/bin/claimstone validate --all-projects`.
 
-## Local model operating point
+## Model backends
 
-When a stage uses the local `llama.cpp` server: **narrow window, many calls, short
-structured outputs.** Measured on the target machine at Q8_0: 11.6 min per call on ~8K-token
-prompts, ~5 calls/hour, 1.43 tok/s generation against 121 tok/s prefill — it reads far
-faster than it writes. A pre-registered probe showed harvest per call is roughly constant
-at ~2 claims **regardless of window size**, so widening the window reduces total harvest.
-"One JSON per document" is therefore the worst available call shape. Long prose, ideation
-and agentic iteration are out of scope for the local model by arithmetic.
+**One boundary, several backends** (D13). A stage that needs a model writes work units to
+JSONL and reads results from JSONL; it never imports a vendor SDK. Backends available on this
+machine: the local `llama.cpp` server, `claude -p --output-format json`, `codex exec`,
+`opencode`, Ollama Cloud (API key, $60/month of credit on the $20 plan), and a metered API if
+one is opened. Every result row records `backend`, `model`, `harness_version` and
+`prompt_sha256`.
+
+Which backend serves which lane is **a measurement, not a decision**: the same work units go
+to two backends and the results are compared. Do not hard-code a lane to a vendor.
+
+Two standing constraints. High-volume lanes go where throughput is priced per token —
+interactive subscription plans are not batch infrastructure and are not driven as though they
+were. And a CLI inserts its own harness between the prompt and the model, so where a result
+must be exactly reproducible, prefer the metered API and always record `harness_version`.
+
+**The local backend's operating point**, when it is the one serving a lane: narrow window,
+many calls, short structured outputs. Measured at Q8_0, 11.6 min per call on ~8K-token
+prompts, ~5 calls/hour, 1.43 tok/s generation against 121 tok/s prefill, with harvest per
+call roughly constant at ~2 claims regardless of window size — so widening the window reduces
+total harvest and "one JSON per document" is the worst available call shape. This is the
+operating point of *that machine*, not a general property of models: see the perimeter note
+on D4 before applying it to any other backend.
 
 ## Status
 
 The contract and its validator exist. The six pipeline stages are specified in the README
-and **not implemented**; the CLI exits with a message for each. Acquisition (stage 2) is the
-first milestone, not extraction — it is the binding constraint on the science. The first
-deliverable is a sentence with a number in it: the acquisition rate on a real 26-source
-manifest currently sitting at 0.42, with OA status, licence and failure reason recorded per
-source. If that number does not move, the rest is theatre.
+and **not implemented**; the CLI exits with a message for each.
+
+Order of work, decided 2026-09-22: **stage 2, then a thin vertical slice** (stages 3-6 on the
+26-source manifest, through to real verdicts), **then the dashboard** — it is the one
+component whose value needs data in every stage and whose spec depends on every other stage's
+schema, so it goes last and gets built against real rows.
+
+Acquisition is the first milestone, not extraction, because it is the binding constraint on
+the science (D8) — and since D13 it is the *only* remaining one. The first deliverable is a
+sentence with a number in it: the acquisition rate on a real 26-source manifest currently
+sitting at 0.42, with OA status, licence and failure reason recorded per source, **plus the
+sensitivity of that rate to the gate thresholds that produced it**. A rate quoted without its
+thresholds invites comparing two incomparable numbers.
+
+That deliverable may legitimately be `INSUFFICIENT_ACQUISITION` with the losses broken down
+by failure class. That is a finding, not a failure. Lowering `acquisition_floor` because the
+number came out awkward is the one response that is off the table: a floor change is a dated,
+versioned, motivated event, on the same terms as a question-registry bump.
