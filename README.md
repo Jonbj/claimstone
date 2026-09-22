@@ -59,14 +59,18 @@ Each stage reads and writes JSONL. No stage owns another stage's data.
    asserted.
 4. **extract** — chunks → claims bound to questions. The question registry is in every
    prompt; a claim must cite an existing question id and carry the exact sentence it came
-   from. Two lanes writing one schema: a local model for volume, a frontier model for the
-   few decisive sources. Then the gate, which is code and not judgement: the quote must be
-   an exact substring; every number and inequality in the claim must appear in the quote;
-   the question id must exist. Rejects go to a ledger — that ledger is the denominator.
+   from. The model sits behind a **file boundary**: work units in JSONL, results in JSONL,
+   so any backend can serve the queue and two backends can be compared on the same units.
+   Then the gate, which is code and not judgement: the quote must be an exact substring;
+   every number and inequality in the claim must appear in the quote; the question id must
+   exist. Rejects go to a ledger — that ledger is the denominator.
 5. **review** — an adversarial second read marking each claim
-   `SUPPORTED` / `OVERSTATED` / `AMBIGUOUS` / `NOT_APPLICABLE`. Compact input, short
-   output. On the existing finance corpus this step caught roughly a quarter of the claims
-   that had already passed the mechanical gate; it is the control that pays best.
+   `SUPPORTED` / `OVERSTATED` / `AMBIGUOUS` / `NOT_APPLICABLE`. On the existing finance
+   corpus this step caught roughly a quarter of the claims that had already passed the
+   mechanical gate; it is the control that pays best. Its input is a claim and its quote,
+   not the chunk, so the whole corpus costs about a dollar on a frontier model: it runs over
+   every claim, and on a different model from the one that produced them — a reader sharing
+   the extractor's blind spots is not a control.
 6. **synthesize** — claims → a verdict per question. Deterministic Python for coverage,
    acquisition and completeness metrics. The statistics are delegated to an R script using
    `metafor`, called across a file boundary: random-effects pooling plus publication-bias
@@ -87,8 +91,11 @@ magnitude and the fact that significant results are the ones that get published.
 ## Tools
 
 Python spine (`requests`, `numpy`; no framework) · one GROBID container · one SearXNG
-container · one R script using `metafor` · a local `llama.cpp` server · a frontier model
-for selection and the decisive sources.
+container · one R script using `metafor` · and, behind a file boundary, whatever model
+backend is serving a lane: a local `llama.cpp` server, a CLI on the machine, a hosted
+open-model endpoint, or a metered API. The engine holds no vendor SDK and no lane is
+hard-coded to a vendor — which backend is better at a lane is answered by running both over
+the same work units.
 
 Storage is **append-only JSONL as the source of truth** — hashable, diffable, resumable
 after a crash — with SQLite as a derived view that can be rebuilt from it. No Postgres,
@@ -105,7 +112,13 @@ outcome and not a failure.
 
 ## Status
 
-Early. Stage 1–3 first, measured against a real 26-source manifest whose current
-acquisition rate is 0.42. The first deliverable is a sentence with a number in it: the
-rate after, with OA status, licence and failure reason recorded per source. If that number
-does not move, the rest is theatre.
+Early. **Stage 2 first**, measured against a real 26-source manifest whose current
+acquisition rate is 0.42 — then a thin vertical slice through stages 3-6 on that same
+manifest, through to real verdicts, and the dashboard last, built against real rows.
+
+The first deliverable is a sentence with a number in it: the rate after, with OA status,
+licence and failure reason recorded per source, plus how much that rate moves if the content
+gate's thresholds move. If the number does not move, the rest is theatre — and if it lands
+below the declared floor, the published result is `INSUFFICIENT_ACQUISITION` with the losses
+broken down by failure class. That is a finding. Lowering the floor because the number came
+out awkward is not.
