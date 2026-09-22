@@ -1,0 +1,38 @@
+# Admissible source classes, most authoritative first.
+# Classes are never silently mixed: every claim carries the class of its source, and
+# synthesis reports per class before it reports pooled.
+classes:
+  - id: ACA
+    name: peer-reviewed academic
+    weight_hint: highest
+    notes: version of record in a refereed venue
+  - id: WP
+    name: working paper / preprint
+    weight_hint: high
+    notes: NBER, SSRN, arXiv; not refereed — never silently promoted to ACA
+  - id: MET
+    name: methodological reference
+    weight_hint: high
+    notes: textbook, handbook chapter, methods guide; supports design not effect size
+  - id: IND
+    name: industry / practitioner research
+    weight_hint: medium
+    notes: vendor and sell-side research; disclose the commercial interest
+  - id: NEW
+    name: journalism / secondary reporting
+    weight_hint: low
+    notes: admissible as a pointer to a primary source, never as evidence for an effect
+  - id: DOC
+    name: primary documentation
+    weight_hint: context
+    notes: exchange rules, provider API docs, regulatory filings
+
+# A round may not produce verdicts if fewer than this share of *found* sources
+# were actually obtained. See README, "Admissibility".
+acquisition_floor: 0.80
+
+# Never fetched, whatever the fallback chain suggests.
+excluded_hosts:
+  - sci-hub.se
+  - sci-hub.st
+  - libgen.is

@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+title: "Claimstone: topics in, verdicts out"
+abstract: >-
+  Claimstone takes a set of topics and a frozen list of numbered questions, finds and
+  legally obtains the readable literature on those topics, extracts what each source
+  claims with every claim bound to a verbatim quote verified as an exact substring of the
+  source, weighs the claims per question, and returns a verdict with its coverage. It
+  reports "unanswered in the literature" and "never asked" as distinct states, and refuses
+  to produce verdicts for a round that could not obtain enough of what it found.
+message: "If you use this software, please cite it."
+type: software
+license: Apache-2.0
+repository-code: "https://github.com/Jonbj/claimstone"
+authors:
+  - given-names: Stefano
+    family-names: Del Gobbo
+keywords:
+  - evidence synthesis
+  - systematic review
+  - meta-analysis
+  - provenance
+  - citation verification
+  - reproducible research

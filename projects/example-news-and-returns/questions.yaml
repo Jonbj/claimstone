@@ -1,0 +1,51 @@
+# A worked example: do financial news items carry information about subsequent returns,
+# and under what conditions does any such effect survive?
+#
+# These questions are drawn from the public literature and are deliberately generic. They
+# exist to show the shape of a registry; a real project writes its own.
+#
+# RULE: adding or changing a question is a dated registry bump, never a silent insert —
+# otherwise every round-over-round figure and every multiplicity correction loses meaning.
+registry_version: 1
+frozen_at: 2026-09-22
+questions:
+  - id: Q01
+    text: A future return is neither semantic ground truth about a news item nor proof that the news caused it.
+  - id: Q02
+    text: The sentiment or event content of news carries information about future returns beyond what prices already reflect.
+  - id: Q03
+    text: Positive and negative news are incorporated at different speeds and persist for different lengths of time.
+  - id: Q04
+    text: The information event, rather than the individual article, is the appropriate unit of inference.
+  - id: Q05
+    text: Novelty and staleness of a news item change the size of the price reaction.
+  - id: Q06
+    text: Market- and sector-adjusted abnormal return is a better outcome than raw return for this question.
+  - id: Q07
+    text: Issuer-specific, sector-level and macro news require different outcomes and different statistical units.
+  - id: Q08
+    text: Matched no-news and neutral-news observations are distinct and complementary controls.
+  - id: Q09
+    text: The first observable and executable timestamp, not the nominal publication time, determines what was tradable.
+  - id: Q10
+    text: The effect varies materially by event type, and post-earnings drift does not transfer to generic news.
+  - id: Q11
+    text: A contextual or language-model measure of news adds information over a simple lexical baseline.
+  - id: Q12
+    text: Attention, firm size, liquidity and the information environment moderate underreaction.
+  - id: Q13
+    text: The effect survives realistic transaction costs, spreads and price impact at a plausible trading size.
+  - id: Q14
+    text: The effect survives correction for multiple testing at the significance bar the field now expects.
+  - id: Q15
+    text: The effect persists after the publication that reported it, rather than decaying once it is known.
+  - id: Q16
+    text: The reported relationship is causally identified rather than merely predictive in sample.
+  - id: Q17
+    text: A stated economic mechanism predicts where the effect should and should not appear, and that prediction holds.
+  - id: Q18
+    text: Inference accounts for overlapping event windows and cross-sectional dependence rather than assuming independence.
+  - id: Q19
+    text: Measured latency between publication and market reaction is short enough to matter for an executable rule.
+  - id: Q20
+    text: Abnormal volume or price movement before publication indicates the information was already partly incorporated.

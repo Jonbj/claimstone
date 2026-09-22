@@ -1,0 +1,73 @@
+# Broad search terms. Their job is to FIND things, not to define what was learned.
+# Widening a topic is cheap and safe; it cannot by itself change a verdict.
+topics:
+  - id: T01
+    label: event study methodology
+    terms: [event study abnormal returns, cumulative abnormal returns, event window design,
+            overlapping event windows, cross-sectional dependence clustered standard errors,
+            BHAR versus CAR, bad-model problem long-horizon]
+  - id: T02
+    label: news text and returns
+    terms: [financial news sentiment stock returns, textual analysis stock predictability,
+            news content return predictability, Loughran McDonald financial dictionary,
+            FinBERT financial sentiment, LLM financial sentiment]
+  - id: T03
+    label: novelty, surprise, staleness
+    terms: [news novelty stock returns, stale news reprint, first mention versus republication,
+            earnings surprise magnitude, information materiality]
+  - id: T04
+    label: speed, latency, drift
+    terms: [market reaction speed news, high-frequency news response, post-news drift,
+            underreaction overreaction news, news latency provider timestamp]
+  - id: T05
+    label: pre-news behaviour
+    terms: [pre-announcement price run-up, information leakage before announcement,
+            abnormal volume before news, informed trading pre-event]
+  - id: T06
+    label: event families
+    terms: [earnings announcement returns, guidance revision returns, merger announcement returns,
+            analyst upgrade downgrade returns, price target revision, FDA approval stock,
+            litigation announcement returns, management change announcement returns]
+  - id: T07
+    label: post-earnings-announcement drift
+    terms: [post earnings announcement drift, PEAD decline, PEAD transaction costs,
+            Bernard Thomas drift]
+  - id: T08
+    label: costs, limits to arbitrage, capacity
+    terms: [transaction costs anomaly returns, effective spread price impact,
+            limits to arbitrage, strategy capacity decay, short sale constraints locate]
+  - id: T09
+    label: multiple testing and credibility
+    terms: [multiple testing cross-section expected returns, t-statistic threshold three,
+            data mined anomalies, backtest overfitting deflated Sharpe,
+            post-publication alpha decay]
+  - id: T10
+    label: replication and meta-analysis
+    terms: [replicating anomalies, replication crisis finance, open source asset pricing,
+            meta-analysis economics publication bias, PET-PEESE MAIVE]
+  - id: T11
+    label: information economics and attention
+    terms: [Grossman Stiglitz informationally efficient, Kyle price impact informed trading,
+            rational inattention asset prices, investor attention returns,
+            gradual information diffusion]
+  - id: T12
+    label: behavioural mechanism
+    terms: [investor sentiment overreaction model, conservatism representativeness asset prices,
+            limited attention distraction earnings]
+  - id: T13
+    label: cross-sectional moderators
+    terms: [size liquidity information environment predictability,
+            small cap news reaction, volatility regime news response,
+            pre-market after-hours reaction]
+  - id: T14
+    label: microstructure of the data itself
+    terms: [SIP consolidated tape delay, quote staleness, closing auction price discovery,
+            news provider timestamp accuracy]
+  - id: T15
+    label: causal inference
+    terms: [identification event study causal, exogenous shock stock returns,
+            predictability versus causality asset prices]
+  - id: T16
+    label: datasets, providers, code
+    terms: [RavenPack news analytics, financial news dataset benchmark,
+            event study software package, news price alignment replication code]

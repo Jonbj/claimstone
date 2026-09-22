@@ -1,0 +1,14 @@
+# Acquired full texts never enter version control: licence status varies per source and
+# committing them is not reversible. Only hashes and metadata are tracked.
+store/
+*.pdf
+.venv/
+__pycache__/
+*.pyc
+.env
+
+# Project instances may encode a consuming system's internal design. Only the worked
+# example ships; real instances are kept out of a public repository deliberately.
+projects/*
+!projects/example-news-and-returns/
+claimstone.egg-info/
