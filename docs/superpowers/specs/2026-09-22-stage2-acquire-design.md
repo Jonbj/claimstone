@@ -4,9 +4,13 @@ Date: 2026-09-22 · Scope: stage 2 only · Status: approved, not implemented
 
 Stage 2 turns candidates into frozen texts and accounts for every attempt. It is the first
 milestone because acquisition, not extraction quality, is the binding constraint on the
-science (D8). The deliverable is a sentence with a number in it: the acquisition rate on a
-26-source manifest that currently stands at 0.42, with OA status, licence and failure
-reason recorded per source.
+science (D8) — and since D13 it is the only remaining one. The deliverable is a sentence with
+a number in it: the acquisition rate on a 26-source manifest that currently stands at 0.42,
+with OA status, licence and failure reason recorded per source, **plus the sensitivity of that
+rate to the gate thresholds that produced it** (§5) and a by-hand check of every rejection.
+
+Landing below the declared floor is a legitimate outcome of that deliverable, not a failure of
+it (see "The floor is versioned" in §8).
 
 ## 1. Starting point
 
@@ -27,7 +31,7 @@ already known and are recorded in §9.
 | `fulltext.py` | new | bytes → verdict on the content. No network, no state. |
 | `acquire.py` | rewritten | orchestration: plan → attempt → gate → store → ledger row. |
 | `admissibility.py` | new | rate, per-class breakdown, comparison against the floor. |
-| `dashboard.py` | new | read-only local HTTP view over the ledger. stdlib only. |
+| `gate_audit.py` | new | re-runs the gate over stored bytes at varying thresholds. No network. |
 
 `resolve.py` and `fulltext.py` are formed by extracting what currently sits in the draft
 `acquire.py`. The work already done moves; it is not discarded.
@@ -132,6 +136,38 @@ computed under different thresholds is not comparable to one computed under thes
 without recording them the difference would be invisible. Thresholds are overridable per
 project under an `acquisition:` key in `sources.yaml`; the defaults are the values above.
 
+### Calibrating the thresholds (`gate-audit`)
+
+The numbers above — 10000, 3000, 12000 — were chosen at a desk. Nothing measured them, and a
+wrong threshold moves the headline figure silently. Two properties make that recoverable at no
+network cost: the bytes are stored content-addressed under their hash, and the gate does no
+I/O. **So the gate can be re-run over the whole corpus without re-fetching anything.**
+
+`claimstone gate-audit <project>` does two things.
+
+**A sensitivity sweep.** Re-classify every stored artifact across a range of one threshold and
+report how the rate moves:
+
+```
+min_text_chars   1000  2000  3000  4000  5000  8000
+rate             0.73  0.73  0.73  0.69  0.65  0.54
+```
+
+A rate flat around the chosen value means the threshold is not load-bearing and the number is
+safe. A rate that swings means **the threshold is deciding the result**, and it has to be
+looked at by hand. Which of the two we are in is measurable in a second and is currently
+unknown — that is the point of running it.
+
+**A rejection listing.** `--show-rejected` prints every rejected artifact with its character
+count and the phrase that triggered it, so all of them can be checked by eye. At 26 sources
+this takes about ten minutes and is **a required step of the first round**: one false positive
+found here is worth more than any desk-chosen threshold, and it is the only way to learn
+whether a paywall phrase is catching a legitimate open-access article.
+
+The audit's outcome sets `gate_version: 2`, with thresholds carrying a recorded reason — the
+same standard as D4 and D5. Until it has run, the rate is reported with its thresholds and
+**without** the claim that those thresholds are right.
+
 ## 6. Ledger schema — `acquisitions.jsonl`
 
 One row per candidate per campaign run, append-only. A candidate the retry policy (§7)
@@ -206,8 +242,10 @@ claimstone import-manifest <project> [--manifest PATH]
 claimstone acquire <project> [--campaign NAME] [--retry-class CLASS ...]
                              [--limit N] [--dry-run] [--no-apis]
 claimstone report <project> [--by-class] [--json] [--gate]
-claimstone serve <project> [--port 8787] [--host 127.0.0.1]
+claimstone gate-audit <project> [--sweep NAME] [--show-rejected] [--json]
 ```
+
+`serve` belongs to the dashboard and is specified in `2026-09-22-dashboard-design.md`.
 
 `--dry-run` prints the planned cascade per candidate and fetches nothing: the way to
 inspect attempt order before spending real requests against publishers.
@@ -223,13 +261,54 @@ alembic-s4 — campaign routine, 26 candidates
 ```
 
 The per-class rate is reported **before** the aggregate, not after: D3 says classes are not
-mixed, and a 0.73 hiding `DOC 0.00` is a different fact from a uniform 0.73.
+mixed, and a 0.73 hiding `DOC 0.00` is a different fact from a uniform 0.73. The floor is
+printed with its version (see "The floor is versioned" in §8), because a round-over-round comparison must show whether the
+corpus changed or the measuring stick did.
+
+### Progress on stderr
+
+`acquire` writes one line per source to **stderr** as it goes, with the running rate:
+
+```
+[ 7/26] 0.71  ok    S07  unpaywall  cc-by  412 KB
+[ 8/26] 0.62  fail  S08  LANDING_PAGE_ONLY  (2 840 chars, "purchase pdf")
+```
+
+stdout carries the final summary only, so `claimstone acquire … > summary.txt` still works
+and the progress remains visible. A round over 26 sources with 30-second timeouts takes
+minutes; a silent process that long is indistinguishable from a hung one.
 
 `acquire` always exits 0, including below the floor — measuring is not failing. `report
 --gate` exits 3 when the status is `INSUFFICIENT_ACQUISITION`, so a script or CI cannot
-ignore it. **No flag overrides the floor** (invariant 3). The only ways past it are to
-obtain more sources or to lower `acquisition_floor` in `sources.yaml`, where the change is
-visible in a diff.
+ignore it. **No flag overrides the floor** (invariant 3).
+
+### The floor is versioned
+
+Invariant 3 forbids an override flag. That leaves the door next to it open: `acquisition_floor`
+is a number in an editable file, and lowering it after seeing an awkward result is the same
+post-hoc move that the frozen question registry exists to prevent.
+
+So a floor change is the same class of event as a registry bump (invariant 5). `sources.yaml`
+carries three further keys, all required whenever `floor_version > 1`:
+
+```yaml
+acquisition_floor: 0.80
+floor_version: 1
+floor_set_at: 2026-09-22
+floor_rationale: >
+  Chosen before the first measured round. Below this share of found sources, per-question
+  coverage is not interpretable: a question with no claims cannot be distinguished between
+  NEVER_ASKED and UNANSWERED_IN_LITERATURE when a quarter of the corpus was never read.
+```
+
+The rule, pre-registered: **the floor may be lowered only on a documented argument that a
+specific class of sources is structurally unobtainable** — "4 of 26 are Elsevier with no open
+copy in any repository, verified per DOI" — and never because the number came out awkward.
+`report` prints `floor 0.80 (v1, 2026-09-22)` so the version travels with every figure.
+
+Landing below the floor is a legitimate deliverable: `INSUFFICIENT_ACQUISITION` plus the
+losses broken down by failure class and by host is a finding about the cascade, which is what
+D11 exists to make sayable.
 
 ## 9. The dashboard
 
@@ -275,7 +354,9 @@ URL → response dictionary.
 | `test_resolve.py` | cascade order, wall last, dedup on normalised URL, version rank, DOI-from-title rejecting an approximate match |
 | `test_acquire.py` | row shape, idempotency, success not overwritten by failure, terminal/transient policy, missing `source_class` raises |
 | `test_admissibility.py` | rate arithmetic, per-class breakdown, floor comparison, absence of any override |
-| `test_dashboard.py` | route functions against a temp store; 405 on POST; torn final line skipped; non-loopback bind requires an explicit flag; one real GET against a port-0 bind for wiring |
+| `test_manifest.py` | manifest validation: undeclared class, duplicate `source_id`, a row with neither url nor title, absent file is not an error, threshold overrides |
+| `test_gate_audit.py` | sweep arithmetic over a fixture store; a rejection listing that names the triggering phrase; re-running the gate opens no socket |
+| `test_cli_acquire.py` | `--retry-class` without `--campaign` refused; `report --gate` exits 3 below the floor; progress goes to stderr and the summary to stdout |
 
 HTML fixtures are **synthetic**, hand-written to reproduce the structure of a landing page.
 Copying a publisher's real page into a public repository is a copyright problem not worth

@@ -17,10 +17,21 @@ writes, never triggers work, and holds no state of its own. Deleting it loses no
 
 ## 2. Sequencing
 
-It is built now, over stage 2, but structured around all six stages. This is the only way it
-is useful during the first milestone, and the five unimplemented stages **declare themselves
-unimplemented** rather than rendering zero — the precedent set by `cli.py`, which exits with
-a message instead of pretending.
+**It is built last**, after a thin vertical slice has carried the 26-source manifest through
+stages 3-6 to real verdicts. Revised 2026-09-22; the original plan was to build it first.
+
+Two things changed that. D13 removed the throughput ceiling, so extraction of the manifest is
+hours rather than weeks — the waiting the dashboard was meant to make bearable shrank by an
+order of magnitude, and a thin slice through every stage became affordable. And the dashboard
+is the one component whose value is proportional to having data in **every** stage, and whose
+own spec depends on every other stage's schema. Built first, it is the most exposed thing in
+the repository to changes upstream of it; built last, every section has real rows behind it and
+the honesty rules of §8 become checkable against real cases instead of invented examples.
+
+It is still structured around all six stages, and a stage that is not implemented **declares
+itself unimplemented** rather than rendering zero — the precedent set by `cli.py`, which exits
+with a message instead of pretending. What that does *not* license is speculative readers: see
+§5.
 
 ## 3. Module boundaries
 
@@ -94,10 +105,21 @@ the specific error D12 exists to prevent. `SUPPORTED` and `CONTRADICTED` are lik
 distinct, and `CONTRADICTED` is never styled as a failure state: concluding against a
 question is a successful outcome.
 
-### Before stage 4 exists
+### No speculative readers
 
-Each question shows its text and the state `waiting — extract not implemented`. The spine is
-present and empty, and says why it is empty.
+The table above names fields in `claims.jsonl`, a file whose schema **stage 4 defines and which
+does not exist yet**. Writing readers against it now would mean writing them against a guess.
+
+So the rule: the six-stage *structure* exists from the first version, and a *reader* is added
+when the stage that writes its ledger lands. A stage with no reader reports
+`StageState(implemented=False)` from a declared stage registry — not from an attempted parse of
+a file that is not there. The question spine itself reads `questions.yaml`, which does exist,
+so from day one it shows every question with the state `waiting — extract not implemented`:
+present, empty, and saying why it is empty.
+
+Since §2 now places the dashboard after the vertical slice, in practice most readers will have
+their schema settled before they are written. The rule holds anyway, for the stage that is not
+finished on whatever day the dashboard is next touched.
 
 ## 6. The pipeline strip and progress
 
@@ -118,11 +140,13 @@ One progress rule per stage, because the stages differ in whether a denominator 
   (stage 3), it shows the candidate count and states that completeness is not yet estimable.
 - **acquire / normalize / review** — real percentages, always written as a fraction with the
   denominator beside them, never as a bare percentage.
-- **extract** — the most useful number on the page. D4 measures 11.6 minutes per call, ~5
-  calls/hour, ~2 claims per call. From the rate observed *in this session*:
-  `1 240 chunks remaining · ~5 calls/hour · estimated finish in ~10 days`, labelled an
-  extrapolation from the measured rate, with its interval. It is a harsh number and it is
-  exactly what someone waiting needs; it may change how they choose to run the round.
+- **extract** — a real fraction, chunks done over chunks total, plus a finish estimate from
+  the rate observed **in this run** rather than from any recorded constant. The rate now
+  depends on which backend is serving the lane (D13), and those differ by orders of magnitude:
+  the local server ran at ~5 calls/hour, a hosted endpoint completes the same queue in an
+  afternoon. So the estimate is computed, labelled an extrapolation, given with its interval,
+  and shown **beside the backend and model it was measured on** — an ETA that does not say
+  which backend produced it is not interpretable.
 - **synthesize** — no progress. It either runs or it does not.
 
 ### Rejections are shown, not hidden
