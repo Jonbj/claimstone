@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Turn a 26-source manifest into a measured acquisition rate — with OA status, licence and failure reason recorded per source — where nothing counts as acquired unless the bytes pass a mechanical gate.
+**Goal:** Turn a 26-source manifest into a measured acquisition rate — with OA status, licence and failure reason recorded per source — where nothing counts as acquired unless the bytes pass a mechanical gate, and where the rate is reported together with how much it depends on that gate's thresholds.
 
-**Architecture:** Five modules with one responsibility each. `resolve.py` builds the cascade of places a legal copy might live; `fulltext.py` judges bytes with no network and no state; `acquire.py` orchestrates and writes the append-only ledger; `admissibility.py` computes the rate and compares it to the floor; `net.py` keeps HTTP, robots and the per-domain budget. The fetcher enters every function as a parameter satisfying a `Protocol`, which is what lets the whole stage be tested offline.
+**Architecture:** Six modules with one responsibility each. `resolve.py` builds the cascade of places a legal copy might live; `fulltext.py` judges bytes with no network and no state; `acquire.py` orchestrates and writes the append-only ledger; `admissibility.py` computes the rate and compares it to the floor; `gate_audit.py` re-runs the gate over bytes already on disk at other thresholds, which is possible for free because those bytes are content-addressed and the gate does no I/O; `net.py` keeps HTTP, robots and the per-domain budget. The fetcher enters every function as a parameter satisfying a `Protocol`, which is what lets the whole stage be tested offline.
 
 **Tech Stack:** Python ≥ 3.11, stdlib plus `requests`, `PyYAML`, `numpy`. No framework. pytest.
 
@@ -32,6 +32,7 @@
 | `claimstone/resolve.py` | create | candidate → ordered `[Location]`. Fetcher injected. |
 | `claimstone/acquire.py` | rewrite | orchestration and the ledger row. |
 | `claimstone/admissibility.py` | create | rate, per-class breakdown, floor. |
+| `claimstone/gate_audit.py` | create | re-runs the gate over stored bytes at other thresholds. No network. |
 | `claimstone/config.py` | modify | loads `manifest.tsv` as the fourth project file. |
 | `claimstone/cli.py` | modify | `import-manifest`, `acquire`, `report`. |
 | `tests/fakes.py` | create | `FakeFetcher` and response builders, shared by every test below. |
@@ -39,7 +40,9 @@
 | `tests/test_resolve.py` | create | the cascade |
 | `tests/test_acquire.py` | create | orchestration, ledger, retry policy |
 | `tests/test_admissibility.py` | create | rate arithmetic and the floor |
-| `tests/test_manifest.py` | create | manifest validation |
+| `tests/test_manifest.py` | create | manifest validation and threshold overrides |
+| `tests/test_floor.py` | create | the floor is versioned, dated and motivated |
+| `tests/test_gate_audit.py` | create | the sweep, the rejection listing, missing bytes |
 | `tests/test_live.py` | create | three known-OA DOIs, skipped unless `CLAIMSTONE_LIVE=1` |
 | `docs/contracts/acquisitions.md` | create | the row schema stage 3 will read |
 
@@ -743,6 +746,8 @@ Create `tests/test_acquire.py`:
 ```python
 """Orchestration: plan, attempt, gate, store, record. Never raises on a failed fetch."""
 
+import pathlib
+
 import pytest
 
 from claimstone import acquire, net
@@ -771,6 +776,9 @@ def test_a_gated_landing_page_is_not_an_acquisition(tmp_path):
     assert row["acquired"] is False
     assert row["failure_class"] == net.LANDING
     assert row["attempts"][-1]["gate_kind"] == "LANDING_PAGE_ONLY"
+    # The bytes survive a rejection, or the threshold audit is impossible later.
+    kept = row["attempts"][-1]["stored_path"]
+    assert kept and pathlib.Path(kept).exists()
 
 
 def test_a_real_pdf_is_stored_under_its_hash(tmp_path):
@@ -931,6 +939,14 @@ def acquire_one(
         if not verdict.accepted:
             # A 200 carrying a landing page is a failure of acquisition. Keep going: a
             # later location in the cascade may hold the real thing.
+            #
+            # The bytes are stored anyway. Without them the threshold audit cannot re-run
+            # the gate and the by-hand rejection check has nothing to look at — and the
+            # thresholds that produced the headline rate were chosen at a desk.
+            _, rejected_path = store.store_bytes(
+                outcome.body, _suffix_for(outcome.content_type, location.url)
+            )
+            attempt["stored_path"] = str(rejected_path)
             attempt["failure_class"] = verdict.kind
             continue
 
@@ -1959,7 +1975,605 @@ until CLAIMSTONE_LIVE=1 is set.
 
 ---
 
-### Task 10: The first real number
+### Task 10: The floor is versioned
+
+Implements spec §8, "The floor is versioned". Invariant 3 forbids an override flag; this closes
+the door beside it.
+
+**Files:**
+- Modify: `claimstone/config.py`
+- Modify: `claimstone/admissibility.py`
+- Modify: `claimstone/cli.py` (the `_report` floor line)
+- Modify: `projects/example-news-and-returns/sources.yaml`
+- Create: `tests/test_floor.py`
+
+- [ ] **Step 1: Write the failing tests**
+
+Create `tests/test_floor.py`:
+
+```python
+"""Lowering the floor because the number came out awkward is the move this prevents."""
+
+import pytest
+
+from claimstone.config import ConfigError, load_project
+
+BASE = """classes:
+  - id: ACA
+    name: academic
+    weight_hint: highest
+acquisition_floor: 0.80
+"""
+
+
+def project(tmp_path, sources_extra=""):
+    (tmp_path / "sources.yaml").write_text(BASE + sources_extra, encoding="utf-8")
+    (tmp_path / "topics.yaml").write_text(
+        "topics:\n  - id: T01\n    label: t\n    terms: [a]\n", encoding="utf-8")
+    (tmp_path / "questions.yaml").write_text(
+        "registry_version: 1\nfrozen_at: 2026-09-22\n"
+        "questions:\n  - id: Q01\n    text: a question\n", encoding="utf-8")
+    return load_project(tmp_path)
+
+
+def test_version_one_needs_no_rationale(tmp_path):
+    assert project(tmp_path).floor_version == 1
+
+
+def test_a_bumped_floor_without_a_rationale_is_refused(tmp_path):
+    with pytest.raises(ConfigError, match="floor_rationale"):
+        project(tmp_path, "floor_version: 2\nfloor_set_at: 2026-10-01\n")
+
+
+def test_a_bumped_floor_with_a_rationale_loads(tmp_path):
+    loaded = project(
+        tmp_path,
+        "floor_version: 2\nfloor_set_at: 2026-10-01\n"
+        "floor_rationale: 4 of 26 are Elsevier with no open copy in any repository.\n",
+    )
+    assert loaded.floor_version == 2
+    assert "Elsevier" in loaded.floor_rationale
+
+
+def test_a_bumped_floor_needs_a_date(tmp_path):
+    with pytest.raises(ConfigError, match="floor_set_at"):
+        project(tmp_path, "floor_version: 2\nfloor_rationale: because.\n")
+
+
+def test_the_report_carries_the_floor_version(tmp_path):
+    from claimstone import admissibility
+    from claimstone.store import Store
+
+    loaded = project(tmp_path)
+    store = Store("t", base=tmp_path / "store")
+    store.append("acquisitions.jsonl", {"candidate_key": "a", "source_class": "ACA",
+                                        "acquired": True, "url": "https://x.example/a"})
+    verdict = admissibility.admit(loaded, store)
+    assert verdict["floor_version"] == 1
+    assert verdict["floor_set_at"]
+```
+
+- [ ] **Step 2: Run to verify it fails**
+
+Run: `.venv/bin/pytest tests/test_floor.py -q`
+Expected: FAIL with `AttributeError: 'Project' object has no attribute 'floor_version'`
+
+- [ ] **Step 3: Extend `claimstone/config.py`**
+
+Add three fields to `Project`, after `acquisition_floor`:
+
+```python
+    floor_version: int = 1
+    floor_set_at: str = ""
+    floor_rationale: str = ""
+```
+
+Add the loader after `load_gate_thresholds`:
+
+```python
+def load_floor_provenance(root: pathlib.Path) -> tuple[int, str, str]:
+    """Where the floor came from. A bump without a reason is refused.
+
+    Invariant 3 forbids a flag that waives the floor. Without this, the door beside it is
+    open: the floor is a number in an editable file, and lowering it after seeing an awkward
+    result is the post-hoc move the frozen question registry exists to prevent. So a floor
+    change is the same class of event as a registry bump — dated, versioned, motivated.
+    """
+    raw = _read_yaml(pathlib.Path(root) / "sources.yaml")
+    version = raw.get("floor_version", 1)
+    if not isinstance(version, int) or isinstance(version, bool) or version < 1:
+        raise ConfigError("sources.yaml: 'floor_version' must be an integer >= 1")
+
+    set_at = raw.get("floor_set_at")
+    if isinstance(set_at, (_dt.date, _dt.datetime)):
+        set_at = set_at.isoformat()[:10]
+    set_at = str(set_at or "")
+    rationale = str(raw.get("floor_rationale") or "").strip()
+
+    if version > 1:
+        if not set_at:
+            raise ConfigError(
+                "sources.yaml: 'floor_set_at' is required once floor_version > 1 — a floor "
+                "change is dated, like a question-registry bump"
+            )
+        try:
+            _dt.date.fromisoformat(set_at)
+        except ValueError as exc:
+            raise ConfigError("sources.yaml: 'floor_set_at' must be an ISO date") from exc
+        if len(rationale) < 20:
+            raise ConfigError(
+                "sources.yaml: 'floor_rationale' is required once floor_version > 1, and must "
+                "state which class of sources is structurally unobtainable — not that the "
+                "measured rate was inconvenient"
+            )
+    return version, set_at, rationale
+```
+
+In `load_project`, call it and pass the three values into `Project(...)`.
+
+- [ ] **Step 4: Carry it through `admissibility.admit`**
+
+Replace the return statement of `admit`:
+
+```python
+    return {
+        "status": status,
+        "floor": project.acquisition_floor,
+        "floor_version": project.floor_version,
+        "floor_set_at": project.floor_set_at or "unrecorded",
+        **measured,
+    }
+```
+
+- [ ] **Step 5: Print it in `cli._report`**
+
+Replace the total line:
+
+```python
+        print(f"  total  {result['acquired']}/{result['attempted']}  {achieved}"
+              f"   floor {result['floor']:.2f}"
+              f" (v{result['floor_version']}, {result['floor_set_at']})"
+              f"   {result['status']}")
+```
+
+A round-over-round comparison must show whether the corpus changed or the measuring stick did.
+
+- [ ] **Step 6: Record the provenance of the example project's floor**
+
+In `projects/example-news-and-returns/sources.yaml`, replace the `acquisition_floor` block:
+
+```yaml
+# A round may not produce verdicts if fewer than this share of *found* sources
+# were actually obtained. See README, "Admissibility".
+#
+# Changing this is a dated, versioned, motivated event — the same standard as a
+# question-registry bump. It is lowered only on evidence that a class of sources is
+# structurally unobtainable, never because a measured rate was inconvenient.
+acquisition_floor: 0.80
+floor_version: 1
+floor_set_at: 2026-09-22
+floor_rationale: >
+  Set before the first measured round. Below this share, per-question coverage stops being
+  interpretable: a question with no claims cannot be placed between NEVER_ASKED and
+  UNANSWERED_IN_LITERATURE when a quarter of the corpus was never read.
+```
+
+- [ ] **Step 7: Run everything and commit**
+
+Run: `.venv/bin/pytest -q` — expected: all pass
+Run: `.venv/bin/claimstone validate --all-projects` — expected: OK for both
+
+```bash
+git add claimstone/config.py claimstone/admissibility.py claimstone/cli.py \
+        projects/example-news-and-returns/sources.yaml tests/test_floor.py
+git commit -m "config: a floor change is dated, versioned and motivated
+
+Invariant 3 forbids an override flag and left the door beside it open: the floor
+is a number in an editable file. A bump now requires a date and a rationale
+naming a structurally unobtainable class of sources, and the report prints the
+floor version so a round-over-round comparison shows whether the corpus changed
+or the measuring stick did.
+
+<trailer>"
+```
+
+---
+
+### Task 11: gate-audit — the sensitivity of the number to its thresholds
+
+Implements spec §5, "Calibrating the thresholds". Depends on Task 4 storing rejected bytes.
+
+**Files:**
+- Create: `claimstone/gate_audit.py`
+- Create: `tests/test_gate_audit.py`
+- Modify: `claimstone/cli.py`
+
+- [ ] **Step 1: Write the failing tests**
+
+Create `tests/test_gate_audit.py`:
+
+```python
+"""Re-running the gate over stored bytes: free, offline, and the only calibration we have."""
+
+from claimstone import fulltext, gate_audit
+from claimstone.store import Store
+from tests.test_fulltext import page, pdf
+
+
+def _corpus(tmp_path):
+    """Three artifacts: a real PDF, a long article, a short page near the threshold."""
+    store = Store("t", base=tmp_path)
+    rows = []
+    for key, body, ctype in (
+        ("a", pdf(), "application/pdf"),
+        ("b", page(400), "text/html"),
+        ("c", page(30), "text/html"),
+    ):
+        _, path = store.store_bytes(body, ".pdf" if "pdf" in ctype else ".html")
+        rows.append({
+            "candidate_key": key, "source_class": "ACA", "source_id": key.upper(),
+            "acquired": ctype == "application/pdf" or key == "b",
+            "url": f"https://x.example/{key}",
+            "attempts": [{"url": f"https://x.example/{key}", "http_status": 200,
+                          "content_type": ctype, "stored_path": str(path),
+                          "gate_kind": None, "gate_reason": None}],
+        })
+    for row in rows:
+        store.append("acquisitions.jsonl", row)
+    return store
+
+
+def test_the_sweep_reports_a_rate_per_threshold_value(tmp_path):
+    store = _corpus(tmp_path)
+    result = gate_audit.sweep(store, "min_text_chars", [500, 3000, 20000])
+    assert [point["value"] for point in result] == [500, 3000, 20000]
+    assert all(0.0 <= point["rate"] <= 1.0 for point in result)
+
+
+def test_raising_the_threshold_cannot_raise_the_rate(tmp_path):
+    store = _corpus(tmp_path)
+    rates = [p["rate"] for p in gate_audit.sweep(store, "min_text_chars", [500, 5000, 50000])]
+    assert rates == sorted(rates, reverse=True)
+
+
+def test_the_sweep_opens_no_socket(tmp_path, monkeypatch):
+    import socket
+
+    store = _corpus(tmp_path)
+
+    def refuse(*args, **kwargs):
+        raise AssertionError("gate-audit must not touch the network")
+
+    monkeypatch.setattr(socket.socket, "connect", refuse)
+    gate_audit.sweep(store, "min_text_chars", [1000, 3000])
+
+
+def test_rejections_name_the_phrase_that_triggered_them(tmp_path):
+    store = Store("t", base=tmp_path)
+    body = page(40, "<p>Purchase PDF to read the full article.</p>")
+    _, path = store.store_bytes(body, ".html")
+    store.append("acquisitions.jsonl", {
+        "candidate_key": "a", "source_id": "S01", "source_class": "ACA", "acquired": False,
+        "failure_class": "LANDING_PAGE_ONLY", "url": "https://p.example/a",
+        "attempts": [{"url": "https://p.example/a", "http_status": 200,
+                      "content_type": "text/html", "stored_path": str(path),
+                      "gate_kind": "LANDING_PAGE_ONLY", "gate_reason": "x"}],
+    })
+    listing = gate_audit.rejections(store)
+    assert listing[0]["source_id"] == "S01"
+    assert listing[0]["kind"] == fulltext.LANDING_PAGE_ONLY
+    assert "purchase pdf" in listing[0]["reason"]
+    assert listing[0]["chars"] is not None
+
+
+def test_an_artifact_whose_bytes_are_gone_is_reported_not_skipped(tmp_path):
+    store = Store("t", base=tmp_path)
+    store.append("acquisitions.jsonl", {
+        "candidate_key": "a", "source_id": "S01", "source_class": "ACA", "acquired": False,
+        "failure_class": "LANDING_PAGE_ONLY", "url": "https://p.example/a",
+        "attempts": [{"url": "https://p.example/a", "http_status": 200,
+                      "stored_path": str(tmp_path / "gone.html"), "content_type": "text/html",
+                      "gate_kind": "LANDING_PAGE_ONLY", "gate_reason": "x"}],
+    })
+    listing = gate_audit.rejections(store)
+    assert listing[0]["kind"] == "BYTES_MISSING"
+```
+
+That last test matters: a missing artifact must appear in the listing as missing, not vanish
+from it. An audit that silently skips what it cannot read reports a cleaner corpus than exists.
+
+- [ ] **Step 2: Run to verify it fails**
+
+Run: `.venv/bin/pytest tests/test_gate_audit.py -q`
+Expected: FAIL with `ModuleNotFoundError: No module named 'claimstone.gate_audit'`
+
+- [ ] **Step 3: Write `claimstone/gate_audit.py`**
+
+```python
+"""Re-run the content gate over bytes already on disk, at thresholds other than the ones used.
+
+The thresholds in fulltext.py were chosen at a desk. Nothing measured them, and a wrong one
+moves the headline rate silently. Two properties make that recoverable for free: the bytes are
+content-addressed under their hash, and the gate does no I/O. So the question "is this constant
+load-bearing?" is answerable by arithmetic instead of by argument.
+
+A flat sweep means the threshold is not deciding anything. A sweep that swings means it is
+deciding the result, and the boundary cases have to be read by a human.
+"""
+
+from __future__ import annotations
+
+import pathlib
+from typing import Any
+
+from claimstone import fulltext
+from claimstone.store import Store
+
+MISSING = "BYTES_MISSING"
+
+
+def _artifacts(store: Store) -> list[dict[str, Any]]:
+    """Every attempt whose bytes were kept, accepted or not, latest row per candidate."""
+    out: list[dict[str, Any]] = []
+    for key, row in store.latest_by("acquisitions.jsonl", "candidate_key").items():
+        for attempt in row.get("attempts") or []:
+            if attempt.get("stored_path"):
+                out.append({
+                    "candidate_key": key,
+                    "source_id": row.get("source_id"),
+                    "source_class": row.get("source_class"),
+                    "url": attempt.get("url"),
+                    "content_type": attempt.get("content_type") or "",
+                    "stored_path": attempt["stored_path"],
+                })
+    return out
+
+
+def _classify_stored(artifact: dict[str, Any], thresholds: dict[str, int]) -> fulltext.FullText:
+    path = pathlib.Path(artifact["stored_path"])
+    if not path.exists():
+        return fulltext.FullText(MISSING, None, f"no bytes at {path}")
+    return fulltext.classify(
+        path.read_bytes(), artifact["content_type"], artifact["url"] or "", thresholds
+    )
+
+
+def sweep(store: Store, name: str, values: list[int]) -> list[dict[str, Any]]:
+    """How the acquisition rate moves as one threshold moves. No network, no re-fetch."""
+    if name not in fulltext.DEFAULT_THRESHOLDS:
+        raise ValueError(f"unknown threshold {name!r}: {sorted(fulltext.DEFAULT_THRESHOLDS)}")
+    artifacts = _artifacts(store)
+    by_candidate: dict[str, list[dict[str, Any]]] = {}
+    for artifact in artifacts:
+        by_candidate.setdefault(artifact["candidate_key"], []).append(artifact)
+
+    points: list[dict[str, Any]] = []
+    for value in values:
+        thresholds = {**fulltext.DEFAULT_THRESHOLDS, name: value}
+        # A candidate counts as acquired if *any* of its kept artifacts passes: that is what
+        # the cascade would have done at this threshold.
+        accepted = sum(
+            1
+            for group in by_candidate.values()
+            if any(_classify_stored(a, thresholds).accepted for a in group)
+        )
+        total = len(by_candidate)
+        points.append({
+            "value": value,
+            "accepted": accepted,
+            "attempted": total,
+            "rate": (accepted / total) if total else None,
+        })
+    return points
+
+
+def rejections(store: Store, thresholds: dict[str, int] | None = None) -> list[dict[str, Any]]:
+    """Every artifact the gate turns down, with what it counted and what triggered it.
+
+    Printed for a by-hand check. On a 26-source manifest this is ten minutes of reading and it
+    is the only way to learn whether a paywall phrase is catching a legitimate open article.
+    """
+    th = {**fulltext.DEFAULT_THRESHOLDS, **(thresholds or {})}
+    out: list[dict[str, Any]] = []
+    for artifact in _artifacts(store):
+        verdict = _classify_stored(artifact, th)
+        if verdict.accepted:
+            continue
+        out.append({
+            "source_id": artifact["source_id"],
+            "source_class": artifact["source_class"],
+            "url": artifact["url"],
+            "stored_path": artifact["stored_path"],
+            "kind": verdict.kind,
+            "chars": verdict.chars,
+            "reason": verdict.reason,
+        })
+    return out
+```
+
+- [ ] **Step 4: Run to verify it passes**
+
+Run: `.venv/bin/pytest tests/test_gate_audit.py -q`
+Expected: PASS, 5 passed
+
+- [ ] **Step 5: Wire the CLI**
+
+Add the handler to `claimstone/cli.py`:
+
+```python
+SWEEP_VALUES = {
+    "min_text_chars": [1000, 2000, 3000, 4000, 5000, 8000],
+    "min_pdf_bytes": [2000, 5000, 10000, 20000, 50000],
+    "paywall_doubt_chars": [6000, 9000, 12000, 16000, 24000],
+}
+
+
+def _gate_audit(args: argparse.Namespace) -> int:
+    from claimstone import gate_audit
+    from claimstone.store import Store
+
+    project = load_project(args.project)
+    store = Store(project.name, base=args.store)
+
+    name = args.sweep or "min_text_chars"
+    points = gate_audit.sweep(store, name, SWEEP_VALUES[name])
+    listing = gate_audit.rejections(store, project.gate_thresholds)
+
+    if args.json:
+        import json
+
+        print(json.dumps({"sweep": {name: points}, "rejections": listing}, indent=2))
+        return 0
+
+    print(f"{name:<20}" + "".join(f"{p['value']:>7}" for p in points))
+    print(f"{'rate':<20}" + "".join(
+        f"{'—':>7}" if p["rate"] is None else f"{p['rate']:>7.2f}" for p in points))
+    spread = [p["rate"] for p in points if p["rate"] is not None]
+    if spread and max(spread) - min(spread) > 0.05:
+        print(f"\n  this threshold is deciding the rate (spread "
+              f"{max(spread) - min(spread):.2f}) — read the boundary cases by hand")
+    elif spread:
+        print(f"\n  flat across the range (spread {max(spread) - min(spread):.2f}): "
+              f"the chosen value is not load-bearing")
+
+    if args.show_rejected:
+        print(f"\n{len(listing)} rejected:")
+        for item in listing:
+            chars = "—" if item["chars"] is None else str(item["chars"])
+            print(f"  {item['source_id'] or '?':<6} {item['kind']:<18} {chars:>7} chars"
+                  f"  {item['reason']}")
+            print(f"         {item['stored_path']}")
+    return 0
+```
+
+Register it in `build_parser`, in the same loop as the others by adding
+`("gate-audit", _gate_audit, "how much the rate depends on the gate thresholds")` to the
+tuple, and then:
+
+```python
+        if name == "gate-audit":
+            command.add_argument("--sweep", choices=sorted(SWEEP_VALUES),
+                                 help="which threshold to sweep (default min_text_chars)")
+            command.add_argument("--show-rejected", action="store_true",
+                                 help="list every rejected artifact for a by-hand check")
+            command.add_argument("--json", action="store_true")
+```
+
+- [ ] **Step 6: Run everything and commit**
+
+Run: `.venv/bin/pytest -q` — expected: all pass
+
+```bash
+git add claimstone/gate_audit.py claimstone/cli.py tests/test_gate_audit.py
+git commit -m "gate-audit: is the threshold load-bearing, or harmless?
+
+The gate's thresholds were chosen at a desk. Because the bytes are stored under
+their hash and the gate does no I/O, the gate re-runs over the whole corpus for
+free, so the question is answerable by arithmetic. A flat sweep means the
+constant is harmless; a sweep that swings means it is the result. --show-rejected
+lists every rejection for the by-hand check, and an artifact whose bytes are gone
+is reported as missing rather than dropped from the listing.
+
+<trailer>"
+```
+
+---
+
+### Task 12: Progress on stderr
+
+Implements spec §8, "Progress on stderr". A round over 26 sources with 30-second timeouts takes
+minutes, and a silent process that long is indistinguishable from a hung one.
+
+**Files:**
+- Modify: `claimstone/cli.py` (`_acquire`)
+- Modify: `tests/test_cli_acquire.py`
+
+- [ ] **Step 1: Write the failing test**
+
+Append to `tests/test_cli_acquire.py`:
+
+```python
+def test_progress_goes_to_stderr_and_the_summary_to_stdout(tmp_path, capsys, monkeypatch):
+    from claimstone import acquire, cli
+
+    monkeypatch.setenv("CLAIMSTONE_CONTACT_EMAIL", "test@example.org")
+    monkeypatch.setattr(
+        acquire, "run",
+        lambda *a, **k: iter([
+            {"candidate_key": "a", "source_id": "S01", "acquired": True,
+             "provenance": "unpaywall", "licence": "cc-by", "bytes": 412839,
+             "failure_class": None},
+            {"candidate_key": "b", "source_id": "S02", "acquired": False,
+             "failure_class": "LANDING_PAGE_ONLY", "bytes": 0},
+        ]),
+    )
+    cli.main(["acquire", "projects/example-news-and-returns", "--store", str(tmp_path)])
+    captured = capsys.readouterr()
+    assert "S01" in captured.err and "S02" in captured.err
+    assert "0.50" in captured.err           # the running rate is visible while it runs
+    assert "S01" not in captured.out        # stdout carries the summary only
+    assert "2 attempted" in captured.out
+```
+
+- [ ] **Step 2: Run to verify it fails**
+
+Run: `.venv/bin/pytest tests/test_cli_acquire.py -q -k progress`
+Expected: FAIL — the per-source lines are currently on stdout
+
+- [ ] **Step 3: Replace the loop in `cli._acquire`**
+
+```python
+    done = 0
+    obtained = 0
+    total = len(candidates)
+    for row in acquire.run(
+        candidates, store, fetcher,
+        campaign=args.campaign or acquire.ROUTINE,
+        retry_classes=retry_classes,
+        use_apis=not args.no_apis,
+        thresholds=project.gate_thresholds,
+        limit=args.limit,
+    ):
+        done += 1
+        if row["acquired"]:
+            obtained += 1
+            detail = f"{row.get('provenance')}  {row.get('licence') or 'licence unrecorded'}"
+            size = f"{(row.get('bytes') or 0) // 1024} KB"
+        else:
+            detail = str(row.get("failure_class"))
+            size = ""
+        # Progress on stderr, summary on stdout: `acquire … > summary.txt` keeps both.
+        print(
+            f"[{done:>3}/{total}] {obtained / done:.2f}  "
+            f"{'ok  ' if row['acquired'] else 'fail'}  "
+            f"{row.get('source_id') or row['candidate_key']}  {detail}  {size}".rstrip(),
+            file=sys.stderr,
+        )
+    print(f"{done} attempted, {obtained} obtained")
+    return 0
+```
+
+- [ ] **Step 4: Run to verify it passes**
+
+Run: `.venv/bin/pytest tests/test_cli_acquire.py -q`
+Expected: PASS
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add claimstone/cli.py tests/test_cli_acquire.py
+git commit -m "cli: progress on stderr, summary on stdout
+
+A round over 26 sources with 30-second timeouts takes minutes; a silent process
+that long cannot be told apart from a hung one. The running rate is on each line,
+so the shape of the round is visible before it ends.
+
+<trailer>"
+```
+
+---
+
+### Task 13: The first real number, and its sensitivity
 
 This task produces the deliverable. It needs `projects/alembic-s4/manifest.tsv`, which the user supplies.
 
@@ -1992,13 +2606,54 @@ Expected: one line per source. This takes minutes: the fetcher pauses 0.34s betw
 
 Run: `.venv/bin/claimstone report projects/alembic-s4`
 
-Record the result in `docs/DESIGN_DECISIONS.md` under D8 as a dated line: the rate, the per-class breakdown, and the failure classes that account for the gap. **The number is the deliverable whatever it is.** A rate that did not move is a finding about the cascade, and recording it is the point; D11 exists because the alternative was a corpus certifying itself complete at 0.42.
+Expected shape: per-class rates first, then the total with the floor and its version, then the
+failure breakdown by class and by host.
 
-- [ ] **Step 7: Commit the measurement**
+- [ ] **Step 7: Ask whether the thresholds decided it**
+
+Run: `.venv/bin/claimstone gate-audit projects/alembic-s4 --sweep min_text_chars`
+Run: `.venv/bin/claimstone gate-audit projects/alembic-s4 --sweep min_pdf_bytes`
+
+Read the verdict line. A flat sweep means the chosen value is not load-bearing and the rate
+stands as measured. A sweep that swings means **the threshold is deciding the headline number**,
+and Step 8 is no longer optional reading — it is the finding.
+
+- [ ] **Step 8: Check every rejection by hand**
+
+Run: `.venv/bin/claimstone gate-audit projects/alembic-s4 --show-rejected`
+
+For each line, open the stored artifact and confirm the verdict. This is required, not advisory:
+at 26 sources it is about ten minutes, and it is the only way to learn whether a paywall phrase
+is catching a legitimate open-access article. Write down every disagreement — a single false
+positive here is worth more than any desk-chosen threshold.
+
+If the check changes a threshold, bump `GATE_VERSION` to 2 in `claimstone/fulltext.py`, record
+the new value under `acquisition:` in `projects/alembic-s4/sources.yaml` with the reason, and
+re-run `report`. Rows written under version 1 keep their own thresholds on them, so the two
+rounds stay distinguishable.
+
+- [ ] **Step 9: Record the measurement**
+
+Add a dated line to `docs/DESIGN_DECISIONS.md` under D8: the rate, the per-class breakdown, the
+failure classes that account for the gap, the sweep's spread, and how many rejections the
+by-hand check disagreed with.
+
+**The number is the deliverable whatever it is.** Three outcomes are all findings:
+
+- **At or above 0.80** — the round is admissible and the vertical slice can proceed.
+- **Below 0.80** — the published result is `INSUFFICIENT_ACQUISITION` with the losses broken
+  down. This is D11 working, not failing. Do **not** lower the floor here; the only admissible
+  response is the documented structural argument of Task 10, and "the number came out awkward"
+  is not one.
+- **The rate did not move from 0.42** — a finding about the cascade, and the most informative of
+  the three: it says the open-access chain does not reach this literature, which is exactly what
+  D8 claimed nobody had solved.
+
+- [ ] **Step 10: Commit the measurement**
 
 ```bash
-git add docs/DESIGN_DECISIONS.md
-git commit -m "D8: the acquisition rate on the 26-source manifest, measured
+git add docs/DESIGN_DECISIONS.md projects/alembic-s4/sources.yaml claimstone/fulltext.py
+git commit -m "D8: the acquisition rate on the 26-source manifest, with its sensitivity
 
 <trailer>"
 ```
@@ -2007,6 +2662,7 @@ git commit -m "D8: the acquisition rate on the 26-source manifest, measured
 
 ## What this plan does not do
 
-- No dashboard. That is `2026-09-22-dashboard-design.md` and gets its own plan, written after this one lands, because `round_state.py` reads ledgers whose shape this plan settles.
-- No stage 3. GROBID, chunking and the citation discovery channel are out of scope; the only forward commitment is that stage 3 confirms extractable text and may write back a `fulltext_confirmed` signal.
+- No dashboard. That is `2026-09-22-dashboard-design.md`, and it is now scheduled **after** the thin vertical slice, not after this plan: it is the component whose value needs data in every stage and whose spec depends on every other stage's schema, so it is built last against real rows.
+- No `model_call` boundary. D13 makes it the contract stages 4 and 5 consume, and it gets its own spec and plan before the vertical slice. Nothing in stage 2 needs a model.
+- No stage 3. GROBID, chunking and the citation discovery channel are out of scope; the only forward commitment is that stage 3 confirms extractable text and may write back a `fulltext_confirmed` signal. The thin vertical slice that follows carries stages 3-6 over this same 26-source manifest.
 - No institutional authentication (spec §14). A source reachable only that way stays `PAYWALL_403` and lowers the rate.

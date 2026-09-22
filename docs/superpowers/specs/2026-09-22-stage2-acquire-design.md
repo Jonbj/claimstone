@@ -143,6 +143,13 @@ wrong threshold moves the headline figure silently. Two properties make that rec
 network cost: the bytes are stored content-addressed under their hash, and the gate does no
 I/O. **So the gate can be re-run over the whole corpus without re-fetching anything.**
 
+This only works if the bytes survive. **A response the gate rejects therefore has its bytes
+stored anyway**, and the attempt records the path. A landing page is a few hundred kilobytes
+and the corpus is 26 sources; throwing those bytes away in exchange for nothing would make the
+audit impossible and would also make the by-hand rejection check impossible, since there would
+be nothing left to look at. Bytes are discarded only when the transfer itself failed — there
+was never a body to keep.
+
 `claimstone gate-audit <project>` does two things.
 
 **A sensitivity sweep.** Re-classify every stored artifact across a range of one threshold and
@@ -189,7 +196,13 @@ this run", and the previous row stands.
  "failure_class": null,
  "attempts": [{"url": "…", "http_status": 403, "failure_class": "PAYWALL_403",
                "provenance": "candidate", "version": "", "gate_kind": null,
-               "content_type": "text/html", "bytes": 0, "elapsed_s": 1.2}],
+               "gate_reason": null, "stored_path": null,
+               "content_type": "text/html", "bytes": 0, "elapsed_s": 1.2},
+              {"url": "…", "http_status": 200, "failure_class": "LANDING_PAGE_ONLY",
+               "provenance": "candidate", "version": "", "gate_kind": "LANDING_PAGE_ONLY",
+               "gate_reason": "2840 chars and the phrase 'purchase pdf'",
+               "stored_path": "store/alembic-s4/raw/….html",
+               "content_type": "text/html", "bytes": 61204, "elapsed_s": 0.9}],
  "fetched_at": "2026-09-22T10:41:07+00:00"}
 ```
 
@@ -206,7 +219,9 @@ Three rules, each for a reason:
    only when none succeeded. The draft's `rate()` does not do this.
 3. **`attempts` keeps every step of the cascade**, not only the last. "Unpaywall had a
    location and it 404'd" is a different fact from "no open copy existed", and only the full
-   attempt list distinguishes them.
+   attempt list distinguishes them. An attempt whose bytes arrived carries `gate_kind`,
+   `gate_reason` and `stored_path` **whether or not the gate accepted them** — that is what
+   makes the threshold audit and the by-hand rejection check possible later.
 
 `failure_class` on a failed row is the class of the **last** attempt: it says what stopped
 us. The whole history stays in `attempts`.
