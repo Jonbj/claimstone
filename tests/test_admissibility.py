@@ -69,3 +69,29 @@ def test_there_is_no_override(tmp_path):
 
     source = inspect.getsource(admissibility.admit)
     assert "force" not in source and "override" not in source
+
+
+def test_a_regate_supersedes_a_success_but_a_retry_does_not(tmp_path):
+    store = Store("t", base=tmp_path)
+    _ledger(store, [
+        row("a", acquired=True),                                    # accepted without a gate
+        {**row("a", acquired=False, failure="ABSTRACT_ONLY"),
+         "regated_from": "2026-09-22T10:00:00+00:00"},               # corrected judgement
+    ])
+    assert admissibility.rate(store)["acquired"] == 0
+
+    store2 = Store("u", base=tmp_path)
+    _ledger(store2, [row("a", acquired=True),
+                     row("a", acquired=False, failure="PAYWALL_403")])  # a retry, not a re-gate
+    assert admissibility.rate(store2)["acquired"] == 1
+
+
+def test_a_real_acquisition_after_a_regate_wins_again(tmp_path):
+    store = Store("t", base=tmp_path)
+    _ledger(store, [
+        row("a", acquired=True),
+        {**row("a", acquired=False, failure="ABSTRACT_ONLY"),
+         "regated_from": "2026-09-22T10:00:00+00:00"},
+        row("a", acquired=True),   # the cascade found the real document later
+    ])
+    assert admissibility.rate(store)["acquired"] == 1

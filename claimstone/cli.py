@@ -186,6 +186,29 @@ def _gate_audit(args: argparse.Namespace) -> int:
     return 0
 
 
+def _regate(args: argparse.Namespace) -> int:
+    from claimstone import fulltext, gate_audit
+    from claimstone.store import Store
+
+    project = load_project(args.project)
+    store = Store(project.name, base=args.store)
+
+    changed = 0
+    total = 0
+    for row in gate_audit.regate(store, campaign=args.campaign,
+                                 thresholds=project.gate_thresholds):
+        total += 1
+        verdict = row["gate"]["kind"]
+        mark = "ok  " if row["acquired"] else "fail"
+        if not row["acquired"]:
+            changed += 1
+        print(f"{mark}  {row.get('source_id') or row['candidate_key']:<8} {verdict}",
+              file=sys.stderr)
+    print(f"{total} re-judged under gate_version {fulltext.GATE_VERSION}, "
+          f"{total - changed} still full text")
+    return 0
+
+
 def _not_implemented(args: argparse.Namespace) -> int:
     print(
         f"stage '{args.stage_name}' is not implemented yet — see README.md, 'The six stages'",
@@ -211,6 +234,7 @@ def build_parser() -> argparse.ArgumentParser:
         ("acquire", _acquire, "stage 2: obtain the full texts"),
         ("report", _report, "acquisition rate, per class, against the floor"),
         ("gate-audit", _gate_audit, "how much the rate depends on the gate thresholds"),
+        ("regate", _regate, "re-judge bytes already held under the current gate; no network"),
     ):
         command = sub.add_parser(name, help=help_text)
         command.add_argument("project", help="path to a project directory")
@@ -229,6 +253,9 @@ def build_parser() -> argparse.ArgumentParser:
             command.add_argument("--json", action="store_true")
             command.add_argument("--gate", action="store_true",
                                  help="exit 3 when the round is INSUFFICIENT_ACQUISITION")
+        if name == "regate":
+            command.add_argument("--campaign", required=True,
+                                 help="name this re-reading; it lands on every corrected row")
         if name == "gate-audit":
             command.add_argument("--sweep", choices=sorted(SWEEP_VALUES),
                                  help="which threshold to sweep (default min_text_chars)")

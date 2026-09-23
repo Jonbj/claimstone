@@ -12,7 +12,7 @@ deciding the result, and the boundary cases have to be read by a human.
 from __future__ import annotations
 
 import pathlib
-from typing import Any
+from typing import Any, Iterator
 
 from claimstone import fulltext
 from claimstone.store import Store
@@ -119,3 +119,77 @@ def rejections(store: Store, thresholds: dict[str, int] | None = None) -> list[d
             "reason": verdict.reason,
         })
     return out
+
+
+def regate(
+    store: Store,
+    *,
+    campaign: str,
+    thresholds: dict[str, int] | None = None,
+) -> Iterator[dict[str, Any]]:
+    """Re-judge bytes already held, under the gate as it stands now.
+
+    A round recorded before the gate existed, or under an earlier `gate_version`, carries
+    `acquired` flags that the current rule would not agree with. Re-fetching to find that out
+    would be wrong twice over: the bytes are already on disk, and knocking on eighteen hosts to
+    learn what a pure function can tell us offline is not conduct this project permits.
+
+    So this takes no fetcher — it cannot reach the network by construction — and appends a
+    corrected row per candidate whose bytes are held. The ledger stays append-only: the old row
+    is not edited, and `regated_from` carries the timestamp of the row being re-judged, so the
+    history shows a re-reading rather than a second fetch.
+    """
+    from claimstone.acquire import MissingSourceClass
+
+    th = {**fulltext.DEFAULT_THRESHOLDS, **(thresholds or {})}
+    classes = {
+        key: row.get("source_class")
+        for key, row in store.latest_by("candidates.jsonl", "candidate_key").items()
+    }
+    previous = store.latest_by("acquisitions.jsonl", "candidate_key")
+
+    grouped: dict[str, list[dict[str, Any]]] = {}
+    for artifact in _artifacts(store):
+        grouped.setdefault(artifact["candidate_key"], []).append(artifact)
+
+    for key, artifacts in grouped.items():
+        prior = previous.get(key, {})
+        source_class = prior.get("source_class") or classes.get(key)
+        if not source_class:
+            raise MissingSourceClass(
+                f"candidate {key!r} carries no source_class, in its ledger row or its candidate; "
+                "a pool that mixes classes unrecorded cannot be synthesised (invariant 6)"
+            )
+
+        best: tuple[fulltext.FullText, dict[str, Any]] | None = None
+        for artifact in artifacts:
+            verdict = _classify_stored(artifact, th)
+            # Prefer whatever passes; otherwise keep the first verdict as the honest headline.
+            if best is None or (verdict.accepted and not best[0].accepted):
+                best = (verdict, artifact)
+        assert best is not None
+        verdict, artifact = best
+
+        row = {
+            "candidate_key": key,
+            "source_id": prior.get("source_id"),
+            "source_class": source_class,
+            "campaign": campaign,
+            "attempt_no": int(prior.get("attempt_no") or 1),
+            "acquired": verdict.accepted,
+            "sha256": pathlib.Path(artifact["stored_path"]).stem if verdict.accepted else None,
+            "stored_path": artifact["stored_path"] if verdict.accepted else None,
+            "url": artifact["url"],
+            "provenance": prior.get("provenance"),
+            "version": prior.get("version"),
+            "licence": prior.get("licence"),
+            "oa_status": prior.get("oa_status"),
+            "content_type": artifact["content_type"],
+            "gate": verdict.as_row(th),
+            "attempts": [],
+            "failure_class": None if verdict.accepted else verdict.kind,
+            "fetched_at": prior.get("fetched_at"),
+            "regated_from": prior.get("fetched_at"),
+        }
+        store.append("acquisitions.jsonl", row)
+        yield row

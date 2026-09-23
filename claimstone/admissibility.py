@@ -19,10 +19,19 @@ INSUFFICIENT = "INSUFFICIENT_ACQUISITION"
 
 
 def collapse(store: Store) -> dict[str, dict[str, Any]]:
-    """One row per candidate, preferring the latest **successful** attempt.
+    """One row per candidate: the latest re-gate, else the latest success, else the latest row.
 
-    Plain latest-wins would let a retry campaign that fails erase a success whose bytes are on
-    disk, and the rate would fall while the corpus was unchanged.
+    Two rules that both sound right pull in opposite directions here, and the order between them
+    is the whole content of this function.
+
+    A **retry** that fails must not erase a recorded success. Its failure is a fact about the
+    world — the host refused us this time — and says nothing about bytes already on disk. Plain
+    latest-wins would drop the rate while the corpus was unchanged.
+
+    A **re-gate** that fails must erase one. It is not a new attempt at anything; it is a
+    corrected reading of the very artifact the earlier row claimed, and it says that artifact was
+    never a document. A row carrying `regated_from` is therefore authoritative, and a genuine
+    acquisition afterwards still supersedes it in turn.
     """
     best: dict[str, dict[str, Any]] = {}
     for row in store.read("acquisitions.jsonl"):
@@ -31,7 +40,12 @@ def collapse(store: Store) -> dict[str, dict[str, Any]]:
             continue
         key = str(key)
         held = best.get(key)
-        if held is None or row.get("acquired") or not held.get("acquired"):
+        if (
+            held is None
+            or row.get("regated_from")
+            or row.get("acquired")
+            or not held.get("acquired")
+        ):
             best[key] = row
     return best
 
