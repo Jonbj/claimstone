@@ -17,6 +17,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 import requests
+from typing import Protocol
 
 USER_AGENT = (
     "Claimstone/0.1 (evidence-synthesis research tool; "
@@ -35,6 +36,32 @@ ROBOTS = "ROBOTS_DISALLOWED"
 BUDGET = "DOMAIN_BUDGET_EXHAUSTED"
 BAD_TYPE = "UNEXPECTED_CONTENT_TYPE"
 EMPTY = "EMPTY_RESPONSE"
+
+# Set by the content gate in fulltext.py rather than by HTTP: a 200 that carries a landing
+# page, or the abstract page of a document, is a failure of acquisition even though the
+# transfer succeeded.
+LANDING = "LANDING_PAGE_ONLY"
+ABSTRACT = "ABSTRACT_ONLY"
+TOO_SHORT = "TOO_SHORT"
+CORRUPT_PDF = "CORRUPT_PDF"
+NOT_TEXT = "NOT_TEXT"
+WAYBACK_MISS = "WAYBACK_MISS"
+NO_LOCATIONS = "NO_LOCATIONS"
+
+# Terminal: retrying changes nothing until the world changes, so a retry needs a named
+# campaign. Transient: the next ordinary run should try again on its own.
+TERMINAL = frozenset(
+    {PAYWALL, ROBOTS, EXCLUDED, NOT_FOUND, BAD_TYPE, LANDING, ABSTRACT, TOO_SHORT,
+     CORRUPT_PDF, NOT_TEXT, NO_LOCATIONS}
+)
+TRANSIENT = frozenset(
+    {TIMEOUT, CONNECTION, SERVER_ERROR, RATE_LIMITED, BUDGET, EMPTY, WAYBACK_MISS}
+)
+
+
+def is_terminal(failure_class: str | None) -> bool:
+    """An unrecognised class counts as terminal: a typo must cost a retry, not a loop."""
+    return failure_class not in TRANSIENT
 
 
 class ContactNotConfigured(RuntimeError):
@@ -79,6 +106,14 @@ class Outcome:
             "bytes": len(self.body) if self.body else 0,
             "elapsed_s": round(self.elapsed_s, 2),
         }
+
+
+class FetcherLike(Protocol):
+    """What the stages need from a fetcher. Tests supply their own implementation."""
+
+    def get(self, url: str, *, expect: tuple[str, ...] = (), as_json: bool = False) -> Outcome: ...
+
+    def get_json(self, url: str) -> tuple[dict[str, Any] | None, Outcome]: ...
 
 
 @dataclass
