@@ -51,8 +51,18 @@ def collapse(store: Store) -> dict[str, dict[str, Any]]:
 
 
 def rate(store: Store) -> dict[str, Any]:
-    """Acquisition accounting. `rate` is None when nothing was attempted — not 0.0."""
+    """Acquisition accounting. `rate` is None when nothing was attempted — not 0.0.
+
+    Where a ledger row carries no `source_class` — rows written before that became mandatory —
+    the candidate is asked instead. A candidate is the authority on its own class, and the
+    alternative is a report that files a known source under UNCLASSIFIED, which reads as a
+    defect in the corpus rather than in the row that recorded it.
+    """
     rows = collapse(store)
+    candidate_classes = {
+        key: row.get("source_class")
+        for key, row in store.latest_by("candidates.jsonl", "candidate_key").items()
+    }
     attempted = len(rows)
     acquired = sum(1 for row in rows.values() if row.get("acquired"))
 
@@ -60,7 +70,11 @@ def rate(store: Store) -> dict[str, Any]:
     failures: dict[str, int] = {}
     hosts: dict[str, int] = {}
     for row in rows.values():
-        klass = str(row.get("source_class") or "UNCLASSIFIED")
+        klass = str(
+            row.get("source_class")
+            or candidate_classes.get(str(row.get("candidate_key")))
+            or "UNCLASSIFIED"
+        )
         bucket = by_class.setdefault(klass, {"attempted": 0, "acquired": 0, "rate": 0.0})
         bucket["attempted"] += 1
         if row.get("acquired"):

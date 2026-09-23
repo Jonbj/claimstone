@@ -95,3 +95,14 @@ def test_a_real_acquisition_after_a_regate_wins_again(tmp_path):
         row("a", acquired=True),   # the cascade found the real document later
     ])
     assert admissibility.rate(store)["acquired"] == 1
+
+
+def test_a_row_without_a_class_is_filed_under_the_candidates_class(tmp_path):
+    store = Store("t", base=tmp_path)
+    store.append("candidates.jsonl", {"candidate_key": "a", "source_class": "ACA"})
+    store.append("acquisitions.jsonl", {"candidate_key": "a", "acquired": False,
+                                        "failure_class": "PAYWALL_403",
+                                        "url": "https://wall.example/a"})
+    by_class = admissibility.rate(store)["by_class"]
+    assert "UNCLASSIFIED" not in by_class
+    assert by_class["ACA"]["attempted"] == 1

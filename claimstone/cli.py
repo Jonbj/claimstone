@@ -57,7 +57,8 @@ def _import_manifest(args: argparse.Namespace) -> int:
         print(f"no manifest.tsv under {args.project}/", file=sys.stderr)
         return 1
     result = discover.import_manifest(Store(project.name, base=args.store), project.manifest)
-    print(f"{project.name}: {result['new']} new of {result['rows']} manifest rows")
+    print(f"{project.name}: {result['new']} new, {result['updated']} corrected, "
+          f"of {result['rows']} manifest rows")
     return 0
 
 

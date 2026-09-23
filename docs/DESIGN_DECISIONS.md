@@ -85,6 +85,42 @@ one entry. The OA fallback chains that exist are single scripts, and at least on
 through Sci-Hub, which is excluded here. This is why acquisition is stage 2 and the first
 milestone: it is the binding constraint on the science, not extraction quality.
 
+### Measured, 2026-09-23
+
+On the 25-source manifest, with the content gate at `gate_version: 2`:
+
+```
+ACA            6/10  0.60
+IND            1/9   0.11
+MET            5/6   0.83
+total         12/25  0.48   floor 0.80 (v1)   INSUFFICIENT_ACQUISITION
+failures      PAYWALL_403 7   ABSTRACT_ONLY 6
+by host       ravenpack 4 · sciencedirect 2 · wiley 1 · ssrn 1 · doi.org 1 ·
+              sec.gov 1 · lseg 1 · marketpsych 1 · spglobal 1
+```
+
+**0.42 → 0.48.** The round recorded 0.72 before a gate existed; re-judging the bytes it had
+already stored dropped six artifacts that were vendor abstract or product pages, not documents.
+No source was re-fetched to establish this — the bytes were on disk and the gate does no I/O.
+
+**The thresholds are not deciding it.** All four swept flat: `min_text_chars`, `min_pdf_bytes`
+and `paywall_doubt_chars` at spread 0.00, `fulltext_chars` at 0.04 and only downward from
+15000, where a 9243-character product page would slip through. The rate is set by the structural
+signal — a reference list present or absent — not by any constant chosen at a desk.
+
+**Every rejection was checked by hand: 6 of 6 correct, no false positive.** Four RavenPack
+research abstracts, one LSEG product page, one MarketPsych overview.
+
+**Why the floor is out of reach here, and what that is evidence of.** Eight sources separate
+0.48 from 0.80. Seven are genuine publisher 403s. Six are pages for which no open full text
+exists to obtain — and three of those are *product pages*, which are not research in any form
+and would fail this gate at any threshold. `IND 1/9` is therefore a finding about the manifest's
+composition as much as about acquisition: entries were admitted as industry research that are
+vendor marketing. That is the shape of argument the pre-registered rule asks for before a floor
+may move (see the floor-versioning rule in the stage 2 spec) — but the argument belongs to
+whoever owns the manifest, and the floor stays at 0.80 (v1) until they make it. The published
+result for this round is `INSUFFICIENT_ACQUISITION`.
+
 ## D9 — Append-only JSONL is the source of truth
 Hashable, diffable, resumable after a crash, and auditable with grep. SQLite is a derived
 read model, rebuildable from the JSONL. No Postgres (single writer, megabytes of data),

@@ -119,3 +119,21 @@ def test_the_sweep_denominator_is_every_candidate_not_only_those_with_bytes(tmp_
     assert point["attempted"] == 4
     assert point["accepted"] == 2
     assert point["rate"] == 0.5
+
+
+def test_an_artifact_named_by_an_earlier_row_is_still_found(tmp_path):
+    # Append-only plus content-addressed means a pointer to bytes never goes stale. A later row
+    # that happens not to mention an artifact — which a rejection does, since row-level
+    # stored_path means "what we accepted" — must not hide it from the audit.
+    store = Store("t", base=tmp_path)
+    _, path = store.store_bytes(page(60), ".html")
+    store.append("acquisitions.jsonl", {
+        "candidate_key": "a", "source_id": "S01", "source_class": "IND", "acquired": True,
+        "url": "https://vendor.example/x", "content_type": "text/html",
+        "stored_at": str(path), "attempts": []})
+    store.append("acquisitions.jsonl", {
+        "candidate_key": "a", "source_id": "S01", "source_class": "IND", "acquired": False,
+        "failure_class": "ABSTRACT_ONLY", "url": "https://vendor.example/x",
+        "stored_path": None, "attempts": [], "regated_from": "x"})
+    listing = gate_audit.rejections(store)
+    assert [item["kind"] for item in listing] == [fulltext.ABSTRACT_ONLY]

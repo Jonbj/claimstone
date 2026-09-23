@@ -68,7 +68,21 @@ def test_regate_records_that_no_network_was_involved(tmp_path):
     store = _round(tmp_path)
     rows = list(gate_audit.regate(store, campaign="regate-v2"))
     assert all(row["regated_from"] == "2026-09-22T10:00:00+00:00" for row in rows)
-    assert all(row["attempts"] == [] for row in rows)
+    # One synthetic attempt per row, with no HTTP status: nothing was requested.
+    assert all(len(row["attempts"]) == 1 for row in rows)
+    assert all(row["attempts"][0]["http_status"] is None for row in rows)
+
+
+def test_a_rejected_regate_still_points_at_the_bytes(tmp_path):
+    # Otherwise the next gate_version cannot re-judge what is still on disk.
+    store = _round(tmp_path)
+    rows = list(gate_audit.regate(store, campaign="first"))
+    rejected = next(r for r in rows if not r["acquired"])
+    assert rejected["stored_path"] is None          # nothing was accepted at row level
+    assert rejected["attempts"][0]["stored_path"]   # but the artifact is still findable
+    # And a second pass can therefore re-judge every artifact the first pass saw.
+    again = list(gate_audit.regate(store, campaign="second"))
+    assert len(again) == len(rows)
 
 
 def test_regate_is_appended_and_wins_the_collapse(tmp_path):
@@ -91,3 +105,17 @@ def test_regate_opens_no_socket(tmp_path, monkeypatch):
 
     monkeypatch.setattr(socket.socket, "connect", refuse)
     list(gate_audit.regate(store, campaign="regate-v2"))
+
+
+def test_regate_prefers_the_candidates_class_over_a_stale_ledger_row(tmp_path):
+    # An earlier round recorded the manifest's own word for the class. The candidate has since
+    # been re-imported with the id it resolves to, and that is what must land on the new row.
+    store = Store("t", base=tmp_path)
+    digest, path = store.store_bytes(pdf(), ".pdf")
+    store.append("candidates.jsonl", {"candidate_key": "a", "source_class": "ACA"})
+    store.append("acquisitions.jsonl", {
+        "candidate_key": "a", "source_class": "academic", "acquired": True,
+        "url": "https://x.example/a", "content_type": "application/pdf",
+        "sha256": digest, "stored_at": str(path), "attempts": []})
+    row = next(iter(gate_audit.regate(store, campaign="regate-v2")))
+    assert row["source_class"] == "ACA"

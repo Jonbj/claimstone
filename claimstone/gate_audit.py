@@ -21,39 +21,53 @@ MISSING = "BYTES_MISSING"
 
 
 def _artifacts(store: Store) -> list[dict[str, Any]]:
-    """Every kept artifact, accepted or not, latest row per candidate.
+    """Every artifact this project ever kept, per candidate, deduplicated by path.
 
-    Both places a row records bytes are read. The attempts carry `stored_path` for every body
-    that arrived, which is what a round written by the current `acquire` produces; a row also
-    records the artifact it accepted at the top level, which is all an older round left behind.
-    Reading only the attempts would make the audit silently empty on an existing corpus.
+    The whole log is read, not just the latest row per candidate. The store is
+    content-addressed and append-only, so a pointer to bytes never goes stale: an artifact named
+    three rows ago is still on disk under the same hash. Reading only the newest row loses
+    artifacts whenever a later row happens not to mention them — which a rejection does, because
+    at row level `stored_path` means "the artifact we accepted" and a rejection accepted none.
+
+    Two places a row can name bytes: each attempt's `stored_path`, which the current `acquire`
+    writes for every body that arrived, and the row-level field, which is all an older round
+    left behind — under `stored_at` in the first schema.
     """
-    out: list[dict[str, Any]] = []
-    for key, row in store.latest_by("acquisitions.jsonl", "candidate_key").items():
-        seen: set[str] = set()
-        common = {
+    grouped: dict[str, dict[str, dict[str, Any]]] = {}
+    facts: dict[str, dict[str, Any]] = {}
+    for row in store.read("acquisitions.jsonl"):
+        key = row.get("candidate_key")
+        if key is None:
+            continue
+        key = str(key)
+        # Later rows describe the candidate better; artifacts accumulate across all of them.
+        facts[key] = {
             "candidate_key": key,
-            "source_id": row.get("source_id"),
-            "source_class": row.get("source_class"),
+            "source_id": row.get("source_id") or facts.get(key, {}).get("source_id"),
+            "source_class": row.get("source_class") or facts.get(key, {}).get("source_class"),
         }
+        held = grouped.setdefault(key, {})
         for attempt in row.get("attempts") or []:
             path = attempt.get("stored_path")
-            if path and path not in seen:
-                seen.add(str(path))
-                out.append(common | {
+            if path:
+                held.setdefault(str(path), {
                     "url": attempt.get("url"),
                     "content_type": attempt.get("content_type") or "",
-                    "stored_path": path,
+                    "stored_path": str(path),
                 })
-        # `stored_at` is the older schema's name for the same field.
         path = row.get("stored_path") or row.get("stored_at")
-        if path and str(path) not in seen:
-            out.append(common | {
+        if path:
+            held.setdefault(str(path), {
                 "url": row.get("url"),
                 "content_type": row.get("content_type") or "",
                 "stored_path": str(path),
             })
-    return out
+
+    return [
+        facts[key] | artifact
+        for key, artifacts in grouped.items()
+        for artifact in artifacts.values()
+    ]
 
 
 def _classify_stored(artifact: dict[str, Any], thresholds: dict[str, int]) -> fulltext.FullText:
@@ -154,7 +168,10 @@ def regate(
 
     for key, artifacts in grouped.items():
         prior = previous.get(key, {})
-        source_class = prior.get("source_class") or classes.get(key)
+        # The candidate is the authority on its own class, not a ledger row that copied it:
+        # an earlier round recorded the manifest's own word for the class rather than the id it
+        # resolves to, and preferring the row would preserve that split.
+        source_class = classes.get(key) or prior.get("source_class")
         if not source_class:
             raise MissingSourceClass(
                 f"candidate {key!r} carries no source_class, in its ledger row or its candidate; "
@@ -186,7 +203,20 @@ def regate(
             "oa_status": prior.get("oa_status"),
             "content_type": artifact["content_type"],
             "gate": verdict.as_row(th),
-            "attempts": [],
+            # One synthetic attempt recording which artifact was re-judged. Without it a
+            # rejection would null out stored_path at row level and the pointer to the bytes
+            # would be lost, so the next gate_version could not re-judge what is still on disk.
+            "attempts": [{
+                "url": artifact["url"],
+                "http_status": None,
+                "failure_class": None if verdict.accepted else verdict.kind,
+                "content_type": artifact["content_type"],
+                "provenance": prior.get("provenance"),
+                "version": prior.get("version"),
+                "gate_kind": verdict.kind,
+                "gate_reason": verdict.reason,
+                "stored_path": artifact["stored_path"],
+            }],
             "failure_class": None if verdict.accepted else verdict.kind,
             "fetched_at": prior.get("fetched_at"),
             "regated_from": prior.get("fetched_at"),
