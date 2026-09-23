@@ -198,8 +198,40 @@ def _limit_kw(api: str) -> str:
     return {"openalex": "per_page", "crossref": "rows", "arxiv": "max_results"}[api]
 
 
-def import_manifest(
-    store: Store, tsv_path: str, *, class_of: dict[str, str] | None = None
+def import_manifest(store: Store, entries: Iterable[Any]) -> dict[str, Any]:
+    """Seed candidates from a validated manifest. Parsing and validation live in config.
+
+    This exists so acquisition can be measured against a real frozen corpus rather than a fresh
+    search: the point of the first milestone is whether the acquisition rate moves on the
+    manifest that produced 0.42, holding the source list constant.
+    """
+    known = set(store.latest_by("candidates.jsonl", "candidate_key"))
+    added = 0
+    rows = 0
+    for entry in entries:
+        rows += 1
+        row = _row(
+            title=entry.title,
+            url=entry.url,
+            doi=ids.normalize_doi(entry.url),
+            year=None,
+            venue="",
+            source_api="manifest",
+            query="manifest.tsv",
+            topic_id="",
+            channel=CHANNEL_KEYWORD,
+            extra={
+                "source_id": entry.source_id,
+                "source_class": entry.source_class,
+                "declared_format": entry.declared_format,
+            },
+        )
+        if row["candidate_key"] in known:
+            continue
+        known.add(row["candidate_key"])
+        store.append("candidates.jsonl", row)
+        added += 1
+    return {"rows": rows, "new": added, "total": len(known)}
 ) -> dict[str, Any]:
     """Seed candidates from an existing curated manifest (source_id, class, format, url, title).
 
