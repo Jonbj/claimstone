@@ -17,6 +17,8 @@
 - Run tests with `.venv/bin/pytest`, the CLI with `.venv/bin/claimstone`.
 - **Every commit message ends with the trailer** `Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>`, shown in full in Task 1 and abbreviated as `<trailer>` afterwards.
 - **No test may construct a real `net.Fetcher`.** Its `__post_init__` calls `contact_email()`, which raises unless `CLAIMSTONE_CONTACT_EMAIL` is set, and CI does not set it. Tests use the `FakeFetcher` built in Task 1.
+- **`tests/conftest.py` sets `CLAIMSTONE_CONTACT_EMAIL` for the session.** `resolve` needs it to build an Unpaywall or OpenAlex URL at all, so without it the cascade tests fail on a missing address rather than on the behaviour under test. That is configuration, not a network capability.
+- **Use DOIs with 4-9 digits in the registrant code** (`10.1234/abc`, not `10.1/abc`). `ids.normalize_doi` matches the real DOI shape, so a toy DOI is silently dropped and the test then exercises a cascade with no DOI in it.
 - Commit after every task. A task that leaves the suite red is not finished.
 
 ## Starting state
@@ -609,7 +611,7 @@ def test_openalex_is_consulted_only_when_unpaywall_returns_nothing():
         OPENALEX_WORK: {"open_access": {"oa_status": "bronze"}, "locations": [
             {"is_oa": True, "pdf_url": "https://oa.example/x.pdf", "version": "publishedVersion"}]},
     })
-    candidate = {"url": "https://x.example/a", "doi": "10.1/abc", "title": "A paper"}
+    candidate = {"url": "https://x.example/a", "doi": "10.1234/abc", "title": "A paper"}
     locations, _ = resolve.plan(fetcher, candidate)
     assert any(loc.provenance == "openalex" for loc in locations)
 
@@ -620,7 +622,7 @@ def test_published_version_outranks_a_preprint():
             {"url": "https://a.example/preprint.pdf", "version": "submittedVersion"},
             {"url": "https://b.example/vor.pdf", "version": "publishedVersion"}]},
     })
-    candidate = {"url": "https://x.example/a", "doi": "10.1/abc", "title": "A paper"}
+    candidate = {"url": "https://x.example/a", "doi": "10.1234/abc", "title": "A paper"}
     locations, _ = resolve.plan(fetcher, candidate)
     versions = [loc.version for loc in locations if loc.provenance == "unpaywall"]
     assert versions[0] == "publishedVersion"
@@ -632,7 +634,7 @@ def test_the_same_url_is_never_planned_twice():
             {"url": "https://a.example/x.pdf?utm_source=alert"},
             {"url": "https://a.example/x.pdf"}]},
     })
-    candidate = {"url": "https://x.example/a", "doi": "10.1/abc", "title": "A paper"}
+    candidate = {"url": "https://x.example/a", "doi": "10.1234/abc", "title": "A paper"}
     locations, _ = resolve.plan(fetcher, candidate)
     assert len(locations) == len({loc.url for loc in locations})
 
@@ -640,11 +642,11 @@ def test_the_same_url_is_never_planned_twice():
 def test_a_title_resolves_a_doi_only_on_an_exact_match():
     fetcher = FakeFetcher(json_pages={
         OPENALEX_SEARCH: {"results": [
-            {"doi": "https://doi.org/10.1/close", "title": "News sentiment and returns, revisited"}]},
+            {"doi": "https://doi.org/10.1234/close", "title": "News sentiment and returns, revisited"}]},
     })
     assert resolve.resolve_doi_by_title(fetcher, "News sentiment and returns") is None
     assert resolve.resolve_doi_by_title(
-        fetcher, "News sentiment and returns, revisited") == "10.1/close"
+        fetcher, "News sentiment and returns, revisited") == "10.1234/close"
 
 
 def test_a_source_without_a_doi_falls_back_to_the_wayback_machine():
@@ -826,8 +828,8 @@ from tests.test_fulltext import page, pdf
 
 
 def candidate(**overrides):
-    base = {"candidate_key": "doi:10.1/abc", "source_id": "S01", "source_class": "ACA",
-            "doi": "10.1/abc", "url": "https://repo.example/paper.pdf", "title": "A paper"}
+    base = {"candidate_key": "doi:10.1234/abc", "source_id": "S01", "source_class": "ACA",
+            "doi": "10.1234/abc", "url": "https://repo.example/paper.pdf", "title": "A paper"}
     return {**base, **overrides}
 
 
@@ -889,7 +891,7 @@ def test_every_attempt_is_kept_not_just_the_last(tmp_path):
             "oa_status": "closed",
             "oa_locations": [{"url": a}, {"url": b}]}},
     )
-    row = acquire.acquire_one(fetcher, store, candidate(url="https://doi.org/10.1/abc"))
+    row = acquire.acquire_one(fetcher, store, candidate(url="https://doi.org/10.1234/abc"))
     assert len(row["attempts"]) >= 2
     assert row["failure_class"] == net.PAYWALL
 
@@ -1129,7 +1131,7 @@ def test_an_exhausted_budget_returns_to_the_queue():
 
 def test_a_skipped_candidate_writes_no_row(tmp_path):
     store = Store("t", base=tmp_path)
-    store.append("acquisitions.jsonl", {"candidate_key": "doi:10.1/abc", **_row(net.PAYWALL)})
+    store.append("acquisitions.jsonl", {"candidate_key": "doi:10.1234/abc", **_row(net.PAYWALL)})
     rows = list(acquire.run([candidate()], store, FakeFetcher(), use_apis=False))
     assert rows == []
     assert len(list(store.read("acquisitions.jsonl"))) == 1
