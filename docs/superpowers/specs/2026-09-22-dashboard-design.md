@@ -7,7 +7,7 @@ dashboard to this document.
 
 ## 1. Purpose
 
-A round takes time. Acquisition over 26 sources with timeouts and multi-step cascades takes
+A round takes time. Acquisition over 25 sources with timeouts and multi-step cascades takes
 minutes; extraction at the measured local-model rate takes days (D4). The person waiting
 needs to see three things: what is being asked, what has been learned so far, and what the
 machine is doing right now.
@@ -17,7 +17,7 @@ writes, never triggers work, and holds no state of its own. Deleting it loses no
 
 ## 2. Sequencing
 
-**It is built last**, after a thin vertical slice has carried the 26-source manifest through
+**It is built last**, after a thin vertical slice has carried the 25-source manifest through
 stages 3-6 to real verdicts. Revised 2026-09-22; the original plan was to build it first.
 
 Two things changed that. D13 removed the throughput ceiling, so extraction of the manifest is

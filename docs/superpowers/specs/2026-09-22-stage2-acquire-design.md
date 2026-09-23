@@ -5,7 +5,7 @@ Date: 2026-09-22 · Scope: stage 2 only · Status: approved, not implemented
 Stage 2 turns candidates into frozen texts and accounts for every attempt. It is the first
 milestone because acquisition, not extraction quality, is the binding constraint on the
 science (D8) — and since D13 it is the only remaining one. The deliverable is a sentence with
-a number in it: the acquisition rate on a 26-source manifest that currently stands at 0.42,
+a number in it: the acquisition rate on a 25-source manifest that currently stands at 0.42,
 with OA status, licence and failure reason recorded per source, **plus the sensitivity of that
 rate to the gate thresholds that produced it** (§5) and a by-hand check of every rejection.
 
@@ -184,7 +184,7 @@ I/O. **So the gate can be re-run over the whole corpus without re-fetching anyth
 
 This only works if the bytes survive. **A response the gate rejects therefore has its bytes
 stored anyway**, and the attempt records the path. A landing page is a few hundred kilobytes
-and the corpus is 26 sources; throwing those bytes away in exchange for nothing would make the
+and the corpus is 25 sources; throwing those bytes away in exchange for nothing would make the
 audit impossible and would also make the by-hand rejection check impossible, since there would
 be nothing left to look at. Bytes are discarded only when the transfer itself failed — there
 was never a body to keep.
@@ -205,7 +205,7 @@ looked at by hand. Which of the two we are in is measurable in a second and is c
 unknown — that is the point of running it.
 
 **A rejection listing.** `--show-rejected` prints every rejected artifact with its character
-count and the phrase that triggered it, so all of them can be checked by eye. At 26 sources
+count and the phrase that triggered it, so all of them can be checked by eye. At 25 sources
 this takes about ten minutes and is **a required step of the first round**: one false positive
 found here is worth more than any desk-chosen threshold, and it is the only way to learn
 whether a paywall phrase is catching a legitimate open-access article.
@@ -307,7 +307,7 @@ inspect attempt order before spending real requests against publishers.
 `report` output:
 
 ```
-alembic-s4 — campaign routine, 26 candidates
+alembic-s4 — campaign routine, 25 candidates
   obtained      19 / 26   0.73        floor 0.80   INSUFFICIENT_ACQUISITION
   by class      ACA 11/14 0.79   WP 6/6 1.00   NEW 2/4 0.50   DOC 0/2 0.00
   failures      PAYWALL_403 4   LANDING_PAGE_ONLY 2   NOT_FOUND_404 1
@@ -329,7 +329,7 @@ corpus changed or the measuring stick did.
 ```
 
 stdout carries the final summary only, so `claimstone acquire … > summary.txt` still works
-and the progress remains visible. A round over 26 sources with 30-second timeouts takes
+and the progress remains visible. A round over 25 sources with 30-second timeouts takes
 minutes; a silent process that long is indistinguishable from a hung one.
 
 `acquire` always exits 0, including below the floor — measuring is not failing. `report

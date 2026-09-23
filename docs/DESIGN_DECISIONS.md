@@ -100,8 +100,16 @@ acquisition failure: a blocked downloader produces "0% new" and reads as saturat
 ## D11 — Admissibility gates verdicts
 Acquisition rate is computed every round and reported. Below the declared floor the round
 is `INSUFFICIENT_ACQUISITION` and produces no verdicts. The corpus that motivated this
-project stands at 0.42 with 20 sources lost to 403 and connection failures, and the
+project stands at 0.42 with most of its sources lost to 403 and connection failures, and the
 criterion it was using would have declared it saturated.
+
+**Provenance check (2026-09-23).** The manifest this refers to is
+`SOURCE_MANIFEST.tsv` in the consuming project and holds **25 sources**, not the 26 stated
+in earlier drafts here and in the README. An earlier "20 sources lost" cannot be reconciled
+with 25 sources at 0.42, and the original measurement is not in this repository, so the count
+is left as "most" rather than restated with a number that cannot be checked. What is
+checkable is recorded instead: the round in `630ca52` attempted 25 and obtained 12 full
+texts (0.48) once abstract pages were recognised.
 
 ## D12 — "Never asked" is a distinct state
 `SUPPORTED` / `CONTRADICTED` / `UNANSWERED_IN_LITERATURE` / `NEVER_ASKED` are four states,
@@ -119,7 +127,7 @@ with an API key (Ollama Cloud), or a metered API. Every result row records `back
 
 **What decided it.** The local operating point (D4) implied weeks of wall-clock for a corpus
 of a few hundred documents, which forced a corpus ceiling — a limit on the science imposed by
-one machine. Measured against real rates instead: extraction of the 26-source manifest is
+one machine. Measured against real rates instead: extraction of the 25-source manifest is
 ~130 calls, and of a 300-source corpus ~1,500. On Ollama Cloud's hosted open models at
 $0.30/$1.20 per MTok that is **$0.23 and $2.63** respectively, inside the $60 of monthly
 credit a $20 plan includes; the adversarial reader of stage 5, whose input is compact by

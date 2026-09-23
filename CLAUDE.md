@@ -128,13 +128,13 @@ The contract and its validator exist. The six pipeline stages are specified in t
 and **not implemented**; the CLI exits with a message for each.
 
 Order of work, decided 2026-09-22: **stage 2, then a thin vertical slice** (stages 3-6 on the
-26-source manifest, through to real verdicts), **then the dashboard** — it is the one
+25-source manifest, through to real verdicts), **then the dashboard** — it is the one
 component whose value needs data in every stage and whose spec depends on every other stage's
 schema, so it goes last and gets built against real rows.
 
 Acquisition is the first milestone, not extraction, because it is the binding constraint on
 the science (D8) — and since D13 it is the *only* remaining one. The first deliverable is a
-sentence with a number in it: the acquisition rate on a real 26-source manifest currently
+sentence with a number in it: the acquisition rate on a real 25-source manifest currently
 sitting at 0.42, with OA status, licence and failure reason recorded per source, **plus the
 sensitivity of that rate to the gate thresholds that produced it**. A rate quoted without its
 thresholds invites comparing two incomparable numbers.
