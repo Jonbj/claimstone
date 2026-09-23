@@ -76,4 +76,10 @@ def admit(project: Project, store: Store) -> dict[str, Any]:
     measured = rate(store)
     achieved = measured["rate"]
     status = OK if achieved is not None and achieved >= project.acquisition_floor else INSUFFICIENT
-    return {"status": status, "floor": project.acquisition_floor, **measured}
+    return {
+        "status": status,
+        "floor": project.acquisition_floor,
+        "floor_version": project.floor_version,
+        "floor_set_at": project.floor_set_at or "unrecorded",
+        **measured,
+    }

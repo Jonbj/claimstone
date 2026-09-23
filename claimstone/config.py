@@ -72,6 +72,9 @@ class Project:
     frozen_at: str
     manifest: tuple[ManifestEntry, ...] = ()
     gate_thresholds: dict[str, int] = field(default_factory=dict)
+    floor_version: int = 1
+    floor_set_at: str = ""
+    floor_rationale: str = ""
 
     @property
     def question_ids(self) -> frozenset[str]:
@@ -291,6 +294,44 @@ def load_gate_thresholds(root: pathlib.Path) -> dict[str, int]:
     return {str(k): int(v) for k, v in raw.items()}
 
 
+def load_floor_provenance(root: pathlib.Path) -> tuple[int, str, str]:
+    """Where the floor came from. A bump without a reason is refused.
+
+    Invariant 3 forbids a flag that waives the floor. Without this, the door beside it is open:
+    the floor is a number in an editable file, and lowering it after seeing an awkward result is
+    the post-hoc move the frozen question registry exists to prevent. So a floor change is the
+    same class of event as a registry bump — dated, versioned, motivated.
+    """
+    raw = _read_yaml(pathlib.Path(root) / "sources.yaml")
+    version = raw.get("floor_version", 1)
+    if not isinstance(version, int) or isinstance(version, bool) or version < 1:
+        raise ConfigError("sources.yaml: 'floor_version' must be an integer >= 1")
+
+    set_at = raw.get("floor_set_at")
+    if isinstance(set_at, (_dt.date, _dt.datetime)):
+        set_at = set_at.isoformat()[:10]
+    set_at = str(set_at or "")
+    rationale = str(raw.get("floor_rationale") or "").strip()
+
+    if version > 1:
+        if not set_at:
+            raise ConfigError(
+                "sources.yaml: 'floor_set_at' is required once floor_version > 1 — a floor "
+                "change is dated, like a question-registry bump"
+            )
+        try:
+            _dt.date.fromisoformat(set_at)
+        except ValueError as exc:
+            raise ConfigError("sources.yaml: 'floor_set_at' must be an ISO date") from exc
+        if len(rationale) < 20:
+            raise ConfigError(
+                "sources.yaml: 'floor_rationale' is required once floor_version > 1, and must "
+                "state which class of sources is structurally unobtainable — not that the "
+                "measured rate was inconvenient"
+            )
+    return version, set_at, rationale
+
+
 def load_project(root: str | pathlib.Path) -> Project:
     """Load and validate one project directory. Raises ConfigError on any violation."""
     path = pathlib.Path(root)
@@ -306,6 +347,7 @@ def load_project(root: str | pathlib.Path) -> Project:
         {alias: c.id for c in classes for alias in c.aliases},
     )
     gate_thresholds = load_gate_thresholds(path)
+    floor_version, floor_set_at, floor_rationale = load_floor_provenance(path)
 
     return Project(
         name=path.name,
@@ -319,6 +361,9 @@ def load_project(root: str | pathlib.Path) -> Project:
         frozen_at=frozen_at,
         manifest=manifest,
         gate_thresholds=gate_thresholds,
+        floor_version=floor_version,
+        floor_set_at=floor_set_at,
+        floor_rationale=floor_rationale,
     )
 
 
