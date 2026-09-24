@@ -136,6 +136,25 @@ as what they are. Two of the three recoveries came from the archive, which is th
 did not exist before — for the classes with no open-access infrastructure it is the whole
 cascade.
 
+### 0.60 is an upper bound, 2026-09-24
+
+Running GROBID over the fourteen acquired PDFs found one that is not a document: `IND008` is
+`lseg-machine-readable-news-fact-sheet.pdf` — 4,618 characters of body, **zero references**, and
+sections titled "Key use cases" and "Find out more". Marketing, and the PDF twin of the six HTML
+abstract pages, caught by the same signal: no bibliography, short body, commercial prose.
+
+It passed stage 2 because **the PDF gate there is structural** — magic bytes, `%%EOF`, size — and
+says so: no PDF parser exists before stage 3, and a half-working heuristic would be the softening
+the invariants forbid. `IND008` has 299,781 bytes against 4,618 characters of text, a ratio of
+65:1 where a paper runs 15-20:1, but reaching the character count needs the parser that is
+missing.
+
+So **the honest count is 14 of 25 = 0.56**, and 0.60 is an upper bound with one known false
+positive already named. This is the `fulltext_confirmed` signal the stage 2 spec promised stage 3
+would write back; it paid for itself on the first document it saw. Nobody should quote 0.60 as a
+confirmed figure, and the record is corrected here rather than after stage 3 lands, because a
+number left optimistic is how a corpus certifies itself better than it is.
+
 **Why the floor is out of reach here, and what that is evidence of.** Five sources separate
 0.60 from 0.80. Four are publisher 403s that survived a named campaign with an improved cascade.
 Six are pages for which no open full text exists to obtain — and three of those are *product pages*, which are not research in any form
