@@ -203,3 +203,41 @@ def test_a_round_can_be_isolated(tmp_path):
     assert admissibility.rate(store, round_name="spring")["found"] == 1
     assert admissibility.rate(store, round_name="spring")["rate"] == 1.0
     assert admissibility.rate(store, round_name="autumn")["rate"] == 0.0
+
+
+# --- the confirmed basis only when stage 3 has finished -----------------------
+
+def test_the_basis_stays_obtained_while_normalize_is_incomplete(tmp_path):
+    # A rate called "confirmed" that counts unexamined bytes as confirmed is a rate with two
+    # meanings. Until stage 3 has reached every obtained source, the honest headline is what
+    # acquisition established, with the partial confirmation reported beside it.
+    store = Store("t", base=tmp_path)
+    _ledger(store, [row("a", acquired=True), row("b", acquired=True)])
+    store.append("documents.jsonl", {"source_id": "a", "fulltext_confirmed": True})
+    result = admissibility.rate(store)
+    assert result["basis"] == "obtained"
+    assert result["rate"] == 1.0
+    assert result["confirmed"] == 1
+    assert result["awaiting_normalize"] == 1
+
+
+def test_the_basis_becomes_confirmed_once_nothing_is_awaiting(tmp_path):
+    store = Store("t", base=tmp_path)
+    _ledger(store, [row("a", acquired=True), row("b", acquired=True)])
+    store.append("documents.jsonl", {"source_id": "a", "fulltext_confirmed": True})
+    store.append("documents.jsonl", {"source_id": "b", "fulltext_confirmed": False,
+                                     "failure_class": "NOT_A_DOCUMENT"})
+    result = admissibility.rate(store)
+    assert result["basis"] == "confirmed"
+    assert result["confirmed"] == 1
+    assert result["awaiting_normalize"] == 0
+    assert result["rate"] == 0.5
+
+
+def test_an_incomplete_normalize_cannot_lower_the_rate(tmp_path):
+    # The failure mode this prevents: the rate falling because stage 3 has not finished, which
+    # measures our progress and reports it as a property of the corpus.
+    store = Store("t", base=tmp_path)
+    _ledger(store, [row(key, acquired=True) for key in "abcd"])
+    store.append("documents.jsonl", {"source_id": "a", "fulltext_confirmed": True})
+    assert admissibility.rate(store)["rate"] == 1.0

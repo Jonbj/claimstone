@@ -1,5 +1,7 @@
 """The gate. A landing page answering 200 is the failure mode this exists to catch."""
 
+import pytest
+
 from claimstone import fulltext
 
 
@@ -97,3 +99,65 @@ def test_thresholds_are_reported_with_the_verdict():
     row = verdict.as_row({"min_pdf_bytes": 10000})
     assert row["gate_version"] == fulltext.GATE_VERSION
     assert row["thresholds"]["min_pdf_bytes"] == 10000
+
+
+# --- the gate's language and genre assumptions are declarable ------------------
+
+def cited_in(language_heading: str, paragraphs: int = 120) -> bytes:
+    body = "".join(f"<p>Paragrafo {i} mostra un effetto.</p>" for i in range(paragraphs))
+    return f"<html><body>{body}<h2>{language_heading}</h2><p>Fama 1993.</p></body></html>".encode()
+
+
+def test_the_default_reference_headings_are_english():
+    verdict = fulltext.classify(cited_in("References"), "text/html", "https://x.org/a")
+    assert verdict.kind == fulltext.HTML_FULLTEXT
+
+
+def test_a_project_can_declare_its_own_reference_headings():
+    # An Italian or German corpus must be expressible without editing this package: invariant 4
+    # says the engine holds no domain knowledge, and "a bibliography is headed References" is
+    # knowledge about a language and a genre.
+    policy = {"reference_headings": ("bibliografia", "riferimenti")}
+    assert fulltext.classify(cited_in("Bibliografia"), "text/html", "https://x.org/a",
+                             policy=policy).kind == fulltext.HTML_FULLTEXT
+    # And the English default no longer applies once the project has spoken.
+    assert fulltext.classify(cited_in("References"), "text/html", "https://x.org/a",
+                             policy=policy).kind == fulltext.ABSTRACT_ONLY
+
+
+def test_a_project_can_declare_its_own_paywall_phrases():
+    body = page(40, extra="<p>Acquista il PDF per leggere l'articolo completo.</p>")
+    policy = {"paywall_phrases": ("acquista il pdf",)}
+    verdict = fulltext.classify(body, "text/html", "https://p.example/a", policy=policy)
+    assert verdict.kind == fulltext.LANDING_PAGE_ONLY
+    assert "acquista il pdf" in verdict.reason
+
+
+def test_a_genre_without_bibliographies_can_switch_the_signal_off():
+    # A corpus of regulatory filings or API documentation has no reference lists. Requiring one
+    # would reject every source in it.
+    policy = {"structural_signal": "none"}
+    short = fulltext.classify(page(60), "text/html", "https://reg.example/a", policy=policy)
+    assert short.kind == fulltext.HTML_FULLTEXT
+    assert "no structural signal is required" in short.reason
+
+
+def test_switching_the_signal_off_still_rejects_what_is_merely_short():
+    policy = {"structural_signal": "none"}
+    verdict = fulltext.classify(page(2), "text/html", "https://reg.example/a", policy=policy)
+    assert verdict.kind == fulltext.TOO_SHORT
+
+
+def test_an_unknown_structural_signal_is_refused():
+    with pytest.raises(ValueError, match="vibes"):
+        fulltext.classify(page(60), "text/html", "https://x.org/a",
+                          policy={"structural_signal": "vibes"})
+
+
+def test_the_policy_in_force_is_recorded_with_the_verdict():
+    # A rate computed under a different policy is not comparable to one computed under this, and
+    # without recording it the difference is invisible — the rule the thresholds already follow.
+    policy = {"structural_signal": "none"}
+    row = fulltext.classify(page(60), "text/html", "https://x.org/a",
+                            policy=policy).as_row({}, policy=policy)
+    assert row["policy"]["structural_signal"] == "none"

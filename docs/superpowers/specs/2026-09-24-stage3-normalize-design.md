@@ -12,8 +12,8 @@ GROBID 0.8.1 over those 14 PDFs:
 | | |
 |---|---|
 | Speed | **39 seconds for 14 documents**, 1-6s each. Not a constraint. |
-| Body text | **818,678 characters**, median 41,162 per document |
-| Chunks at 9,000 chars | **~91**, so a round of `extract` is ~91 calls (~$0.20 on a hosted open model) |
+| Body text | **775,266 characters** of paragraph prose across 14 documents |
+| Chunks at 9,000 chars | **~86**, so a round of `extract` is ~86 calls (~$0.20 on a hosted open model) |
 | Sections | 318, of which 95 under 800 characters — but see below: only 30 are junk |
 | References | **803** across 14 documents; 412 of them from one survey |
 | Tables | **117** |
@@ -49,6 +49,18 @@ it.
 quoting "the average net firm sentiment is 2.4%" could never match its chunk, so invariant 1
 would reject a true claim and the rejection ledger — which is the denominator — would fill with
 artefacts of the parser.
+
+### Where these figures come from
+
+`tools/derive_corpus_figures.py alembic-s4` prints every number above from
+`store/<project>/tei/`, which `claimstone normalize` writes. The TEI itself cannot be committed —
+it is the full text of copyrighted papers — so the derivation is committed instead.
+
+A review pointed out that the figures had been measured outside the repository and were not
+reproducible from it. Making them reproducible immediately corrected one: an earlier draft said
+**818,678** body characters, counted from rendered `<div>` text including section headings, while
+`Document.body_chars` counts paragraphs only. The number did not match its own definition. It is
+775,266.
 
 ## 2. Module boundaries
 
@@ -143,7 +155,7 @@ Stage 3 owns these and no other stage writes them:
 
 | file | one row per | carries |
 |---|---|---|
-| `documents.jsonl` | normalized document | `source_id`, byte `sha256`, `tei_path`, stats, `fulltext_confirmed` and its reason |
+| `documents.jsonl` | normalized document | `source_id`, byte `sha256`, the parsed path, stats, `fulltext_confirmed` and its reason |
 | `chunks.jsonl` | chunk | `chunk_id`, `kind`, `section`, the **text**, `text_sha256`, thresholds, `chunk_version` |
 | `references.jsonl` | distinct reference in the corpus | `key`, title, year, authors, `cited_by`, `citations_in_corpus`, `doi: null` |
 
@@ -158,6 +170,14 @@ fulltext_confirmed = references >= min_references (5)  or  body_chars >= confirm
 Against the 14 measured documents the lowest legitimate reference count is `MET005` with **8**,
 so all fourteen confirm on the first clause. `IND008` has 0 references and 4,618 characters and
 satisfies neither.
+
+**Markup is normalized too, by a different parser.** GROBID reads PDFs, so an HTML source goes
+through `html_doc`, which produces the same `Document` dataclasses and extracts less: sections and
+paragraphs, no tables, no references, no footnotes. That is honest rather than limiting — a
+regulatory filing has no bibliography, and the confirmation rule's second clause exists for exactly
+that case. A first draft of the plan recorded every non-PDF as `NOT_PDF`, which would have dropped
+a 247,993-character SEC filing out of the corpus and turned the 14 of 25 below into 13 with nobody
+noticing.
 
 A document that does not confirm **produces no chunks** and is recorded in `documents.jsonl` with
 `NOT_A_DOCUMENT` and its reason. It does not disappear: it stays counted, as stage 2's
@@ -228,7 +248,8 @@ papers, the same reason the stage 2 HTML fixtures are synthetic.
 |---|---|
 | `test_tei.py` | synthetic TEI: sections, tables with ragged rows, references, malformed XML, a TEI with no body |
 | `test_chunk.py` | the five rules, including a note kept as a note and a bare head dropped; the canonical rendering byte for byte; thresholds on every chunk; a ragged table does not shift its columns |
-| `test_normalize.py` | orchestration against a fake GROBID; idempotence by `sha256`; the three ledgers; `fulltext_confirmed` on an `IND008`-shaped document |
+| `test_normalize.py` | orchestration against a fake GROBID; idempotence by `sha256`; the three ledgers; `fulltext_confirmed` on an `IND008`-shaped document; markup routed away from GROBID |
+| `test_html_doc.py` | headings into sections; skipped elements; no-text refusal |
 | `test_grobid.py` | the `isalive` check, and the error message naming the workaround |
 | `test_real_tei.py` | runs the pure functions over `store/*/tei/*.xml` **when the store is populated**, skipped otherwise — the real-data validation that cannot be committed |
 

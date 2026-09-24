@@ -174,6 +174,34 @@ exists to stop, and the first draft of the gate did not stop it.
 the summary page" and "the document is short" are different facts, and only the first tells you
 a full text may exist elsewhere and is worth another attempt.
 
+### The gate's language and genre assumptions are declared, not built in
+
+Added 2026-09-24, after a review pointed out that this gate violates invariant 4. The paywall
+phrases are English. So are the reference-list headings. The citation pattern is the Western
+author-year convention. A corpus in another language, or one of regulatory filings that cite
+nothing, could not use the gate without editing the package — which is exactly what invariant 4
+forbids.
+
+So `sources.yaml` may declare, under `gate_policy`:
+
+| key | effect |
+|---|---|
+| `paywall_phrases` | replaces the English defaults entirely |
+| `reference_headings` | replaces `references`, `bibliography`, `works cited` |
+| `structural_signal` | `reference_list` (default) or `none` |
+
+`structural_signal: none` asks only for length, and is **weaker on purpose**: a corpus of filings
+or API documentation has no bibliographies, and requiring one would reject every source in it. A
+project choosing it is accepting that `ABSTRACT_ONLY` cannot be detected structurally, and the
+verdict says so in its reason.
+
+The policy in force is recorded on every ledger row beside the thresholds, for the same reason: a
+rate computed under a different policy is not comparable to one computed under this.
+
+What this does **not** add is a "needs review" verdict. `gate-audit --show-rejected` already lists
+every rejection for a by-hand check, which is the same function without a state that nothing
+consumes.
+
 ### Recorded parameters
 
 `gate_version` (2 — the HTML rule changed on measurement before anything shipped) and the thresholds in force are written onto every ledger row. A rate

@@ -65,13 +65,21 @@ claimstone/          the engine — no domain knowledge, ever
 projects/<name>/     one instance: topics.yaml, questions.yaml, sources.yaml
 store/<project>/     generated, gitignored; append-only JSONL plus fetched bytes
 docs/                DESIGN_DECISIONS.md and data contracts
+tools/               scripts that derive a reported figure from the store, committed
+                     because the data they read cannot be
 tests/
 ```
 
+A number quoted in a spec names the command that produces it. `tools/derive_corpus_figures.py`
+exists because the corpus figures were once measured outside the repository and could not be
+checked — and running it corrected one of them on the first attempt.
+
 ## Storage model
 
-**Append-only JSONL is the source of truth** — hashable, diffable, resumable after a crash,
-auditable with `grep`. SQLite, if introduced, is a derived read model rebuildable from the
+**Append-only JSONL is the source of truth** — hashable, diffable, auditable with `grep`, and
+resumable after a crash in one specific sense: a process killed mid-append leaves a final line
+with no newline, which `Store.read` skips and records and `Store.repair` truncates. Damage
+anywhere else raises, because silently skipping a row removes it from a denominator. SQLite, if introduced, is a derived read model rebuildable from the
 JSONL, never the primary. Do not add Postgres (single writer, megabytes of data), a vector
 database (a few hundred documents: similarity is one matrix multiplication) or a graph
 database (a citation graph is a table of edges).
@@ -84,6 +92,7 @@ Per project under `store/<project>/`:
 | `acquisitions.jsonl` | acquire | one row per attempt: `http_status`, resolved OA location, licence, `failure_class` |
 | `raw/<sha256>.<ext>` | acquire | the fetched bytes, content-addressed |
 | `rejections.jsonl` | extract | what was discarded and why — this is the denominator |
+| `registry.jsonl` | any command | one row per question-registry version seen, with its hash. A changed hash under an unchanged version refuses to run (invariant 5) |
 
 ## Working conventions
 
