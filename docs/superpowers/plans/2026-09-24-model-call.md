@@ -33,6 +33,28 @@ call_id       = sha256(f"{lane}|{schema_version}|{prompt_sha256}|{max_output_tok
 
 Both corrections land in the spec in Task 10.
 
+## Three defects an adversarial review found in this plan, 2026-09-24
+
+All three were in the plan as first written, and all three are corrected above.
+
+**1. The echo check could not fail.** `build_result` hashed `request["system"]` and
+`request["user"]` and compared the result to `request["prompt_sha256"]`, which `work_unit` had
+computed from those same two fields. `hash(x) == hash(x)`, true by construction. §3 of the spec is
+built entirely on that guarantee, and the guarantee was a tautology. A runner now reports the
+prompt it actually sent; a runner that reports nothing gets `prompt_verified: false`, which is an
+honest third state rather than a pass.
+
+**2. Resumability defeated the comparison primitive.** `Queue.pending()` and
+`model_report.summarise()` both collapsed on `call_id` alone, so a batch answered by backend A
+looked finished to backend B — and the only justification for this whole module is that two
+backends can drain the same requests file and be compared. Identity is now the call *and* the
+backend, with every attempt kept, because a retry that timed out was still paid for.
+
+**3. `--model` was optional against runners that require it.** `_model_run` constructed a
+`CliRunner` without a model and caught only `ValueError`, so the `TypeError` from the constructor
+escaped. `runners.build` now refuses with a sentence, and a backend that can pick its own model
+declares one.
+
 ## File structure
 
 | File | Action | Responsibility |
@@ -166,6 +188,19 @@ def canonical(value: Any) -> str:
     return json.dumps(value, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
 
 
+PROMPT_SEPARATOR = "\n\n---\n\n"
+
+
+def rendered_prompt(system: str, user: str) -> str:
+    """The one string a prompt is, for hashing and for any runner that sends it as one.
+
+    It exists so `prompt_sha256` and a runner's `prompt_sent` are comparable at all. A backend that
+    takes two messages sends them separately and reports this joining of them; a backend that takes
+    one string sends exactly this.
+    """
+    return f"{system}{PROMPT_SEPARATOR}{user}"
+
+
 def _now() -> str:
     return _dt.datetime.now(_dt.timezone.utc).isoformat(timespec="seconds")
 
@@ -186,8 +221,10 @@ def work_unit(
     if lane not in LANES:
         raise ValueError(f"unknown lane {lane!r}: {', '.join(LANES)}")
 
-    # The prompt, and only the prompt: this is what the echo check on the result verifies.
-    prompt_sha256 = sha256_text(canonical({"system": system, "user": user}))
+    # The prompt, and only the prompt: this is what the echo check on the result verifies. A
+    # runner that reports `prompt_sent` must report exactly the string `rendered_prompt` returns,
+    # or its rows come back PROMPT_MISMATCH — which is the check working.
+    prompt_sha256 = sha256_text(rendered_prompt(system, user))
     schema_sha256 = sha256_text(canonical(response_schema))
     # Everything that makes the call a different call, including the cap — a retry under a
     # bigger cap is a different question, not a second attempt at the same one.
@@ -509,10 +546,38 @@ def test_pending_skips_what_already_succeeded(tmp_path):
     queue = model_call.Queue(store, lane="extract", batch="b1")
     queue.write([unit(), unit(user="another chunk")])
     first = next(iter(queue.requests()))
-    store.append(queue.results_name, {"call_id": first["call_id"], "ok": True})
-    pending = [u["call_id"] for u in queue.pending()]
+    store.append(queue.results_name,
+                 {"call_id": first["call_id"], "backend": "fake", "ok": True})
+    pending = [u["call_id"] for u in queue.pending(backend="fake")]
     assert first["call_id"] not in pending
     assert len(pending) == 1
+
+
+def test_another_backend_still_has_everything_to_do(tmp_path):
+    # The point of the whole boundary. Collapsing results on call_id alone made a batch answered
+    # by A look finished to B, which is the comparison primitive defeated by its own bookkeeping.
+    store = Store("t", base=tmp_path)
+    queue = model_call.Queue(store, lane="extract", batch="b1")
+    queue.write([unit(), unit(user="another chunk")])
+    for request in queue.requests():
+        store.append(queue.results_name,
+                     {"call_id": request["call_id"], "backend": "a", "ok": True})
+    assert queue.pending(backend="a") == []
+    assert len(queue.pending(backend="b")) == 2
+
+
+def test_every_attempt_is_kept_for_cost_accounting(tmp_path):
+    store = Store("t", base=tmp_path)
+    queue = model_call.Queue(store, lane="extract", batch="b1")
+    queue.write([unit()])
+    call_id = next(iter(queue.requests()))["call_id"]
+    store.append(queue.results_name, {"call_id": call_id, "backend": "a", "ok": False,
+                                      "failure_class": "TIMEOUT", "cost_usd": 0.001})
+    store.append(queue.results_name, {"call_id": call_id, "backend": "a", "ok": True,
+                                      "cost_usd": 0.002})
+    # The collapse shows one current answer; the attempts show both, because both were paid for.
+    assert len(queue.results(backend="a")) == 1
+    assert len(queue.attempts()) == 2
 
 
 def test_pending_retries_a_transient_failure_but_not_a_terminal_one(tmp_path):
@@ -520,11 +585,11 @@ def test_pending_retries_a_transient_failure_but_not_a_terminal_one(tmp_path):
     queue = model_call.Queue(store, lane="extract", batch="b1")
     queue.write([unit(), unit(user="another chunk")])
     units = list(queue.requests())
-    store.append(queue.results_name,
-                 {"call_id": units[0]["call_id"], "ok": False, "failure_class": "TIMEOUT"})
-    store.append(queue.results_name,
-                 {"call_id": units[1]["call_id"], "ok": False, "failure_class": "SCHEMA_INVALID"})
-    pending = [u["call_id"] for u in queue.pending()]
+    store.append(queue.results_name, {"call_id": units[0]["call_id"], "backend": "fake",
+                                      "ok": False, "failure_class": "TIMEOUT"})
+    store.append(queue.results_name, {"call_id": units[1]["call_id"], "backend": "fake",
+                                      "ok": False, "failure_class": "SCHEMA_INVALID"})
+    pending = [u["call_id"] for u in queue.pending(backend="fake")]
     assert pending == [units[0]["call_id"]]
 ```
 
@@ -592,15 +657,33 @@ class Queue:
     def requests(self) -> Any:
         return self.store.read(self.requests_name)
 
-    def results(self) -> dict[str, dict[str, Any]]:
-        return self.store.latest_by(self.results_name, "call_id")
+    def results(self, *, backend: str | None = None) -> dict[str, dict[str, Any]]:
+        """The latest result per call, **per backend**.
 
-    def pending(self) -> list[dict[str, Any]]:
-        """Units with no answer yet, plus those whose last answer was transient."""
-        answered = self.results()
+        Collapsing on `call_id` alone was the first draft, and it destroyed the one property this
+        whole boundary exists for: after backend A answered a batch, draining it with backend B
+        produced nothing, because every call already looked done. Two backends over the same
+        requests file is the comparison primitive — it cannot be defeated by the resumability
+        logic.
+        """
+        latest: dict[str, dict[str, Any]] = {}
+        for row in self.store.read(self.results_name):
+            if backend is not None and row.get("backend") != backend:
+                continue
+            key = f"{row.get('call_id')}|{row.get('backend')}"
+            latest[key] = row
+        return latest
+
+    def attempts(self) -> list[dict[str, Any]]:
+        """Every result row ever written, in order. What cost money, not what is current."""
+        return list(self.store.read(self.results_name))
+
+    def pending(self, *, backend: str) -> list[dict[str, Any]]:
+        """Units this backend has not answered, plus those its last answer left transient."""
+        answered = self.results(backend=backend)
         out: list[dict[str, Any]] = []
         for unit in self.requests():
-            held = answered.get(unit["call_id"])
+            held = answered.get(f"{unit['call_id']}|{backend}")
             if held is None:
                 out.append(unit)
             elif not held.get("ok") and not is_terminal(held.get("failure_class")):
@@ -672,6 +755,9 @@ class RawAnswer:
 
     body: bytes = b""
     model: str = ""
+    # The prompt this runner actually sent, as it sent it. Without this the echo check compares
+    # the request against itself and can never fail — see §3 of the plan's corrections.
+    prompt_sent: str | None = None
     usage: dict[str, int] = field(default_factory=dict)
     # None means "not priced", never "free": a subscription-backed CLI has no per-call price,
     # and rendering that as 0.0 would make a cost report add up to a number that is not true.
@@ -814,15 +900,40 @@ def test_the_prompt_hash_is_echoed_and_verified(tmp_path):
     assert rows[0]["prompt_sha256"]
 
 
-def test_a_runner_that_mangled_the_prompt_is_caught(tmp_path):
+def test_a_runner_that_reports_a_different_prompt_is_caught(tmp_path):
     class Mangling(FakeRunner):
         def run(self, request):
-            request["system"] = "something else entirely"
-            return answer([{"question_id": "Q07"}])
+            result = answer([{"question_id": "Q07"}])
+            # A templating bug: it sent something other than what it was handed, and says so.
+            result.prompt_sent = "something else entirely"
+            return result
 
     _, rows = _drain(tmp_path, Mangling())
     assert rows[0]["ok"] is False
     assert rows[0]["failure_class"] == "PROMPT_MISMATCH"
+    assert rows[0]["prompt_verified"] is False
+
+
+def test_a_runner_that_reports_the_right_prompt_is_verified(tmp_path):
+    class Honest(FakeRunner):
+        def run(self, request):
+            result = answer([{"question_id": "Q07"}])
+            result.prompt_sent = model_call.rendered_prompt(request["system"], request["user"])
+            return result
+
+    _, rows = _drain(tmp_path, Honest())
+    assert rows[0]["ok"] is True
+    assert rows[0]["prompt_verified"] is True
+
+
+def test_a_runner_that_reports_nothing_is_neither_verified_nor_failed(tmp_path):
+    # The honest third state. Treating silence as a pass is the tautology this replaced;
+    # treating it as a failure would make every such backend unusable.
+    runner = FakeRunner(default=answer([{"question_id": "Q07"}]))
+    _, rows = _drain(tmp_path, runner)
+    assert rows[0]["ok"] is True
+    assert rows[0]["prompt_verified"] is False
+    assert rows[0]["prompt_sha256"] is None
 
 
 def test_draining_twice_does_not_repeat_a_success(tmp_path):
@@ -869,10 +980,19 @@ def available() -> dict[str, Callable[..., Runner]]:
     }
 
 
-def build(name: str, **kwargs: Any) -> Runner:
+# A backend that cannot pick a model for you. Passing --model is then required, and saying so is
+# better than a TypeError out of a dataclass constructor.
+NEEDS_MODEL = frozenset({"claude-cli", "codex-cli", "opencode-cli", "ollama-cloud"})
+
+
+def build(name: str, *, model: str | None = None, **kwargs: Any) -> Runner:
     factories = available()
     if name not in factories:
         raise ValueError(f"unknown backend {name!r}: {', '.join(sorted(factories))}")
+    if model is None and name in NEEDS_MODEL:
+        raise ValueError(f"backend {name!r} needs a model: pass --model")
+    if model is not None:
+        kwargs["model"] = model
     return factories[name](**kwargs)
 
 
@@ -917,6 +1037,7 @@ def build_result(
     request: dict[str, Any],
     answer: Any,
     *,
+    attempt_no: int = 1,
     backend: str,
     harness_version: str,
     raw_sha256: str | None,
@@ -926,23 +1047,41 @@ def build_result(
     latency_s: float,
 ) -> dict[str, Any]:
     """One result row. `ok` is true only when there is a validated output to show."""
-    # Checked before anything else is believed: the runner was handed this request, and if the
-    # prompt that came back is not the prompt that went out, nothing else on the row means
-    # anything. This is the quote gate's logic, one stage earlier.
-    echoed = sha256_text(canonical({"system": request["system"], "user": request["user"]}))
-    if echoed != request["prompt_sha256"]:
-        output, failure_class, problems = None, "PROMPT_MISMATCH", []
-    else:
+    # Checked against what the runner says it sent, not against the request we still hold. The
+    # first draft of this hashed request["system"] and request["user"] and compared the result to
+    # request["prompt_sha256"], which was computed from those same two fields — hash(x) == hash(x),
+    # true by construction. A guarantee that cannot fail is not a guarantee.
+    #
+    # A runner that does not report what it sent gets no verification, and the row says so rather
+    # than implying one.
+    if answer.prompt_sent is None:
+        echoed = None
+        verified = False
         output, failure_class, problems = _classify(answer, request)
+    else:
+        echoed = sha256_text(answer.prompt_sent)
+        verified = echoed == request["prompt_sha256"]
+        if not verified:
+            output, failure_class, problems = None, "PROMPT_MISMATCH", []
+        else:
+            output, failure_class, problems = _classify(answer, request)
 
     return {
         "call_id": request["call_id"],
         "lane": request["lane"],
+        # Identity is the call **and** who answered it, on which attempt. A row keyed by call_id
+        # alone cannot say whether a cost was a first try or a third, or which backend paid it.
+        "result_key": f"{request['call_id']}|{backend}",
+        "attempt_no": attempt_no,
         "ok": failure_class is None,
         "backend": backend,
         "model": answer.model,
         "harness_version": harness_version,
         "prompt_sha256": echoed,
+        # False means this backend does not report what it sent, so no echo check ran. It is not
+        # a failure and it is not a pass; conflating either with a verified row would be the
+        # tautology again, worn differently.
+        "prompt_verified": verified,
         "output": output,
         "schema_errors": problems,
         "raw_sha256": raw_sha256,
@@ -968,7 +1107,7 @@ def drain(queue: Queue, runner: Any, *, limit: int | None = None) -> Any:
 
     last = 0.0
     done = 0
-    for request in queue.pending():
+    for request in queue.pending(backend=runner.name):
         if limit is not None and done >= limit:
             return
         wait = runner.min_interval_s - (time.time() - last)
@@ -986,8 +1125,14 @@ def drain(queue: Queue, runner: Any, *, limit: int | None = None) -> Any:
             digest, path = queue.store.store_bytes_at(f"{queue.root}/raw", answer.body, ".txt")
             raw_sha256, raw_path = digest, str(path)
 
+        prior = sum(
+            1 for attempt in queue.attempts()
+            if attempt.get("call_id") == request["call_id"]
+            and attempt.get("backend") == runner.name
+        )
         row = build_result(
             request, answer,
+            attempt_no=prior + 1,
             backend=runner.name,
             harness_version=runner.harness_version(),
             raw_sha256=raw_sha256,
@@ -1780,6 +1925,26 @@ def _store(tmp_path, rows):
     return store
 
 
+def test_a_retry_is_two_payments_not_one(tmp_path):
+    # A timeout that cost money and was retried was paid for twice. Summing the collapse would
+    # report one, and "what did this batch cost" is the question the report exists to answer.
+    store = _store(tmp_path, [
+        result("a", backend="x", cost=0.001, ok=False, failure="TIMEOUT"),
+        result("a", backend="x", cost=0.002),
+    ])
+    summary = model_report.summarise(store, lane="extract", batch="b1")
+    assert summary["calls"] == 1
+    assert summary["attempts"] == 2
+    assert summary["by_backend"]["x"]["cost_usd"] == 0.003
+
+
+def test_two_backends_over_the_same_calls_are_not_collapsed(tmp_path):
+    store = _store(tmp_path, [result("a", backend="x"), result("a", backend="y")])
+    summary = model_report.summarise(store, lane="extract", batch="b1")
+    assert summary["calls"] == 2
+    assert set(summary["by_backend"]) == {"x", "y"}
+
+
 def test_cost_is_summed_per_backend_and_model(tmp_path):
     store = _store(tmp_path, [result("a", backend="ollama-cloud", cost=0.001),
                               result("b", backend="ollama-cloud", cost=0.002)])
@@ -1859,10 +2024,16 @@ from claimstone.store import Store
 
 def summarise(store: Store, *, lane: str, batch: str) -> dict[str, Any]:
     """Per backend and model: calls, outcomes, tokens, cost, observed throughput."""
-    rows = store.latest_by(f"calls/{lane}/{batch}/results.jsonl", "call_id")
+    # Every attempt, not the latest per call: a timeout that cost money and was retried is two
+    # payments, and collapsing them reports one. Correctness is counted on the collapse below.
+    attempts = list(store.read(f"calls/{lane}/{batch}/results.jsonl"))
+    current: dict[str, dict[str, Any]] = {}
+    for row in attempts:
+        current[f"{row.get('call_id')}|{row.get('backend')}"] = row
+    rows = {key: row for key, row in current.items()}
 
     by_backend: dict[str, dict[str, Any]] = {}
-    for row in rows.values():
+    for row in attempts:
         key = str(row.get("backend") or "unknown")
         bucket = by_backend.setdefault(key, {
             "calls": 0, "ok": 0, "unpriced": 0,
@@ -1901,8 +2072,11 @@ def summarise(store: Store, *, lane: str, batch: str) -> dict[str, Any]:
     return {
         "lane": lane,
         "batch": batch,
+        # Distinct (call, backend) pairs currently answered, and how many of those stand valid.
         "calls": len(rows),
         "ok": sum(1 for row in rows.values() if row.get("ok")),
+        # What was actually paid for and waited on, retries included.
+        "attempts": len(attempts),
         "by_backend": dict(sorted(by_backend.items())),
     }
 ```
@@ -1956,6 +2130,21 @@ def test_a_backend_must_be_named():
             ["model-run", "projects/example-news-and-returns", "extract", "--batch", "b1"])
 
 
+def test_a_backend_that_needs_a_model_says_so_rather_than_crashing(capsys):
+    code = main(["model-run", "projects/example-news-and-returns", "extract",
+                 "--batch", "b1", "--backend", "claude-cli"])
+    assert code == 2
+    error = capsys.readouterr().err
+    assert "--model" in error
+
+
+def test_a_backend_with_a_default_model_needs_no_flag():
+    from claimstone import runners
+
+    # llamacpp serves whatever the local server has loaded; naming it is not the caller's job.
+    assert runners.build("llamacpp").model == "local"
+
+
 def test_an_unknown_backend_is_refused_by_name(capsys):
     code = main(["model-run", "projects/example-news-and-returns", "extract",
                  "--batch", "b1", "--backend", "nonesuch"])
@@ -1992,9 +2181,10 @@ def _model_run(args: argparse.Namespace) -> int:
         print(f"unknown lane {args.lane!r}: {', '.join(model_call.LANES)}", file=sys.stderr)
         return 2
     try:
-        runner = runners.build(args.backend, model=args.model) if args.model \
-            else runners.build(args.backend)
+        runner = runners.build(args.backend, model=args.model)
     except ValueError as exc:
+        # Includes "this backend needs --model": a missing model is a usage error with a sentence,
+        # not a TypeError from a constructor.
         print(str(exc), file=sys.stderr)
         return 2
 
