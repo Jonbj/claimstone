@@ -39,6 +39,13 @@ evidence the channel finds the right kind of thing.
 **Overlap with the keyword channel: 6 of the 25 manifest sources appear among the 711
 references.** That number matters in §6, and mostly for what it does not license.
 
+### Where these figures come from
+
+`tools/derive_corpus_figures.py alembic-s4` prints all of them from `store/<project>/tei/`, which
+`claimstone normalize` writes. The TEI cannot be committed — it is the full text of copyrighted
+papers — so the derivation is, and a review was right that quoting them without it made them
+unauditable.
+
 ## 3. Assigning a source class
 
 `classify.py` exposes `classify(candidate, classes) -> str | None`. The rules live in

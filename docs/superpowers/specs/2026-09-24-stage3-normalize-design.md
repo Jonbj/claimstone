@@ -12,8 +12,8 @@ GROBID 0.8.1 over those 14 PDFs:
 | | |
 |---|---|
 | Speed | **39 seconds for 14 documents**, 1-6s each. Not a constraint. |
-| Body text | **818,678 characters**, median 41,162 per document |
-| Chunks at 9,000 chars | **~91**, so a round of `extract` is ~91 calls (~$0.20 on a hosted open model) |
+| Body text | **775,266 characters** of paragraph prose across 14 documents |
+| Chunks at 9,000 chars | **~86**, so a round of `extract` is ~86 calls (~$0.20 on a hosted open model) |
 | Sections | 318, of which 95 under 800 characters — but see below: only 30 are junk |
 | References | **803** across 14 documents; 412 of them from one survey |
 | Tables | **117** |
@@ -49,6 +49,18 @@ it.
 quoting "the average net firm sentiment is 2.4%" could never match its chunk, so invariant 1
 would reject a true claim and the rejection ledger — which is the denominator — would fill with
 artefacts of the parser.
+
+### Where these figures come from
+
+`tools/derive_corpus_figures.py alembic-s4` prints every number above from
+`store/<project>/tei/`, which `claimstone normalize` writes. The TEI itself cannot be committed —
+it is the full text of copyrighted papers — so the derivation is committed instead.
+
+A review pointed out that the figures had been measured outside the repository and were not
+reproducible from it. Making them reproducible immediately corrected one: an earlier draft said
+**818,678** body characters, counted from rendered `<div>` text including section headings, while
+`Document.body_chars` counts paragraphs only. The number did not match its own definition. It is
+775,266.
 
 ## 2. Module boundaries
 

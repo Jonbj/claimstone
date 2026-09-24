@@ -65,8 +65,14 @@ claimstone/          the engine — no domain knowledge, ever
 projects/<name>/     one instance: topics.yaml, questions.yaml, sources.yaml
 store/<project>/     generated, gitignored; append-only JSONL plus fetched bytes
 docs/                DESIGN_DECISIONS.md and data contracts
+tools/               scripts that derive a reported figure from the store, committed
+                     because the data they read cannot be
 tests/
 ```
+
+A number quoted in a spec names the command that produces it. `tools/derive_corpus_figures.py`
+exists because the corpus figures were once measured outside the repository and could not be
+checked — and running it corrected one of them on the first attempt.
 
 ## Storage model
 
