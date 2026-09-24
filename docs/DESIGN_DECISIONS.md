@@ -111,10 +111,35 @@ signal — a reference list present or absent — not by any constant chosen at 
 **Every rejection was checked by hand: 6 of 6 correct, no false positive.** Four RavenPack
 research abstracts, one LSEG product page, one MarketPsych overview.
 
-**Why the floor is out of reach here, and what that is evidence of.** Eight sources separate
-0.48 from 0.80. Seven are genuine publisher 403s. Six are pages for which no open full text
-exists to obtain — and three of those are *product pages*, which are not research in any form
-and would fail this gate at any threshold. `IND 1/9` is therefore a finding about the manifest's
+### The named campaign, 2026-09-24
+
+The seven 403s were terminal, so a routine run left them alone. But the cascade had changed
+since they were refused — the known wall now sorts last instead of being re-promoted by format
+ranking, a DOI is resolved from the title when the URL carries only a publisher's internal id,
+and a source with no DOI falls back to an archived snapshot. A changed capability is what a
+named campaign is for, so `--campaign cascade-v2-walls --retry-class PAYWALL_403` re-knocked on
+those seven and no others.
+
+**Three of seven recovered. 0.48 → 0.60.**
+
+```
+ACA009   PDF_FULLTEXT   unpaywall  1062 KB   accepted version in an institutional repository
+IND001   HTML_FULLTEXT  wayback     504 KB   a SEC EDGAR filing, 247,993 characters
+IND007   PDF_FULLTEXT   wayback     934 KB   an S&P Global PDF
+total   15/25  0.60   floor 0.80 (v1)   INSUFFICIENT_ACQUISITION
+failures  ABSTRACT_ONLY 6   PAYWALL_403 4   (sciencedirect 2, wiley 1, doi.org 1)
+```
+
+Against the 0.42 the project started from: **0.42 → 0.60**, with every source's OA status,
+licence and failure reason recorded, and with the six that look obtained but are not now named
+as what they are. Two of the three recoveries came from the archive, which is the fallback that
+did not exist before — for the classes with no open-access infrastructure it is the whole
+cascade.
+
+**Why the floor is out of reach here, and what that is evidence of.** Five sources separate
+0.60 from 0.80. Four are publisher 403s that survived a named campaign with an improved cascade.
+Six are pages for which no open full text exists to obtain — and three of those are *product pages*, which are not research in any form
+and would fail this gate at any threshold. `IND 3/9` is therefore a finding about the manifest's
 composition as much as about acquisition: entries were admitted as industry research that are
 vendor marketing. That is the shape of argument the pre-registered rule asks for before a floor
 may move (see the floor-versioning rule in the stage 2 spec) — but the argument belongs to
