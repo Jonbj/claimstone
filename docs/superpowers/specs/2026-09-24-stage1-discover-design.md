@@ -127,9 +127,14 @@ belong here**; 15 such near-matches were found.
 the other and they are different papers — so a containment rule, which would have fixed the
 banner problem, produces wrong merges.
 
-**Therefore: nothing is ever merged on an approximate match.** A candidate whose folded title is
-suspiciously close to an existing one records `possible_duplicate_of: <key>` and **stays a
-distinct candidate**.
+**Therefore: nothing is ever merged on an approximate match.** A candidate records
+`possible_duplicate_of: <key>` and **stays a distinct candidate**.
+
+"Approximate" is defined, not left to judgement: one folded title contains the other and the
+shorter of the two is at least 25 characters. That is exactly the check that found both the 15
+banner cases and the Harvey/Fang-Peress false positive, so its error rate on this corpus is known
+rather than assumed — and since the outcome is a note and never a merge, a false positive costs a
+line in a report.
 
 The asymmetry decides it. A duplicate costs one wasted acquisition attempt — and not even a second
 download, since bytes are content-addressed. A wrong merge **loses a source permanently** and
@@ -186,6 +191,11 @@ claimstone discover <project> [--round NAME] [--topics T01,T05] [--api openalex]
                              [--per-query N] [--channel keyword|citation|both]
 claimstone discover-report <project> [--round NAME] [--json]
 ```
+
+`--topics` takes a comma-separated list and `--api` is repeatable; omitting either means all of
+them. `--channel` defaults to `both`, and `both` with no `references.jsonl` present runs the
+keyword channel and says the citation channel had nothing to read — rather than reporting zero
+citation candidates, which would read as "the bibliography found nothing".
 
 `--channel citation` opens no socket: it reads `references.jsonl` and writes candidates. So it is
 re-runnable at no cost when the threshold changes — the same arrangement as `gate-audit` and
