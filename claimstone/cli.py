@@ -9,7 +9,13 @@ import argparse
 import sys
 
 from claimstone import __version__
+from typing import TYPE_CHECKING
+
 from claimstone.config import ConfigError, discover_projects, load_project
+
+if TYPE_CHECKING:  # import cost at startup matters for a CLI; these are annotations only
+    from claimstone.config import Project
+    from claimstone.store import Store
 
 STAGES = ("normalize", "extract", "review", "synthesize")
 
@@ -43,7 +49,8 @@ def _validate(args: argparse.Namespace) -> int:
             f"(registry v{project.registry_version}, frozen {project.frozen_at}), "
             f"{len(project.classes)} source classes, "
             f"acquisition floor {project.acquisition_floor:.2f} "
-            f"(v{project.floor_version}){manifest}"
+            f"(v{project.floor_version}){manifest}, "
+            f"registry {project.registry_sha256[:12]}"
         )
     return 1 if failures else 0
 
@@ -56,15 +63,28 @@ def _import_manifest(args: argparse.Namespace) -> int:
     if not project.manifest:
         print(f"no manifest.tsv under {args.project}/", file=sys.stderr)
         return 1
-    result = discover.import_manifest(Store(project.name, base=args.store), project.manifest)
+    result = discover.import_manifest(_checked_store(args, project), project.manifest)
     print(f"{project.name}: {result['new']} new, {result['updated']} corrected, "
           f"of {result['rows']} manifest rows")
     return 0
 
 
+def _checked_store(args: argparse.Namespace, project: "Project") -> "Store":
+    """The project's store, with the question registry verified against what it last saw.
+
+    Run wherever a store is opened rather than in one command: a drift check that only fires when
+    someone remembers to ask for it protects nothing.
+    """
+    from claimstone.config import check_registry_drift
+    from claimstone.store import Store
+
+    store = Store(project.name, base=args.store)
+    check_registry_drift(project, store)
+    return store
+
+
 def _acquire(args: argparse.Namespace) -> int:
     from claimstone import acquire, net, resolve
-    from claimstone.store import Store
 
     retry_classes = frozenset(args.retry_class or ())
     if retry_classes and not args.campaign:
@@ -76,7 +96,7 @@ def _acquire(args: argparse.Namespace) -> int:
         return 2
 
     project = load_project(args.project)
-    store = Store(project.name, base=args.store)
+    store = _checked_store(args, project)
     fetcher = net.Fetcher(excluded_hosts=frozenset(project.excluded_hosts))
     candidates = list(store.latest_by("candidates.jsonl", "candidate_key").values())
 
@@ -125,7 +145,7 @@ def _report(args: argparse.Namespace) -> int:
     from claimstone.store import Store
 
     project = load_project(args.project)
-    result = admissibility.admit(project, Store(project.name, base=args.store))
+    result = admissibility.admit(project, _checked_store(args, project))
 
     if args.json:
         import json
@@ -177,7 +197,7 @@ def _gate_audit(args: argparse.Namespace) -> int:
     from claimstone.store import Store
 
     project = load_project(args.project)
-    store = Store(project.name, base=args.store)
+    store = _checked_store(args, project)
 
     name = args.sweep or "min_text_chars"
     points = gate_audit.sweep(store, name, SWEEP_VALUES[name])
@@ -215,7 +235,7 @@ def _regate(args: argparse.Namespace) -> int:
     from claimstone.store import Store
 
     project = load_project(args.project)
-    store = Store(project.name, base=args.store)
+    store = _checked_store(args, project)
 
     changed = 0
     total = 0
@@ -297,7 +317,13 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    return int(args.func(args))
+    try:
+        return int(args.func(args))
+    except ConfigError as exc:
+        # A contract violation is the user's to fix, so it gets a sentence rather than a
+        # traceback. `validate` handles its own and never reaches here.
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
 
 
 if __name__ == "__main__":

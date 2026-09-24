@@ -84,6 +84,7 @@ Per project under `store/<project>/`:
 | `acquisitions.jsonl` | acquire | one row per attempt: `http_status`, resolved OA location, licence, `failure_class` |
 | `raw/<sha256>.<ext>` | acquire | the fetched bytes, content-addressed |
 | `rejections.jsonl` | extract | what was discarded and why — this is the denominator |
+| `registry.jsonl` | any command | one row per question-registry version seen, with its hash. A changed hash under an unchanged version refuses to run (invariant 5) |
 
 ## Working conventions
 

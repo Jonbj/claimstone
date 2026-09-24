@@ -24,6 +24,10 @@ class ConfigError(Exception):
     """A project's input files do not satisfy the contract."""
 
 
+class RegistryDrift(ConfigError):
+    """The question registry changed without its version being bumped (invariant 5)."""
+
+
 @dataclass(frozen=True)
 class SourceClass:
     id: str
@@ -70,6 +74,7 @@ class Project:
     questions: tuple[Question, ...]
     registry_version: int
     frozen_at: str
+    registry_sha256: str = ""
     manifest: tuple[ManifestEntry, ...] = ()
     gate_thresholds: dict[str, int] = field(default_factory=dict)
     gate_policy: dict[str, Any] = field(default_factory=dict)
@@ -216,6 +221,57 @@ def load_questions(root: pathlib.Path) -> tuple[tuple[Question, ...], int, str]:
         )
     _require_unique([q.id for q in questions], what="question", where="questions.yaml")
     return tuple(questions), version, frozen_at
+
+
+def registry_digest(questions: tuple[Question, ...]) -> str:
+    """A hash of the questions themselves — ids and texts, in order.
+
+    It covers the questions and not the file, so a cosmetic edit does not read as drift. A check
+    that fires on every whitespace change stops being believed, and then it protects nothing.
+    """
+    import hashlib
+    import json as _json
+
+    payload = _json.dumps(
+        [[q.id, q.text] for q in questions], ensure_ascii=False, separators=(",", ":")
+    )
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def check_registry_drift(project: Project, store: Any) -> None:
+    """Refuse a registry whose text changed while its version did not (invariant 5).
+
+    Every round-over-round figure and every multiplicity correction is stated against a registry.
+    If a question's wording can change under an unchanged version, those figures compare two
+    different questions and say nothing — and the change leaves no trace, which is worse than a
+    wrong answer because nobody knows to distrust it.
+
+    The first sighting of a version is recorded, not refused. A bump is recorded too. Only a
+    changed hash under an unchanged version raises.
+    """
+    seen = {
+        int(row["registry_version"]): str(row["registry_sha256"])
+        for row in store.read("registry.jsonl")
+        if row.get("registry_version") is not None
+    }
+    held = seen.get(project.registry_version)
+    if held == project.registry_sha256:
+        return
+    if held is not None:
+        raise RegistryDrift(
+            f"{project.name}: the question registry changed under registry_version "
+            f"{project.registry_version}. Recorded {held[:12]}, now {project.registry_sha256[:12]}. "
+            "Adding or changing a question is a dated version bump, never a silent edit — "
+            "otherwise every round-over-round figure compares two different registries "
+            "(invariant 5)."
+        )
+    store.append("registry.jsonl", {
+        "registry_version": project.registry_version,
+        "registry_sha256": project.registry_sha256,
+        "frozen_at": project.frozen_at,
+        "questions": len(project.questions),
+        "seen_at": _dt.datetime.now(_dt.timezone.utc).isoformat(timespec="seconds"),
+    })
 
 
 MANIFEST_COLUMNS = ("source_id", "class", "format", "url", "title")
@@ -399,6 +455,7 @@ def load_project(root: str | pathlib.Path) -> Project:
         questions=questions,
         registry_version=version,
         frozen_at=frozen_at,
+        registry_sha256=registry_digest(questions),
         manifest=manifest,
         gate_thresholds=gate_thresholds,
         gate_policy=gate_policy,
