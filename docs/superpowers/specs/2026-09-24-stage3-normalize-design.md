@@ -1,0 +1,240 @@
+# Stage 3 — normalize: design
+
+Date: 2026-09-24 · Scope: stage 3 only · Status: approved, not implemented
+
+Between the bytes stage 2 obtained and the chunks stage 4 will read. Every number below was
+measured on the 14 acquired PDFs of `alembic-s4`, not estimated.
+
+## 1. What the measurement established
+
+GROBID 0.8.1 over those 14 PDFs:
+
+| | |
+|---|---|
+| Speed | **39 seconds for 14 documents**, 1-6s each. Not a constraint. |
+| Body text | **818,678 characters**, median 41,162 per document |
+| Chunks at 9,000 chars | **~91**, so a round of `extract` is ~91 calls (~$0.20 on a hosted open model) |
+| Sections | 318, of which 95 under 800 characters — but see below: only 30 are junk |
+| References | **803** across 14 documents; 412 of them from one survey |
+| Tables | **117** |
+
+**GROBID needs a workaround on this machine.** The image's JVM cannot read cgroup v2 under
+Docker 29 and dies at startup with `CgroupV2Subsystem.getInstance … anyController is null`. It
+starts with `-e JAVA_TOOL_OPTIONS=-XX:-UseContainerSupport`, ready in ~15s. That flag belongs in
+the error message, not in someone's memory.
+
+**One acquired PDF is not a document.** `IND008` is `lseg-machine-readable-news-fact-sheet.pdf`:
+4,618 characters of body, **zero references**, sections titled "Key use cases" and "Find out
+more". It passed stage 2 because the PDF gate there is structural, which that spec declares. It
+is the PDF twin of the six HTML abstract pages, and the same signal catches it.
+
+**Length is not the signal for a junk section either.** A first reading of this spec called all
+95 short divs "captions and table fragments" on the strength of their length alone — the same
+mistake the content gate made about HTML abstract pages, made again by the same author two days
+later. Looking at them:
+
+| of the 95 short divs | count | what they are |
+|---|---|---|
+| bare head, **no paragraphs at all** | 28 | genuine junk: a heading GROBID could attach nothing to |
+| text begins with a caption marker | 2 | figure and table notes: `2.14` → "Notes: We sort all stocks…", `Weeks` → "The figure plots the cumulative coefficients from Table 5…" |
+| everything else | **65** | **real short sections**: `II. Short-Horizon Return…`, `Other Adjustments`, `III. Understanding Retur…` |
+
+So the junk is 30 of 318 (9%), not 95 (30%). And the two notes are real prose — a methods note
+under a table can support a claim — so discarding them loses content, while merging them into a
+neighbouring section would file a figure's commentary under a heading that has nothing to do with
+it.
+
+**Naive text extraction destroys tables.** `itertext()` over a TEI table yields
+`Sentiment variableMeanStandard deviation2.4%39.0%` — words fused, no separators. A claim
+quoting "the average net firm sentiment is 2.4%" could never match its chunk, so invariant 1
+would reject a true claim and the rejection ledger — which is the denominator — would fill with
+artefacts of the parser.
+
+## 2. Module boundaries
+
+```
+grobid.py     HTTP to the container. No domain logic. Owns the "is GROBID up?" question.
+tei.py        TEI bytes → Document. Pure: no I/O, no store.
+chunk.py      Document → [Chunk]. Pure. Where pack, split and table rendering live.
+normalize.py  orchestration: call GROBID, store the TEI, build chunks, write three ledgers.
+```
+
+Only `normalize.py` touches the network or the store, so the rules — which are the part with
+judgement in them — are tested offline against synthetic TEI.
+
+## 3. The Document
+
+`tei.py` renders TEI into Python and knows nothing about chunking:
+
+```python
+Document(source_id, sha256, title, abstract, sections, tables, references, stats)
+Section(head, paragraphs, chars)        # paragraphs kept apart, never pre-joined
+Table(number, head, caption, rows)      # rows: list[list[str]] — cells stay cells
+Reference(key, title, year, authors, doi)
+```
+
+**Cells stay cells until the last possible moment.** That is the lesson of §1's table finding:
+the fused text comes from calling `itertext()` too early. Nothing in `tei.py` concatenates.
+
+## 4. Chunking
+
+
+
+Five declared rules, applied in this order. The first three decide what a short div *is*, which
+§1 shows cannot be read off its length:
+
+| rule | condition | outcome |
+|---|---|---|
+| 1. a note | short **and** its text after the head begins with a caption marker | its own chunk, `kind="note"` — kept and labelled, never merged into a section it does not belong to |
+| 2. junk | short **and** it has no paragraphs at all | dropped, counted in `documents.jsonl` stats |
+| 3. a short section | short, has paragraphs, no caption marker | merged into the **following** section, or the preceding one when it is last |
+| 4. split | `chars > max_chunk_chars` (9000) | split at paragraph boundaries, never mid-sentence |
+| 5. a table | always | its own chunk, `kind="table"` — the numbers are what stage 6 pools |
+
+"short" means `chars < min_section_chars` (800). Caption markers are a declared list — `Notes:`,
+`Note:`, `This table`, `This figure`, `The figure`, `The table`, `Source:`, `Sources:`,
+`Standard errors`, `T-statistics` — matched case-folded against the text following the head, in
+the same style as the content gate's paywall phrases. On the measured corpus this list catches
+exactly the two notes and nothing else; a marker list that grew to catch more would need the same
+by-hand check the gate's rejections got.
+
+Merging into the *following* section rather than the preceding one is deliberate: a short
+`II. Short-Horizon Return` heading is the opening of what follows, not the tail of what came
+before.
+
+A chunk carries its `section` name, so a claim's provenance is "Predicting Returns" rather than
+"characters 18000-27000". One is information; the other is an offset.
+
+**The thresholds and `chunk_version` are written onto every chunk.** Two rounds under different
+thresholds are not comparable, and without recording them the difference is invisible — the same
+rule the content gate follows.
+
+## 5. The chunk's text is the canonical text
+
+This section protects invariant 1.
+
+**A chunk carries its text, exactly as the extractor will see it, with that text's hash.** Not a
+pointer to an offset in the TEI from which the text can be rebuilt: the text. Stage 4's gate
+checks that `evidence_quote` is an exact substring **of the chunk**, so if the chunk were
+rendered twice — once for the prompt and once for the check — any difference between the two
+renderings would reject a true claim.
+
+Prose rendering: paragraphs joined with a blank line, internal whitespace normalised, nothing
+else.
+
+Table rendering, deterministic and declared:
+
+```
+Table 1: Characteristics of News Sentiment Variables
+This table shows the average net firm sentiment (positive minus negative)…
+
+| Sentiment variable | Mean | Standard deviation |
+| Thomson Reuters net sentiment | 2.4% | 39.0% |
+| Thomson Reuters positive | 24.6% |  |
+```
+
+Ragged rows are padded with empty cells to the widest row. In the measured table, row 1 has three
+cells and row 3 has two; a rendering that skipped the missing cell would shift the columns and
+silently move a number into the wrong one.
+
+## 6. The three ledgers
+
+Stage 3 owns these and no other stage writes them:
+
+| file | one row per | carries |
+|---|---|---|
+| `documents.jsonl` | normalized document | `source_id`, byte `sha256`, `tei_path`, stats, `fulltext_confirmed` and its reason |
+| `chunks.jsonl` | chunk | `chunk_id`, `kind`, `section`, the **text**, `text_sha256`, thresholds, `chunk_version` |
+| `references.jsonl` | distinct reference in the corpus | `key`, title, year, authors, `cited_by`, `citations_in_corpus`, `doi: null` |
+
+### `fulltext_confirmed`
+
+Same shape as the HTML gate, because it is the same question asked of a different format:
+
+```
+fulltext_confirmed = references >= min_references (5)  or  body_chars >= confirm_chars (15000)
+```
+
+Against the 14 measured documents the lowest legitimate reference count is `MET005` with **8**,
+so all fourteen confirm on the first clause. `IND008` has 0 references and 4,618 characters and
+satisfies neither.
+
+A document that does not confirm **produces no chunks** and is recorded in `documents.jsonl` with
+`NOT_A_DOCUMENT` and its reason. It does not disappear: it stays counted, as stage 2's
+`ABSTRACT_ONLY` rows do. "We obtained it and it was not a document" is a different failure from
+"we never obtained it", with a different remedy.
+
+### The thresholds are sweepable
+
+`min_references: 5` and `confirm_chars: 15000` were chosen by looking at fourteen documents. The
+TEI is stored content-addressed and parsing does no I/O, so
+`claimstone normalize --confirm-audit` re-runs the confirmation across a range of one threshold
+without re-fetching or re-calling GROBID — the same arrangement as `gate-audit`, for the same
+reason. Two constants chosen at a desk are two constants to interrogate.
+
+### References
+
+One row per distinct reference, deduplicated on normalised title, carrying which corpus
+documents cite it and how many do. **Stage 3 resolves no DOIs and decides no candidacy.**
+
+Which references become candidates is a declared rule belonging to `discover`, and it needs care
+that this spec does not settle: capture-recapture requires the two channels to sample the *same*
+population, and 803 references include statistics textbooks and unrelated fields. Filtering them
+by topic terms would fix the population and destroy the independence D10 needs. `citations_in_corpus`
+is the signal that makes the question answerable later — a work three corpus documents cite is
+not the same kind of candidate as one a survey cites once — and `synthesize` must state what its
+completeness estimate can and cannot claim. Recorded here as an open decision, not a solved one.
+
+## 7. CLI
+
+```
+claimstone normalize <project> [--limit N] [--grobid-url URL] [--force]
+claimstone normalize --confirm-audit <project> [--sweep NAME]
+```
+
+**Idempotent by content hash**: a document whose `sha256` is already in `documents.jsonl` is not
+re-normalized. `--force` exists for when `chunk_version` changes, and it needs no network because
+the TEI is already on disk — the same arrangement as `regate`.
+
+`grobid.py` fails usefully. When `/api/isalive` does not answer:
+
+```
+GROBID is not answering on http://localhost:8070.
+Start it with:
+  docker run -d --name claimstone-grobid -p 8070:8070 \
+    -e JAVA_TOOL_OPTIONS=-XX:-UseContainerSupport lfoppiano/grobid:0.8.1
+JAVA_TOOL_OPTIONS is required: the image's JVM cannot read cgroup v2 under
+Docker 29 and the container dies at startup.
+```
+
+`report` gains two lines and names the difference:
+
+```
+  obtained      15/25  0.60
+  confirmed     14/25  0.56   <- the figure
+                1 obtained but not a document: IND008
+```
+
+`admissibility.admit()` uses the confirmed rate where `documents.jsonl` exists and the obtained
+rate where it does not, **stating which of the two it used**. A rate without its denominator is
+what the honesty rules forbid.
+
+## 8. Testing
+
+The 14 real TEI files **do not enter the repository**: they are the full text of copyrighted
+papers, the same reason the stage 2 HTML fixtures are synthetic.
+
+| file | covers |
+|---|---|
+| `test_tei.py` | synthetic TEI: sections, tables with ragged rows, references, malformed XML, a TEI with no body |
+| `test_chunk.py` | the five rules, including a note kept as a note and a bare head dropped; the canonical rendering byte for byte; thresholds on every chunk; a ragged table does not shift its columns |
+| `test_normalize.py` | orchestration against a fake GROBID; idempotence by `sha256`; the three ledgers; `fulltext_confirmed` on an `IND008`-shaped document |
+| `test_grobid.py` | the `isalive` check, and the error message naming the workaround |
+| `test_real_tei.py` | runs the pure functions over `store/*/tei/*.xml` **when the store is populated**, skipped otherwise — the real-data validation that cannot be committed |
+
+## 9. Out of scope, deliberately
+
+No OCR: a scanned PDF fails confirmation and says so. No formula parsing, though `MET002` carries
+60 of them — a formula is not a claim. No figure images. And no citation *context*: which
+paragraph cited which reference would make the citation graph much richer, and is exactly the
+kind of thing to add when something needs it.
