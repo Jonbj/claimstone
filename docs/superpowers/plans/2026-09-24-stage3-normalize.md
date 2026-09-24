@@ -40,6 +40,7 @@ This also narrows §4's caption-marker rule: real notes arrive already labelled 
 | `claimstone/tei.py` | create | TEI bytes → `Document`. Pure, no I/O, no rendering. |
 | `claimstone/chunk.py` | create | `Document` → `[Chunk]`. Pure. The five rules and the canonical rendering. |
 | `claimstone/normalize.py` | create | orchestration, the three ledgers, `fulltext_confirmed`, the confirm sweep. |
+| `claimstone/html_doc.py` | create | markup → the same `Document` TEI produces. No tables, no references. |
 | `claimstone/admissibility.py` | done in `7490f6d` | already prefers the confirmed rate; Task 6 only verifies it against real rows. |
 | `claimstone/cli.py` | modify | `normalize`, `normalize --confirm-audit`; `report` gains the confirmed line. |
 | `claimstone/config.py` | modify | `normalize:` thresholds, beside `acquisition:`. |
@@ -47,6 +48,7 @@ This also narrows §4's caption-marker rule: real notes arrive already labelled 
 | `tests/test_tei.py` | create | parsing, on synthetic TEI |
 | `tests/test_chunk.py` | create | the five rules and the rendering |
 | `tests/test_normalize.py` | create | orchestration, ledgers, idempotence, confirmation |
+| `tests/test_html_doc.py` | create | headings into sections, skipped elements, no-text refusal |
 | `tests/test_real_tei.py` | create | the pure functions over real TEI when present |
 | `docs/contracts/normalize.md` | create | the three ledgers stage 4 will read |
 
@@ -1473,7 +1475,328 @@ claim that a paper said nothing.
 
 ---
 
-### Task 5: The confirmation sweep
+### Task 5: The HTML path
+
+Fixes a contradiction between the spec and this plan that a review found.
+
+Spec §1 counts **14 of 25** as the honest figure. The corpus holds 15 obtained sources: 14 PDFs
+and one HTML full text, `IND001`, a SEC EDGAR filing of 247,993 characters. Task 4 records every
+non-PDF as `NOT_PDF`, so once `IND008` is correctly rejected the plan as written reports **13**,
+not 14 — and the source it drops is a real document.
+
+The confirmation rule already anticipates this case. Its second clause — long enough to stand
+without a bibliography — is exactly what a regulatory filing is. What was missing is a `Document`
+to apply it to.
+
+**Files:**
+- Create: `claimstone/html_doc.py`
+- Modify: `claimstone/normalize.py`
+- Create: `tests/test_html_doc.py`
+- Modify: `tests/test_normalize.py`
+
+- [ ] **Step 1: Write the failing tests**
+
+Create `tests/test_html_doc.py`:
+
+```python
+"""HTML into the same Document tei.py produces, so chunking and confirmation do not care."""
+
+from claimstone import html_doc
+
+FILING = """<html><head><title>FORM 10-K ANNUAL REPORT</title></head><body>
+  <nav>Skip to content</nav>
+  <h1>Item 1. Business</h1>
+  <p>The registrant operates a news analytics service.</p>
+  <p>Revenue is recognised when the service is delivered.</p>
+  <h2>Item 1A. Risk Factors</h2>
+  <p>Competition in this market is intense.</p>
+  <script>var tracking = 1;</script>
+</body></html>""".encode()
+
+FLAT = b"<html><body><p>One paragraph and no headings at all.</p></body></html>"
+
+
+def test_the_title_comes_from_the_title_element():
+    assert html_doc.parse(FILING).title == "FORM 10-K ANNUAL REPORT"
+
+
+def test_headings_become_sections():
+    doc = html_doc.parse(FILING)
+    assert [s.head for s in doc.sections] == ["Item 1. Business", "Item 1A. Risk Factors"]
+    assert doc.sections[0].paragraphs == (
+        "The registrant operates a news analytics service.",
+        "Revenue is recognised when the service is delivered.",
+    )
+
+
+def test_script_and_nav_are_not_text():
+    doc = html_doc.parse(FILING)
+    joined = " ".join(p for s in doc.sections for p in s.paragraphs)
+    assert "tracking" not in joined
+    assert "Skip to content" not in joined
+
+
+def test_a_document_with_no_headings_is_one_section():
+    doc = html_doc.parse(FLAT)
+    assert len(doc.sections) == 1
+    assert doc.sections[0].head == ""
+    assert doc.sections[0].paragraphs == ("One paragraph and no headings at all.",)
+
+
+def test_html_carries_no_tables_or_references():
+    # Both are real problems and neither is this path's. A filing has no bibliography, and its
+    # tables need work that PDF tables already got; saying so beats pretending to extract them.
+    doc = html_doc.parse(FILING)
+    assert doc.tables == ()
+    assert doc.references == ()
+    assert doc.notes == ()
+
+
+def test_body_chars_counts_the_paragraphs():
+    doc = html_doc.parse(FILING)
+    assert doc.body_chars == sum(len(p) for s in doc.sections for p in s.paragraphs)
+
+
+def test_markup_with_no_body_raises_rather_than_returning_nothing():
+    import pytest
+
+    from claimstone import tei
+
+    with pytest.raises(tei.TeiError, match="no text"):
+        html_doc.parse(b"<html><head><title>Only a head</title></head></html>")
+```
+
+Append to `tests/test_normalize.py`:
+
+```python
+FILING_HTML = """<html><head><title>FORM 10-K</title></head><body>
+  <h1>Item 1. Business</h1>
+  <p>%s</p>
+</body></html>""" % ("The registrant operates a service. " * 600)
+
+
+def test_a_long_html_document_is_confirmed(tmp_path):
+    # IND001 in the real corpus: a SEC filing of 247,993 characters, with no bibliography. The
+    # confirmation rule's second clause is for exactly this, and marking it NOT_PDF dropped a
+    # real document out of the count.
+    store = Store("t", base=tmp_path)
+    row = acquired("IND001", store, body=FILING_HTML.encode())
+    row["content_type"] = "text/html"
+    store.append("acquisitions.jsonl", row)
+    result = next(iter(normalize.run(store, FakeGrobid())))
+    assert result["fulltext_confirmed"] is True
+    assert result["chunks"] > 0
+    assert result["failure_class"] is None
+
+
+def test_a_short_html_document_is_not_confirmed(tmp_path):
+    store = Store("t", base=tmp_path)
+    row = acquired("NEW009", store, body=b"<html><body><p>A brief note.</p></body></html>")
+    row["content_type"] = "text/html"
+    store.append("acquisitions.jsonl", row)
+    result = next(iter(normalize.run(store, FakeGrobid())))
+    assert result["fulltext_confirmed"] is False
+    assert result["failure_class"] == "NOT_A_DOCUMENT"
+
+
+def test_html_does_not_call_grobid(tmp_path):
+    # GROBID reads PDFs. Sending it markup would be a request that cannot succeed.
+    store = Store("t", base=tmp_path)
+    row = acquired("IND001", store, body=FILING_HTML.encode())
+    row["content_type"] = "text/html"
+    store.append("acquisitions.jsonl", row)
+    grobid = FakeGrobid()
+    list(normalize.run(store, grobid))
+    assert grobid.calls == 0
+```
+
+- [ ] **Step 2: Run to verify it fails**
+
+Run: `.venv/bin/pytest tests/test_html_doc.py -q`
+Expected: FAIL with `ModuleNotFoundError: No module named 'claimstone.html_doc'`
+
+- [ ] **Step 3: Write `claimstone/html_doc.py`**
+
+```python
+"""HTML into the same `Document` that `tei.py` produces.
+
+Some sources have no PDF and are still documents — a regulatory filing, a technical standard, an
+agency page. Recording them as `NOT_PDF` drops a real document out of the corpus count, which is
+what the first draft of stage 3 did to a 247,993-character SEC filing.
+
+This produces the same dataclasses as `tei.py`, so `chunk.py` and the confirmation rule do not
+know or care which parser they came from. It extracts less: **no tables, no references, no
+footnotes.** A filing has no bibliography, and its tables need the work that TEI tables already
+received. Saying so is better than pretending: the confirmation rule's second clause — long enough
+to stand without a reference list — is what admits these documents, and it does so honestly.
+"""
+
+from __future__ import annotations
+
+from html.parser import HTMLParser
+
+from claimstone.tei import Document, Section, TeiError
+
+_SKIP = frozenset({"script", "style", "nav", "header", "footer", "aside", "noscript"})
+_HEADINGS = ("h1", "h2", "h3")
+_BLOCKS = ("p", "li", "dd", "blockquote")
+
+
+class _Reader(HTMLParser):
+    """Headings open sections; block elements inside them become paragraphs."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.title = ""
+        self.sections: list[tuple[str, list[str]]] = []
+        self._muted = 0
+        self._sink: list[str] | None = None
+        self._in_title = False
+
+    def handle_starttag(self, tag: str, attrs: object) -> None:
+        if tag in _SKIP:
+            self._muted += 1
+            return
+        if tag == "title":
+            self._in_title = True
+            return
+        if tag in _HEADINGS:
+            self.sections.append(("", []))
+            self._sink = None
+        elif tag in _BLOCKS:
+            self._sink = None
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag in _SKIP and self._muted:
+            self._muted -= 1
+        elif tag == "title":
+            self._in_title = False
+        elif tag in _HEADINGS or tag in _BLOCKS:
+            self._sink = None
+
+    def handle_data(self, data: str) -> None:
+        text = " ".join(data.split())
+        if not text or self._muted:
+            return
+        if self._in_title:
+            self.title = f"{self.title} {text}".strip()
+            return
+        if not self.sections:
+            # Text before any heading belongs to an unnamed opening section.
+            self.sections.append(("", []))
+        head, paragraphs = self.sections[-1]
+        if not head:
+            # The first text after a heading tag *is* the heading.
+            self.sections[-1] = (text, paragraphs)
+        else:
+            paragraphs.append(text)
+
+    def document(self) -> Document:
+        sections = tuple(
+            Section(head=head if paragraphs else "", paragraphs=tuple(paragraphs))
+            if paragraphs or head
+            else Section(head="", paragraphs=())
+            for head, paragraphs in self.sections
+        )
+        return Document(
+            title=self.title,
+            abstract="",
+            sections=tuple(s for s in sections if s.head or s.paragraphs),
+            tables=(),
+            notes=(),
+            references=(),
+        )
+
+
+def parse(payload: bytes) -> Document:
+    """Markup in, the same Document a TEI parse produces. Raises when there is no text."""
+    reader = _Reader()
+    try:
+        reader.feed(payload.decode("utf-8", "replace"))
+    except Exception:
+        # Malformed markup is ordinary on the web and is not itself a verdict; take what parsed.
+        pass
+    doc = reader.document()
+    if not any(section.paragraphs for section in doc.sections):
+        raise TeiError("no text found in the markup: nothing to chunk")
+    return doc
+```
+
+The heading handling deserves a note: a heading element's own text arrives as the first data after
+its start tag, which is why `handle_data` treats the first text of a freshly opened section as the
+head. It is the simplest rule that keeps `<h1>Item 1</h1><p>body</p>` and
+`<h1><span>Item 1</span></h1><p>body</p>` behaving the same.
+
+- [ ] **Step 4: Route markup to it in `claimstone/normalize.py`**
+
+Replace the `NOT_PDF` branch:
+
+```python
+        is_pdf = "pdf" in str(source.get("content_type") or "").lower()
+        tei_path = store.root / "tei" / f"{digest}.xml"
+
+        if is_pdf:
+            if tei_path.exists():
+                payload = tei_path.read_bytes()
+            else:
+                payload = grobid.full_text(pathlib.Path(stored).read_bytes(),
+                                           filename=f"{source_id}.pdf")
+                tei_path.parent.mkdir(parents=True, exist_ok=True)
+                tei_path.write_bytes(payload)
+            parser, parsed_from = tei.parse, str(tei_path)
+        else:
+            # GROBID reads PDFs; sending it markup is a request that cannot succeed. And a
+            # document without a PDF is still a document — the confirmation rule's second clause
+            # is what admits a filing that has no bibliography.
+            payload = pathlib.Path(stored).read_bytes()
+            parser, parsed_from = html_doc.parse, str(stored)
+
+        try:
+            doc = parser(payload)
+        except tei.TeiError as exc:
+            row = common | {"fulltext_confirmed": False, "failure_class": TEI_UNREADABLE,
+                            "reason": str(exc)[:200], "chunks": 0, "tei_path": parsed_from}
+            store.append("documents.jsonl", row)
+            attempted += 1
+            yield row
+            continue
+```
+
+Import it at the top — `from claimstone import html_doc` — and change the row's `tei_path` to
+`parsed_from` where the successful row is built. Delete the `NOT_PDF` constant and the branch that
+used it: nothing produces it now, and a constant no code can set is a state that misleads whoever
+reads the taxonomy.
+
+- [ ] **Step 5: Run to verify it passes**
+
+Run: `.venv/bin/pytest tests/test_html_doc.py tests/test_normalize.py -q`
+Expected: PASS
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add claimstone/html_doc.py claimstone/normalize.py tests/test_html_doc.py \
+        tests/test_normalize.py
+git commit -m "normalize: an HTML source can be a document too
+
+Recording every non-PDF as NOT_PDF dropped a 247,993-character SEC filing out of
+the corpus, and made the spec's 14 of 25 into 13 without anyone noticing. A review
+caught the contradiction between the two documents.
+
+html_doc produces the same dataclasses tei does, so chunking and confirmation do not
+know which parser they came from. It extracts less and says so: no tables, no
+references, no footnotes. A filing has no bibliography, which is precisely what the
+confirmation rule's second clause is for.
+
+NOT_PDF is gone rather than left unreachable. A constant no code can set is a state
+that misleads whoever reads the taxonomy.
+
+<trailer>"
+```
+
+---
+
+### Task 6: The confirmation sweep
 
 Implements spec §6's "the thresholds are sweepable".
 
@@ -1585,7 +1908,7 @@ exists.
 
 ---
 
-### Task 6: Verify the confirmed basis against real documents
+### Task 7: Verify the confirmed basis against real documents
 
 Implements spec §7's report lines — **most of which already exist.**
 
@@ -1691,7 +2014,7 @@ diverges without any test noticing.
 <trailer>"
 ```
 
-### Task 7: Wiring the CLI
+### Task 8: Wiring the CLI
 
 Implements spec §7's commands.
 
@@ -1880,9 +2203,9 @@ normalize leaves the placeholder list, which is now extract, review and synthesi
 
 ---
 
-### Task 8: The contract, the real-TEI check, and the spec corrections
+### Task 9: The contract, the real-TEI check, and the spec corrections
 
-Implements spec §8 and lands the three corrections this plan made.
+Implements spec §8 and lands the four corrections this plan made.
 
 **Files:**
 - Create: `docs/contracts/normalize.md`
@@ -2064,7 +2387,7 @@ matches its text and that no table cell vanishes in rendering.
 
 ## What this plan does not do
 
-- **No HTML normalization.** The one confirmed HTML full text in the corpus — a SEC filing of 247,993 characters — is recorded `NOT_PDF` and skipped. A GROBID-free path for HTML is a contained addition once there is more than one such source to design against.
+- **No HTML tables or references.** `html_doc` extracts sections and paragraphs only. Table extraction from arbitrary markup is the work TEI tables already received and is not repeated here; a filing has no bibliography to extract.
 - **No DOI resolution for references** (spec §6). 803 references would be 803 Crossref lookups, and which of them become candidates is `discover`'s declared rule, not stage 3's.
 - **No OCR, no formula parsing, no figure images, no citation context** (spec §9). A scanned PDF fails confirmation and says so.
 - **No stage 4.** This produces chunks; nothing here builds a prompt or extracts a claim. `model_call` (planned separately) is the boundary that carries them to a model.

@@ -143,7 +143,7 @@ Stage 3 owns these and no other stage writes them:
 
 | file | one row per | carries |
 |---|---|---|
-| `documents.jsonl` | normalized document | `source_id`, byte `sha256`, `tei_path`, stats, `fulltext_confirmed` and its reason |
+| `documents.jsonl` | normalized document | `source_id`, byte `sha256`, the parsed path, stats, `fulltext_confirmed` and its reason |
 | `chunks.jsonl` | chunk | `chunk_id`, `kind`, `section`, the **text**, `text_sha256`, thresholds, `chunk_version` |
 | `references.jsonl` | distinct reference in the corpus | `key`, title, year, authors, `cited_by`, `citations_in_corpus`, `doi: null` |
 
@@ -158,6 +158,14 @@ fulltext_confirmed = references >= min_references (5)  or  body_chars >= confirm
 Against the 14 measured documents the lowest legitimate reference count is `MET005` with **8**,
 so all fourteen confirm on the first clause. `IND008` has 0 references and 4,618 characters and
 satisfies neither.
+
+**Markup is normalized too, by a different parser.** GROBID reads PDFs, so an HTML source goes
+through `html_doc`, which produces the same `Document` dataclasses and extracts less: sections and
+paragraphs, no tables, no references, no footnotes. That is honest rather than limiting — a
+regulatory filing has no bibliography, and the confirmation rule's second clause exists for exactly
+that case. A first draft of the plan recorded every non-PDF as `NOT_PDF`, which would have dropped
+a 247,993-character SEC filing out of the corpus and turned the 14 of 25 below into 13 with nobody
+noticing.
 
 A document that does not confirm **produces no chunks** and is recorded in `documents.jsonl` with
 `NOT_A_DOCUMENT` and its reason. It does not disappear: it stays counted, as stage 2's
@@ -228,7 +236,8 @@ papers, the same reason the stage 2 HTML fixtures are synthetic.
 |---|---|
 | `test_tei.py` | synthetic TEI: sections, tables with ragged rows, references, malformed XML, a TEI with no body |
 | `test_chunk.py` | the five rules, including a note kept as a note and a bare head dropped; the canonical rendering byte for byte; thresholds on every chunk; a ragged table does not shift its columns |
-| `test_normalize.py` | orchestration against a fake GROBID; idempotence by `sha256`; the three ledgers; `fulltext_confirmed` on an `IND008`-shaped document |
+| `test_normalize.py` | orchestration against a fake GROBID; idempotence by `sha256`; the three ledgers; `fulltext_confirmed` on an `IND008`-shaped document; markup routed away from GROBID |
+| `test_html_doc.py` | headings into sections; skipped elements; no-text refusal |
 | `test_grobid.py` | the `isalive` check, and the error message naming the workaround |
 | `test_real_tei.py` | runs the pure functions over `store/*/tei/*.xml` **when the store is populated**, skipped otherwise — the real-data validation that cannot be committed |
 
