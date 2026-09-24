@@ -19,3 +19,9 @@ jobs:
         run: python -m claimstone.cli validate --all-projects
       - name: Tests
         run: pytest -q
+
+      # A figure is comparable only against another produced by the same instrument. These two
+      # version constants say which instrument; changing one without saying so in the file that
+      # records measurements makes two incomparable numbers look like a trend.
+      - name: Measurement instruments are versioned in step with what they measured
+        run: python tools/check_instrument_versions.py

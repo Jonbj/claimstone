@@ -196,10 +196,27 @@ no vector database (a few hundred documents: similarity is one matrix multiplica
 graph database (a citation graph is a table of edges).
 
 ## D10 — Two independent discovery channels, by construction
-Keyword search over metadata APIs, and backward citations extracted by GROBID. Two
-independent channels make corpus completeness **estimable** — capture-recapture — instead
-of merely asserted from a round-over-round delta. That delta is confounded with
-acquisition failure: a blocked downloader produces "0% new" and reads as saturation.
+Keyword search over metadata APIs, and backward citations extracted by GROBID.
+
+The reason is **not** that two channels give a completeness estimate. It is that a
+round-over-round delta cannot be trusted on its own: that delta is confounded with acquisition
+failure, because a blocked downloader produces "0% new" and reads as saturation. A second channel
+that does not depend on the first breaks that confound — if the citation channel keeps producing
+sources the keyword channel never found, the corpus is not saturated regardless of what the delta
+says.
+
+**Revised 2026-09-24**, after a review pointed out the original wording claimed capture-recapture
+made completeness *estimable*, and the stage 1 spec had already established that it does not here.
+Measured: the manifest and the reference set overlap on 6 works, which yields about 2,962 and a
+coverage of 0.8% — and all three assumptions fail. Exact-title matching understates the overlap by
+an unknown amount, since GROBID took an NBER cover banner as a title in 15 cases. The manifest was
+curated by hand and is not a sample of anything. And catchability is unequal by construction, which
+the citation channel's own `min_citations_in_corpus` threshold depends on, so our filter breaks the
+assumption the estimate requires.
+
+What survives is the whole operational point: **705 of 711 references were not in the manifest**,
+which says the first channel missed hundreds of sources and needs no population estimate to say it.
+The number the report must not print is the percentage.
 
 ## D11 — Admissibility gates verdicts
 Acquisition rate is computed every round and reported. Below the declared floor the round
@@ -249,3 +266,70 @@ between the prompt and the model and changes with its version, which is why
 `harness_version` is recorded and why the metered API is preferred wherever a result must be
 exactly reproducible. High-volume lanes go where throughput is priced per token; interactive
 subscription plans are not batch infrastructure and are not used as though they were.
+
+## D14 — A retry and a re-judgement collapse differently
+Adopted 2026-09-24, discovered while correcting a round that had been measured before the content
+gate existed.
+
+Two rules about the append-only ledger both sound right and pull in opposite directions, and the
+order between them is the whole content of `admissibility.collapse`.
+
+A **retry** that fails must not erase a recorded success. Its failure is a fact about the world —
+the host refused us this time — and says nothing about bytes already on disk. Plain latest-wins
+would drop the rate while the corpus was unchanged.
+
+A **re-gate** that fails must erase one. It is not a new attempt at anything; it is a corrected
+reading of the very artifact the earlier row claimed, and it says that artifact was never a
+document. A row carrying `regated_from` is therefore authoritative, and a genuine acquisition
+afterwards supersedes it in turn.
+
+The same reasoning gives `gate_audit._artifacts` its shape: it reads the **whole** log rather than
+the latest row per candidate, because the store is content-addressed and append-only, so a pointer
+to bytes never goes stale. A later row that happens not to mention an artifact — which a rejection
+does, since row-level `stored_path` means "what we accepted" — must not hide bytes that are still
+on disk.
+
+## D15 — Stage 6 is not specified until a verdict is defined
+Adopted 2026-09-24, on the recommendation of an adversarial review, which asked to be allowed to
+conclude that a subsystem should not exist and then did.
+
+The plan was random-effects pooling with PET-PEESE and MAIVE, delegated to `metafor` across a file
+boundary (D6). The review's objection is not about the statistics; it is that the inputs cannot
+support them. An exact-substring quote verifies the **provenance of a text**. It does not establish
+that the model selected the right result from the paper, extracted its estimand and uncertainty
+correctly, or weighed study quality — and the project's rhetoric has been treating the quote gate
+as if it did.
+
+Worse, the registry mixes kinds. Of 28 questions in `alembic-s4`, several are methodological
+requirements or operational judgements rather than empirical effects. Pooling across event studies,
+textual-analysis papers and methods references would lack a common estimand, and random effects
+explain variation among comparable estimates — they do not confer meaning on incomparable ones.
+
+So, in order, before any statistics:
+
+1. Per question, predefine the eligible designs, the outcome, the direction, the horizon, the
+   population, what magnitude would matter, and what would count as a counterexample. Identify the
+   questions that are not effect-estimation questions at all.
+2. Extract a structured **study-result** record — estimate, scale, standard error or interval,
+   sample, horizon, design, dependence — with claims as evidence annotations rather than as
+   independent observations.
+3. Build a structured evidence table per question: pertinent studies, findings in each direction,
+   risk of bias, missing acquisition, missing precision, live disagreements. Not a count of
+   significant results; the distinction is the one Cochrane draws between structured synthesis and
+   vote counting.
+4. Allow meta-analysis only for a pre-specified subset with compatible estimands and verified
+   sampling variances, and omit a pooled estimate when observational studies are not similar
+   enough.
+5. Treat PET-PEESE and MAIVE as sensitivity analyses where their inputs fit. MAIVE needs enough
+   estimates and a real relationship between inverse sample size and reported variance; it repairs
+   neither missing nor incomparable effects.
+
+And `SUPPORTED` needs an operational definition before any code: evidence sufficiency, coverage,
+design quality, replication, and a rule for material counter-evidence. That no threshold was
+written anywhere was not a deferral of something easy.
+
+**A fifth outcome is likely needed.** The four states do not express "relevant literature exists
+and conflicts", and forcing that into `UNANSWERED_IN_LITERATURE` would be the same collapse
+invariant 2 forbids, one category over. Invariant 2 forbids reporting absence as absence of effect;
+it does not forbid a fifth state, and an explicit abstention is the honest place for irreducible
+disagreement.
