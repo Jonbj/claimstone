@@ -110,6 +110,12 @@ This catches the real pathological case — an HTML error page served as
 explicit decision rather than a discovery downstream. Stage 3 will write back a
 `fulltext_confirmed` signal; until it exists, a structurally valid PDF counts as acquired.
 
+**Measured, 2026-09-24.** That weakness cost exactly one source in 25 on the first corpus:
+`IND008`, a vendor fact-sheet PDF with 4,618 characters of body and no references, which this
+gate cannot tell from a paper. Reaching a character count needs the parser that does not exist
+before stage 3, so the gate stays structural and the rate it produces is an **upper bound** until
+stage 3 confirms extractable structure. Recorded under D8.
+
 ### HTML / XML
 
 XML is treated identically to HTML here; structured parsing belongs to stage 3.
