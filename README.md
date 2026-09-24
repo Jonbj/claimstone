@@ -97,8 +97,11 @@ open-model endpoint, or a metered API. The engine holds no vendor SDK and no lan
 hard-coded to a vendor — which backend is better at a lane is answered by running both over
 the same work units.
 
-Storage is **append-only JSONL as the source of truth** — hashable, diffable, resumable
-after a crash — with SQLite as a derived view that can be rebuilt from it. No Postgres,
+Storage is **append-only JSONL as the source of truth** — hashable, diffable, and resumable
+after a crash in a specific sense: a process killed mid-append leaves a final line with no
+newline, which readers skip and report and `Store.repair` truncates. Damage anywhere else raises,
+because silently skipping a row drops it out of a denominator. SQLite is a derived view that can
+be rebuilt from it. No Postgres,
 no vector database, no graph database: this is a few hundred documents, similarity is a
 matrix multiplication and a citation graph is a table of edges.
 

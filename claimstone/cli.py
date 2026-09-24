@@ -148,14 +148,15 @@ def _report(args: argparse.Namespace) -> int:
         share = "—" if not found else f"{result['obtained'] / found:.2f}"
         print(f"  {'obtained':<14} {result['obtained']}/{found}  {share}")
         if result["confirmed"] is not None:
+            marker = "  <- the figure" if result["basis"] == "confirmed" else ""
             print(f"  {'confirmed':<14} {result['confirmed']}/{found}"
-                  f"  {result['confirmed'] / found:.2f}  <- the figure")
+                  f"  {result['confirmed'] / found:.2f}{marker}")
             if result["not_a_document"]:
                 print(f"                 {len(result['not_a_document'])} obtained but not a "
                       f"document: {', '.join(result['not_a_document'])}")
             if result["awaiting_normalize"]:
-                print(f"                 {result['awaiting_normalize']} awaiting normalize, "
-                      f"counted as obtained")
+                print(f"                 {result['awaiting_normalize']} still awaiting "
+                      f"normalize, so the figure stays the obtained rate")
         if result["orphan_acquisitions"]:
             print(f"  {'orphans':<14} {len(result['orphan_acquisitions'])} acquisition rows with "
                   f"no candidate — the ledger is inconsistent")

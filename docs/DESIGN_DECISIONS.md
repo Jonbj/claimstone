@@ -182,7 +182,15 @@ whoever owns the manifest, and the floor stays at 0.80 (v1) until they make it. 
 result for this round is `INSUFFICIENT_ACQUISITION`.
 
 ## D9 — Append-only JSONL is the source of truth
-Hashable, diffable, resumable after a crash, and auditable with grep. SQLite is a derived
+Hashable, diffable, and auditable with grep.
+
+**What resumability means, added 2026-09-24** after a review pointed out the claim was
+unqualified while `Store.read` would raise on a truncated last line. A crash mid-append leaves a
+final line with no trailing newline; readers skip exactly that line and record it, and
+`Store.repair` truncates it. Incompleteness is judged by the missing newline and never by
+parseability, since a row cut at `{"k": 2}` is valid JSON and still half-written. Damage anywhere
+other than the end raises: it is not a crash artefact, and skipping it would remove a row from a
+denominator silently. SQLite is a derived
 read model, rebuildable from the JSONL. No Postgres (single writer, megabytes of data),
 no vector database (a few hundred documents: similarity is one matrix multiplication), no
 graph database (a citation graph is a table of edges).

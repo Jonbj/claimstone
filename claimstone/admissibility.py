@@ -98,11 +98,12 @@ def rate(store: Store, *, round_name: str | None = None) -> dict[str, Any]:
             identifier = str(row.get("source_id") or key)
             held = confirmed_rows.get(identifier)
             if held is None:
-                # Not yet normalized is not the same as normalized and rejected: counting it as
-                # unconfirmed would make the rate fall because stage 3 had not finished, which
-                # measures our progress and calls it a property of the corpus.
+                # Not yet normalized is not the same as normalized and rejected. It is counted
+                # as awaiting and nothing more: calling it confirmed would give one number two
+                # meanings, and calling it unconfirmed would make the rate fall because stage 3
+                # had not finished — measuring our progress and reporting it as a property of
+                # the corpus.
                 awaiting += 1
-                confirmed += 1
             elif held.get("fulltext_confirmed"):
                 confirmed += 1
             else:
@@ -127,8 +128,12 @@ def rate(store: Store, *, round_name: str | None = None) -> dict[str, Any]:
     for bucket in by_class.values():
         bucket["rate"] = bucket["obtained"] / bucket["found"]
 
-    basis = "confirmed" if confirmed is not None else "obtained"
-    numerator = confirmed if confirmed is not None else obtained
+    # The confirmed basis only once stage 3 has reached every obtained source. While any remain
+    # awaiting, `confirmed` is partial information reported beside the figure, never the figure:
+    # a headline that counts unexamined bytes as confirmed is a headline with two meanings.
+    complete = confirmed is not None and awaiting == 0
+    basis = "confirmed" if complete else "obtained"
+    numerator = confirmed if complete else obtained
     return {
         "round": round_name,
         "found": found,
