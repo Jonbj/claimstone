@@ -136,6 +136,22 @@ as what they are. Two of the three recoveries came from the archive, which is th
 did not exist before — for the classes with no open-access infrastructure it is the whole
 cascade.
 
+### The denominator was wrong, 2026-09-24
+
+An adversarial review found, and running it confirmed, that `rate()` divided by the number of
+acquisition rows rather than by the candidates found. With 25 candidates discovered and one
+attempted and obtained it returned **1.00** and `admit()` returned **OK** against an 0.80 floor: a
+corpus read at 4% certifying itself complete, which is the failure D11 exists to prevent, in the
+module that exists to prevent it.
+
+`sources.yaml` has always declared the floor a share of what was *found*. The code did not
+implement that. Fixed in `7490f6d`, with the chain of states — found, classified, attempted,
+obtained, confirmed — reported separately, because each has a different remedy.
+
+**The figures below are unaffected.** That round attempted all 25 candidates, so its denominator
+happened to be right. That was luck, not protection, and it is why the defect survived a
+measurement that looked correct.
+
 ### 0.60 is an upper bound, 2026-09-24
 
 Running GROBID over the fourteen acquired PDFs found one that is not a document: `IND008` is

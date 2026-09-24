@@ -40,7 +40,7 @@ This also narrows §4's caption-marker rule: real notes arrive already labelled 
 | `claimstone/tei.py` | create | TEI bytes → `Document`. Pure, no I/O, no rendering. |
 | `claimstone/chunk.py` | create | `Document` → `[Chunk]`. Pure. The five rules and the canonical rendering. |
 | `claimstone/normalize.py` | create | orchestration, the three ledgers, `fulltext_confirmed`, the confirm sweep. |
-| `claimstone/admissibility.py` | modify | prefer the confirmed rate where `documents.jsonl` exists. |
+| `claimstone/admissibility.py` | done in `7490f6d` | already prefers the confirmed rate; Task 6 only verifies it against real rows. |
 | `claimstone/cli.py` | modify | `normalize`, `normalize --confirm-audit`; `report` gains the confirmed line. |
 | `claimstone/config.py` | modify | `normalize:` thresholds, beside `acquisition:`. |
 | `tests/test_grobid.py` | create | liveness, the helpful error, the injected transport |
@@ -1585,185 +1585,111 @@ exists.
 
 ---
 
-### Task 6: The confirmed rate reaches the report
+### Task 6: Verify the confirmed basis against real documents
 
-Implements spec §7's report lines.
+Implements spec §7's report lines — **most of which already exist.**
+
+`admissibility.rate()` gained `confirmed`, `awaiting_normalize`, `not_a_document` and `basis` in
+commit `7490f6d`, alongside a separate fix: the denominator became the candidate set rather than
+the acquisition rows, because dividing by acquisitions let one obtained source out of twenty-five
+found report 1.00 and pass an 0.80 floor. `cli._report` prints the whole chain already.
+
+So this task does not build that machinery. It checks that the machinery agrees with what stage 3
+actually writes, which nothing has yet verified end to end — `admissibility` was written against
+hand-made `documents.jsonl` rows, not against rows `normalize.run()` produced.
 
 **Files:**
-- Modify: `claimstone/admissibility.py`
-- Modify: `claimstone/cli.py`
-- Modify: `tests/test_admissibility.py`
+- Modify: `tests/test_normalize.py`
 
-- [ ] **Step 1: Write the failing tests**
+- [ ] **Step 1: Write the failing test**
 
-Append to `tests/test_admissibility.py`:
+Append to `tests/test_normalize.py`:
 
 ```python
-def test_without_documents_the_obtained_rate_is_the_figure(tmp_path):
-    store = Store("t", base=tmp_path)
-    _ledger(store, [row("a", acquired=True), row("b", acquired=False, failure="PAYWALL_403")])
-    result = admissibility.rate(store)
-    assert result["confirmed"] is None
-    assert result["basis"] == "obtained"
+def test_the_confirmed_rate_matches_what_normalize_wrote(tmp_path):
+    """End to end: acquire's ledger, normalize's verdicts, admissibility's arithmetic.
 
+    Each side was tested against fixtures of the other's shape. This asserts they agree on rows
+    one of them really produced — which is where a field name or a join key silently diverges.
+    """
+    from claimstone import admissibility
+    from claimstone.config import load_project
 
-def test_with_documents_the_confirmed_rate_is_the_figure(tmp_path):
     store = Store("t", base=tmp_path)
-    _ledger(store, [row("a", acquired=True), row("b", acquired=True)])
-    store.append("documents.jsonl", {"source_id": "a", "fulltext_confirmed": True})
-    store.append("documents.jsonl", {"source_id": "b", "fulltext_confirmed": False,
-                                     "failure_class": "NOT_A_DOCUMENT"})
+    for source_id, body in (("S01", b"%PDF one"), ("S02", b"%PDF two"),
+                            ("IND008", b"%PDF three")):
+        acq = acquired(source_id, store, body=body)
+        store.append("candidates.jsonl", {"candidate_key": acq["candidate_key"],
+                                          "source_id": source_id, "source_class": "ACA"})
+        store.append("acquisitions.jsonl", acq)
+    # Two real documents and one vendor fact sheet.
+    list(normalize.run(store, FakeGrobid(tei_by_call={1: DOC, 2: DOC, 3: FACT_SHEET})))
+
     result = admissibility.rate(store)
-    assert result["acquired"] == 2
-    assert result["confirmed"] == 1
+    assert result["found"] == 3
+    assert result["obtained"] == 3
+    assert result["confirmed"] == 2
     assert result["basis"] == "confirmed"
-    assert result["rate"] == 0.5
-    assert result["not_a_document"] == ["b"]
+    assert result["not_a_document"] == ["IND008"]
+    assert result["awaiting_normalize"] == 0
+    assert result["rate"] == 2 / 3
 
 
-def test_a_source_with_no_document_row_yet_is_not_counted_as_unconfirmed(tmp_path):
-    # Not yet normalized is not the same as normalized and rejected, and conflating them would
-    # make the rate fall simply because stage 3 has not finished.
+def test_a_source_normalize_has_not_reached_is_not_counted_against_the_corpus(tmp_path):
+    from claimstone import admissibility
+
     store = Store("t", base=tmp_path)
-    _ledger(store, [row("a", acquired=True), row("b", acquired=True)])
-    store.append("documents.jsonl", {"source_id": "a", "fulltext_confirmed": True})
+    for source_id in ("S01", "S02"):
+        acq = acquired(source_id, store, body=f"%PDF {source_id}".encode())
+        store.append("candidates.jsonl", {"candidate_key": acq["candidate_key"],
+                                          "source_id": source_id, "source_class": "ACA"})
+        store.append("acquisitions.jsonl", acq)
+    list(normalize.run(store, FakeGrobid(), limit=1))
+
     result = admissibility.rate(store)
+    # One normalized and confirmed, one not reached. Counting the second as unconfirmed would
+    # make the rate fall because stage 3 had not finished — measuring our progress and calling
+    # it a property of the corpus.
     assert result["confirmed"] == 2
     assert result["awaiting_normalize"] == 1
-
-
-def test_the_floor_is_compared_against_whichever_basis_was_used(tmp_path):
-    store = Store("t", base=tmp_path)
-    _ledger(store, [row(k, acquired=True) for k in "abcde"])
-    for key in "abcd":
-        store.append("documents.jsonl", {"source_id": key, "fulltext_confirmed": True})
-    store.append("documents.jsonl", {"source_id": "e", "fulltext_confirmed": False,
-                                     "failure_class": "NOT_A_DOCUMENT"})
-    project = load_project("projects/example-news-and-returns")
-    verdict = admissibility.admit(project, store)
-    assert verdict["basis"] == "confirmed"
-    assert verdict["status"] == "OK"     # 4/5 = 0.80, exactly the floor
-```
-
-Note the ledger rows in this file use `candidate_key`, and `documents.jsonl` uses `source_id`. The
-join is on `source_id`, so extend the local `row()` helper to carry one:
-
-```python
-def row(key, *, acquired, klass="ACA", failure=None, url="https://x.example/a"):
-    return {"candidate_key": key, "source_id": key, "source_class": klass, "acquired": acquired,
-            "failure_class": failure, "url": url, "fetched_at": "2026-09-22T10:00:00+00:00"}
 ```
 
 - [ ] **Step 2: Run to verify it fails**
 
-Run: `.venv/bin/pytest tests/test_admissibility.py -q`
-Expected: FAIL with `KeyError: 'confirmed'`
+Run: `.venv/bin/pytest tests/test_normalize.py -q -k "confirmed_rate or has_not_reached"`
+Expected: FAIL. The likely cause is the join key: `admissibility` looks up `documents.jsonl` by
+`source_id`, and `normalize.run()` must write that field with the same value the acquisition row
+carries. If the test fails on `not_a_document == []`, that join is what to fix.
 
-- [ ] **Step 3: Modify `claimstone/admissibility.py`**
+- [ ] **Step 3: Make them pass**
 
-Add, before `rate`:
+No new module. Reconcile whichever side is wrong:
 
-```python
-def confirmations(store: Store) -> dict[str, dict[str, Any]]:
-    """What stage 3 concluded per source, where it has run."""
-    return store.latest_by("documents.jsonl", "source_id")
-```
+- If `normalize.run()` writes a `source_id` that differs from the acquisition row's, fix
+  `normalize.run()` — the acquisition row is the authority, since `acquire` wrote it from the
+  candidate.
+- If `admissibility.confirmations()` keys on the wrong field, fix that.
 
-Then inside `rate`, after `acquired` is computed:
+Do not make the test pass by loosening the assertion. The number this produces is the project's
+headline figure.
 
-```python
-    # Stage 3 knows things stage 2's gate could not: a structurally valid PDF may still be a
-    # vendor fact sheet. Where it has run, its verdict is the figure; where it has not, the
-    # obtained rate is, and the row says which — a rate whose basis is unstated is the thing
-    # the honesty rules forbid.
-    confirmed_rows = confirmations(store)
-    confirmed: int | None = None
-    awaiting = 0
-    not_a_document: list[str] = []
-    if confirmed_rows:
-        confirmed = 0
-        for row in rows.values():
-            if not row.get("acquired"):
-                continue
-            key = str(row.get("source_id") or row.get("candidate_key"))
-            held = confirmed_rows.get(key)
-            if held is None:
-                # Not yet normalized is not the same as normalized and rejected.
-                awaiting += 1
-                confirmed += 1
-            elif held.get("fulltext_confirmed"):
-                confirmed += 1
-            else:
-                not_a_document.append(key)
-```
-
-And replace the return with:
-
-```python
-    basis = "confirmed" if confirmed is not None else "obtained"
-    numerator = confirmed if confirmed is not None else acquired
-    return {
-        "attempted": attempted,
-        "acquired": acquired,
-        "confirmed": confirmed,
-        "awaiting_normalize": awaiting,
-        "not_a_document": sorted(not_a_document),
-        "basis": basis,
-        "rate": (numerator / attempted) if attempted else None,
-        "by_class": dict(sorted(by_class.items())),
-        "failures_by_class": dict(sorted(failures.items(), key=lambda kv: -kv[1])),
-        "failures_by_host": dict(sorted(hosts.items(), key=lambda kv: -kv[1])),
-    }
-```
-
-- [ ] **Step 4: Print both lines in `cli._report`**
-
-Replace the total line with:
-
-```python
-        share = (
-            "—" if not result["attempted"]
-            else f"{result['acquired'] / result['attempted']:.2f}"
-        )
-        print(f"  {'obtained':<14} {result['acquired']}/{result['attempted']}  {share}")
-        if result["confirmed"] is not None:
-            marker = "  <- the figure" if result["basis"] == "confirmed" else ""
-            print(f"  {'confirmed':<14} {result['confirmed']}/{result['attempted']}  "
-                  f"{result['confirmed'] / result['attempted']:.2f}{marker}")
-            if result["not_a_document"]:
-                print(f"                 {len(result['not_a_document'])} obtained but not a "
-                      f"document: {', '.join(result['not_a_document'])}")
-            if result["awaiting_normalize"]:
-                print(f"                 {result['awaiting_normalize']} awaiting normalize, "
-                      f"counted as obtained")
-        print(f"  {'floor':<14} {result['floor']:.2f}"
-              f" (v{result['floor_version']}, {result['floor_set_at']})"
-              f"   {result['status']}   basis: {result['basis']}")
-```
-
-- [ ] **Step 5: Run everything**
+- [ ] **Step 4: Run the whole suite**
 
 Run: `.venv/bin/pytest -q`
 Expected: PASS, all tests
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
-git add claimstone/admissibility.py claimstone/cli.py tests/test_admissibility.py
-git commit -m "admissibility: the confirmed rate is the figure, and the report says so
+git add tests/test_normalize.py claimstone/normalize.py claimstone/admissibility.py
+git commit -m "normalize: the confirmed rate agrees with the rows normalize really writes
 
-Where stage 3 has run, its verdict is the headline; where it has not, the obtained
-rate is, and the row names which basis produced it — a rate whose basis is unstated
-is what the honesty rules forbid.
-
-Not yet normalized counts as obtained rather than unconfirmed. Conflating the two
-would make the rate fall simply because stage 3 had not finished, which is a
-measurement of our progress dressed up as a measurement of the corpus.
+Both sides were tested against fixtures shaped like the other. This joins them on
+rows one of them actually produced, which is where a field name or a join key
+diverges without any test noticing.
 
 <trailer>"
 ```
-
----
 
 ### Task 7: Wiring the CLI
 

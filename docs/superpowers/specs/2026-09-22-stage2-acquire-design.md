@@ -313,12 +313,23 @@ inspect attempt order before spending real requests against publishers.
 `report` output:
 
 ```
-alembic-s4 — campaign routine, 25 candidates
-  obtained      19 / 26   0.73        floor 0.80   INSUFFICIENT_ACQUISITION
-  by class      ACA 11/14 0.79   WP 6/6 1.00   NEW 2/4 0.50   DOC 0/2 0.00
-  failures      PAYWALL_403 4   LANDING_PAGE_ONLY 2   NOT_FOUND_404 1
-  by host       sciencedirect.com 3   onlinelibrary.wiley.com 2   …
+alembic-s4 — round all
+  ACA            7/10  0.70
+  IND            3/9   0.33
+  MET            5/6   0.83
+  found          25
+  attempted      25/25
+  obtained       15/25  0.60
+  floor          0.80 (v1, 2026-09-22)   INSUFFICIENT_ACQUISITION   basis: obtained
+  failures       ABSTRACT_ONLY 6  PAYWALL_403 4
+  by host        www.ravenpack.com 4  www.sciencedirect.com 2  …
 ```
+
+**The denominator is `found`, not `attempted`** — corrected 2026-09-24 after a review showed the
+original divided by acquisition rows, so one obtained source of twenty-five found reported 1.00
+and passed the floor. The chain of states is printed separately because the remedies differ: found
+but unclassified needs a declared rule, found but unattempted needs the round finishing, attempted
+and refused needs a campaign or a better cascade.
 
 The per-class rate is reported **before** the aggregate, not after: D3 says classes are not
 mixed, and a 0.73 hiding `DOC 0.00` is a different fact from a uniform 0.73. The floor is
