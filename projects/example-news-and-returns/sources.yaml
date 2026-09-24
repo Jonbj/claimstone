@@ -29,7 +29,17 @@ classes:
 
 # A round may not produce verdicts if fewer than this share of *found* sources
 # were actually obtained. See README, "Admissibility".
+#
+# Changing this is a dated, versioned, motivated event — the same standard as a
+# question-registry bump. It is lowered only on evidence that a class of sources is
+# structurally unobtainable, never because a measured rate was inconvenient.
 acquisition_floor: 0.80
+floor_version: 1
+floor_set_at: 2026-09-22
+floor_rationale: >
+  Set before the first measured round. Below this share, per-question coverage stops being
+  interpretable: a question with no claims cannot be placed between NEVER_ASKED and
+  UNANSWERED_IN_LITERATURE when a quarter of the corpus was never read.
 
 # Never fetched, whatever the fallback chain suggests.
 excluded_hosts:

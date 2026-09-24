@@ -112,7 +112,7 @@ outcome and not a failure.
 
 ## Status
 
-Early. **Stage 2 first**, measured against a real 26-source manifest whose current
+Early. **Stage 2 first**, measured against a real 25-source manifest whose current
 acquisition rate is 0.42 — then a thin vertical slice through stages 3-6 on that same
 manifest, through to real verdicts, and the dashboard last, built against real rows.
 

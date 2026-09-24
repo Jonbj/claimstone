@@ -85,6 +85,67 @@ one entry. The OA fallback chains that exist are single scripts, and at least on
 through Sci-Hub, which is excluded here. This is why acquisition is stage 2 and the first
 milestone: it is the binding constraint on the science, not extraction quality.
 
+### Measured, 2026-09-23
+
+On the 25-source manifest, with the content gate at `gate_version: 2`:
+
+```
+ACA            6/10  0.60
+IND            1/9   0.11
+MET            5/6   0.83
+total         12/25  0.48   floor 0.80 (v1)   INSUFFICIENT_ACQUISITION
+failures      PAYWALL_403 7   ABSTRACT_ONLY 6
+by host       ravenpack 4 · sciencedirect 2 · wiley 1 · ssrn 1 · doi.org 1 ·
+              sec.gov 1 · lseg 1 · marketpsych 1 · spglobal 1
+```
+
+**0.42 → 0.48.** The round recorded 0.72 before a gate existed; re-judging the bytes it had
+already stored dropped six artifacts that were vendor abstract or product pages, not documents.
+No source was re-fetched to establish this — the bytes were on disk and the gate does no I/O.
+
+**The thresholds are not deciding it.** All four swept flat: `min_text_chars`, `min_pdf_bytes`
+and `paywall_doubt_chars` at spread 0.00, `fulltext_chars` at 0.04 and only downward from
+15000, where a 9243-character product page would slip through. The rate is set by the structural
+signal — a reference list present or absent — not by any constant chosen at a desk.
+
+**Every rejection was checked by hand: 6 of 6 correct, no false positive.** Four RavenPack
+research abstracts, one LSEG product page, one MarketPsych overview.
+
+### The named campaign, 2026-09-24
+
+The seven 403s were terminal, so a routine run left them alone. But the cascade had changed
+since they were refused — the known wall now sorts last instead of being re-promoted by format
+ranking, a DOI is resolved from the title when the URL carries only a publisher's internal id,
+and a source with no DOI falls back to an archived snapshot. A changed capability is what a
+named campaign is for, so `--campaign cascade-v2-walls --retry-class PAYWALL_403` re-knocked on
+those seven and no others.
+
+**Three of seven recovered. 0.48 → 0.60.**
+
+```
+ACA009   PDF_FULLTEXT   unpaywall  1062 KB   accepted version in an institutional repository
+IND001   HTML_FULLTEXT  wayback     504 KB   a SEC EDGAR filing, 247,993 characters
+IND007   PDF_FULLTEXT   wayback     934 KB   an S&P Global PDF
+total   15/25  0.60   floor 0.80 (v1)   INSUFFICIENT_ACQUISITION
+failures  ABSTRACT_ONLY 6   PAYWALL_403 4   (sciencedirect 2, wiley 1, doi.org 1)
+```
+
+Against the 0.42 the project started from: **0.42 → 0.60**, with every source's OA status,
+licence and failure reason recorded, and with the six that look obtained but are not now named
+as what they are. Two of the three recoveries came from the archive, which is the fallback that
+did not exist before — for the classes with no open-access infrastructure it is the whole
+cascade.
+
+**Why the floor is out of reach here, and what that is evidence of.** Five sources separate
+0.60 from 0.80. Four are publisher 403s that survived a named campaign with an improved cascade.
+Six are pages for which no open full text exists to obtain — and three of those are *product pages*, which are not research in any form
+and would fail this gate at any threshold. `IND 3/9` is therefore a finding about the manifest's
+composition as much as about acquisition: entries were admitted as industry research that are
+vendor marketing. That is the shape of argument the pre-registered rule asks for before a floor
+may move (see the floor-versioning rule in the stage 2 spec) — but the argument belongs to
+whoever owns the manifest, and the floor stays at 0.80 (v1) until they make it. The published
+result for this round is `INSUFFICIENT_ACQUISITION`.
+
 ## D9 — Append-only JSONL is the source of truth
 Hashable, diffable, resumable after a crash, and auditable with grep. SQLite is a derived
 read model, rebuildable from the JSONL. No Postgres (single writer, megabytes of data),
@@ -100,8 +161,16 @@ acquisition failure: a blocked downloader produces "0% new" and reads as saturat
 ## D11 — Admissibility gates verdicts
 Acquisition rate is computed every round and reported. Below the declared floor the round
 is `INSUFFICIENT_ACQUISITION` and produces no verdicts. The corpus that motivated this
-project stands at 0.42 with 20 sources lost to 403 and connection failures, and the
+project stands at 0.42 with most of its sources lost to 403 and connection failures, and the
 criterion it was using would have declared it saturated.
+
+**Provenance check (2026-09-23).** The manifest this refers to is
+`SOURCE_MANIFEST.tsv` in the consuming project and holds **25 sources**, not the 26 stated
+in earlier drafts here and in the README. An earlier "20 sources lost" cannot be reconciled
+with 25 sources at 0.42, and the original measurement is not in this repository, so the count
+is left as "most" rather than restated with a number that cannot be checked. What is
+checkable is recorded instead: the round in `630ca52` attempted 25 and obtained 12 full
+texts (0.48) once abstract pages were recognised.
 
 ## D12 — "Never asked" is a distinct state
 `SUPPORTED` / `CONTRADICTED` / `UNANSWERED_IN_LITERATURE` / `NEVER_ASKED` are four states,
@@ -119,7 +188,7 @@ with an API key (Ollama Cloud), or a metered API. Every result row records `back
 
 **What decided it.** The local operating point (D4) implied weeks of wall-clock for a corpus
 of a few hundred documents, which forced a corpus ceiling — a limit on the science imposed by
-one machine. Measured against real rates instead: extraction of the 26-source manifest is
+one machine. Measured against real rates instead: extraction of the 25-source manifest is
 ~130 calls, and of a 300-source corpus ~1,500. On Ollama Cloud's hosted open models at
 $0.30/$1.20 per MTok that is **$0.23 and $2.63** respectively, inside the $60 of monthly
 credit a $20 plan includes; the adversarial reader of stage 5, whose input is compact by

@@ -1,191 +1,36 @@
-"""Stage 2 — acquire: turn candidates into frozen texts, legally, and account for failures.
+"""Stage 2 — acquire: candidates become frozen texts, legally, with every attempt recorded.
 
 This is the binding constraint on the science, not extraction quality: the corpus that
-motivated this project sits at an acquisition rate of 0.42 because publishers return 403.
-The strategy is therefore open-access first. When a publisher refuses and a DOI is known,
-Unpaywall and OpenAlex are asked where a legal free copy lives, and the cascade continues
-there instead of retrying the wall.
+motivated this project sits at 0.42 because publishers return 403. Every attempt is recorded,
+successful or not, because a swallowed failure inflates the rate that decides whether a round
+may produce verdicts at all.
 
-Every attempt is recorded, successful or not. The acquisition rate computed from this log
-is what gates whether a round may produce verdicts at all.
+Where a copy might live is `resolve`'s problem; whether what came back is a document is
+`fulltext`'s. This module does neither — it walks the cascade, applies the gate, stores the
+bytes and writes the row.
 """
 
 from __future__ import annotations
 
 import datetime as _dt
-from dataclasses import dataclass
 from typing import Any, Iterable, Iterator
 
-from claimstone import ids, net
+from claimstone import fulltext, net, resolve
 from claimstone.store import Store
 
 PDF_TYPES = ("application/pdf", "application/octet-stream")
 HTML_TYPES = ("text/html", "application/xhtml+xml", "application/xml", "text/xml", "text/plain")
 
-# Hosts we know serve landing pages rather than full text; a hit here is not a success.
-KNOWN_WALLS = (
-    "sciencedirect.com", "onlinelibrary.wiley.com", "link.springer.com",
-    "tandfonline.com", "jstor.org", "academic.oup.com", "papers.ssrn.com",
-    "journals.sagepub.com", "doi.org",
-)
+ROUTINE = "routine"
+DEFAULT_RETRY_AFTER_S = 6 * 3600
+
+
+class MissingSourceClass(ValueError):
+    """Invariant 6: a blog post and a refereed paper never share a pool unrecorded."""
 
 
 def _now() -> str:
     return _dt.datetime.now(_dt.timezone.utc).isoformat(timespec="seconds")
-
-
-@dataclass(frozen=True)
-class Location:
-    """One place a copy might live, and why we believe it."""
-
-    url: str
-    provenance: str           # unpaywall | openalex | arxiv | candidate | crossref
-    version: str = ""         # publishedVersion | acceptedVersion | submittedVersion
-    licence: str | None = None
-    oa_status: str | None = None
-    host_type: str | None = None
-
-
-def unpaywall_locations(fetcher: net.Fetcher, doi: str) -> tuple[list[Location], str | None]:
-    """Ask Unpaywall for legal free copies. Returns locations and the record's oa_status."""
-    email = net.contact_email()
-    payload, _ = fetcher.get_json(f"https://api.unpaywall.org/v2/{doi}?email={email}")
-    if not payload:
-        return [], None
-    oa_status = payload.get("oa_status")
-    locations: list[Location] = []
-    raw = payload.get("oa_locations") or []
-    best = payload.get("best_oa_location")
-    if best and best not in raw:
-        raw = [best, *raw]
-    for entry in raw:
-        if not isinstance(entry, dict):
-            continue
-        for key in ("url_for_pdf", "url"):
-            url = entry.get(key)
-            if not url:
-                continue
-            locations.append(
-                Location(
-                    url=str(url),
-                    provenance="unpaywall",
-                    version=str(entry.get("version") or ""),
-                    licence=entry.get("license"),
-                    oa_status=oa_status,
-                    host_type=entry.get("host_type"),
-                )
-            )
-    return locations, oa_status
-
-
-def openalex_locations(fetcher: net.Fetcher, doi: str) -> list[Location]:
-    """OpenAlex carries its own view of where a copy lives; used as the 403 fallback."""
-    payload, _ = fetcher.get_json(f"https://api.openalex.org/works/doi:{doi}")
-    if not payload:
-        return []
-    locations: list[Location] = []
-    seen: set[str] = set()
-    entries = [payload.get("best_oa_location"), *(payload.get("locations") or [])]
-    for entry in entries:
-        if not isinstance(entry, dict) or not entry.get("is_oa"):
-            continue
-        for key in ("pdf_url", "landing_page_url"):
-            url = entry.get(key)
-            if not url or url in seen:
-                continue
-            seen.add(str(url))
-            locations.append(
-                Location(
-                    url=str(url),
-                    provenance="openalex",
-                    version=str(entry.get("version") or ""),
-                    licence=entry.get("license"),
-                    oa_status=(payload.get("open_access") or {}).get("oa_status"),
-                )
-            )
-    return locations
-
-
-def resolve_doi_by_title(fetcher: net.Fetcher, title: str) -> str | None:
-    """Find a DOI from a title via OpenAlex, when the URL does not carry one.
-
-    Publisher URLs often use an internal identifier — a ScienceDirect PII, an SSRN
-    abstract id — so DOI extraction from the URL fails and no open-access lookup is even
-    attempted. Without this step those sources are recorded as paywalled when a legal free
-    copy may exist. The match is accepted only on an exact normalised-title equality, so a
-    near-miss becomes no DOI rather than the wrong paper.
-    """
-    folded = ids.normalize_title(title)
-    if len(folded) < 15:
-        return None
-    import urllib.parse
-
-    url = "https://api.openalex.org/works?" + urllib.parse.urlencode(
-        {"search": title, "per-page": 5, "mailto": net.contact_email(), "select": "doi,title"}
-    )
-    payload, _ = fetcher.get_json(url)
-    for work in (payload or {}).get("results") or []:
-        if ids.normalize_title(work.get("title")) == folded:
-            return ids.normalize_doi(work.get("doi"))
-    return None
-
-
-def _version_rank(version: str) -> int:
-    """Prefer the version of record, but never refuse a legal preprint over a paywall."""
-    return {"publishedversion": 0, "acceptedversion": 1, "submittedversion": 2}.get(
-        version.lower().replace(" ", ""), 3
-    )
-
-
-def plan_locations(
-    fetcher: net.Fetcher, candidate: dict[str, Any], *, use_apis: bool = True
-) -> tuple[list[Location], str | None]:
-    """Build the cascade for one candidate, cheapest and most likely first."""
-    doi = ids.normalize_doi(candidate.get("doi")) or ids.normalize_doi(candidate.get("url"))
-    original = str(candidate.get("url") or "")
-    oa_status: str | None = None
-    locations: list[Location] = []
-
-    # An arXiv identifier is a guaranteed legal full text; try it before anything else.
-    arxiv = ids.arxiv_id(original) or ids.arxiv_id(candidate.get("title"))
-    if arxiv:
-        locations.append(
-            Location(f"https://arxiv.org/pdf/{arxiv}", "arxiv", "submittedVersion", oa_status="green")
-        )
-
-    # The URL we were given, unless it is a host we know serves only a landing page.
-    if original and not any(w in net.host_of(original) for w in KNOWN_WALLS):
-        locations.append(Location(original, "candidate"))
-
-    if not doi and use_apis and candidate.get("title"):
-        doi = resolve_doi_by_title(fetcher, str(candidate["title"]))
-
-    if doi and use_apis:
-        upw, oa_status = unpaywall_locations(fetcher, doi)
-        locations.extend(upw)
-        if not upw:
-            locations.extend(openalex_locations(fetcher, doi))
-
-    # A known wall is tried last: better a landing page than nothing, but only after
-    # every legal open copy has been attempted.
-    if original and any(w in net.host_of(original) for w in KNOWN_WALLS):
-        locations.append(Location(original, "candidate"))
-
-    # Format outranks version label: a PDF gives the parser a real document, whereas a
-    # "publishedVersion" landing page may not carry the full text at all. ACA001 in the
-    # reference manifest regressed exactly this way — Unpaywall's HTML beat a direct PDF.
-    ordered = sorted(
-        locations,
-        key=lambda loc: (0 if loc.url.lower().endswith(".pdf") else 1, _version_rank(loc.version)),
-    )
-    deduped: list[Location] = []
-    seen: set[str] = set()
-    for loc in ordered:
-        key = ids.normalize_url(loc.url)
-        if key and key not in seen:
-            seen.add(key)
-            deduped.append(loc)
-    return deduped, oa_status
 
 
 def _suffix_for(content_type: str, url: str) -> str:
@@ -197,93 +42,161 @@ def _suffix_for(content_type: str, url: str) -> str:
 
 
 def acquire_one(
-    fetcher: net.Fetcher, store: Store, candidate: dict[str, Any], *, use_apis: bool = True
+    fetcher: net.FetcherLike,
+    store: Store,
+    candidate: dict[str, Any],
+    *,
+    campaign: str = ROUTINE,
+    use_apis: bool = True,
+    thresholds: dict[str, int] | None = None,
 ) -> dict[str, Any]:
-    """Try the cascade for one candidate. Returns the ledger row; never raises on failure."""
-    locations, oa_status = plan_locations(fetcher, candidate, use_apis=use_apis)
-    robots = {h: n for h, n in fetcher.robots_notes.items() if n != "honoured"}
+    """Try the cascade for one candidate. Returns the ledger row; never raises on a fetch."""
+    if not candidate.get("source_class"):
+        raise MissingSourceClass(
+            f"candidate {candidate.get('candidate_key')!r} carries no source_class; "
+            "a pool that mixes classes unrecorded cannot be synthesised (invariant 6)"
+        )
+
+    th = {**fulltext.DEFAULT_THRESHOLDS, **(thresholds or {})}
+    locations, oa_status = resolve.plan(fetcher, candidate, use_apis=use_apis)
     attempts: list[dict[str, Any]] = []
-
-    for loc in locations:
-        expect = PDF_TYPES if loc.url.lower().endswith(".pdf") else PDF_TYPES + HTML_TYPES
-        outcome = fetcher.get(loc.url, expect=expect)
-        row = outcome.as_row() | {"provenance": loc.provenance, "version": loc.version}
-        attempts.append(row)
-        if outcome.ok and outcome.body:
-            digest, path = store.store_bytes(outcome.body, _suffix_for(outcome.content_type, loc.url))
-            return {
-                "candidate_key": candidate["candidate_key"],
-                "source_id": candidate.get("source_id"),
-                "acquired": True,
-                "sha256": digest,
-                "stored_at": str(path),
-                "url": loc.url,
-                "provenance": loc.provenance,
-                "version": loc.version,
-                "licence": loc.licence,
-                "oa_status": loc.oa_status or oa_status,
-                "content_type": outcome.content_type,
-                "bytes": len(outcome.body),
-                "attempts": attempts,
-                "failure_class": None,
-                "robots_notes": robots,
-                "fetched_at": _now(),
-            }
-
-    return {
+    common = {
         "candidate_key": candidate["candidate_key"],
         "source_id": candidate.get("source_id"),
-        "acquired": False,
-        "sha256": None,
-        "url": str(candidate.get("url") or ""),
-        "oa_status": oa_status,
-        "attempts": attempts,
-        # The class of the last attempt is the honest headline: it says what stopped us.
-        "failure_class": (attempts[-1]["failure_class"] if attempts else net.NOT_FOUND),
-        "robots_notes": robots,
+        "source_class": candidate["source_class"],
+        "campaign": campaign,
         "fetched_at": _now(),
     }
+
+    for location in locations:
+        expect = PDF_TYPES if location.url.lower().endswith(".pdf") else PDF_TYPES + HTML_TYPES
+        outcome = fetcher.get(location.url, expect=expect)
+        attempt = outcome.as_row() | {
+            "provenance": location.provenance,
+            "version": location.version,
+            "gate_kind": None,
+            "gate_reason": None,
+            "stored_path": None,
+        }
+
+        if not outcome.ok or not outcome.body:
+            attempts.append(attempt)
+            continue
+
+        verdict = fulltext.classify(outcome.body, outcome.content_type, location.url, th)
+        digest, path = store.store_bytes(
+            outcome.body, _suffix_for(outcome.content_type, location.url)
+        )
+        attempt |= {
+            "gate_kind": verdict.kind,
+            "gate_reason": verdict.reason,
+            "stored_path": str(path),
+        }
+        attempts.append(attempt)
+
+        if not verdict.accepted:
+            # A 200 carrying a landing page or an abstract page is a failure of acquisition.
+            # Keep going: a later location in the cascade may hold the real thing.
+            #
+            # The bytes are kept regardless. Without them the threshold audit cannot re-run
+            # the gate and the by-hand rejection check has nothing to look at — and the
+            # thresholds that produced the headline rate were chosen at a desk.
+            attempt["failure_class"] = verdict.kind
+            continue
+
+        return common | {
+            "acquired": True,
+            "sha256": digest,
+            "stored_path": str(path),
+            "url": location.url,
+            "provenance": location.provenance,
+            "version": location.version,
+            "licence": location.licence,
+            "oa_status": location.oa_status or oa_status,
+            "host_type": location.host_type,
+            "content_type": outcome.content_type,
+            "bytes": len(outcome.body),
+            "gate": verdict.as_row(th),
+            "attempts": attempts,
+            "failure_class": None,
+        }
+
+    return common | {
+        "acquired": False,
+        "sha256": None,
+        "stored_path": None,
+        "url": str(candidate.get("url") or ""),
+        "oa_status": oa_status,
+        "gate": None,
+        "attempts": attempts,
+        # The class of the last attempt is the honest headline: it says what stopped us.
+        "failure_class": attempts[-1]["failure_class"] if attempts else net.NO_LOCATIONS,
+    }
+
+
+def _age_seconds(row: dict[str, Any]) -> float:
+    stamp = row.get("fetched_at")
+    if not stamp:
+        return float("inf")
+    try:
+        when = _dt.datetime.fromisoformat(str(stamp))
+    except ValueError:
+        return float("inf")
+    if when.tzinfo is None:
+        when = when.replace(tzinfo=_dt.timezone.utc)
+    return (_dt.datetime.now(_dt.timezone.utc) - when).total_seconds()
+
+
+def should_attempt(
+    previous: dict[str, Any] | None,
+    *,
+    retry_classes: frozenset[str],
+    retry_after_s: int = DEFAULT_RETRY_AFTER_S,
+) -> bool:
+    """Decide whether to knock again.
+
+    Terminal failures are left alone unless their class was explicitly named, which is the
+    named-campaign rule: a host that returned 403 is not re-requested on a routine run.
+    Transient failures come back on their own once the TTL has passed, so a downloader blocked
+    for an afternoon does not quietly leave those sources out of the denominator.
+    """
+    if previous is None:
+        return True
+    if previous.get("acquired"):
+        return False
+    failure_class = previous.get("failure_class")
+    if failure_class in retry_classes:
+        return True
+    if net.is_terminal(failure_class):
+        return False
+    return _age_seconds(previous) >= retry_after_s
 
 
 def run(
     candidates: Iterable[dict[str, Any]],
     store: Store,
-    fetcher: net.Fetcher,
+    fetcher: net.FetcherLike,
     *,
-    skip_acquired: bool = True,
+    campaign: str = ROUTINE,
+    retry_classes: frozenset[str] = frozenset(),
+    retry_after_s: int = DEFAULT_RETRY_AFTER_S,
     use_apis: bool = True,
+    thresholds: dict[str, int] | None = None,
+    limit: int | None = None,
 ) -> Iterator[dict[str, Any]]:
-    """Acquire every candidate not already held. Idempotent by candidate key."""
-    already = {
-        key for key, row in store.latest_by("acquisitions.jsonl", "candidate_key").items()
-        if row.get("acquired")
-    }
+    """Acquire what the retry policy allows. A candidate it declines writes no row."""
+    previous = store.latest_by("acquisitions.jsonl", "candidate_key")
+    attempted = 0
     for candidate in candidates:
-        if skip_acquired and candidate["candidate_key"] in already:
+        if limit is not None and attempted >= limit:
+            return
+        prior = previous.get(str(candidate["candidate_key"]))
+        if not should_attempt(prior, retry_classes=retry_classes, retry_after_s=retry_after_s):
             continue
-        row = acquire_one(fetcher, store, candidate, use_apis=use_apis)
+        row = acquire_one(
+            fetcher, store, candidate, campaign=campaign, use_apis=use_apis, thresholds=thresholds
+        )
+        row["attempt_no"] = int((prior or {}).get("attempt_no") or 0) + 1
         store.append("acquisitions.jsonl", row)
+        attempted += 1
         yield row
-
-
-def rate(store: Store) -> dict[str, Any]:
-    """Acquisition accounting. This is the figure that gates verdicts."""
-    latest = store.latest_by("acquisitions.jsonl", "candidate_key")
-    attempted = len(latest)
-    acquired = sum(1 for row in latest.values() if row.get("acquired"))
-    failures: dict[str, int] = {}
-    hosts: dict[str, int] = {}
-    for row in latest.values():
-        if row.get("acquired"):
-            continue
-        failures[str(row.get("failure_class"))] = failures.get(str(row.get("failure_class")), 0) + 1
-        host = net.host_of(str(row.get("url") or ""))
-        if host:
-            hosts[host] = hosts.get(host, 0) + 1
-    return {
-        "attempted": attempted,
-        "acquired": acquired,
-        "rate": (acquired / attempted) if attempted else 0.0,
-        "failures_by_class": dict(sorted(failures.items(), key=lambda kv: -kv[1])),
-        "failures_by_host": dict(sorted(hosts.items(), key=lambda kv: -kv[1])),
-    }

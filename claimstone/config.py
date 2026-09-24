@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import datetime as _dt
 import pathlib
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 import yaml
@@ -30,6 +30,10 @@ class SourceClass:
     name: str
     weight_hint: str
     notes: str = ""
+    # What a manifest written elsewhere may call this class. Declared, never inferred: the
+    # engine guessing that "academic" means ACA would misclassify a source the moment the two
+    # stop lining up, and invariant 6 exists to prevent exactly that.
+    aliases: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -47,6 +51,15 @@ class Question:
 
 
 @dataclass(frozen=True)
+class ManifestEntry:
+    source_id: str
+    source_class: str
+    declared_format: str
+    url: str
+    title: str
+
+
+@dataclass(frozen=True)
 class Project:
     name: str
     root: pathlib.Path
@@ -57,6 +70,11 @@ class Project:
     questions: tuple[Question, ...]
     registry_version: int
     frozen_at: str
+    manifest: tuple[ManifestEntry, ...] = ()
+    gate_thresholds: dict[str, int] = field(default_factory=dict)
+    floor_version: int = 1
+    floor_set_at: str = ""
+    floor_rationale: str = ""
 
     @property
     def question_ids(self) -> frozenset[str]:
@@ -110,9 +128,15 @@ def load_sources(root: pathlib.Path) -> tuple[tuple[SourceClass, ...], float, tu
                     entry.get("weight_hint"), field="weight_hint", where="sources.yaml"
                 ),
                 notes=str(entry.get("notes") or ""),
+                aliases=tuple(
+                    str(a).strip() for a in (entry.get("aliases") or []) if str(a).strip()
+                ),
             )
         )
     _require_unique([c.id for c in classes], what="source class", where="sources.yaml")
+    _require_unique(
+        [a for c in classes for a in c.aliases], what="class alias", where="sources.yaml"
+    )
 
     floor = raw.get("acquisition_floor")
     if not isinstance(floor, (int, float)) or isinstance(floor, bool) or not 0 < float(floor) <= 1:
@@ -193,6 +217,121 @@ def load_questions(root: pathlib.Path) -> tuple[tuple[Question, ...], int, str]:
     return tuple(questions), version, frozen_at
 
 
+MANIFEST_COLUMNS = ("source_id", "class", "format", "url", "title")
+GATE_THRESHOLD_NAMES = ("min_pdf_bytes", "min_text_chars", "paywall_doubt_chars", "fulltext_chars")
+
+
+def load_manifest(
+    root: pathlib.Path, class_ids: frozenset[str], aliases: dict[str, str] | None = None
+) -> tuple[ManifestEntry, ...]:
+    """Load the optional curated source list. Absent is fine; malformed is not.
+
+    Its purpose is to hold the source list constant across rounds: the milestone asks whether
+    the acquisition rate moved on the manifest that produced 0.42, not whether a fresh search
+    found easier papers.
+    """
+    import csv
+
+    path = pathlib.Path(root) / "manifest.tsv"
+    if not path.exists():
+        return ()
+
+    resolve_class = dict(aliases or {})
+    entries: list[ManifestEntry] = []
+    with path.open(encoding="utf-8", newline="") as handle:
+        reader = csv.DictReader(handle, delimiter="\t")
+        missing = [c for c in MANIFEST_COLUMNS if c not in (reader.fieldnames or [])]
+        if missing:
+            raise ConfigError(f"manifest.tsv: missing column(s): {', '.join(missing)}")
+        for line_no, entry in enumerate(reader, start=2):
+            source_id = (entry.get("source_id") or "").strip()
+            klass = (entry.get("class") or "").strip()
+            url = (entry.get("url") or "").strip()
+            title = (entry.get("title") or "").strip()
+            if not any((source_id, klass, url, title)):
+                # A trailing blank line is how a text file ends, not a row.
+                continue
+            if not source_id:
+                raise ConfigError(f"manifest.tsv line {line_no}: 'source_id' is required")
+            klass = resolve_class.get(klass, klass)
+            if klass not in class_ids:
+                known = sorted(class_ids | set(resolve_class))
+                raise ConfigError(
+                    f"manifest.tsv line {line_no}: class {klass!r} is not declared in "
+                    f"sources.yaml, either as a class id or as an alias "
+                    f"(known: {', '.join(known)})"
+                )
+            if not url and not title:
+                raise ConfigError(
+                    f"manifest.tsv line {line_no} ({source_id}): needs a 'url' or a 'title'"
+                )
+            entries.append(
+                ManifestEntry(source_id, klass, (entry.get("format") or "").strip(), url, title)
+            )
+
+    _require_unique([e.source_id for e in entries], what="source_id", where="manifest.tsv")
+    return tuple(entries)
+
+
+def load_gate_thresholds(root: pathlib.Path) -> dict[str, int]:
+    """Per-project overrides for the content gate. Absent means the engine defaults.
+
+    A misspelt key is an error rather than a silent no-op: a threshold the operator believed
+    they had raised, and had not, produces a rate they would trust wrongly.
+    """
+    raw = _read_yaml(pathlib.Path(root) / "sources.yaml").get("acquisition") or {}
+    if not isinstance(raw, dict):
+        raise ConfigError("sources.yaml: 'acquisition' must be a mapping")
+    unknown = sorted(set(raw) - set(GATE_THRESHOLD_NAMES))
+    if unknown:
+        raise ConfigError(
+            f"sources.yaml: unknown acquisition threshold(s): {', '.join(unknown)} "
+            f"(known: {', '.join(GATE_THRESHOLD_NAMES)})"
+        )
+    for name, value in raw.items():
+        if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+            raise ConfigError(f"sources.yaml: acquisition.{name} must be a non-negative integer")
+    return {str(k): int(v) for k, v in raw.items()}
+
+
+def load_floor_provenance(root: pathlib.Path) -> tuple[int, str, str]:
+    """Where the floor came from. A bump without a reason is refused.
+
+    Invariant 3 forbids a flag that waives the floor. Without this, the door beside it is open:
+    the floor is a number in an editable file, and lowering it after seeing an awkward result is
+    the post-hoc move the frozen question registry exists to prevent. So a floor change is the
+    same class of event as a registry bump — dated, versioned, motivated.
+    """
+    raw = _read_yaml(pathlib.Path(root) / "sources.yaml")
+    version = raw.get("floor_version", 1)
+    if not isinstance(version, int) or isinstance(version, bool) or version < 1:
+        raise ConfigError("sources.yaml: 'floor_version' must be an integer >= 1")
+
+    set_at = raw.get("floor_set_at")
+    if isinstance(set_at, (_dt.date, _dt.datetime)):
+        set_at = set_at.isoformat()[:10]
+    set_at = str(set_at or "")
+    rationale = str(raw.get("floor_rationale") or "").strip()
+
+    if version > 1:
+        if not set_at:
+            raise ConfigError(
+                "sources.yaml: 'floor_set_at' is required once floor_version > 1 — a floor "
+                "change is dated, like a question-registry bump"
+            )
+        try:
+            _dt.date.fromisoformat(set_at)
+        except ValueError as exc:
+            raise ConfigError("sources.yaml: 'floor_set_at' must be an ISO date") from exc
+        if len(rationale) < 20:
+            raise ConfigError(
+                "sources.yaml: 'floor_rationale' is required once floor_version > 1, and must "
+                "state which class of sources is structurally unobtainable — not that the "
+                "measured rate was inconvenient"
+            )
+    return version, set_at, rationale
+
+
 def load_project(root: str | pathlib.Path) -> Project:
     """Load and validate one project directory. Raises ConfigError on any violation."""
     path = pathlib.Path(root)
@@ -202,6 +341,13 @@ def load_project(root: str | pathlib.Path) -> Project:
     classes, floor, excluded = load_sources(path)
     topics = load_topics(path)
     questions, version, frozen_at = load_questions(path)
+    manifest = load_manifest(
+        path,
+        frozenset(c.id for c in classes),
+        {alias: c.id for c in classes for alias in c.aliases},
+    )
+    gate_thresholds = load_gate_thresholds(path)
+    floor_version, floor_set_at, floor_rationale = load_floor_provenance(path)
 
     return Project(
         name=path.name,
@@ -213,6 +359,11 @@ def load_project(root: str | pathlib.Path) -> Project:
         questions=questions,
         registry_version=version,
         frozen_at=frozen_at,
+        manifest=manifest,
+        gate_thresholds=gate_thresholds,
+        floor_version=floor_version,
+        floor_set_at=floor_set_at,
+        floor_rationale=floor_rationale,
     )
 
 

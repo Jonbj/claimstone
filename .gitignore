@@ -12,3 +12,6 @@ __pycache__/
 projects/*
 !projects/example-news-and-returns/
 claimstone.egg-info/
+
+# A project's curated source list is its reading list: same reason as projects/*.
+projects/*/manifest.tsv

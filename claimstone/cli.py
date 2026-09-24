@@ -1,33 +1,24 @@
 """Command line entry point.
 
-Stages that are not implemented say so and exit non-zero rather than pretending.
+Stages that exist have commands; the four that do not say so rather than pretending.
 """
 
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 
-from claimstone import __version__, acquire, discover, net
+from claimstone import __version__
 from claimstone.config import ConfigError, discover_projects, load_project
 
 STAGES = ("normalize", "extract", "review", "synthesize")
 
-
-def _load(args: argparse.Namespace):
-    project = load_project(args.project)
-    from claimstone.store import Store
-
-    return project, Store(project.name, args.store_dir)
-
-
-def _fetcher(project, args: argparse.Namespace) -> net.Fetcher:
-    return net.Fetcher(
-        excluded_hosts=frozenset(h.lower() for h in project.excluded_hosts),
-        obey_robots=not args.ignore_robots,
-        timeout_s=args.timeout,
-    )
+SWEEP_VALUES = {
+    "min_text_chars": [1000, 2000, 3000, 4000, 5000, 8000],
+    "min_pdf_bytes": [2000, 5000, 10000, 20000, 50000],
+    "paywall_doubt_chars": [6000, 9000, 12000, 16000, 24000],
+    "fulltext_chars": [8000, 12000, 15000, 20000, 30000],
+}
 
 
 def _validate(args: argparse.Namespace) -> int:
@@ -35,6 +26,7 @@ def _validate(args: argparse.Namespace) -> int:
     if not roots:
         print(f"no project found under {args.projects_dir}/", file=sys.stderr)
         return 1
+
     failures = 0
     for root in roots:
         try:
@@ -43,86 +35,178 @@ def _validate(args: argparse.Namespace) -> int:
             print(f"FAIL {root}: {exc}", file=sys.stderr)
             failures += 1
             continue
+        manifest = f", {len(project.manifest)} manifest rows" if project.manifest else ""
         print(
-            f"OK   {project.name}: {len(project.topics)} topics, "
+            f"OK   {project.name}: "
+            f"{len(project.topics)} topics, "
             f"{len(project.questions)} questions "
             f"(registry v{project.registry_version}, frozen {project.frozen_at}), "
             f"{len(project.classes)} source classes, "
-            f"acquisition floor {project.acquisition_floor:.2f}"
+            f"acquisition floor {project.acquisition_floor:.2f} "
+            f"(v{project.floor_version}){manifest}"
         )
     return 1 if failures else 0
 
 
-def _discover(args: argparse.Namespace) -> int:
-    project, store = _load(args)
-    summary = discover.run(
-        project,
-        store,
-        _fetcher(project, args),
-        apis=args.api or tuple(discover.SEARCHERS),
-        topics=args.topic or None,
-        per_query=args.per_query,
-    )
-    print(
-        f"discover: {summary['returned']} returned, {summary['new']} new, "
-        f"{summary['total']} candidates total"
-    )
-    return 0
-
-
 def _import_manifest(args: argparse.Namespace) -> int:
-    project, store = _load(args)
-    summary = discover.import_manifest(store, args.tsv)
-    print(f"import: {summary['rows']} rows read, {summary['new']} new, {summary['total']} total")
+    from claimstone import discover
+    from claimstone.store import Store
+
+    project = load_project(args.project)
+    if not project.manifest:
+        print(f"no manifest.tsv under {args.project}/", file=sys.stderr)
+        return 1
+    result = discover.import_manifest(Store(project.name, base=args.store), project.manifest)
+    print(f"{project.name}: {result['new']} new, {result['updated']} corrected, "
+          f"of {result['rows']} manifest rows")
     return 0
 
 
 def _acquire(args: argparse.Namespace) -> int:
-    project, store = _load(args)
+    from claimstone import acquire, net, resolve
+    from claimstone.store import Store
+
+    retry_classes = frozenset(args.retry_class or ())
+    if retry_classes and not args.campaign:
+        print(
+            "refusing to re-request a terminal failure on an unnamed run: pass --campaign NAME "
+            "so the ledger records why this round knocked again",
+            file=sys.stderr,
+        )
+        return 2
+
+    project = load_project(args.project)
+    store = Store(project.name, base=args.store)
+    fetcher = net.Fetcher(excluded_hosts=frozenset(project.excluded_hosts))
     candidates = list(store.latest_by("candidates.jsonl", "candidate_key").values())
-    if args.limit:
-        candidates = candidates[: args.limit]
-    if not candidates:
-        print("no candidates: run discover or import-manifest first", file=sys.stderr)
-        return 1
 
-    fetcher = _fetcher(project, args)
-    for row in acquire.run(
-        candidates, store, fetcher, skip_acquired=not args.refetch, use_apis=not args.no_apis
-    ):
-        mark = "ok  " if row["acquired"] else "FAIL"
-        label = row.get("source_id") or row["candidate_key"][:44]
-        detail = row.get("provenance") if row["acquired"] else row.get("failure_class")
-        print(f"{mark} {label:<46} {detail}")
-    return _status(args)
-
-
-def _status(args: argparse.Namespace) -> int:
-    project, store = _load(args)
-    stats = acquire.rate(store)
-    floor = project.acquisition_floor
-    admissible = stats["attempted"] > 0 and stats["rate"] >= floor
-
-    if getattr(args, "json", False):
-        print(json.dumps({**stats, "floor": floor, "admissible": admissible}, indent=2))
+    if args.dry_run:
+        for candidate in candidates:
+            locations, _ = resolve.plan(fetcher, candidate, use_apis=not args.no_apis)
+            print(f"{candidate.get('source_id') or candidate['candidate_key']}")
+            for position, location in enumerate(locations, start=1):
+                print(f"  {position}. {location.provenance:<10} {location.url}")
         return 0
 
-    print(f"\nproject: {project.name}")
-    print(f"attempted: {stats['attempted']}   acquired: {stats['acquired']}")
-    print(f"rate:      {stats['rate']:.2f}   floor: {floor:.2f}")
-    print(
-        "verdicts:  ADMISSIBLE"
-        if admissible
-        else "verdicts:  INSUFFICIENT_ACQUISITION — this round may not produce verdicts"
-    )
-    if stats["failures_by_class"]:
-        print("\nfailures by class:")
-        for name, count in stats["failures_by_class"].items():
-            print(f"  {count:4d}  {name}")
-    if stats["failures_by_host"]:
-        print("\nfailures by host:")
-        for host, count in list(stats["failures_by_host"].items())[:12]:
-            print(f"  {count:4d}  {host}")
+    done = 0
+    obtained = 0
+    total = len(candidates)
+    for row in acquire.run(
+        candidates, store, fetcher,
+        campaign=args.campaign or acquire.ROUTINE,
+        retry_classes=retry_classes,
+        use_apis=not args.no_apis,
+        thresholds=project.gate_thresholds,
+        limit=args.limit,
+    ):
+        done += 1
+        if row["acquired"]:
+            obtained += 1
+            detail = f"{row.get('provenance')}  {row.get('licence') or 'licence unrecorded'}"
+            size = f"{(row.get('bytes') or 0) // 1024} KB"
+        else:
+            detail = str(row.get("failure_class"))
+            size = ""
+        # Progress on stderr, summary on stdout: `acquire … > summary.txt` keeps both, and a
+        # round that takes minutes cannot be mistaken for a hung one.
+        print(
+            f"[{done:>3}/{total}] {obtained / done:.2f}  "
+            f"{'ok  ' if row['acquired'] else 'fail'}  "
+            f"{row.get('source_id') or row['candidate_key']}  {detail}  {size}".rstrip(),
+            file=sys.stderr,
+        )
+    print(f"{done} attempted, {obtained} obtained")
+    return 0
+
+
+def _report(args: argparse.Namespace) -> int:
+    from claimstone import admissibility
+    from claimstone.store import Store
+
+    project = load_project(args.project)
+    result = admissibility.admit(project, Store(project.name, base=args.store))
+
+    if args.json:
+        import json
+
+        print(json.dumps(result, indent=2, sort_keys=True))
+    else:
+        achieved = "—" if result["rate"] is None else f"{result['rate']:.2f}"
+        print(f"{project.name} — {result['attempted']} candidates")
+        # Per class before pooled: D3 says classes are not mixed, and an aggregate that hides
+        # one class sitting at zero is a different fact from a uniform one.
+        for klass, bucket in result["by_class"].items():
+            print(f"  {klass:<14} {bucket['acquired']}/{bucket['attempted']}  {bucket['rate']:.2f}")
+        print(f"  {'total':<14} {result['acquired']}/{result['attempted']}  {achieved}"
+              f"   floor {result['floor']:.2f}"
+              f" (v{result['floor_version']}, {result['floor_set_at']})"
+              f"   {result['status']}")
+        for name, counts in (("failures", result["failures_by_class"]),
+                             ("by host", result["failures_by_host"])):
+            if counts:
+                print(f"  {name:<14} " + "  ".join(f"{k} {v}" for k, v in counts.items()))
+
+    return 3 if args.gate and result["status"] == admissibility.INSUFFICIENT else 0
+
+
+def _gate_audit(args: argparse.Namespace) -> int:
+    from claimstone import gate_audit
+    from claimstone.store import Store
+
+    project = load_project(args.project)
+    store = Store(project.name, base=args.store)
+
+    name = args.sweep or "min_text_chars"
+    points = gate_audit.sweep(store, name, SWEEP_VALUES[name])
+    listing = gate_audit.rejections(store, project.gate_thresholds)
+
+    if args.json:
+        import json
+
+        print(json.dumps({"sweep": {name: points}, "rejections": listing}, indent=2))
+        return 0
+
+    print(f"{name:<20}" + "".join(f"{p['value']:>8}" for p in points))
+    print(f"{'rate':<20}" + "".join(
+        f"{'—':>8}" if p["rate"] is None else f"{p['rate']:>8.2f}" for p in points))
+    spread = [p["rate"] for p in points if p["rate"] is not None]
+    if spread and max(spread) - min(spread) > 0.05:
+        print(f"\n  this threshold is deciding the rate (spread "
+              f"{max(spread) - min(spread):.2f}) — read the boundary cases by hand")
+    elif spread:
+        print(f"\n  flat across the range (spread {max(spread) - min(spread):.2f}): "
+              f"the chosen value is not load-bearing")
+
+    if args.show_rejected:
+        print(f"\n{len(listing)} rejected:")
+        for item in listing:
+            chars = "—" if item["chars"] is None else str(item["chars"])
+            print(f"  {item['source_id'] or '?':<8} {item['kind']:<18} {chars:>7} chars"
+                  f"  {item['reason']}")
+            print(f"           {item['stored_path']}")
+    return 0
+
+
+def _regate(args: argparse.Namespace) -> int:
+    from claimstone import fulltext, gate_audit
+    from claimstone.store import Store
+
+    project = load_project(args.project)
+    store = Store(project.name, base=args.store)
+
+    changed = 0
+    total = 0
+    for row in gate_audit.regate(store, campaign=args.campaign,
+                                 thresholds=project.gate_thresholds):
+        total += 1
+        verdict = row["gate"]["kind"]
+        mark = "ok  " if row["acquired"] else "fail"
+        if not row["acquired"]:
+            changed += 1
+        print(f"{mark}  {row.get('source_id') or row['candidate_key']:<8} {verdict}",
+              file=sys.stderr)
+    print(f"{total} re-judged under gate_version {fulltext.GATE_VERSION}, "
+          f"{total - changed} still full text")
     return 0
 
 
@@ -139,46 +223,49 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--version", action="version", version=f"claimstone {__version__}")
     sub = parser.add_subparsers(dest="command", required=True)
 
-    def with_project(p: argparse.ArgumentParser) -> argparse.ArgumentParser:
-        p.add_argument("project", help="path to a project directory")
-        p.add_argument("--store-dir", default="store")
-        p.add_argument("--timeout", type=int, default=30)
-        p.add_argument(
-            "--ignore-robots",
-            action="store_true",
-            help="not for routine use; the default respects robots.txt",
-        )
-        return p
-
     validate = sub.add_parser("validate", help="check a project's input contract")
     group = validate.add_mutually_exclusive_group(required=True)
     group.add_argument("project", nargs="?", help="path to a project directory")
-    group.add_argument("--all-projects", action="store_true")
+    group.add_argument("--all-projects", action="store_true", help="validate every project")
     validate.add_argument("--projects-dir", default="projects")
     validate.set_defaults(func=_validate)
 
-    disc = with_project(sub.add_parser("discover", help="stage 1: topics to candidates"))
-    disc.add_argument("--api", action="append", choices=list(discover.SEARCHERS), default=None)
-    disc.add_argument("--topic", action="append", default=None, help="restrict to a topic id")
-    disc.add_argument("--per-query", type=int, default=25)
-    disc.set_defaults(func=_discover)
-
-    imp = with_project(sub.add_parser("import-manifest", help="seed candidates from a TSV"))
-    imp.add_argument("--tsv", required=True)
-    imp.set_defaults(func=_import_manifest)
-
-    acq = with_project(sub.add_parser("acquire", help="stage 2: candidates to frozen texts"))
-    acq.add_argument("--limit", type=int, default=0)
-    acq.add_argument("--refetch", action="store_true", help="retry candidates already held")
-    acq.add_argument("--no-apis", action="store_true", help="skip OA resolution (offline test)")
-    acq.set_defaults(func=_acquire)
-
-    stat = with_project(sub.add_parser("status", help="acquisition accounting and admissibility"))
-    stat.add_argument("--json", action="store_true")
-    stat.set_defaults(func=_status)
+    for name, handler, help_text in (
+        ("import-manifest", _import_manifest, "seed candidates from manifest.tsv"),
+        ("acquire", _acquire, "stage 2: obtain the full texts"),
+        ("report", _report, "acquisition rate, per class, against the floor"),
+        ("gate-audit", _gate_audit, "how much the rate depends on the gate thresholds"),
+        ("regate", _regate, "re-judge bytes already held under the current gate; no network"),
+    ):
+        command = sub.add_parser(name, help=help_text)
+        command.add_argument("project", help="path to a project directory")
+        command.add_argument("--store", default="store", help="where generated data lives")
+        command.set_defaults(func=handler)
+        if name == "acquire":
+            command.add_argument("--campaign", help="name this run; required with --retry-class")
+            command.add_argument("--retry-class", action="append",
+                                 help="re-request a terminal failure class, e.g. PAYWALL_403")
+            command.add_argument("--limit", type=int, default=None)
+            command.add_argument("--no-apis", action="store_true",
+                                 help="plan from the candidate URL alone; no Unpaywall or OpenAlex")
+            command.add_argument("--dry-run", action="store_true",
+                                 help="print the planned cascade and fetch nothing")
+        if name == "report":
+            command.add_argument("--json", action="store_true")
+            command.add_argument("--gate", action="store_true",
+                                 help="exit 3 when the round is INSUFFICIENT_ACQUISITION")
+        if name == "regate":
+            command.add_argument("--campaign", required=True,
+                                 help="name this re-reading; it lands on every corrected row")
+        if name == "gate-audit":
+            command.add_argument("--sweep", choices=sorted(SWEEP_VALUES),
+                                 help="which threshold to sweep (default min_text_chars)")
+            command.add_argument("--show-rejected", action="store_true",
+                                 help="list every rejected artifact for a by-hand check")
+            command.add_argument("--json", action="store_true")
 
     for stage in STAGES:
-        placeholder = with_project(sub.add_parser(stage, help=f"(not implemented) stage: {stage}"))
+        placeholder = sub.add_parser(stage, help=f"(not implemented) stage: {stage}")
         placeholder.set_defaults(func=_not_implemented, stage_name=stage)
 
     return parser
@@ -186,14 +273,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    try:
-        return int(args.func(args))
-    except ConfigError as exc:
-        print(f"config error: {exc}", file=sys.stderr)
-        return 1
-    except net.ContactNotConfigured as exc:
-        print(f"{exc}", file=sys.stderr)
-        return 1
+    return int(args.func(args))
 
 
 if __name__ == "__main__":

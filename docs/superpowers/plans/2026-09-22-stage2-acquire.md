@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Turn a 26-source manifest into a measured acquisition rate — with OA status, licence and failure reason recorded per source — where nothing counts as acquired unless the bytes pass a mechanical gate, and where the rate is reported together with how much it depends on that gate's thresholds.
+**Goal:** Turn a 25-source manifest into a measured acquisition rate — with OA status, licence and failure reason recorded per source — where nothing counts as acquired unless the bytes pass a mechanical gate, and where the rate is reported together with how much it depends on that gate's thresholds.
 
 **Architecture:** Six modules with one responsibility each. `resolve.py` builds the cascade of places a legal copy might live; `fulltext.py` judges bytes with no network and no state; `acquire.py` orchestrates and writes the append-only ledger; `admissibility.py` computes the rate and compares it to the floor; `gate_audit.py` re-runs the gate over bytes already on disk at other thresholds, which is possible for free because those bytes are content-addressed and the gate does no I/O; `net.py` keeps HTTP, robots and the per-domain budget. The fetcher enters every function as a parameter satisfying a `Protocol`, which is what lets the whole stage be tested offline.
 
@@ -17,11 +17,15 @@
 - Run tests with `.venv/bin/pytest`, the CLI with `.venv/bin/claimstone`.
 - **Every commit message ends with the trailer** `Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>`, shown in full in Task 1 and abbreviated as `<trailer>` afterwards.
 - **No test may construct a real `net.Fetcher`.** Its `__post_init__` calls `contact_email()`, which raises unless `CLAIMSTONE_CONTACT_EMAIL` is set, and CI does not set it. Tests use the `FakeFetcher` built in Task 1.
+- **`tests/conftest.py` sets `CLAIMSTONE_CONTACT_EMAIL` for the session.** `resolve` needs it to build an Unpaywall or OpenAlex URL at all, so without it the cascade tests fail on a missing address rather than on the behaviour under test. That is configuration, not a network capability.
+- **Use DOIs with 4-9 digits in the registrant code** (`10.1234/abc`, not `10.1/abc`). `ids.normalize_doi` matches the real DOI shape, so a toy DOI is silently dropped and the test then exercises a cascade with no DOI in it.
 - Commit after every task. A task that leaves the suite red is not finished.
 
 ## Starting state
 
-`claimstone/acquire.py` (289 lines) and `claimstone/discover.py` (246 lines) exist untracked, written in a previous session which is now stopped. They are a working draft of the cascade. This plan **moves** most of that code into `resolve.py` and corrects three defects recorded in spec §10. Nothing is rewritten that does not need to be.
+`claimstone/acquire.py` and `claimstone/discover.py` were committed in `630ca52` by a previous session, which also **ran a round**: 25 candidates attempted, 18 counted as obtained, reported as 0.72. That figure was measured before any content gate existed; re-gating its stored bytes gives **12 full texts, 0.48** (spec §5). This plan **moves** most of that code into `resolve.py`, adds the gate, and corrects four defects recorded in spec §10. Nothing is rewritten that does not need to be.
+
+The round's output is on disk under `store/alembic-s4/` — 25 ledger rows and 18 artifacts — which is what makes the threshold audit of Task 11 runnable against real data on the day it is written, rather than against fixtures alone.
 
 ## File structure
 
@@ -607,7 +611,7 @@ def test_openalex_is_consulted_only_when_unpaywall_returns_nothing():
         OPENALEX_WORK: {"open_access": {"oa_status": "bronze"}, "locations": [
             {"is_oa": True, "pdf_url": "https://oa.example/x.pdf", "version": "publishedVersion"}]},
     })
-    candidate = {"url": "https://x.example/a", "doi": "10.1/abc", "title": "A paper"}
+    candidate = {"url": "https://x.example/a", "doi": "10.1234/abc", "title": "A paper"}
     locations, _ = resolve.plan(fetcher, candidate)
     assert any(loc.provenance == "openalex" for loc in locations)
 
@@ -618,7 +622,7 @@ def test_published_version_outranks_a_preprint():
             {"url": "https://a.example/preprint.pdf", "version": "submittedVersion"},
             {"url": "https://b.example/vor.pdf", "version": "publishedVersion"}]},
     })
-    candidate = {"url": "https://x.example/a", "doi": "10.1/abc", "title": "A paper"}
+    candidate = {"url": "https://x.example/a", "doi": "10.1234/abc", "title": "A paper"}
     locations, _ = resolve.plan(fetcher, candidate)
     versions = [loc.version for loc in locations if loc.provenance == "unpaywall"]
     assert versions[0] == "publishedVersion"
@@ -630,7 +634,7 @@ def test_the_same_url_is_never_planned_twice():
             {"url": "https://a.example/x.pdf?utm_source=alert"},
             {"url": "https://a.example/x.pdf"}]},
     })
-    candidate = {"url": "https://x.example/a", "doi": "10.1/abc", "title": "A paper"}
+    candidate = {"url": "https://x.example/a", "doi": "10.1234/abc", "title": "A paper"}
     locations, _ = resolve.plan(fetcher, candidate)
     assert len(locations) == len({loc.url for loc in locations})
 
@@ -638,11 +642,11 @@ def test_the_same_url_is_never_planned_twice():
 def test_a_title_resolves_a_doi_only_on_an_exact_match():
     fetcher = FakeFetcher(json_pages={
         OPENALEX_SEARCH: {"results": [
-            {"doi": "https://doi.org/10.1/close", "title": "News sentiment and returns, revisited"}]},
+            {"doi": "https://doi.org/10.1234/close", "title": "News sentiment and returns, revisited"}]},
     })
     assert resolve.resolve_doi_by_title(fetcher, "News sentiment and returns") is None
     assert resolve.resolve_doi_by_title(
-        fetcher, "News sentiment and returns, revisited") == "10.1/close"
+        fetcher, "News sentiment and returns, revisited") == "10.1234/close"
 
 
 def test_a_source_without_a_doi_falls_back_to_the_wayback_machine():
@@ -824,8 +828,8 @@ from tests.test_fulltext import page, pdf
 
 
 def candidate(**overrides):
-    base = {"candidate_key": "doi:10.1/abc", "source_id": "S01", "source_class": "ACA",
-            "doi": "10.1/abc", "url": "https://repo.example/paper.pdf", "title": "A paper"}
+    base = {"candidate_key": "doi:10.1234/abc", "source_id": "S01", "source_class": "ACA",
+            "doi": "10.1234/abc", "url": "https://repo.example/paper.pdf", "title": "A paper"}
     return {**base, **overrides}
 
 
@@ -887,7 +891,7 @@ def test_every_attempt_is_kept_not_just_the_last(tmp_path):
             "oa_status": "closed",
             "oa_locations": [{"url": a}, {"url": b}]}},
     )
-    row = acquire.acquire_one(fetcher, store, candidate(url="https://doi.org/10.1/abc"))
+    row = acquire.acquire_one(fetcher, store, candidate(url="https://doi.org/10.1234/abc"))
     assert len(row["attempts"]) >= 2
     assert row["failure_class"] == net.PAYWALL
 
@@ -1127,7 +1131,7 @@ def test_an_exhausted_budget_returns_to_the_queue():
 
 def test_a_skipped_candidate_writes_no_row(tmp_path):
     store = Store("t", base=tmp_path)
-    store.append("acquisitions.jsonl", {"candidate_key": "doi:10.1/abc", **_row(net.PAYWALL)})
+    store.append("acquisitions.jsonl", {"candidate_key": "doi:10.1234/abc", **_row(net.PAYWALL)})
     rows = list(acquire.run([candidate()], store, FakeFetcher(), use_apis=False))
     assert rows == []
     assert len(list(store.read("acquisitions.jsonl"))) == 1
@@ -2437,7 +2441,7 @@ def sweep(store: Store, name: str, values: list[int]) -> list[dict[str, Any]]:
 def rejections(store: Store, thresholds: dict[str, int] | None = None) -> list[dict[str, Any]]:
     """Every artifact the gate turns down, with what it counted and what triggered it.
 
-    Printed for a by-hand check. On a 26-source manifest this is ten minutes of reading and it
+    Printed for a by-hand check. On a 25-source manifest this is ten minutes of reading and it
     is the only way to learn whether a paywall phrase is catching a legitimate open article.
     """
     th = {**fulltext.DEFAULT_THRESHOLDS, **(thresholds or {})}
@@ -2548,7 +2552,7 @@ is reported as missing rather than dropped from the listing.
 
 ### Task 12: Progress on stderr
 
-Implements spec §8, "Progress on stderr". A round over 26 sources with 30-second timeouts takes
+Implements spec §8, "Progress on stderr". A round over 25 sources with 30-second timeouts takes
 minutes, and a silent process that long is indistinguishable from a hung one.
 
 **Files:**
@@ -2631,7 +2635,7 @@ Expected: PASS
 git add claimstone/cli.py tests/test_cli_acquire.py
 git commit -m "cli: progress on stderr, summary on stdout
 
-A round over 26 sources with 30-second timeouts takes minutes; a silent process
+A round over 25 sources with 30-second timeouts takes minutes; a silent process
 that long cannot be told apart from a hung one. The running rate is on each line,
 so the shape of the round is visible before it ends.
 
@@ -2644,10 +2648,24 @@ so the shape of the round is visible before it ends.
 
 This task produces the deliverable. It needs `projects/alembic-s4/manifest.tsv`, which the user supplies.
 
-- [ ] **Step 1: Confirm the manifest is present and valid**
+- [ ] **Step 1: Put the manifest where the contract expects it**
+
+The real manifest lives in the consuming project, outside this repository:
+`/home/stefano/Documents/Projects/Alembic/docs/research/s4-web-validation-2026-08-28/SOURCE_MANIFEST.tsv`.
+`config.load_manifest` reads `projects/<name>/manifest.tsv`, so link it rather than adding a
+path option to the config surface — and a symlink keeps a single copy, so the two projects
+cannot drift apart:
+
+```bash
+ln -sfn /home/stefano/Documents/Projects/Alembic/docs/research/s4-web-validation-2026-08-28/SOURCE_MANIFEST.tsv         projects/alembic-s4/manifest.tsv
+```
+
+It is gitignored (`projects/*/manifest.tsv`), which is the privacy rule: the reading list
+encodes the consuming system's design.
 
 Run: `.venv/bin/claimstone validate projects/alembic-s4`
-Expected: `OK alembic-s4: …`. A malformed manifest fails here with the offending line number.
+Expected: `OK alembic-s4: …`, reporting 25 manifest rows. A malformed manifest fails here with
+the offending line number.
 
 - [ ] **Step 2: Set the contact address**
 
@@ -2657,12 +2675,12 @@ Crossref and Unpaywall require it, and `net.Fetcher` refuses to construct withou
 - [ ] **Step 3: Seed the candidates**
 
 Run: `.venv/bin/claimstone import-manifest projects/alembic-s4`
-Expected: `alembic-s4: 26 new of 26 manifest rows`
+Expected: `alembic-s4: 26 new of 25 manifest rows`
 
 - [ ] **Step 4: Look at the plan before spending requests**
 
 Run: `.venv/bin/claimstone acquire projects/alembic-s4 --dry-run`
-Expected: 26 blocks, each listing its cascade in order. Check by eye that no excluded host appears and that walls are last.
+Expected: 25 blocks, each listing its cascade in order. Check by eye that no excluded host appears and that walls are last.
 
 - [ ] **Step 5: Run it**
 
@@ -2690,7 +2708,7 @@ and Step 8 is no longer optional reading — it is the finding.
 Run: `.venv/bin/claimstone gate-audit projects/alembic-s4 --show-rejected`
 
 For each line, open the stored artifact and confirm the verdict. This is required, not advisory:
-at 26 sources it is about ten minutes, and it is the only way to learn whether a paywall phrase
+at 25 sources it is about ten minutes, and it is the only way to learn whether a paywall phrase
 is catching a legitimate open-access article. Write down every disagreement — a single false
 positive here is worth more than any desk-chosen threshold.
 
@@ -2720,7 +2738,7 @@ by-hand check disagreed with.
 
 ```bash
 git add docs/DESIGN_DECISIONS.md projects/alembic-s4/sources.yaml claimstone/fulltext.py
-git commit -m "D8: the acquisition rate on the 26-source manifest, with its sensitivity
+git commit -m "D8: the acquisition rate on the 25-source manifest, with its sensitivity
 
 <trailer>"
 ```
@@ -2731,5 +2749,5 @@ git commit -m "D8: the acquisition rate on the 26-source manifest, with its sens
 
 - No dashboard. That is `2026-09-22-dashboard-design.md`, and it is now scheduled **after** the thin vertical slice, not after this plan: it is the component whose value needs data in every stage and whose spec depends on every other stage's schema, so it is built last against real rows.
 - No `model_call` boundary. D13 makes it the contract stages 4 and 5 consume, and it gets its own spec and plan before the vertical slice. Nothing in stage 2 needs a model.
-- No stage 3. GROBID, chunking and the citation discovery channel are out of scope; the only forward commitment is that stage 3 confirms extractable text and may write back a `fulltext_confirmed` signal. The thin vertical slice that follows carries stages 3-6 over this same 26-source manifest.
+- No stage 3. GROBID, chunking and the citation discovery channel are out of scope; the only forward commitment is that stage 3 confirms extractable text and may write back a `fulltext_confirmed` signal. The thin vertical slice that follows carries stages 3-6 over this same 25-source manifest.
 - No institutional authentication (spec §14). A source reachable only that way stays `PAYWALL_403` and lowers the rate.

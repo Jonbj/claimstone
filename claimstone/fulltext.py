@@ -1,0 +1,177 @@
+"""Does this look like full text?
+
+A publisher landing page answers HTTP 200 with a perfectly good content type. Counting it as
+an acquisition inflates the rate that decides whether a round may produce verdicts at all,
+which is the failure this project exists to prevent. So a transfer succeeding is not the
+question; what came back is.
+
+The HTML rule is strict because that is where the inflation happens, and it is strict about
+the right thing. A first draft tested length alone; run over 25 artifacts a real round had
+already stored, it accepted three vendor research summaries at 4190, 4820 and 5981 characters
+and rejected two at 2473 and 2526 — the same kind of page either side of a line chosen at a
+desk. No threshold fixes that: one of those summaries runs to 9243 characters. What separates
+them is that none of them cites anything. A document that argues from evidence has a reference
+list; a page summarising one does not.
+
+The PDF rule is structural — no PDF parser exists before stage 3 — and catches the case that
+actually occurs: an HTML error page wearing a PDF content type.
+"""
+
+from __future__ import annotations
+
+import re
+from dataclasses import dataclass
+from html.parser import HTMLParser
+from typing import Any
+
+PDF_FULLTEXT = "PDF_FULLTEXT"
+HTML_FULLTEXT = "HTML_FULLTEXT"
+LANDING_PAGE_ONLY = "LANDING_PAGE_ONLY"
+ABSTRACT_ONLY = "ABSTRACT_ONLY"
+TOO_SHORT = "TOO_SHORT"
+CORRUPT_PDF = "CORRUPT_PDF"
+NOT_TEXT = "NOT_TEXT"
+
+ACCEPTED = (PDF_FULLTEXT, HTML_FULLTEXT)
+
+# Bumped whenever a rule below changes. Written onto every ledger row, because a rate computed
+# under different thresholds is not comparable to one computed under these.
+# Version 2: the HTML rule gained the structural signal after a length-only rule was measured
+# against 25 real artifacts and accepted three abstract pages out of six.
+GATE_VERSION = 2
+
+DEFAULT_THRESHOLDS: dict[str, int] = {
+    # Low on purpose: a short conference note can be a legitimate 12 KB PDF, and a false
+    # TOO_SHORT removes a real source from the numerator.
+    "min_pdf_bytes": 10000,
+    "min_text_chars": 3000,
+    "paywall_doubt_chars": 12000,
+    # Above this, accept without a structural signal: a document this long is a document.
+    "fulltext_chars": 15000,
+}
+
+PAYWALL_PHRASES = (
+    "get access", "purchase pdf", "buy article", "rent this article",
+    "sign in to continue", "institutional access", "add to cart",
+    "subscribe to continue", "you do not have access",
+)
+
+_SKIP_TAGS = frozenset({"script", "style", "nav", "header", "footer", "aside"})
+
+_REFERENCE_HEADING = re.compile(r">\s*(references|bibliography|works cited)\s*<", re.I)
+# "(Author, 2019)" / "(Author and Other, 2019)" — enough of these is a reference list even when
+# the heading is missing or styled unrecognisably.
+_CITATION = re.compile(
+    r"\(\s*[A-Z][A-Za-z'\-]+(?:\s+(?:and|&|et al\.?)\s+[A-Z][A-Za-z'\-]+)?"
+    r"(?:\s*,)?\s*(?:19|20)\d{2}[a-z]?\s*\)"
+)
+_MIN_CITATIONS = 10
+
+
+@dataclass(frozen=True)
+class FullText:
+    kind: str
+    chars: int | None
+    reason: str
+    gate_version: int = GATE_VERSION
+
+    @property
+    def accepted(self) -> bool:
+        return self.kind in ACCEPTED
+
+    def as_row(self, thresholds: dict[str, int]) -> dict[str, Any]:
+        return {
+            "kind": self.kind,
+            "chars": self.chars,
+            "reason": self.reason,
+            "gate_version": self.gate_version,
+            "thresholds": dict(thresholds),
+        }
+
+
+class _VisibleText(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self._parts: list[str] = []
+        self._muted = 0
+
+    def handle_starttag(self, tag: str, attrs: Any) -> None:
+        if tag in _SKIP_TAGS:
+            self._muted += 1
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag in _SKIP_TAGS and self._muted:
+            self._muted -= 1
+
+    def handle_data(self, data: str) -> None:
+        if not self._muted:
+            self._parts.append(data)
+
+    def text(self) -> str:
+        return " ".join("".join(self._parts).split())
+
+
+def visible_text(body: bytes) -> str:
+    parser = _VisibleText()
+    try:
+        parser.feed(body.decode("utf-8", "replace"))
+    except Exception:
+        # Malformed markup is common and is not itself a verdict; take what was parsed.
+        pass
+    return parser.text()
+
+
+def cites(markup: str, text: str) -> bool:
+    """Does this document argue from evidence, or summarise something that did?"""
+    if _REFERENCE_HEADING.search(markup):
+        return True
+    return len(_CITATION.findall(text)) >= _MIN_CITATIONS
+
+
+def _classify_pdf(body: bytes, th: dict[str, int]) -> FullText:
+    if b"%PDF-" not in body[:1024]:
+        return FullText(NOT_TEXT, None, "no %PDF- magic in the first 1024 bytes")
+    if b"%%EOF" not in body[-2048:]:
+        return FullText(CORRUPT_PDF, None, "no %%EOF trailer: truncated transfer")
+    if len(body) < th["min_pdf_bytes"]:
+        return FullText(
+            TOO_SHORT, None, f"{len(body)} bytes below min_pdf_bytes {th['min_pdf_bytes']}"
+        )
+    return FullText(PDF_FULLTEXT, None, "")
+
+
+def _classify_markup(body: bytes, th: dict[str, int]) -> FullText:
+    markup = body.decode("utf-8", "replace")
+    text = visible_text(body)
+    count = len(text)
+
+    folded = text.lower()
+    hit = next((phrase for phrase in PAYWALL_PHRASES if phrase in folded), None)
+    if hit and count < th["paywall_doubt_chars"]:
+        # A phrase alone is never sufficient: a legitimate open-access article also contains
+        # "sign in". Above the doubt threshold the text is there whatever the menu says.
+        return FullText(LANDING_PAGE_ONLY, count, f"{count} chars and the phrase {hit!r}")
+
+    # The structural check precedes the length check deliberately. A 2473-character summary is
+    # both short and a summary, and the second is the more useful thing to record: it says a
+    # full text may exist elsewhere and is worth another attempt.
+    if count < th["fulltext_chars"] and not cites(markup, text):
+        return FullText(
+            ABSTRACT_ONLY, count,
+            f"{count} chars and no reference list: a summary of a document, not the document",
+        )
+
+    if count < th["min_text_chars"]:
+        return FullText(TOO_SHORT, count, f"{count} chars, and it does cite: a truncation")
+
+    return FullText(HTML_FULLTEXT, count, "")
+
+
+def classify(
+    body: bytes, content_type: str, url: str, thresholds: dict[str, int] | None = None
+) -> FullText:
+    th = {**DEFAULT_THRESHOLDS, **(thresholds or {})}
+    if not body:
+        return FullText(TOO_SHORT, 0, "empty body")
+    looks_pdf = "pdf" in (content_type or "").lower() or url.lower().endswith(".pdf")
+    return _classify_pdf(body, th) if looks_pdf else _classify_markup(body, th)

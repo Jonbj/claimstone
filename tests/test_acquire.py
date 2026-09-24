@@ -1,131 +1,179 @@
-"""Tests pinning the two defects found while measuring the reference manifest.
+"""Orchestration: plan, attempt, gate, store, record. Never raises on a failed fetch."""
 
-Both were silent and both moved the headline number, which is why they are pinned here:
-a wrong acquisition rate decides whether a round may produce verdicts at all.
-"""
-
-from __future__ import annotations
+import datetime as _dt
+import pathlib
+import time
 
 import pytest
 
-from claimstone import acquire, ids, net
+from claimstone import acquire, net
+from claimstone.store import Store
+from tests.fakes import FakeFetcher, fail, ok
+from tests.test_fulltext import page, pdf
+
+UNPAYWALL = "https://api.unpaywall.org/v2/"
 
 
-class _FakeResponse:
-    def __init__(self, status: int, body: str, content_type: str) -> None:
-        self.status_code = status
-        self.text = body
-        self.content = body.encode()
-        self.headers = {"Content-Type": content_type}
+def candidate(**overrides):
+    base = {"candidate_key": "doi:10.1234/abc", "source_id": "S01", "source_class": "ACA",
+            "doi": "10.1234/abc", "url": "https://repo.example/paper.pdf", "title": "A paper"}
+    return {**base, **overrides}
 
 
-class _FakeSession:
-    """Serves whatever the test declares for /robots.txt; records what was asked for."""
-
-    def __init__(self, robots: _FakeResponse) -> None:
-        self._robots = robots
-        self.asked: list[str] = []
-        self.headers: dict[str, str] = {}
-
-    def get(self, url: str, **_: object) -> _FakeResponse:
-        self.asked.append(url)
-        if url.endswith("/robots.txt"):
-            return self._robots
-        raise AssertionError("only robots.txt should be fetched in these tests")
+def test_a_candidate_without_a_source_class_is_an_error(tmp_path):
+    store = Store("t", base=tmp_path)
+    with pytest.raises(acquire.MissingSourceClass):
+        acquire.acquire_one(FakeFetcher(), store, candidate(source_class=None), use_apis=False)
 
 
-def _fetcher_with_robots(monkeypatch, response: _FakeResponse) -> net.Fetcher:
-    monkeypatch.setenv("CLAIMSTONE_CONTACT_EMAIL", "test@example.org")
-    fetcher = net.Fetcher(pause_s=0.0)
-    fetcher._session = _FakeSession(response)  # type: ignore[assignment]
-    return fetcher
+def test_a_gated_landing_page_is_not_an_acquisition(tmp_path):
+    store = Store("t", base=tmp_path)
+    url = "https://publisher.example/article"
+    fetcher = FakeFetcher(pages={url: ok(url, page(40, "<p>Purchase PDF</p>"), "text/html")})
+    row = acquire.acquire_one(fetcher, store, candidate(url=url, doi=None), use_apis=False)
+    assert row["acquired"] is False
+    assert row["failure_class"] == net.LANDING
+    assert row["attempts"][-1]["gate_kind"] == "LANDING_PAGE_ONLY"
+    # The bytes survive a rejection, or the threshold audit is impossible later.
+    kept = row["attempts"][-1]["stored_path"]
+    assert kept and pathlib.Path(kept).exists()
 
 
-@pytest.mark.parametrize(
-    "response,why",
-    [
-        (_FakeResponse(403, "<html><h1>Forbidden</h1></html>", "text/html"),
-         "a 403 on robots.txt is not a prohibition on the site"),
-        (_FakeResponse(200, "<!doctype html><html>rate limit</html>", "text/html"),
-         "an HTML error page is not a robots file"),
-        (_FakeResponse(404, "", "text/plain"),
-         "no robots.txt means no rules"),
-        (_FakeResponse(200, "nonsense without any directives", "text/plain"),
-         "a body with no User-agent line states nothing"),
-    ],
-)
-def test_absent_or_bogus_robots_does_not_forbid(monkeypatch, response, why):
-    """urllib's parser invents prohibitions here, which silently deflates the rate."""
-    fetcher = _fetcher_with_robots(monkeypatch, response)
-    assert fetcher._robots_allows("https://example.org/paper.pdf"), why
+def test_an_abstract_page_is_not_an_acquisition(tmp_path):
+    store = Store("t", base=tmp_path)
+    url = "https://vendor.example/research/x"
+    fetcher = FakeFetcher(pages={url: ok(url, page(60), "text/html")})
+    row = acquire.acquire_one(fetcher, store, candidate(url=url, doi=None), use_apis=False)
+    assert row["acquired"] is False
+    assert row["failure_class"] == net.ABSTRACT
 
 
-def test_real_robots_is_honoured(monkeypatch):
-    fetcher = _fetcher_with_robots(
-        monkeypatch, _FakeResponse(200, "User-agent: *\nDisallow: /private/\n", "text/plain")
+def test_a_real_pdf_is_stored_under_its_hash(tmp_path):
+    store = Store("t", base=tmp_path)
+    url = "https://repo.example/paper.pdf"
+    fetcher = FakeFetcher(pages={url: ok(url, pdf(), "application/pdf")})
+    row = acquire.acquire_one(fetcher, store, candidate(), use_apis=False)
+    assert row["acquired"] is True
+    assert row["gate"]["kind"] == "PDF_FULLTEXT"
+    assert row["gate"]["gate_version"] == 2
+    assert (tmp_path / "t" / "raw" / f"{row['sha256']}.pdf").exists()
+
+
+def test_the_cascade_continues_past_a_403(tmp_path):
+    store = Store("t", base=tmp_path)
+    wall = "https://www.sciencedirect.com/science/article/pii/S03"
+    open_copy = "https://repo.example/paper.pdf"
+    fetcher = FakeFetcher(
+        pages={wall: fail(wall, 403, net.PAYWALL), open_copy: ok(open_copy, pdf())},
+        json_pages={UNPAYWALL: {
+            "oa_status": "green",
+            "oa_locations": [{"url_for_pdf": open_copy, "version": "acceptedVersion",
+                              "license": "cc-by"}]}},
     )
-    assert fetcher._robots_allows("https://example.org/open/paper.pdf")
-    assert not fetcher._robots_allows("https://example.org/private/paper.pdf")
+    row = acquire.acquire_one(fetcher, store, candidate(url=wall))
+    assert row["acquired"] is True
+    assert row["provenance"] == "unpaywall"
+    assert row["licence"] == "cc-by"
+    # The open copy is tried first and succeeds; the wall is never reached.
+    assert [a["http_status"] for a in row["attempts"]] == [200]
 
 
-def test_pdf_is_preferred_over_a_published_landing_page(monkeypatch):
-    """Format outranks version label: a landing page may not carry the full text."""
-    monkeypatch.setenv("CLAIMSTONE_CONTACT_EMAIL", "test@example.org")
-    fetcher = net.Fetcher(pause_s=0.0)
-    candidate = {"url": "https://example.org/paper.pdf", "title": "A paper", "doi": None}
-
-    def fake_unpaywall(_f, _doi):
-        return [acquire.Location("https://example.org/landing", "unpaywall", "publishedVersion")], "green"
-
-    monkeypatch.setattr(acquire, "unpaywall_locations", fake_unpaywall)
-    locations, _ = acquire.plan_locations(fetcher, candidate, use_apis=False)
-    assert locations[0].url.endswith(".pdf")
-
-
-def test_known_wall_is_tried_last(monkeypatch):
-    """A publisher landing page is attempted only after every legal open copy."""
-    monkeypatch.setenv("CLAIMSTONE_CONTACT_EMAIL", "test@example.org")
-    fetcher = net.Fetcher(pause_s=0.0)
-    candidate = {
-        "url": "https://www.sciencedirect.com/science/article/pii/S0304405X21001306",
-        "title": "Pervasive Underreaction",
-        "doi": None,
-    }
-    locations, _ = acquire.plan_locations(fetcher, candidate, use_apis=False)
-    assert locations, "the original URL must still be attempted"
-    assert "sciencedirect.com" in locations[-1].url
-
-
-def test_pii_url_yields_no_doi():
-    """The reason title resolution exists: a ScienceDirect PII is not a DOI."""
-    assert ids.normalize_doi(
-        "https://www.sciencedirect.com/science/article/pii/S0304405X21001306"
-    ) is None
-    assert ids.normalize_doi("https://doi.org/10.1016/j.jfineco.2021.04.003") == (
-        "10.1016/j.jfineco.2021.04.003"
+def test_every_attempt_is_kept_not_just_the_last(tmp_path):
+    store = Store("t", base=tmp_path)
+    a, b = "https://a.example/x.pdf", "https://b.example/y.pdf"
+    fetcher = FakeFetcher(
+        pages={a: fail(a, 404, net.NOT_FOUND), b: fail(b, 403, net.PAYWALL)},
+        json_pages={UNPAYWALL: {"oa_status": "closed", "oa_locations": [{"url": a}, {"url": b}]}},
     )
+    row = acquire.acquire_one(fetcher, store, candidate(url="https://doi.org/10.1234/abc"))
+    assert len(row["attempts"]) >= 2
+    assert {a["failure_class"] for a in row["attempts"]} == {net.NOT_FOUND, net.PAYWALL}
 
 
-def test_rate_is_computed_from_the_latest_attempt_per_candidate(tmp_path):
-    from claimstone.store import Store
-
-    store = Store("p", tmp_path)
-    store.append("acquisitions.jsonl", {"candidate_key": "a", "acquired": False,
-                                        "failure_class": "PAYWALL_403", "url": "https://x.org/a"})
-    store.append("acquisitions.jsonl", {"candidate_key": "a", "acquired": True, "url": "https://x.org/a"})
-    store.append("acquisitions.jsonl", {"candidate_key": "b", "acquired": False,
-                                        "failure_class": "PAYWALL_403", "url": "https://y.org/b"})
-    stats = acquire.rate(store)
-    assert stats == {
-        "attempted": 2,
-        "acquired": 1,
-        "rate": 0.5,
-        "failures_by_class": {"PAYWALL_403": 1},
-        "failures_by_host": {"y.org": 1},
-    }
+def test_a_candidate_with_nowhere_to_look_says_so(tmp_path):
+    store = Store("t", base=tmp_path)
+    row = acquire.acquire_one(
+        FakeFetcher(), store, candidate(url="", doi=None, title=""), use_apis=False)
+    assert row["acquired"] is False
+    assert row["failure_class"] == net.NO_LOCATIONS
+    assert row["attempts"] == []
 
 
-def test_contact_email_is_required(monkeypatch):
-    monkeypatch.delenv("CLAIMSTONE_CONTACT_EMAIL", raising=False)
-    with pytest.raises(net.ContactNotConfigured):
-        net.contact_email()
+def test_the_campaign_is_written_on_every_row(tmp_path):
+    store = Store("t", base=tmp_path)
+    url = "https://repo.example/paper.pdf"
+    fetcher = FakeFetcher(pages={url: ok(url, pdf())})
+    row = acquire.acquire_one(fetcher, store, candidate(), campaign="elsevier-retry",
+                              use_apis=False)
+    assert row["campaign"] == "elsevier-retry"
+
+
+# --- Task 5: the retry policy -------------------------------------------------
+
+def _row(failure_class, *, acquired=False, age_s=0):
+    stamp = _dt.datetime.fromtimestamp(time.time() - age_s, _dt.timezone.utc)
+    return {"acquired": acquired, "failure_class": failure_class,
+            "fetched_at": stamp.isoformat(timespec="seconds")}
+
+
+def test_a_candidate_never_tried_is_attempted():
+    assert acquire.should_attempt(None, retry_classes=frozenset()) is True
+
+
+def test_an_acquired_candidate_is_left_alone():
+    assert acquire.should_attempt(_row(None, acquired=True), retry_classes=frozenset()) is False
+
+
+def test_a_403_is_not_reattempted_without_a_named_campaign():
+    assert acquire.should_attempt(_row(net.PAYWALL), retry_classes=frozenset()) is False
+
+
+def test_a_403_is_reattempted_when_its_class_is_named():
+    assert acquire.should_attempt(
+        _row(net.PAYWALL), retry_classes=frozenset({net.PAYWALL})) is True
+
+
+def test_an_abstract_page_is_terminal_too():
+    assert acquire.should_attempt(_row(net.ABSTRACT), retry_classes=frozenset()) is False
+
+
+def test_a_fresh_timeout_waits():
+    assert acquire.should_attempt(
+        _row(net.TIMEOUT, age_s=60), retry_classes=frozenset(), retry_after_s=6 * 3600) is False
+
+
+def test_an_old_timeout_is_retried_on_its_own():
+    assert acquire.should_attempt(
+        _row(net.TIMEOUT, age_s=7 * 3600), retry_classes=frozenset(),
+        retry_after_s=6 * 3600) is True
+
+
+def test_an_exhausted_budget_returns_to_the_queue():
+    # Transient on purpose: a source dropped because the budget ran out must come back, or a
+    # blocked downloader reads as a saturated corpus.
+    assert acquire.should_attempt(
+        _row(net.BUDGET, age_s=7 * 3600), retry_classes=frozenset(),
+        retry_after_s=6 * 3600) is True
+
+
+def test_a_skipped_candidate_writes_no_row(tmp_path):
+    store = Store("t", base=tmp_path)
+    store.append("acquisitions.jsonl", {"candidate_key": "doi:10.1234/abc", **_row(net.PAYWALL)})
+    rows = list(acquire.run([candidate()], store, FakeFetcher(), use_apis=False))
+    assert rows == []
+    assert len(list(store.read("acquisitions.jsonl"))) == 1
+
+
+def test_attempt_no_increments_across_campaigns(tmp_path):
+    store = Store("t", base=tmp_path)
+    url = "https://repo.example/paper.pdf"
+    fetcher = FakeFetcher(pages={url: ok(url, pdf())})
+    first = list(acquire.run([candidate()], store, fetcher, use_apis=False))
+    assert first[0]["attempt_no"] == 1
+    # A retry campaign that names the class re-attempts even a terminal failure.
+    store.append("acquisitions.jsonl", {**first[0], "acquired": False,
+                                       "failure_class": net.PAYWALL})
+    again = list(acquire.run([candidate()], store, fetcher, use_apis=False,
+                             campaign="elsevier", retry_classes=frozenset({net.PAYWALL})))
+    assert again[0]["attempt_no"] == 2
+    assert again[0]["campaign"] == "elsevier"
