@@ -76,8 +76,10 @@ checked — and running it corrected one of them on the first attempt.
 
 ## Storage model
 
-**Append-only JSONL is the source of truth** — hashable, diffable, resumable after a crash,
-auditable with `grep`. SQLite, if introduced, is a derived read model rebuildable from the
+**Append-only JSONL is the source of truth** — hashable, diffable, auditable with `grep`, and
+resumable after a crash in one specific sense: a process killed mid-append leaves a final line
+with no newline, which `Store.read` skips and records and `Store.repair` truncates. Damage
+anywhere else raises, because silently skipping a row removes it from a denominator. SQLite, if introduced, is a derived read model rebuildable from the
 JSONL, never the primary. Do not add Postgres (single writer, megabytes of data), a vector
 database (a few hundred documents: similarity is one matrix multiplication) or a graph
 database (a citation graph is a table of edges).

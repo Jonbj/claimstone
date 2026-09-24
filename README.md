@@ -115,13 +115,20 @@ outcome and not a failure.
 
 ## Status
 
-Early. **Stage 2 first**, measured against a real 25-source manifest whose current
-acquisition rate is 0.42 — then a thin vertical slice through stages 3-6 on that same
-manifest, through to real verdicts, and the dashboard last, built against real rows.
+Early, and measured. **Stage 2 is implemented**; stages 1 and 3-6 are specified with
+implementation plans and not built. The dashboard is specified and deliberately last.
 
-The first deliverable is a sentence with a number in it: the rate after, with OA status,
-licence and failure reason recorded per source, plus how much that rate moves if the content
-gate's thresholds move. If the number does not move, the rest is theatre — and if it lands
-below the declared floor, the published result is `INSUFFICIENT_ACQUISITION` with the losses
-broken down by failure class. That is a finding. Lowering the floor because the number came
-out awkward is not.
+The first deliverable is a sentence with a number in it, and here it is: on a real 25-source
+manifest whose acquisition rate was **0.42**, the rate is now **0.60** — fifteen sources obtained
+with OA status, licence and failure reason recorded for each, and an upper bound rather than a
+final figure, because one obtained PDF turned out to be a vendor fact sheet and stage 3 has not
+yet run to confirm the rest.
+
+That is below the declared floor of 0.80, so the published result is `INSUFFICIENT_ACQUISITION`
+with the losses broken down: four publishers that refused twice, and six pages that are abstracts
+or product sheets rather than documents. **That is a finding, not a failure** — and the floor stays
+where it is. Lowering it because a round came out awkward is the one response that is off the table.
+
+None of the thresholds that produced the number are deciding it: all four sweep flat, and every
+rejection was checked by hand. `docs/DESIGN_DECISIONS.md` carries the derivation under D8, and
+`tools/derive_corpus_figures.py` reproduces the corpus figures from the store.
