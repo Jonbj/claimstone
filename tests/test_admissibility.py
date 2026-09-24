@@ -6,7 +6,19 @@ from claimstone.store import Store
 
 
 def _ledger(store, rows):
+    """Append acquisition rows, registering each key as a found candidate first.
+
+    A source cannot be acquired without having been found. The old helper appended only
+    acquisitions, which is exactly the assumption the denominator fix removes.
+    """
+    seen: set[str] = set()
     for row in rows:
+        key = str(row["candidate_key"])
+        if key not in seen:
+            seen.add(key)
+            store.append("candidates.jsonl",
+                         {"candidate_key": key, "source_id": key,
+                          "source_class": row.get("source_class"), "url": row.get("url")})
         store.append("acquisitions.jsonl", row)
 
 
@@ -18,7 +30,7 @@ def row(key, *, acquired, klass="ACA", failure=None, url="https://x.example/a"):
 def test_a_failed_retry_does_not_erase_a_recorded_success(tmp_path):
     store = Store("t", base=tmp_path)
     _ledger(store, [row("a", acquired=True), row("a", acquired=False, failure="PAYWALL_403")])
-    assert admissibility.rate(store)["acquired"] == 1
+    assert admissibility.rate(store)["obtained"] == 1
 
 
 def test_the_rate_is_acquired_over_attempted(tmp_path):
@@ -26,7 +38,7 @@ def test_the_rate_is_acquired_over_attempted(tmp_path):
     _ledger(store, [row("a", acquired=True), row("b", acquired=True),
                     row("c", acquired=False, failure="PAYWALL_403")])
     result = admissibility.rate(store)
-    assert (result["attempted"], result["acquired"]) == (3, 2)
+    assert (result["found"], result["obtained"]) == (3, 2)
     assert round(result["rate"], 2) == 0.67
 
 
@@ -36,14 +48,14 @@ def test_classes_are_reported_separately(tmp_path):
                     row("b", acquired=False, klass="DOC", failure="NOT_FOUND_404"),
                     row("c", acquired=False, klass="DOC", failure="PAYWALL_403")])
     by_class = admissibility.rate(store)["by_class"]
-    assert by_class["ACA"] == {"attempted": 1, "acquired": 1, "rate": 1.0}
+    assert by_class["ACA"] == {"found": 1, "obtained": 1, "rate": 1.0}
     assert by_class["DOC"]["rate"] == 0.0
 
 
 def test_an_empty_ledger_has_no_rate_rather_than_a_rate_of_zero(tmp_path):
     store = Store("t", base=tmp_path)
     result = admissibility.rate(store)
-    assert result["attempted"] == 0
+    assert result["found"] == 0
     assert result["rate"] is None
 
 
@@ -78,12 +90,12 @@ def test_a_regate_supersedes_a_success_but_a_retry_does_not(tmp_path):
         {**row("a", acquired=False, failure="ABSTRACT_ONLY"),
          "regated_from": "2026-09-22T10:00:00+00:00"},               # corrected judgement
     ])
-    assert admissibility.rate(store)["acquired"] == 0
+    assert admissibility.rate(store)["obtained"] == 0
 
     store2 = Store("u", base=tmp_path)
     _ledger(store2, [row("a", acquired=True),
                      row("a", acquired=False, failure="PAYWALL_403")])  # a retry, not a re-gate
-    assert admissibility.rate(store2)["acquired"] == 1
+    assert admissibility.rate(store2)["obtained"] == 1
 
 
 def test_a_real_acquisition_after_a_regate_wins_again(tmp_path):
@@ -94,7 +106,7 @@ def test_a_real_acquisition_after_a_regate_wins_again(tmp_path):
          "regated_from": "2026-09-22T10:00:00+00:00"},
         row("a", acquired=True),   # the cascade found the real document later
     ])
-    assert admissibility.rate(store)["acquired"] == 1
+    assert admissibility.rate(store)["obtained"] == 1
 
 
 def test_a_row_without_a_class_is_filed_under_the_candidates_class(tmp_path):
@@ -105,4 +117,89 @@ def test_a_row_without_a_class_is_filed_under_the_candidates_class(tmp_path):
                                         "url": "https://wall.example/a"})
     by_class = admissibility.rate(store)["by_class"]
     assert "UNCLASSIFIED" not in by_class
-    assert by_class["ACA"]["attempted"] == 1
+    assert by_class["ACA"]["found"] == 1
+
+
+# --- the denominator: what the floor is a share of ----------------------------
+
+def _found(store, n, *, klass="ACA"):
+    """n candidates discovered. This is what the floor is a share of."""
+    for index in range(n):
+        store.append("candidates.jsonl", {"candidate_key": f"k{index}", "source_class": klass})
+
+
+def test_the_denominator_is_what_was_found_not_what_was_attempted(tmp_path):
+    # The defect this replaces: dividing by acquisition rows let one obtained source out of
+    # twenty-five found report a rate of 1.00 and pass the floor — a corpus read at 4%
+    # certifying itself complete, which is the failure this project exists to prevent.
+    store = Store("t", base=tmp_path)
+    _found(store, 25)
+    _ledger(store, [row("k0", acquired=True)])
+    result = admissibility.rate(store)
+    assert result["found"] == 25
+    assert result["attempted"] == 1
+    assert result["obtained"] == 1
+    assert result["rate"] == 1 / 25
+
+
+def test_an_unread_corpus_does_not_pass_the_floor(tmp_path):
+    store = Store("t", base=tmp_path)
+    _found(store, 25)
+    _ledger(store, [row("k0", acquired=True)])
+    project = load_project("projects/example-news-and-returns")
+    assert admissibility.admit(project, store)["status"] == "INSUFFICIENT_ACQUISITION"
+
+
+def test_the_chain_of_states_is_reported_separately(tmp_path):
+    store = Store("t", base=tmp_path)
+    _found(store, 4)
+    store.append("candidates.jsonl", {"candidate_key": "k4", "source_class": None})
+    _ledger(store, [row("k0", acquired=True), row("k1", acquired=True),
+                    row("k2", acquired=False, failure="PAYWALL_403")])
+    result = admissibility.rate(store)
+    assert (result["found"], result["classified"]) == (5, 4)
+    assert (result["attempted"], result["obtained"]) == (3, 2)
+
+
+def test_an_unclassified_candidate_stays_in_the_denominator(tmp_path):
+    # It was found and it was not read. Dropping it into a smaller denominator is the same
+    # inflation, arrived at from the other side.
+    store = Store("t", base=tmp_path)
+    store.append("candidates.jsonl", {"candidate_key": "k0", "source_class": "ACA"})
+    store.append("candidates.jsonl", {"candidate_key": "k1", "source_class": None})
+    _ledger(store, [row("k0", acquired=True)])
+    result = admissibility.rate(store)
+    assert result["found"] == 2
+    assert result["rate"] == 0.5
+    assert result["unclassified"] == 1
+
+
+def test_an_acquisition_with_no_candidate_is_reported_not_absorbed(tmp_path):
+    # Adding it to `found` would reintroduce the inflation; hiding it would hide a broken
+    # ledger. It is counted on its own line.
+    store = Store("t", base=tmp_path)
+    _found(store, 2)
+    store.append("acquisitions.jsonl", row("k0", acquired=True))
+    store.append("acquisitions.jsonl", row("ghost", acquired=True))
+    result = admissibility.rate(store)
+    assert result["found"] == 2
+    assert result["orphan_acquisitions"] == ["ghost"]
+
+
+def test_no_candidates_means_no_rate_rather_than_zero(tmp_path):
+    store = Store("t", base=tmp_path)
+    result = admissibility.rate(store)
+    assert result["found"] == 0
+    assert result["rate"] is None
+
+
+def test_a_round_can_be_isolated(tmp_path):
+    store = Store("t", base=tmp_path)
+    store.append("candidates.jsonl", {"candidate_key": "k0", "source_class": "ACA",
+                                      "round": "spring"})
+    store.append("candidates.jsonl", {"candidate_key": "k1", "source_class": "ACA",
+                                      "round": "autumn"})
+    store.append("acquisitions.jsonl", row("k0", acquired=True))
+    assert admissibility.rate(store, round_name="spring")["found"] == 1
+    assert admissibility.rate(store, round_name="spring")["rate"] == 1.0
+    assert admissibility.rate(store, round_name="autumn")["rate"] == 0.0

@@ -131,16 +131,37 @@ def _report(args: argparse.Namespace) -> int:
 
         print(json.dumps(result, indent=2, sort_keys=True))
     else:
-        achieved = "—" if result["rate"] is None else f"{result['rate']:.2f}"
-        print(f"{project.name} — {result['attempted']} candidates")
+        print(f"{project.name} — round {result['round'] or 'all'}")
         # Per class before pooled: D3 says classes are not mixed, and an aggregate that hides
         # one class sitting at zero is a different fact from a uniform one.
         for klass, bucket in result["by_class"].items():
-            print(f"  {klass:<14} {bucket['acquired']}/{bucket['attempted']}  {bucket['rate']:.2f}")
-        print(f"  {'total':<14} {result['acquired']}/{result['attempted']}  {achieved}"
-              f"   floor {result['floor']:.2f}"
+            print(f"  {klass:<14} {bucket['obtained']}/{bucket['found']}  {bucket['rate']:.2f}")
+
+        # The chain of states, separately, because the remedies differ: a rule to declare, a
+        # round to finish, a campaign to run, a stage 3 to run.
+        found = result["found"]
+        print(f"  {'found':<14} {found}")
+        if result["unclassified"]:
+            print(f"  {'classified':<14} {result['classified']}/{found}"
+                  f"   {result['unclassified']} unclassified, which acquire will refuse")
+        print(f"  {'attempted':<14} {result['attempted']}/{found}")
+        share = "—" if not found else f"{result['obtained'] / found:.2f}"
+        print(f"  {'obtained':<14} {result['obtained']}/{found}  {share}")
+        if result["confirmed"] is not None:
+            print(f"  {'confirmed':<14} {result['confirmed']}/{found}"
+                  f"  {result['confirmed'] / found:.2f}  <- the figure")
+            if result["not_a_document"]:
+                print(f"                 {len(result['not_a_document'])} obtained but not a "
+                      f"document: {', '.join(result['not_a_document'])}")
+            if result["awaiting_normalize"]:
+                print(f"                 {result['awaiting_normalize']} awaiting normalize, "
+                      f"counted as obtained")
+        if result["orphan_acquisitions"]:
+            print(f"  {'orphans':<14} {len(result['orphan_acquisitions'])} acquisition rows with "
+                  f"no candidate — the ledger is inconsistent")
+        print(f"  {'floor':<14} {result['floor']:.2f}"
               f" (v{result['floor_version']}, {result['floor_set_at']})"
-              f"   {result['status']}")
+              f"   {result['status']}   basis: {result['basis']}")
         for name, counts in (("failures", result["failures_by_class"]),
                              ("by host", result["failures_by_host"])):
             if counts:

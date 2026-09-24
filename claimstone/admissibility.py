@@ -18,6 +18,11 @@ OK = "OK"
 INSUFFICIENT = "INSUFFICIENT_ACQUISITION"
 
 
+def confirmations(store: Store) -> dict[str, dict[str, Any]]:
+    """What stage 3 concluded per source, where it has run. Empty until normalize exists."""
+    return store.latest_by("documents.jsonl", "source_id")
+
+
 def collapse(store: Store) -> dict[str, dict[str, Any]]:
     """One row per candidate: the latest re-gate, else the latest success, else the latest row.
 
@@ -50,58 +55,104 @@ def collapse(store: Store) -> dict[str, dict[str, Any]]:
     return best
 
 
-def rate(store: Store) -> dict[str, Any]:
-    """Acquisition accounting. `rate` is None when nothing was attempted — not 0.0.
+def rate(store: Store, *, round_name: str | None = None) -> dict[str, Any]:
+    """Acquisition accounting. The denominator is what was **found**, not what was attempted.
 
-    Where a ledger row carries no `source_class` — rows written before that became mandatory —
-    the candidate is asked instead. A candidate is the authority on its own class, and the
-    alternative is a report that files a known source under UNCLASSIFIED, which reads as a
-    defect in the corpus rather than in the row that recorded it.
+    This is the figure that decides whether a round may produce verdicts, so the denominator is
+    the whole point. Dividing by acquisition rows — which this function did until 2026-09-24 —
+    let one obtained source out of twenty-five found report a rate of 1.00 and pass an 0.80
+    floor: a corpus read at 4% certifying itself complete, which is the exact failure the
+    project exists to prevent. `sources.yaml` says the floor is a share of what was *found*, and
+    now it is.
+
+    Five states are reported separately because the remedies differ. Found but unclassified
+    needs a declared rule; found but never attempted needs the round finishing; attempted and
+    refused needs a campaign or a different cascade; obtained but unconfirmed needs stage 3.
+    Collapsing them into one ratio hides which one happened.
     """
-    rows = collapse(store)
-    candidate_classes = {
-        key: row.get("source_class")
+    candidates = {
+        key: row
         for key, row in store.latest_by("candidates.jsonl", "candidate_key").items()
+        if round_name is None or row.get("round") == round_name
     }
+    rows = {key: row for key, row in collapse(store).items() if key in candidates}
+
+    found = len(candidates)
+    classified = sum(1 for row in candidates.values() if row.get("source_class"))
     attempted = len(rows)
-    acquired = sum(1 for row in rows.values() if row.get("acquired"))
+    obtained = sum(1 for row in rows.values() if row.get("acquired"))
+
+    # An acquisition row whose candidate is absent means a broken ledger. Adding it to `found`
+    # would reintroduce the inflation; dropping it silently would hide the breakage.
+    orphans = sorted(set(collapse(store)) - set(candidates)) if round_name is None else []
+
+    confirmed_rows = confirmations(store)
+    confirmed: int | None = None
+    awaiting = 0
+    not_a_document: list[str] = []
+    if confirmed_rows:
+        confirmed = 0
+        for key, row in rows.items():
+            if not row.get("acquired"):
+                continue
+            identifier = str(row.get("source_id") or key)
+            held = confirmed_rows.get(identifier)
+            if held is None:
+                # Not yet normalized is not the same as normalized and rejected: counting it as
+                # unconfirmed would make the rate fall because stage 3 had not finished, which
+                # measures our progress and calls it a property of the corpus.
+                awaiting += 1
+                confirmed += 1
+            elif held.get("fulltext_confirmed"):
+                confirmed += 1
+            else:
+                not_a_document.append(identifier)
 
     by_class: dict[str, dict[str, Any]] = {}
     failures: dict[str, int] = {}
     hosts: dict[str, int] = {}
-    for row in rows.values():
-        klass = str(
-            row.get("source_class")
-            or candidate_classes.get(str(row.get("candidate_key")))
-            or "UNCLASSIFIED"
-        )
-        bucket = by_class.setdefault(klass, {"attempted": 0, "acquired": 0, "rate": 0.0})
-        bucket["attempted"] += 1
-        if row.get("acquired"):
-            bucket["acquired"] += 1
+    for key, candidate in candidates.items():
+        klass = str(candidate.get("source_class") or "UNCLASSIFIED")
+        bucket = by_class.setdefault(klass, {"found": 0, "obtained": 0, "rate": 0.0})
+        bucket["found"] += 1
+        row = rows.get(key)
+        if row is not None and row.get("acquired"):
+            bucket["obtained"] += 1
             continue
-        name = str(row.get("failure_class"))
+        name = str((row or {}).get("failure_class") or "NOT_ATTEMPTED")
         failures[name] = failures.get(name, 0) + 1
-        host = net.host_of(str(row.get("url") or ""))
+        host = net.host_of(str((row or candidate).get("url") or ""))
         if host:
             hosts[host] = hosts.get(host, 0) + 1
-
     for bucket in by_class.values():
-        bucket["rate"] = bucket["acquired"] / bucket["attempted"]
+        bucket["rate"] = bucket["obtained"] / bucket["found"]
 
+    basis = "confirmed" if confirmed is not None else "obtained"
+    numerator = confirmed if confirmed is not None else obtained
     return {
+        "round": round_name,
+        "found": found,
+        "classified": classified,
+        "unclassified": found - classified,
         "attempted": attempted,
-        "acquired": acquired,
-        "rate": (acquired / attempted) if attempted else None,
+        "obtained": obtained,
+        "confirmed": confirmed,
+        "awaiting_normalize": awaiting,
+        "not_a_document": sorted(not_a_document),
+        "orphan_acquisitions": orphans,
+        "basis": basis,
+        "rate": (numerator / found) if found else None,
         "by_class": dict(sorted(by_class.items())),
         "failures_by_class": dict(sorted(failures.items(), key=lambda kv: -kv[1])),
         "failures_by_host": dict(sorted(hosts.items(), key=lambda kv: -kv[1])),
     }
 
 
-def admit(project: Project, store: Store) -> dict[str, Any]:
+def admit(
+    project: Project, store: Store, *, round_name: str | None = None
+) -> dict[str, Any]:
     """Whether this round may produce verdicts. Invariant 3: nothing waives the floor."""
-    measured = rate(store)
+    measured = rate(store, round_name=round_name)
     achieved = measured["rate"]
     status = OK if achieved is not None and achieved >= project.acquisition_floor else INSUFFICIENT
     return {
