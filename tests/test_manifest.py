@@ -100,3 +100,45 @@ def test_the_same_alias_cannot_mean_two_classes(tmp_path):
         encoding="utf-8")
     with pytest.raises(ConfigError, match="paper"):
         load_sources(tmp_path)
+
+
+# --- the gate's language policy, declared per project -------------------------
+
+def test_absent_gate_policy_means_the_engine_defaults(tmp_path):
+    from claimstone.config import load_gate_policy
+
+    (tmp_path / "sources.yaml").write_text(
+        "classes: []\nacquisition_floor: 0.8\n", encoding="utf-8")
+    assert load_gate_policy(tmp_path) == {}
+
+
+def test_a_project_declares_its_own_headings_and_phrases(tmp_path):
+    from claimstone.config import load_gate_policy
+
+    (tmp_path / "sources.yaml").write_text(
+        "classes: []\nacquisition_floor: 0.8\ngate_policy:\n"
+        "  reference_headings: [Bibliografia, Riferimenti]\n"
+        "  paywall_phrases: [Acquista il PDF]\n"
+        "  structural_signal: reference_list\n", encoding="utf-8")
+    policy = load_gate_policy(tmp_path)
+    assert policy["reference_headings"] == ("bibliografia", "riferimenti")
+    assert policy["paywall_phrases"] == ("acquista il pdf",)
+
+
+def test_an_unknown_structural_signal_is_a_configuration_error(tmp_path):
+    from claimstone.config import load_gate_policy
+
+    (tmp_path / "sources.yaml").write_text(
+        "classes: []\nacquisition_floor: 0.8\ngate_policy:\n  structural_signal: vibes\n",
+        encoding="utf-8")
+    with pytest.raises(ConfigError, match="structural_signal"):
+        load_gate_policy(tmp_path)
+
+
+def test_an_unknown_gate_policy_key_is_an_error(tmp_path):
+    from claimstone.config import load_gate_policy
+
+    (tmp_path / "sources.yaml").write_text(
+        "classes: []\nacquisition_floor: 0.8\ngate_policy:\n  tone: formal\n", encoding="utf-8")
+    with pytest.raises(ConfigError, match="tone"):
+        load_gate_policy(tmp_path)

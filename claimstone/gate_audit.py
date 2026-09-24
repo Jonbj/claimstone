@@ -70,12 +70,17 @@ def _artifacts(store: Store) -> list[dict[str, Any]]:
     ]
 
 
-def _classify_stored(artifact: dict[str, Any], thresholds: dict[str, int]) -> fulltext.FullText:
+def _classify_stored(
+    artifact: dict[str, Any],
+    thresholds: dict[str, int],
+    policy: dict[str, Any] | None = None,
+) -> fulltext.FullText:
     path = pathlib.Path(artifact["stored_path"])
     if not path.exists():
         return fulltext.FullText(MISSING, None, f"no bytes at {path}")
     return fulltext.classify(
-        path.read_bytes(), artifact["content_type"], artifact["url"] or "", thresholds
+        path.read_bytes(), artifact["content_type"], artifact["url"] or "", thresholds,
+        policy=policy,
     )
 
 
@@ -111,7 +116,11 @@ def sweep(store: Store, name: str, values: list[int]) -> list[dict[str, Any]]:
     return points
 
 
-def rejections(store: Store, thresholds: dict[str, int] | None = None) -> list[dict[str, Any]]:
+def rejections(
+    store: Store,
+    thresholds: dict[str, int] | None = None,
+    policy: dict[str, Any] | None = None,
+) -> list[dict[str, Any]]:
     """Every artifact the gate turns down, with what it counted and what triggered it.
 
     Printed for a by-hand check. On a 25-source manifest this is ten minutes of reading and it
@@ -120,7 +129,7 @@ def rejections(store: Store, thresholds: dict[str, int] | None = None) -> list[d
     th = {**fulltext.DEFAULT_THRESHOLDS, **(thresholds or {})}
     out: list[dict[str, Any]] = []
     for artifact in _artifacts(store):
-        verdict = _classify_stored(artifact, th)
+        verdict = _classify_stored(artifact, th, policy)
         if verdict.accepted:
             continue
         out.append({
@@ -140,6 +149,7 @@ def regate(
     *,
     campaign: str,
     thresholds: dict[str, int] | None = None,
+    policy: dict[str, Any] | None = None,
 ) -> Iterator[dict[str, Any]]:
     """Re-judge bytes already held, under the gate as it stands now.
 
@@ -180,7 +190,7 @@ def regate(
 
         best: tuple[fulltext.FullText, dict[str, Any]] | None = None
         for artifact in artifacts:
-            verdict = _classify_stored(artifact, th)
+            verdict = _classify_stored(artifact, th, policy)
             # Prefer whatever passes; otherwise keep the first verdict as the honest headline.
             if best is None or (verdict.accepted and not best[0].accepted):
                 best = (verdict, artifact)
@@ -202,7 +212,7 @@ def regate(
             "licence": prior.get("licence"),
             "oa_status": prior.get("oa_status"),
             "content_type": artifact["content_type"],
-            "gate": verdict.as_row(th),
+            "gate": verdict.as_row(th, policy),
             # One synthetic attempt recording which artifact was re-judged. Without it a
             # rejection would null out stored_path at row level and the pointer to the bytes
             # would be lost, so the next gate_version could not re-judge what is still on disk.

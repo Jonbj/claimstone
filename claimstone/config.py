@@ -72,6 +72,7 @@ class Project:
     frozen_at: str
     manifest: tuple[ManifestEntry, ...] = ()
     gate_thresholds: dict[str, int] = field(default_factory=dict)
+    gate_policy: dict[str, Any] = field(default_factory=dict)
     floor_version: int = 1
     floor_set_at: str = ""
     floor_rationale: str = ""
@@ -221,6 +222,44 @@ MANIFEST_COLUMNS = ("source_id", "class", "format", "url", "title")
 GATE_THRESHOLD_NAMES = ("min_pdf_bytes", "min_text_chars", "paywall_doubt_chars", "fulltext_chars")
 
 
+GATE_POLICY_NAMES = ("paywall_phrases", "reference_headings", "structural_signal")
+
+
+def load_gate_policy(root: pathlib.Path) -> dict[str, Any]:
+    """The gate's language and genre assumptions, declared per project.
+
+    "A bibliography is headed References" and "a paywall says purchase pdf" are knowledge about a
+    language and a genre, not about the engine's job (invariant 4). The defaults in `fulltext` are
+    English scholarly prose; a project in another language, or one reading regulatory filings that
+    cite nothing, states its own here instead of editing the package.
+    """
+    raw = _read_yaml(pathlib.Path(root) / "sources.yaml").get("gate_policy") or {}
+    if not isinstance(raw, dict):
+        raise ConfigError("sources.yaml: 'gate_policy' must be a mapping")
+    unknown = sorted(set(raw) - set(GATE_POLICY_NAMES))
+    if unknown:
+        raise ConfigError(
+            f"sources.yaml: unknown gate_policy key(s): {', '.join(unknown)} "
+            f"(known: {', '.join(GATE_POLICY_NAMES)})"
+        )
+
+    policy: dict[str, Any] = {}
+    for name in ("paywall_phrases", "reference_headings"):
+        if name in raw:
+            values = raw[name]
+            if not isinstance(values, list) or not values:
+                raise ConfigError(f"sources.yaml: gate_policy.{name} must be a non-empty list")
+            policy[name] = tuple(str(v).strip().lower() for v in values)
+    if "structural_signal" in raw:
+        signal = str(raw["structural_signal"]).strip()
+        if signal not in ("reference_list", "none"):
+            raise ConfigError(
+                "sources.yaml: gate_policy.structural_signal must be 'reference_list' or 'none'"
+            )
+        policy["structural_signal"] = signal
+    return policy
+
+
 def load_manifest(
     root: pathlib.Path, class_ids: frozenset[str], aliases: dict[str, str] | None = None
 ) -> tuple[ManifestEntry, ...]:
@@ -347,6 +386,7 @@ def load_project(root: str | pathlib.Path) -> Project:
         {alias: c.id for c in classes for alias in c.aliases},
     )
     gate_thresholds = load_gate_thresholds(path)
+    gate_policy = load_gate_policy(path)
     floor_version, floor_set_at, floor_rationale = load_floor_provenance(path)
 
     return Project(
@@ -361,6 +401,7 @@ def load_project(root: str | pathlib.Path) -> Project:
         frozen_at=frozen_at,
         manifest=manifest,
         gate_thresholds=gate_thresholds,
+        gate_policy=gate_policy,
         floor_version=floor_version,
         floor_set_at=floor_set_at,
         floor_rationale=floor_rationale,

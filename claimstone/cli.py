@@ -97,6 +97,7 @@ def _acquire(args: argparse.Namespace) -> int:
         retry_classes=retry_classes,
         use_apis=not args.no_apis,
         thresholds=project.gate_thresholds,
+        policy=project.gate_policy,
         limit=args.limit,
     ):
         done += 1
@@ -180,7 +181,7 @@ def _gate_audit(args: argparse.Namespace) -> int:
 
     name = args.sweep or "min_text_chars"
     points = gate_audit.sweep(store, name, SWEEP_VALUES[name])
-    listing = gate_audit.rejections(store, project.gate_thresholds)
+    listing = gate_audit.rejections(store, project.gate_thresholds, project.gate_policy)
 
     if args.json:
         import json
@@ -219,7 +220,8 @@ def _regate(args: argparse.Namespace) -> int:
     changed = 0
     total = 0
     for row in gate_audit.regate(store, campaign=args.campaign,
-                                 thresholds=project.gate_thresholds):
+                                 thresholds=project.gate_thresholds,
+                                 policy=project.gate_policy):
         total += 1
         verdict = row["gate"]["kind"]
         mark = "ok  " if row["acquired"] else "fail"

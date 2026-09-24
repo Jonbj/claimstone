@@ -22,7 +22,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from html.parser import HTMLParser
-from typing import Any
+from typing import Any, Sequence
 
 PDF_FULLTEXT = "PDF_FULLTEXT"
 HTML_FULLTEXT = "HTML_FULLTEXT"
@@ -58,7 +58,19 @@ PAYWALL_PHRASES = (
 
 _SKIP_TAGS = frozenset({"script", "style", "nav", "header", "footer", "aside"})
 
-_REFERENCE_HEADING = re.compile(r">\s*(references|bibliography|works cited)\s*<", re.I)
+# Everything below is knowledge about a language and a genre, not about the engine's job, so a
+# project may replace it (invariant 4). These are the defaults for English scholarly prose, which
+# is what the first corpus is; an Italian corpus, or one of regulatory filings, must be
+# expressible without editing this package.
+DEFAULT_POLICY: dict[str, Any] = {
+    "paywall_phrases": PAYWALL_PHRASES,
+    "reference_headings": ("references", "bibliography", "works cited"),
+    # `reference_list` requires the marks of a citing document; `none` asks only for length, for
+    # a genre that does not cite at all.
+    "structural_signal": "reference_list",
+}
+
+STRUCTURAL_SIGNALS = ("reference_list", "none")
 # "(Author, 2019)" / "(Author and Other, 2019)" — enough of these is a reference list even when
 # the heading is missing or styled unrecognisably.
 _CITATION = re.compile(
@@ -79,13 +91,23 @@ class FullText:
     def accepted(self) -> bool:
         return self.kind in ACCEPTED
 
-    def as_row(self, thresholds: dict[str, int]) -> dict[str, Any]:
+    def as_row(
+        self, thresholds: dict[str, int], policy: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
+        applied = {**DEFAULT_POLICY, **(policy or {})}
         return {
             "kind": self.kind,
             "chars": self.chars,
             "reason": self.reason,
             "gate_version": self.gate_version,
             "thresholds": dict(thresholds),
+            # A rate computed under a different policy is not comparable to one computed under
+            # this, and without recording it the difference is invisible.
+            "policy": {
+                "structural_signal": applied["structural_signal"],
+                "reference_headings": list(applied["reference_headings"]),
+                "paywall_phrases": len(applied["paywall_phrases"]),
+            },
         }
 
 
@@ -121,10 +143,11 @@ def visible_text(body: bytes) -> str:
     return parser.text()
 
 
-def cites(markup: str, text: str) -> bool:
+def cites(markup: str, text: str, headings: Sequence[str] = ()) -> bool:
     """Does this document argue from evidence, or summarise something that did?"""
-    if _REFERENCE_HEADING.search(markup):
-        return True
+    for heading in headings or DEFAULT_POLICY["reference_headings"]:
+        if re.search(rf">\s*{re.escape(heading)}\s*<", markup, re.I):
+            return True
     return len(_CITATION.findall(text)) >= _MIN_CITATIONS
 
 
@@ -140,13 +163,13 @@ def _classify_pdf(body: bytes, th: dict[str, int]) -> FullText:
     return FullText(PDF_FULLTEXT, None, "")
 
 
-def _classify_markup(body: bytes, th: dict[str, int]) -> FullText:
+def _classify_markup(body: bytes, th: dict[str, int], policy: dict[str, Any]) -> FullText:
     markup = body.decode("utf-8", "replace")
     text = visible_text(body)
     count = len(text)
 
     folded = text.lower()
-    hit = next((phrase for phrase in PAYWALL_PHRASES if phrase in folded), None)
+    hit = next((phrase for phrase in policy["paywall_phrases"] if phrase in folded), None)
     if hit and count < th["paywall_doubt_chars"]:
         # A phrase alone is never sufficient: a legitimate open-access article also contains
         # "sign in". Above the doubt threshold the text is there whatever the menu says.
@@ -155,23 +178,41 @@ def _classify_markup(body: bytes, th: dict[str, int]) -> FullText:
     # The structural check precedes the length check deliberately. A 2473-character summary is
     # both short and a summary, and the second is the more useful thing to record: it says a
     # full text may exist elsewhere and is worth another attempt.
-    if count < th["fulltext_chars"] and not cites(markup, text):
-        return FullText(
-            ABSTRACT_ONLY, count,
-            f"{count} chars and no reference list: a summary of a document, not the document",
-        )
+    if policy["structural_signal"] == "reference_list":
+        if count < th["fulltext_chars"] and not cites(
+            markup, text, policy["reference_headings"]
+        ):
+            return FullText(
+                ABSTRACT_ONLY, count,
+                f"{count} chars and no reference list: a summary of a document, not the document",
+            )
+        if count < th["min_text_chars"]:
+            return FullText(TOO_SHORT, count, f"{count} chars, and it does cite: a truncation")
+        return FullText(HTML_FULLTEXT, count, "")
 
+    # structural_signal: none — the genre does not cite, so length is all there is. Weaker on
+    # purpose and declared as such: a corpus of filings or API documentation has no
+    # bibliographies, and requiring one would reject every source in it.
     if count < th["min_text_chars"]:
-        return FullText(TOO_SHORT, count, f"{count} chars, and it does cite: a truncation")
-
-    return FullText(HTML_FULLTEXT, count, "")
+        return FullText(TOO_SHORT, count, f"{count} chars")
+    return FullText(HTML_FULLTEXT, count, "no structural signal is required by this project")
 
 
 def classify(
-    body: bytes, content_type: str, url: str, thresholds: dict[str, int] | None = None
+    body: bytes,
+    content_type: str,
+    url: str,
+    thresholds: dict[str, int] | None = None,
+    policy: dict[str, Any] | None = None,
 ) -> FullText:
     th = {**DEFAULT_THRESHOLDS, **(thresholds or {})}
+    applied = {**DEFAULT_POLICY, **(policy or {})}
+    if applied["structural_signal"] not in STRUCTURAL_SIGNALS:
+        raise ValueError(
+            f"unknown structural_signal {applied['structural_signal']!r}: "
+            f"{', '.join(STRUCTURAL_SIGNALS)}"
+        )
     if not body:
         return FullText(TOO_SHORT, 0, "empty body")
     looks_pdf = "pdf" in (content_type or "").lower() or url.lower().endswith(".pdf")
-    return _classify_pdf(body, th) if looks_pdf else _classify_markup(body, th)
+    return _classify_pdf(body, th) if looks_pdf else _classify_markup(body, th, applied)

@@ -49,6 +49,7 @@ def acquire_one(
     campaign: str = ROUTINE,
     use_apis: bool = True,
     thresholds: dict[str, int] | None = None,
+    policy: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Try the cascade for one candidate. Returns the ledger row; never raises on a fetch."""
     if not candidate.get("source_class"):
@@ -83,7 +84,8 @@ def acquire_one(
             attempts.append(attempt)
             continue
 
-        verdict = fulltext.classify(outcome.body, outcome.content_type, location.url, th)
+        verdict = fulltext.classify(outcome.body, outcome.content_type, location.url, th,
+                                    policy=policy)
         digest, path = store.store_bytes(
             outcome.body, _suffix_for(outcome.content_type, location.url)
         )
@@ -116,7 +118,7 @@ def acquire_one(
             "host_type": location.host_type,
             "content_type": outcome.content_type,
             "bytes": len(outcome.body),
-            "gate": verdict.as_row(th),
+            "gate": verdict.as_row(th, policy),
             "attempts": attempts,
             "failure_class": None,
         }
@@ -182,6 +184,7 @@ def run(
     retry_after_s: int = DEFAULT_RETRY_AFTER_S,
     use_apis: bool = True,
     thresholds: dict[str, int] | None = None,
+    policy: dict[str, Any] | None = None,
     limit: int | None = None,
 ) -> Iterator[dict[str, Any]]:
     """Acquire what the retry policy allows. A candidate it declines writes no row."""
@@ -194,7 +197,8 @@ def run(
         if not should_attempt(prior, retry_classes=retry_classes, retry_after_s=retry_after_s):
             continue
         row = acquire_one(
-            fetcher, store, candidate, campaign=campaign, use_apis=use_apis, thresholds=thresholds
+            fetcher, store, candidate, campaign=campaign, use_apis=use_apis,
+            thresholds=thresholds, policy=policy,
         )
         row["attempt_no"] = int((prior or {}).get("attempt_no") or 0) + 1
         store.append("acquisitions.jsonl", row)
