@@ -92,7 +92,7 @@ def test_regate_is_appended_and_wins_the_collapse(tmp_path):
     list(gate_audit.regate(store, campaign="regate-v2"))
     result = admissibility.rate(store)
     # One PDF survives; the summary page does not; the 403 never did.
-    assert (result["acquired"], result["attempted"]) == (1, 3)
+    assert (result["obtained"], result["found"]) == (1, 3)
 
 
 def test_regate_opens_no_socket(tmp_path, monkeypatch):
