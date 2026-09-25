@@ -5,7 +5,8 @@
 # exist to show the shape of a registry; a real project writes its own.
 #
 # RULE: adding or changing a question is a dated registry bump, never a silent insert —
-# otherwise every round-over-round figure and every multiplicity correction loses meaning.
+# otherwise every round-over-round figure compares two different registries. No multiplicity
+# correction is performed on these questions and none is claimed: see D17 and the verdict contract.
 #
 # v2 (2026-09-25) assigns a `kind` to every question: seven effects, four heterogeneity claims,
 # eight methodological requirements and one premise. The kind decides which rule judges the

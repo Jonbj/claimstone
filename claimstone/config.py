@@ -275,14 +275,39 @@ def check_registry_drift(project: Project, store: Any) -> None:
     The first sighting of a version is recorded, not refused. A bump is recorded too. Only a
     changed hash under an unchanged version raises.
     """
-    seen = {
-        int(row["registry_version"]): str(row["registry_sha256"])
-        for row in store.read("registry.jsonl")
-        if row.get("registry_version") is not None
-    }
-    held = seen.get(project.registry_version)
+    seen: dict[int, dict[str, str]] = {}
+    for row in store.read("registry.jsonl"):
+        if row.get("registry_version") is None:
+            continue
+        seen[int(row["registry_version"])] = {
+            "sha256": str(row.get("registry_sha256") or ""),
+            "frozen_at": str(row.get("frozen_at") or ""),
+        }
+
+    held_row = seen.get(project.registry_version)
+    held = held_row["sha256"] if held_row else None
     if held == project.registry_sha256:
         return
+
+    if held is None and seen:
+        # A bump must move forward in both the version and the date. A version below one already
+        # recorded is a rollback presented as a bump; an unchanged date on a higher version makes
+        # the bump cosmetic, and "dated" is half of what invariant 5 asks for.
+        highest = max(seen)
+        if project.registry_version < highest:
+            raise RegistryDrift(
+                f"{project.name}: registry_version {project.registry_version} is below "
+                f"{highest}, which this store has already recorded. A registry does not go "
+                "backwards (invariant 5)."
+            )
+        latest_date = seen[highest]["frozen_at"]
+        if latest_date and project.frozen_at <= latest_date:
+            raise RegistryDrift(
+                f"{project.name}: registry_version {project.registry_version} carries "
+                f"frozen_at {project.frozen_at}, which is not later than {latest_date} recorded "
+                f"for v{highest}. A registry change is dated as well as versioned (invariant 5)."
+            )
+
     if held is not None:
         raise RegistryDrift(
             f"{project.name}: the question registry changed under registry_version "

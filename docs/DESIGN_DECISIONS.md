@@ -249,7 +249,9 @@ with an API key (Ollama Cloud), or a metered API. Every result row records `back
 **What decided it.** The local operating point (D4) implied weeks of wall-clock for a corpus
 of a few hundred documents, which forced a corpus ceiling — a limit on the science imposed by
 one machine. Measured against real rates instead: extraction of the 25-source manifest is
-~130 calls, and of a 300-source corpus ~1,500. On Ollama Cloud's hosted open models at
+~86 chunks, and since stage 4 asks one call per chunk per question kind, **~344 calls** (the ~130
+figure in an earlier version of this entry predated the four-lane design); a 300-source corpus is
+roughly 4,000. Stage 5 adds one review call per claim, about $5 for this corpus. On Ollama Cloud's hosted open models at
 $0.30/$1.20 per MTok that is **$0.23 and $2.63** respectively, inside the $60 of monthly
 credit a $20 plan includes; the adversarial reader of stage 5, whose input is compact by
 construction, is **~$1.30 for the whole corpus** on a frontier model. The ceiling was never

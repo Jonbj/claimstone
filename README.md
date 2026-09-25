@@ -3,7 +3,8 @@
 Give it a set of **topics** and a frozen list of **questions**. It finds the readable
 literature on those topics, obtains the full text legally, extracts what each source
 actually claims — each claim tied to a verbatim quote from the source — weighs the
-claims per question, and returns a verdict for each question.
+claims per question, and returns an evidence profile for each question — with a verdict where
+someone has read the profile and signed one.
 
 Its defining constraint: **nothing enters the evidence base unless a verbatim excerpt
 backs it, verified mechanically.** A claim whose quote is not an exact substring of the
@@ -30,9 +31,16 @@ Per project, three input files — all data:
 | `questions.yaml` | numbered, frozen before results are seen; used to **say what was learned** |
 | `sources.yaml` | admissible source classes and their hierarchy |
 
-Output: one verdict per question, from
-`SUPPORTED` / `CONTRADICTED` / `UNANSWERED_IN_LITERATURE` / `NEVER_ASKED`,
-with the evidence attached and the coverage reported.
+Output: one row per question. An **evidence profile** built by code — every verified result with its
+uncertainty, design and dependence, the counter-evidence with the same fields, the coverage and what
+the gate threw away — and, where a person has read that profile and signed a judgement, a verdict
+from `SUPPORTED` / `CONTRADICTED` / `CONTESTED_IN_LITERATURE` / `UNANSWERED_IN_LITERATURE` /
+`NEVER_ASKED`.
+
+**The profile is automatic; the verdict is not.** An earlier design applied a threshold to counts of
+agreeing sources, and that is vote counting with a better name — three small imprecise positives
+would have outvoted one large precise negative. Code describes the evidence; a person judges it and
+is recorded doing so.
 
 **Topics in, questions out.** A tool whose job is "gather information on topics" has no
 stopping condition and no way to say "we don't know" — because *not knowing* is only
