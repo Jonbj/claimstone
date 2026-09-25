@@ -421,6 +421,43 @@ def check_schema(schema: dict[str, Any], path: str = "$") -> None:
     declared = schema.get("type")
     if declared is not None and declared not in _TYPES:
         raise UnsupportedSchema(f"{path}: unknown type {declared!r}")
+
+    # Each keyword's SHAPE is checked, not only its name. Two cases got past a version that checked
+    # names alone: `additionalProperties: {"type": "string"}` was accepted and then ignored, so an
+    # extra integer field passed; and `required: "question_id"` was iterated character by character,
+    # turning one typo into eleven invented errors. Both are the silent skip this module refuses,
+    # wearing a supported keyword's name.
+    if "enum" in schema:
+        if not isinstance(schema["enum"], list) or not schema["enum"]:
+            raise UnsupportedSchema(f"{path}: enum must be a non-empty list")
+    if "additionalProperties" in schema:
+        if not isinstance(schema["additionalProperties"], bool):
+            raise UnsupportedSchema(
+                f"{path}: additionalProperties must be true or false; the schema form is "
+                f"not checked by this validator"
+            )
+        if schema["additionalProperties"] is False and "properties" not in schema:
+            raise UnsupportedSchema(
+                f"{path}: additionalProperties false needs properties to compare against"
+            )
+    if "required" in schema:
+        if not isinstance(schema["required"], list) or not all(
+            isinstance(n, str) for n in schema["required"]
+        ):
+            raise UnsupportedSchema(f"{path}: required must be a list of field names")
+    if "properties" in schema:
+        if not isinstance(schema["properties"], dict) or not all(
+            isinstance(n, str) for n in schema["properties"]
+        ):
+            raise UnsupportedSchema(f"{path}: properties must map field names to schemas")
+    for name in ("minItems", "maxItems"):
+        if name in schema:
+            value = schema[name]
+            if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+                raise UnsupportedSchema(f"{path}: {name} must be a non-negative integer")
+
+    if declared == "array" and "items" not in schema:
+        raise UnsupportedSchema(f"{path}: an array schema must declare items")
     if "items" in schema:
         check_schema(schema["items"], f"{path}[]")
     for name, sub in (schema.get("properties") or {}).items():
