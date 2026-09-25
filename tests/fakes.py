@@ -37,3 +37,28 @@ class FakeFetcher:
             if url.startswith(prefix):
                 return payload, net.Outcome(url, True, 200)
         return None, net.Outcome(url, False, 404, net.NOT_FOUND, "fake: url not configured")
+
+
+from claimstone.runners.base import RawAnswer
+
+
+@dataclass
+class FakeRunner:
+    """Answers from a dictionary keyed by call_id. Opens nothing."""
+
+    name: str = "fake"
+    max_concurrency: int = 1
+    min_interval_s: float = 0.0
+    answers: dict[str, RawAnswer] = field(default_factory=dict)
+    default: RawAnswer | None = None
+    calls: list[str] = field(default_factory=list)
+
+    def harness_version(self) -> str:
+        return "fake/1"
+
+    def run(self, request: dict[str, Any]) -> RawAnswer:
+        self.calls.append(request["call_id"])
+        answer = self.answers.get(request["call_id"], self.default)
+        if answer is None:
+            return RawAnswer(failure_class="BACKEND_ERROR", detail="fake: no answer configured")
+        return answer

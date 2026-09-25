@@ -951,12 +951,6 @@ def test_an_unpriced_call_stays_unpriced(tmp_path):
     assert rows[0]["cost_usd"] is None
 
 
-def test_the_prompt_hash_is_echoed_and_verified(tmp_path):
-    runner = FakeRunner(default=answer([{"question_id": "Q07"}]))
-    _, rows = _drain(tmp_path, runner)
-    assert rows[0]["prompt_sha256"]
-
-
 def test_a_runner_that_reports_a_different_prompt_is_caught(tmp_path):
     class Mangling(FakeRunner):
         def run(self, request):
@@ -1069,14 +1063,18 @@ def _classify(answer: Any, request: dict[str, Any]) -> tuple[Any, str | None, li
         # that collapsed into "the model wrote something unparseable" — they are different
         # facts about why a chunk produced no claims.
         return None, "REFUSED", []
+    if answer.truncated:
+        # A partial answer is not a short answer. Parsing what arrived would turn a cut-off
+        # list into a complete one, which is a fabricated absence of claims.
+        #
+        # Checked before the empty body, not after: EMPTY is transient and TRUNCATED is terminal,
+        # so an answer cut off before it produced a byte would otherwise be retried on every drain
+        # for ever, and each retry would be cut off in the same place.
+        return None, "TRUNCATED", []
     if not answer.body:
         # Not "the chunk contained nothing": that is a claim about the literature, and a
         # runner returning zero bytes has not made it.
         return None, "EMPTY", []
-    if answer.truncated:
-        # A partial answer is not a short answer. Parsing what arrived would turn a cut-off
-        # list into a complete one, which is a fabricated absence of claims.
-        return None, "TRUNCATED", []
     try:
         parsed = json.loads(answer.body.decode("utf-8", "replace"))
     except ValueError:

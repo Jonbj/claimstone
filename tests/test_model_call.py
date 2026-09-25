@@ -184,3 +184,135 @@ def test_the_identical_asker_twice_adds_nothing(tmp_path):
     assert [row["asked_by"] for row in queue.requests()] == [
         [{"source_id": "S07", "chunk_id": "S07#4"}]
     ]
+
+
+import json as _json
+
+from claimstone.runners.base import RawAnswer
+from tests.fakes import FakeRunner
+
+
+def answer(payload, **overrides):
+    body = _json.dumps(payload).encode() if not isinstance(payload, bytes) else payload
+    return RawAnswer(body=body, model="m1", usage={"input_tokens": 10, "output_tokens": 5},
+                     cost_usd=0.001, **overrides)
+
+
+def _drain(tmp_path, runner, units=None):
+    store = Store("t", base=tmp_path)
+    queue = model_call.Queue(store, lane="extract", batch="b1")
+    queue.write(units or [unit()])
+    rows = list(model_call.drain(queue, runner))
+    return queue, rows
+
+
+def test_a_valid_answer_is_recorded_as_ok(tmp_path):
+    runner = FakeRunner(default=answer([{"question_id": "Q07"}]))
+    _, rows = _drain(tmp_path, runner)
+    assert rows[0]["ok"] is True
+    assert rows[0]["output"] == [{"question_id": "Q07"}]
+    assert rows[0]["backend"] == "fake"
+    assert rows[0]["harness_version"] == "fake/1"
+
+
+def test_the_raw_bytes_are_always_stored(tmp_path):
+    import pathlib
+
+    runner = FakeRunner(default=answer(b"not json at all"))
+    _, rows = _drain(tmp_path, runner)
+    assert rows[0]["ok"] is False
+    assert rows[0]["failure_class"] == "NOT_JSON"
+    assert pathlib.Path(rows[0]["raw_path"]).exists()
+
+
+def test_a_malformed_answer_is_a_failure_not_an_empty_output(tmp_path):
+    runner = FakeRunner(default=answer(b"{"))
+    _, rows = _drain(tmp_path, runner)
+    assert rows[0]["output"] is None
+    assert rows[0]["failure_class"] == "NOT_JSON"
+
+
+def test_an_answer_of_the_wrong_shape_is_schema_invalid(tmp_path):
+    runner = FakeRunner(default=answer([{"claim": "no question id"}]))
+    _, rows = _drain(tmp_path, runner)
+    assert rows[0]["failure_class"] == "SCHEMA_INVALID"
+    assert any("question_id" in p for p in rows[0]["schema_errors"])
+
+
+def test_a_truncated_answer_is_truncated_not_a_short_answer(tmp_path):
+    runner = FakeRunner(default=answer([{"question_id": "Q07"}], truncated=True))
+    _, rows = _drain(tmp_path, runner)
+    assert rows[0]["ok"] is False
+    assert rows[0]["failure_class"] == "TRUNCATED"
+
+
+def test_an_empty_body_is_empty_not_no_claims(tmp_path):
+    runner = FakeRunner(default=answer(b""))
+    _, rows = _drain(tmp_path, runner)
+    assert rows[0]["failure_class"] == "EMPTY"
+
+
+def test_a_backend_failure_is_carried_through(tmp_path):
+    runner = FakeRunner(default=RawAnswer(failure_class="RATE_LIMITED", detail="429"))
+    _, rows = _drain(tmp_path, runner)
+    assert rows[0]["failure_class"] == "RATE_LIMITED"
+    assert rows[0]["detail"] == "429"
+
+
+def test_an_unpriced_call_stays_unpriced(tmp_path):
+    runner = FakeRunner(default=RawAnswer(body=b"[]", model="m", cost_usd=None))
+    _, rows = _drain(tmp_path, runner)
+    assert rows[0]["cost_usd"] is None
+
+
+def test_a_runner_that_reports_a_different_prompt_is_caught(tmp_path):
+    class Mangling(FakeRunner):
+        def run(self, request):
+            result = answer([{"question_id": "Q07"}])
+            # A templating bug: it sent something other than what it was handed, and says so.
+            result.prompt_sent = "something else entirely"
+            return result
+
+    _, rows = _drain(tmp_path, Mangling())
+    assert rows[0]["ok"] is False
+    assert rows[0]["failure_class"] == "PROMPT_MISMATCH"
+    assert rows[0]["prompt_verified"] is False
+
+
+def test_a_runner_that_reports_the_right_prompt_is_verified(tmp_path):
+    class Honest(FakeRunner):
+        def run(self, request):
+            result = answer([{"question_id": "Q07"}])
+            result.prompt_sent = model_call.rendered_prompt(request["system"], request["user"])
+            return result
+
+    _, rows = _drain(tmp_path, Honest())
+    assert rows[0]["ok"] is True
+    assert rows[0]["prompt_verified"] is True
+
+
+def test_a_runner_that_reports_nothing_is_neither_verified_nor_failed(tmp_path):
+    # The honest third state. Treating silence as a pass is the tautology this replaced;
+    # treating it as a failure would make every such backend unusable.
+    runner = FakeRunner(default=answer([{"question_id": "Q07"}]))
+    _, rows = _drain(tmp_path, runner)
+    assert rows[0]["ok"] is True
+    assert rows[0]["prompt_verified"] is False
+    assert rows[0]["prompt_sha256"] is None
+
+
+def test_draining_twice_does_not_repeat_a_success(tmp_path):
+    runner = FakeRunner(default=answer([{"question_id": "Q07"}]))
+    queue, _ = _drain(tmp_path, runner)
+    again = list(model_call.drain(queue, runner))
+    assert again == []
+    assert len(runner.calls) == 1
+
+
+def test_a_truncated_empty_body_is_truncated_and_not_retried_forever(tmp_path):
+    """EMPTY is transient and TRUNCATED is terminal, so the order of the two checks decides whether
+    a cut-off answer with no bytes is retried on every drain for ever."""
+    runner = FakeRunner(default=RawAnswer(body=b"", model="m", truncated=True))
+    queue, rows = _drain(tmp_path, runner)
+    assert rows[0]["failure_class"] == "TRUNCATED"
+    assert queue.pending(backend="fake") == []

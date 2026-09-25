@@ -158,11 +158,17 @@ class Store:
                 out[str(identifier)] = row
         return out
 
-    def store_bytes(self, data: bytes, suffix: str) -> tuple[str, pathlib.Path]:
-        """Write bytes under their own hash. Re-fetching the same bytes is a no-op."""
+    def store_bytes_at(self, where: str, data: bytes, suffix: str) -> tuple[str, pathlib.Path]:
+        """Write bytes under their own hash, inside `where`. Re-storing the same bytes is a no-op,
+        so a re-drain that gets an identical answer costs nothing."""
         digest = sha256_bytes(data)
-        self.raw.mkdir(parents=True, exist_ok=True)
-        target = self.raw / f"{digest}{suffix}"
+        directory = self.root / where
+        directory.mkdir(parents=True, exist_ok=True)
+        target = directory / f"{digest}{suffix}"
         if not target.exists():
             target.write_bytes(data)
         return digest, target
+
+    def store_bytes(self, data: bytes, suffix: str) -> tuple[str, pathlib.Path]:
+        """Write bytes under their own hash. Re-fetching the same bytes is a no-op."""
+        return self.store_bytes_at("raw", data, suffix)

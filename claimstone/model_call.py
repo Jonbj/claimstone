@@ -203,3 +203,151 @@ class Queue:
             elif not held.get("ok") and not is_terminal(held.get("failure_class")):
                 out.append(unit)
         return out
+
+
+def _classify(answer: Any, request: dict[str, Any]) -> tuple[Any, str | None, list[str]]:
+    """Judge one raw answer. The only place any backend's answer is judged."""
+    if answer.failure_class:
+        return None, answer.failure_class, []
+    if answer.refused:
+        # No runner sets this today: a CLI declining returns prose, which lands as NOT_JSON.
+        # The branch exists because a backend that reports refusal distinctly should not have
+        # that collapsed into "the model wrote something unparseable" — they are different
+        # facts about why a chunk produced no claims.
+        return None, "REFUSED", []
+    if answer.truncated:
+        # A partial answer is not a short answer. Parsing what arrived would turn a cut-off
+        # list into a complete one, which is a fabricated absence of claims.
+        #
+        # Checked before the empty body, not after: EMPTY is transient and TRUNCATED is terminal,
+        # so an answer cut off before it produced a byte would otherwise be retried on every drain
+        # for ever, and each retry would be cut off in the same place.
+        return None, "TRUNCATED", []
+    if not answer.body:
+        # Not "the chunk contained nothing": that is a claim about the literature, and a
+        # runner returning zero bytes has not made it.
+        return None, "EMPTY", []
+    try:
+        parsed = json.loads(answer.body.decode("utf-8", "replace"))
+    except ValueError:
+        return None, "NOT_JSON", []
+
+    from claimstone import jsonshape
+
+    problems = jsonshape.errors(parsed, request["response_schema"])
+    if problems:
+        return None, "SCHEMA_INVALID", problems
+    return parsed, None, []
+
+
+def build_result(
+    request: dict[str, Any],
+    answer: Any,
+    *,
+    attempt_no: int = 1,
+    backend: str,
+    harness_version: str,
+    raw_sha256: str | None,
+    raw_path: str | None,
+    started_at: str,
+    finished_at: str,
+    latency_s: float,
+) -> dict[str, Any]:
+    """One result row. `ok` is true only when there is a validated output to show."""
+    # Checked against what the runner says it sent, not against the request we still hold. The
+    # first draft of this hashed request["system"] and request["user"] and compared the result to
+    # request["prompt_sha256"], which was computed from those same two fields — hash(x) == hash(x),
+    # true by construction. A guarantee that cannot fail is not a guarantee.
+    #
+    # A runner that does not report what it sent gets no verification, and the row says so rather
+    # than implying one.
+    if answer.prompt_sent is None:
+        echoed = None
+        verified = False
+        output, failure_class, problems = _classify(answer, request)
+    else:
+        echoed = sha256_text(answer.prompt_sent)
+        verified = echoed == request["prompt_sha256"]
+        if not verified:
+            output, failure_class, problems = None, "PROMPT_MISMATCH", []
+        else:
+            output, failure_class, problems = _classify(answer, request)
+
+    return {
+        "call_id": request["call_id"],
+        "lane": request["lane"],
+        # Identity is the call **and** who answered it, on which attempt. A row keyed by call_id
+        # alone cannot say whether a cost was a first try or a third, or which backend paid it.
+        "result_key": f"{request['call_id']}|{backend}",
+        "attempt_no": attempt_no,
+        "ok": failure_class is None,
+        "backend": backend,
+        "model": answer.model,
+        "harness_version": harness_version,
+        "prompt_sha256": echoed,
+        # False means this backend does not report what it sent, so no echo check ran. It is not
+        # a failure and it is not a pass; conflating either with a verified row would be the
+        # tautology again, worn differently.
+        "prompt_verified": verified,
+        "output": output,
+        "schema_errors": problems,
+        "raw_sha256": raw_sha256,
+        "raw_path": raw_path,
+        "usage": dict(answer.usage),
+        "cost_usd": answer.cost_usd,
+        "latency_s": round(latency_s, 3),
+        "started_at": started_at,
+        "finished_at": finished_at,
+        "failure_class": failure_class,
+        "detail": answer.detail[:400],
+    }
+
+
+def drain(queue: Queue, runner: Any, *, limit: int | None = None) -> Any:
+    """Answer what is pending, one call at a time, appending each result as it lands.
+
+    Sequential on purpose. The queue is resumable by `call_id`, so parallelism is a contained
+    change that does not touch the file format — and until a lane has been measured on a real
+    backend there is no evidence about what concurrency a given endpoint tolerates.
+    """
+    import time
+
+    last = 0.0
+    done = 0
+    for request in queue.pending(backend=runner.name):
+        if limit is not None and done >= limit:
+            return
+        wait = runner.min_interval_s - (time.time() - last)
+        if wait > 0:
+            time.sleep(wait)
+        last = time.time()
+
+        started_at = _now()
+        began = time.time()
+        answer = runner.run(dict(request))
+        latency = time.time() - began
+
+        raw_sha256 = raw_path = None
+        if answer.body:
+            digest, path = queue.store.store_bytes_at(f"{queue.root}/raw", answer.body, ".txt")
+            raw_sha256, raw_path = digest, str(path)
+
+        prior = sum(
+            1 for attempt in queue.attempts()
+            if attempt.get("call_id") == request["call_id"]
+            and attempt.get("backend") == runner.name
+        )
+        row = build_result(
+            request, answer,
+            attempt_no=prior + 1,
+            backend=runner.name,
+            harness_version=runner.harness_version(),
+            raw_sha256=raw_sha256,
+            raw_path=raw_path,
+            started_at=started_at,
+            finished_at=_now(),
+            latency_s=latency,
+        )
+        queue.store.append(queue.results_name, row)
+        done += 1
+        yield row
