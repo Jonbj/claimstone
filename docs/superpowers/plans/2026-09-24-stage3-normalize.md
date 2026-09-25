@@ -2058,9 +2058,12 @@ Expected: FAIL — `normalize` is still bound to `_not_implemented`
 - [ ] **Step 3: Add the handler to `claimstone/cli.py`**
 
 ```python
+# The boundaries the corpus actually separates at are 1 vs 2 references and 4,377 vs 4,378
+# characters, so both ranges reach below the default: an audit whose lowest value already confirms
+# everything reports "flat" without ever finding the edge. See D21.
 CONFIRM_SWEEP_VALUES = {
-    "min_references": [1, 3, 5, 8, 12, 20],
-    "confirm_chars": [5000, 10000, 15000, 25000, 40000],
+    "min_references": [1, 2, 3, 5, 8, 12, 20],
+    "confirm_chars": [2000, 5000, 10000, 15000, 25000, 40000],
 }
 
 
@@ -2093,10 +2096,11 @@ def _normalize(args: argparse.Namespace) -> int:
             print(f"  {points[0]['unreadable']} TEI could not be re-read and are excluded")
         return 0
 
-    client = grobid_mod.Grobid(url=args.grobid_url)
-    if not client.is_alive():
-        print(str(grobid_mod.Grobid(url=args.grobid_url)._unavailable()), file=sys.stderr)
-        return 2
+    # The container is not checked up front. `full_text` refuses when GROBID is not answering, and a
+    # source whose TEI is already on disk never reaches it — the whole corpus can be re-chunked with
+    # nothing running, which is the point of storing the TEI under its hash. Demanding a container
+    # that will never be contacted is a wall in front of an offline operation. So the run is stepped
+    # and `GrobidUnavailable` is caught, printing the same message and exiting 2.
 
     done = confirmed = 0
     for row in normalize.run(store, client, thresholds=project.normalize_thresholds,

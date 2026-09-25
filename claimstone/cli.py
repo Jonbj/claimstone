@@ -17,7 +17,15 @@ if TYPE_CHECKING:  # import cost at startup matters for a CLI; these are annotat
     from claimstone.config import Project
     from claimstone.store import Store
 
-STAGES = ("normalize", "extract", "review", "synthesize")
+STAGES = ("extract", "review", "synthesize")
+
+# The boundaries the corpus actually separates at are 1 vs 2 references and 4,377 vs 4,378
+# characters, so both ranges reach below the default: an audit whose lowest value already confirms
+# everything reports "flat" without ever finding the edge. See D21.
+CONFIRM_SWEEP_VALUES = {
+    "min_references": [1, 2, 3, 5, 8, 12, 20],
+    "confirm_chars": [2000, 5000, 10000, 15000, 25000, 40000],
+}
 
 SWEEP_VALUES = {
     "min_text_chars": [1000, 2000, 3000, 4000, 5000, 8000],
@@ -25,6 +33,14 @@ SWEEP_VALUES = {
     "paywall_doubt_chars": [6000, 9000, 12000, 16000, 24000],
     "fulltext_chars": [8000, 12000, 15000, 20000, 30000],
 }
+
+
+def grobid_url_default() -> str:
+    import os
+
+    from claimstone.grobid import DEFAULT_URL
+
+    return os.environ.get("CLAIMSTONE_GROBID_URL") or DEFAULT_URL
 
 
 def _validate(args: argparse.Namespace) -> int:
@@ -258,6 +274,81 @@ def _regate(args: argparse.Namespace) -> int:
     return 0
 
 
+def _normalize(args: argparse.Namespace) -> int:
+    from claimstone import grobid as grobid_mod
+    from claimstone import normalize
+
+    project = load_project(args.project)
+    store = _checked_store(args, project)
+
+    if args.confirm_audit:
+        # No GROBID and no network: what was parsed is on disk under its hash.
+        name = args.sweep or "min_references"
+        points = normalize.confirm_sweep(store, name, CONFIRM_SWEEP_VALUES[name])
+        if not points or not points[0]["documents"]:
+            print(f"{project.name}: no documents normalized yet")
+            return 0
+        print(f"{name:<18}" + "".join(f"{p['value']:>8}" for p in points))
+        print(f"{'confirmed':<18}" + "".join(f"{p['confirmed']:>8}" for p in points))
+        counts = [p["confirmed"] for p in points]
+        total = points[0]["documents"]
+        if max(counts) - min(counts) > 1:
+            print(f"\n  this threshold is deciding confirmation (spread "
+                  f"{max(counts) - min(counts)} of {total}) — read the boundary cases by hand")
+        else:
+            print(f"\n  flat across the range: the chosen value is not load-bearing "
+                  f"({total} documents)")
+        if points[0]["unreadable"]:
+            print(f"  {points[0]['unreadable']} document(s) could not be re-read and are excluded")
+        return 0
+
+    # The container is not checked up front. `full_text` refuses when GROBID is not answering, and
+    # a source whose TEI is already on disk never reaches it — the whole corpus can be re-chunked
+    # with nothing running, which is the point of storing the TEI under its hash. Demanding a
+    # container that will never be contacted is a wall in front of an offline operation.
+    client = grobid_mod.Grobid(url=args.grobid_url)
+    done = confirmed = unreadable = 0
+    rows = normalize.run(store, client, thresholds=project.normalize_thresholds,
+                         force=args.force, limit=args.limit)
+    while True:
+        try:
+            row = next(rows)
+        except StopIteration:
+            break
+        except grobid_mod.GrobidUnavailable as exc:
+            # Whatever was normalized before this point is already in the ledger: append-only and
+            # idempotent by hash, so the run resumes here once the container is up.
+            print(str(exc), file=sys.stderr)
+            if done:
+                print(f"{done} normalized before GROBID was needed, {confirmed} confirmed",
+                      file=sys.stderr)
+            return 2
+        done += 1
+        verdict = row["fulltext_confirmed"]
+        if verdict:
+            confirmed += 1
+            mark = "ok  "
+            detail = (f"{row['chunks']} chunks, {row['references']} refs, "
+                      f"{row['tables']} tables, {row['body_chars']} chars")
+        elif verdict is None:
+            # Nothing was established, so it is neither. Printing it as a failure would read as a
+            # source the rule rejected, and the two are not the same fact.
+            unreadable += 1
+            mark = "??  "
+            detail = f"{row.get('failure_class')}  {str(row.get('reason', ''))[:60]}"
+        else:
+            mark = "fail"
+            detail = f"{row.get('failure_class')}  {str(row.get('reason', ''))[:60]}"
+        print(f"[{done:>3}] {mark}  {row['source_id']:<8} {detail}", file=sys.stderr)
+
+    summary = f"{done} normalized, {confirmed} confirmed as documents"
+    if unreadable:
+        summary += (f", {unreadable} unreadable — these stay awaiting, so the round cannot "
+                    f"certify itself until the bytes are back")
+    print(summary)
+    return 0
+
+
 def _not_implemented(args: argparse.Namespace) -> int:
     print(
         f"stage '{args.stage_name}' is not implemented yet — see README.md, 'The six stages'",
@@ -284,6 +375,7 @@ def build_parser() -> argparse.ArgumentParser:
         ("report", _report, "acquisition rate, per class, against the floor"),
         ("gate-audit", _gate_audit, "how much the rate depends on the gate thresholds"),
         ("regate", _regate, "re-judge bytes already held under the current gate; no network"),
+        ("normalize", _normalize, "stage 3: TEI, chunks and references"),
     ):
         command = sub.add_parser(name, help=help_text)
         command.add_argument("project", help="path to a project directory")
@@ -311,6 +403,15 @@ def build_parser() -> argparse.ArgumentParser:
             command.add_argument("--show-rejected", action="store_true",
                                  help="list every rejected artifact for a by-hand check")
             command.add_argument("--json", action="store_true")
+        if name == "normalize":
+            command.add_argument("--grobid-url", default=grobid_url_default())
+            command.add_argument("--force", action="store_true",
+                                 help="re-chunk from what is already parsed; no network")
+            command.add_argument("--limit", type=int, default=None)
+            command.add_argument("--confirm-audit", action="store_true",
+                                 help="sweep a confirmation threshold; needs no GROBID")
+            command.add_argument("--sweep", choices=sorted(CONFIRM_SWEEP_VALUES),
+                                 help="which threshold --confirm-audit moves")
 
     for stage in STAGES:
         placeholder = sub.add_parser(stage, help=f"(not implemented) stage: {stage}")
