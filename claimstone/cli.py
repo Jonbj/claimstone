@@ -168,22 +168,25 @@ def _report(args: argparse.Namespace) -> int:
         print(f"  {'attempted':<14} {result['attempted']}/{found}")
         share = "—" if not found else f"{result['obtained'] / found:.2f}"
         print(f"  {'obtained':<14} {result['obtained']}/{found}  {share}")
-        if result["confirmed"] is not None:
-            marker = "  <- the figure" if result["basis"] == "confirmed" else ""
+        if result["basis"] == "confirmed":
             print(f"  {'confirmed':<14} {result['confirmed']}/{found}"
-                  f"  {result['confirmed'] / found:.2f}{marker}")
+                  f"  {result['rate']:.2f}  <- the figure")
+            if result["rate_upper"] != result["rate"]:
+                print(f"                 could still reach {result['rate_upper']:.2f} once "
+                      f"{result['awaiting_normalize']} awaiting normalize are examined")
             if result["not_a_document"]:
                 print(f"                 {len(result['not_a_document'])} obtained but not a "
                       f"document: {', '.join(result['not_a_document'])}")
-            if result["awaiting_normalize"]:
-                print(f"                 {result['awaiting_normalize']} still awaiting "
-                      f"normalize, so the figure stays the obtained rate")
         if result["orphan_acquisitions"]:
             print(f"  {'orphans':<14} {len(result['orphan_acquisitions'])} acquisition rows with "
                   f"no candidate — the ledger is inconsistent")
         print(f"  {'floor':<14} {result['floor']:.2f}"
               f" (v{result['floor_version']}, {result['floor_set_at']})"
               f"   {result['status']}   basis: {result['basis']}")
+        if not result["final"]:
+            # Only a final round may produce verdicts. Saying which conditions are outstanding is
+            # the difference between a provisional figure and one mistaken for settled.
+            print(f"  {'provisional':<14} not final: {', '.join(result['blocking'])}")
         for name, counts in (("failures", result["failures_by_class"]),
                              ("by host", result["failures_by_host"])):
             if counts:

@@ -65,3 +65,47 @@ def test_repair_leaves_an_intact_ledger_alone(tmp_path):
 
 def test_an_absent_ledger_is_empty_not_an_error(tmp_path):
     assert list(Store("t", base=tmp_path).read("nothing.jsonl")) == []
+
+
+# --- appending after a crash must not make the damage permanent ----------------
+
+def test_appending_after_a_torn_tail_repairs_it_first(tmp_path):
+    # The first fix made a torn tail detectable and left append free to make it permanent:
+    # complete row, crash mid-write, process restarts and appends, and the next read raises.
+    # The torn line was never accepted by any reader, so truncating it loses nothing.
+    store = Store("t", base=tmp_path)
+    store.append("x.jsonl", {"k": 1})
+    with store.path("x.jsonl").open("a", encoding="utf-8") as handle:
+        handle.write('{"k": 2, "partial"')
+    store.append("x.jsonl", {"k": 3})
+    assert [row["k"] for row in store.read("x.jsonl")] == [1, 3]
+
+
+def test_a_repair_leaves_an_audit_row(tmp_path):
+    # Something was lost. The rows that survive are consistent, and the operator has to know
+    # that work between the last complete row and the restart needs redoing.
+    store = Store("t", base=tmp_path)
+    store.append("x.jsonl", {"k": 1})
+    with store.path("x.jsonl").open("a", encoding="utf-8") as handle:
+        handle.write('{"k": 2, "part')
+    store.append("x.jsonl", {"k": 3})
+    audit = list(store.read("ledger_repairs.jsonl"))
+    assert audit[0]["ledger"] == "x.jsonl"
+    assert audit[0]["discarded_bytes"] == len('{"k": 2, "part')
+
+
+def test_the_audit_ledger_repairs_itself_without_recursing(tmp_path):
+    store = Store("t", base=tmp_path)
+    store.append("ledger_repairs.jsonl", {"ledger": "x.jsonl"})
+    with store.path("ledger_repairs.jsonl").open("a", encoding="utf-8") as handle:
+        handle.write('{"ledger": "tr')
+    store.append("ledger_repairs.jsonl", {"ledger": "y.jsonl"})
+    rows = list(store.read("ledger_repairs.jsonl"))
+    assert [r["ledger"] for r in rows] == ["x.jsonl", "y.jsonl"]
+
+
+def test_an_intact_ledger_gets_no_audit_row(tmp_path):
+    store = Store("t", base=tmp_path)
+    store.append("x.jsonl", {"k": 1})
+    store.append("x.jsonl", {"k": 2})
+    assert list(store.read("ledger_repairs.jsonl")) == []

@@ -65,10 +65,13 @@ def rate(store: Store, *, round_name: str | None = None) -> dict[str, Any]:
     project exists to prevent. `sources.yaml` says the floor is a share of what was *found*, and
     now it is.
 
-    Five states are reported separately because the remedies differ. Found but unclassified
-    needs a declared rule; found but never attempted needs the round finishing; attempted and
-    refused needs a campaign or a different cascade; obtained but unconfirmed needs stage 3.
-    Collapsing them into one ratio hides which one happened.
+    Five states are reported separately because the remedies differ. Found but unclassified needs
+    a declared rule; found but never attempted needs the round finishing; attempted and refused
+    needs a campaign or a different cascade; obtained but unconfirmed needs stage 3. Collapsing
+    them into one ratio hides which one happened.
+
+    `rate` is the lower bound and `rate_upper` the ceiling; `final` says whether anything is still
+    outstanding. Only a final round may produce verdicts.
     """
     candidates = {
         key: row
@@ -87,27 +90,22 @@ def rate(store: Store, *, round_name: str | None = None) -> dict[str, Any]:
     orphans = sorted(set(collapse(store)) - set(candidates)) if round_name is None else []
 
     confirmed_rows = confirmations(store)
-    confirmed: int | None = None
+    confirmed = 0
     awaiting = 0
     not_a_document: list[str] = []
-    if confirmed_rows:
-        confirmed = 0
-        for key, row in rows.items():
-            if not row.get("acquired"):
-                continue
-            identifier = str(row.get("source_id") or key)
-            held = confirmed_rows.get(identifier)
-            if held is None:
-                # Not yet normalized is not the same as normalized and rejected. It is counted
-                # as awaiting and nothing more: calling it confirmed would give one number two
-                # meanings, and calling it unconfirmed would make the rate fall because stage 3
-                # had not finished — measuring our progress and reporting it as a property of
-                # the corpus.
-                awaiting += 1
-            elif held.get("fulltext_confirmed"):
-                confirmed += 1
-            else:
-                not_a_document.append(identifier)
+    for key, row in rows.items():
+        if not row.get("acquired"):
+            continue
+        identifier = str(row.get("source_id") or key)
+        held = confirmed_rows.get(identifier)
+        if held is None:
+            # Unknown, and it stays unknown. It is neither confirmed nor refuted, so it raises
+            # the ceiling and never the figure.
+            awaiting += 1
+        elif held.get("fulltext_confirmed"):
+            confirmed += 1
+        else:
+            not_a_document.append(identifier)
 
     by_class: dict[str, dict[str, Any]] = {}
     failures: dict[str, int] = {}
@@ -128,12 +126,31 @@ def rate(store: Store, *, round_name: str | None = None) -> dict[str, Any]:
     for bucket in by_class.values():
         bucket["rate"] = bucket["obtained"] / bucket["found"]
 
-    # The confirmed basis only once stage 3 has reached every obtained source. While any remain
-    # awaiting, `confirmed` is partial information reported beside the figure, never the figure:
-    # a headline that counts unexamined bytes as confirmed is a headline with two meanings.
-    complete = confirmed is not None and awaiting == 0
-    basis = "confirmed" if complete else "obtained"
-    numerator = confirmed if complete else obtained
+    # The rate is a **lower bound**: what is established divided by what was found. Awaiting
+    # normalization raises the ceiling and never the figure, so admission can only be granted on
+    # evidence in hand. The first version of this let the obtained basis carry the headline while
+    # normalization ran, which ignored confirmations already recorded — four obtained with one
+    # already known not to be a document reported 1.00 and passed an 0.80 floor.
+    #
+    # A round is **final** only when nothing is outstanding. Work not yet done, an acquisition with
+    # no candidate, and a ledger that had to be repaired each mean the corpus is not yet what it
+    # will be, and a verdict drawn from it would be provisional whether or not it said so.
+    # Before stage 3 has run at all, confirmation is not an axis yet and the acquisition rate is
+    # the figure, as it has been all along. Once any source has been confirmed or refuted, the
+    # confirmed count becomes the lower bound — including the refutations already in hand, which
+    # is the correction a review forced: the obtained rate was carrying the headline while
+    # normalization ran, so a source already known not to be a document was ignored.
+    started = bool(confirmed_rows)
+
+    blocking: list[str] = []
+    if not started:
+        blocking.append("normalize_not_started")
+    elif awaiting:
+        blocking.append("awaiting_normalize")
+    if orphans:
+        blocking.append("orphan_acquisitions")
+    if any(store.read("ledger_repairs.jsonl")):
+        blocking.append("ledger_repairs")
     return {
         "round": round_name,
         "found": found,
@@ -145,8 +162,13 @@ def rate(store: Store, *, round_name: str | None = None) -> dict[str, Any]:
         "awaiting_normalize": awaiting,
         "not_a_document": sorted(not_a_document),
         "orphan_acquisitions": orphans,
-        "basis": basis,
-        "rate": (numerator / found) if found else None,
+        "blocking": blocking,
+        "final": not blocking,
+        "basis": "confirmed" if started else "obtained",
+        "rate": ((confirmed if started else obtained) / found) if found else None,
+        "rate_upper": (((confirmed + awaiting) if started else obtained) / found)
+        if found
+        else None,
         "by_class": dict(sorted(by_class.items())),
         "failures_by_class": dict(sorted(failures.items(), key=lambda kv: -kv[1])),
         "failures_by_host": dict(sorted(hosts.items(), key=lambda kv: -kv[1])),

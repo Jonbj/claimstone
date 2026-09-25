@@ -205,39 +205,193 @@ def test_a_round_can_be_isolated(tmp_path):
     assert admissibility.rate(store, round_name="autumn")["rate"] == 0.0
 
 
-# --- the confirmed basis only when stage 3 has finished -----------------------
+# --- what is unknown stays unknown --------------------------------------------
 
-def test_the_basis_stays_obtained_while_normalize_is_incomplete(tmp_path):
-    # A rate called "confirmed" that counts unexamined bytes as confirmed is a rate with two
-    # meanings. Until stage 3 has reached every obtained source, the honest headline is what
-    # acquisition established, with the partial confirmation reported beside it.
+def test_an_unnormalized_source_raises_the_ceiling_not_the_figure(tmp_path):
+    # Replaces three tests that asserted the opposite. They encoded a design a review broke: the
+    # obtained rate carried the headline while normalization ran, so a source already known not to
+    # be a document was ignored because stage 3 had not reached the others.
     store = Store("t", base=tmp_path)
     _ledger(store, [row("a", acquired=True), row("b", acquired=True)])
     store.append("documents.jsonl", {"source_id": "a", "fulltext_confirmed": True})
     result = admissibility.rate(store)
-    assert result["basis"] == "obtained"
-    assert result["rate"] == 1.0
     assert result["confirmed"] == 1
     assert result["awaiting_normalize"] == 1
+    assert result["rate"] == 0.5          # established
+    assert result["rate_upper"] == 1.0    # still possible
+    assert result["final"] is False
 
 
-def test_the_basis_becomes_confirmed_once_nothing_is_awaiting(tmp_path):
+def test_a_refuted_source_lowers_both_bounds(tmp_path):
     store = Store("t", base=tmp_path)
     _ledger(store, [row("a", acquired=True), row("b", acquired=True)])
     store.append("documents.jsonl", {"source_id": "a", "fulltext_confirmed": True})
     store.append("documents.jsonl", {"source_id": "b", "fulltext_confirmed": False,
                                      "failure_class": "NOT_A_DOCUMENT"})
     result = admissibility.rate(store)
-    assert result["basis"] == "confirmed"
-    assert result["confirmed"] == 1
-    assert result["awaiting_normalize"] == 0
-    assert result["rate"] == 0.5
+    assert result["rate"] == result["rate_upper"] == 0.5
+    assert result["final"] is True
 
 
-def test_an_incomplete_normalize_cannot_lower_the_rate(tmp_path):
-    # The failure mode this prevents: the rate falling because stage 3 has not finished, which
-    # measures our progress and reports it as a property of the corpus.
+# --- the denominator: what the floor is a share of ----------------------------
+
+def _found(store, n, *, klass="ACA"):
+    """n candidates discovered. This is what the floor is a share of."""
+    for index in range(n):
+        store.append("candidates.jsonl", {"candidate_key": f"k{index}", "source_class": klass})
+
+
+def test_the_denominator_is_what_was_found_not_what_was_attempted(tmp_path):
+    # The defect this replaces: dividing by acquisition rows let one obtained source out of
+    # twenty-five found report a rate of 1.00 and pass the floor — a corpus read at 4%
+    # certifying itself complete, which is the failure this project exists to prevent.
     store = Store("t", base=tmp_path)
-    _ledger(store, [row(key, acquired=True) for key in "abcd"])
+    _found(store, 25)
+    _ledger(store, [row("k0", acquired=True)])
+    result = admissibility.rate(store)
+    assert result["found"] == 25
+    assert result["attempted"] == 1
+    assert result["obtained"] == 1
+    assert result["rate"] == 1 / 25
+
+
+def test_an_unread_corpus_does_not_pass_the_floor(tmp_path):
+    store = Store("t", base=tmp_path)
+    _found(store, 25)
+    _ledger(store, [row("k0", acquired=True)])
+    project = load_project("projects/example-news-and-returns")
+    assert admissibility.admit(project, store)["status"] == "INSUFFICIENT_ACQUISITION"
+
+
+def test_the_chain_of_states_is_reported_separately(tmp_path):
+    store = Store("t", base=tmp_path)
+    _found(store, 4)
+    store.append("candidates.jsonl", {"candidate_key": "k4", "source_class": None})
+    _ledger(store, [row("k0", acquired=True), row("k1", acquired=True),
+                    row("k2", acquired=False, failure="PAYWALL_403")])
+    result = admissibility.rate(store)
+    assert (result["found"], result["classified"]) == (5, 4)
+    assert (result["attempted"], result["obtained"]) == (3, 2)
+
+
+def test_an_unclassified_candidate_stays_in_the_denominator(tmp_path):
+    # It was found and it was not read. Dropping it into a smaller denominator is the same
+    # inflation, arrived at from the other side.
+    store = Store("t", base=tmp_path)
+    store.append("candidates.jsonl", {"candidate_key": "k0", "source_class": "ACA"})
+    store.append("candidates.jsonl", {"candidate_key": "k1", "source_class": None})
+    _ledger(store, [row("k0", acquired=True)])
+    result = admissibility.rate(store)
+    assert result["found"] == 2
+    assert result["rate"] == 0.5
+    assert result["unclassified"] == 1
+
+
+def test_an_acquisition_with_no_candidate_is_reported_not_absorbed(tmp_path):
+    # Adding it to `found` would reintroduce the inflation; hiding it would hide a broken
+    # ledger. It is counted on its own line.
+    store = Store("t", base=tmp_path)
+    _found(store, 2)
+    store.append("acquisitions.jsonl", row("k0", acquired=True))
+    store.append("acquisitions.jsonl", row("ghost", acquired=True))
+    result = admissibility.rate(store)
+    assert result["found"] == 2
+    assert result["orphan_acquisitions"] == ["ghost"]
+
+
+def test_no_candidates_means_no_rate_rather_than_zero(tmp_path):
+    store = Store("t", base=tmp_path)
+    result = admissibility.rate(store)
+    assert result["found"] == 0
+    assert result["rate"] is None
+
+
+def test_a_round_can_be_isolated(tmp_path):
+    store = Store("t", base=tmp_path)
+    store.append("candidates.jsonl", {"candidate_key": "k0", "source_class": "ACA",
+                                      "round": "spring"})
+    store.append("candidates.jsonl", {"candidate_key": "k1", "source_class": "ACA",
+                                      "round": "autumn"})
+    store.append("acquisitions.jsonl", row("k0", acquired=True))
+    assert admissibility.rate(store, round_name="spring")["found"] == 1
+    assert admissibility.rate(store, round_name="spring")["rate"] == 1.0
+    assert admissibility.rate(store, round_name="autumn")["rate"] == 0.0
+
+
+# --- the confirmed basis only when stage 3 has finished -----------------------
+
+
+
+
+# --- admission must never be inflated by work not yet done ---------------------
+
+def test_a_known_negative_counts_against_even_while_normalize_runs(tmp_path):
+    # The first fix made the confirmed basis wait for completeness, and the obtained basis then
+    # ignored the confirmations already in hand: four obtained, one already known not to be a
+    # document, three awaiting — and it returned OK at 1.00.
+    store = Store("t", base=tmp_path)
+    _ledger(store, [row(k, acquired=True) for k in "abcd"])
+    store.append("documents.jsonl", {"source_id": "a", "fulltext_confirmed": False,
+                                     "failure_class": "NOT_A_DOCUMENT"})
+    project = load_project("projects/example-news-and-returns")
+    verdict = admissibility.admit(project, store)
+    assert verdict["status"] == "INSUFFICIENT_ACQUISITION"
+    assert verdict["rate"] == 0.0
+    assert verdict["rate_upper"] == 0.75
+
+
+def test_the_rate_is_the_lower_bound_and_the_upper_is_reported(tmp_path):
+    # What is unknown stays unknown. Admission gates on what is established; the ceiling says
+    # how much better it could still turn out to be.
+    store = Store("t", base=tmp_path)
+    _ledger(store, [row(k, acquired=True) for k in "abcd"])
     store.append("documents.jsonl", {"source_id": "a", "fulltext_confirmed": True})
-    assert admissibility.rate(store)["rate"] == 1.0
+    result = admissibility.rate(store)
+    assert result["rate"] == 0.25
+    assert result["rate_upper"] == 1.0
+    assert result["final"] is False
+
+
+def test_admission_is_final_only_when_nothing_is_outstanding(tmp_path):
+    store = Store("t", base=tmp_path)
+    _ledger(store, [row(k, acquired=True) for k in "abcde"])
+    for key in "abcd":
+        store.append("documents.jsonl", {"source_id": key, "fulltext_confirmed": True})
+    store.append("documents.jsonl", {"source_id": "e", "fulltext_confirmed": False,
+                                     "failure_class": "NOT_A_DOCUMENT"})
+    verdict = admissibility.admit(load_project("projects/example-news-and-returns"), store)
+    assert verdict["final"] is True
+    assert verdict["rate"] == verdict["rate_upper"] == 0.8
+    assert verdict["status"] == "OK"
+
+
+def test_an_orphan_acquisition_blocks_a_final_admission(tmp_path):
+    store = Store("t", base=tmp_path)
+    _ledger(store, [row(k, acquired=True) for k in "abcd"])
+    store.append("acquisitions.jsonl", row("ghost", acquired=True))
+    for key in "abcd":
+        store.append("documents.jsonl", {"source_id": key, "fulltext_confirmed": True})
+    verdict = admissibility.admit(load_project("projects/example-news-and-returns"), store)
+    assert verdict["final"] is False
+    assert verdict["blocking"] == ["orphan_acquisitions"]
+
+
+def test_a_repaired_ledger_blocks_a_final_admission(tmp_path):
+    # A repair means rows were lost. Whatever they were, the round is not complete until someone
+    # has reconciled what went missing.
+    store = Store("t", base=tmp_path)
+    _ledger(store, [row(k, acquired=True) for k in "abcd"])
+    for key in "abcd":
+        store.append("documents.jsonl", {"source_id": key, "fulltext_confirmed": True})
+    store.append("ledger_repairs.jsonl", {"ledger": "acquisitions.jsonl", "discarded_bytes": 40})
+    verdict = admissibility.admit(load_project("projects/example-news-and-returns"), store)
+    assert verdict["final"] is False
+    assert "ledger_repairs" in verdict["blocking"]
+
+
+def test_before_normalize_runs_nothing_is_final(tmp_path):
+    store = Store("t", base=tmp_path)
+    _ledger(store, [row(k, acquired=True) for k in "abcde"])
+    verdict = admissibility.admit(load_project("projects/example-news-and-returns"), store)
+    assert verdict["final"] is False
+    assert "normalize_not_started" in verdict["blocking"]
