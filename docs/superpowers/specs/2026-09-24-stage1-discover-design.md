@@ -6,7 +6,7 @@ The only stage with code and no spec. `discover.py` already searches OpenAlex, C
 and imports a manifest; this document says what it should do, which turns out to differ from what
 it does in one blocking respect.
 
-Every number below was measured on `alembic-s4`: the 25-source manifest and the 803 references
+Every number below was measured on `alembic-s4`: the 25-source manifest and the 817 references
 GROBID extracted from its 14 acquired PDFs.
 
 ## 1. The blocking defect
@@ -25,10 +25,10 @@ an API gets a class, and §3 decides it.
 
 | | |
 |---|---|
-| Raw references across 14 documents | **803** |
+| Raw references across 14 documents | **817** |
 | Distinct, deduplicated on normalised title | **711** |
-| Carrying a DOI in the TEI | **20 (3%)** — consolidation is off, by stage 3's design |
-| Carrying a year | 683 (96%) |
+| Carrying a DOI in the TEI | **30 (4%)** — consolidation is off, by stage 3's design |
+| Carrying a year | 684 (96%) |
 | Cited by exactly one corpus document | **657** |
 | Cited by two or more | **54** |
 

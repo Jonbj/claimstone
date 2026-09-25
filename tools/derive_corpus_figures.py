@@ -103,6 +103,9 @@ def main(project_name: str) -> int:
 
     body_chars = sections = short_sections = tables = notes = note_chars = 0
     references: dict[str, set[str]] = collections.defaultdict(set)
+    raw_references = 0
+    reference_doi: dict[str, str] = {}
+    reference_year: dict[str, str] = {}
 
     for path in files:
         root = ET.parse(path).getroot()
@@ -127,9 +130,19 @@ def main(project_name: str) -> int:
                 notes += 1
                 note_chars += len(text_of(note))
         for entry in root.iter(f"{NS}biblStruct"):
+            raw_references += 1
             title = reference_title(entry)
-            if title:
-                references[normalize_title(title)].add(path.stem)
+            if not title:
+                continue
+            key = normalize_title(title)
+            references[key].add(path.stem)
+            doi = entry.find(f'.//{NS}idno[@type="DOI"]')
+            if doi is not None and text_of(doi):
+                reference_doi.setdefault(key, text_of(doi))
+            date = entry.find(f".//{NS}date")
+            when = (date.get("when") or "") if date is not None else ""
+            if when[:4].isdigit():
+                reference_year.setdefault(key, when[:4])
 
     project = load_project(pathlib.Path("projects") / project_name)
     manifest_titles = {
@@ -161,7 +174,12 @@ def main(project_name: str) -> int:
     print(f"    of which under 800 characters       {short_sections:>9}")
     print(f"  tables                                {tables:>9}")
     print(f"  footnotes                             {notes:>9}  ({note_chars:,} characters)")
+    print(f"  raw references                        {raw_references:>9}")
     print(f"  distinct references                   {len(references):>9}")
+    print(f"    carrying a DOI in the TEI           {len(reference_doi):>9}"
+          f"  ({len(reference_doi) / len(references):.0%}; consolidation is off)")
+    print(f"    carrying a year                     {len(reference_year):>9}"
+          f"  ({len(reference_year) / len(references):.0%})")
     for n in sorted(cited):
         print(f"    cited by {n} document(s)               {cited[n]:>9}")
     print()

@@ -15,7 +15,7 @@ GROBID 0.8.1 over those 14 PDFs:
 | Body text | **775,266 characters** of paragraph prose across 14 documents |
 | Chunks at 9,000 chars | **~86**, so a round of `extract` is ~86 calls (~$0.20 on a hosted open model) |
 | Sections | 318, of which 95 under 800 characters — but see below: only 30 are junk |
-| References | **803** across 14 documents; 412 of them from one survey |
+| References | **817** across 14 documents, **711** distinct; 413 of them from one survey |
 | Tables | **117** |
 
 **GROBID needs a workaround on this machine.** The image's JVM cannot read cgroup v2 under
@@ -50,6 +50,16 @@ quoting "the average net firm sentiment is 2.4%" could never match its chunk, so
 would reject a true claim and the rejection ledger — which is the denominator — would fill with
 artefacts of the parser.
 
+**Figures and notes are siblings of sections.** In `<body>`, `<div>`, `<figure>` and `<note>` are all
+direct children; a `<figure>` never nests inside a `<div>`. So prose extracted from a section
+excludes tables by construction, with no filtering.
+
+**Footnotes are a fourth content source.** `<note place="foot">` children of `<body>`: **103 across
+the 14 documents, 19,453 characters**, outside the 775,266 counted above because that figure sums
+paragraphs only. `ACA008`'s single note reads "We obtained similar results using other random
+strings" — a robustness check a claim could rest on. They become `kind="note"` chunks, packed per
+document, each keeping its marker.
+
 ### Where these figures come from
 
 `tools/derive_corpus_figures.py alembic-s4` prints every number above from
@@ -79,11 +89,16 @@ judgement in them — are tested offline against synthetic TEI.
 `tei.py` renders TEI into Python and knows nothing about chunking:
 
 ```python
-Document(source_id, sha256, title, abstract, sections, tables, references, stats)
-Section(head, paragraphs, chars)        # paragraphs kept apart, never pre-joined
-Table(number, head, caption, rows)      # rows: list[list[str]] — cells stay cells
+Document(title, abstract, sections, tables, notes, references)   # .body_chars sums paragraphs
+Section(head, paragraphs)               # paragraphs kept apart, never pre-joined
+Table(number, head, caption, rows)      # rows: tuple[tuple[str, ...]] — cells stay cells
+Note(marker, text)                      # a footnote keeps its marker, so a quote traces back
 Reference(key, title, year, authors, doi)
 ```
+
+A reference's title lives in `analytic/title` for an article and `monogr/title` for a book. A bare
+`.//title` takes whichever comes first, which is right for the first case and silently takes the
+journal name in the second.
 
 **Cells stay cells until the last possible moment.** That is the lesson of §1's table finding:
 the fused text comes from calling `itertext()` too early. Nothing in `tei.py` concatenates.
@@ -110,9 +125,14 @@ the same style as the content gate's paywall phrases. On the measured corpus thi
 exactly the two notes and nothing else; a marker list that grew to catch more would need the same
 by-hand check the gate's rejections got.
 
+The list exists only for **mis-parsed** notes. GROBID labels real footnotes itself, as `<note>`
+siblings of the sections, and those need no marker matching; rule 1 catches the div that was a figure
+note in disguise.
+
 Merging into the *following* section rather than the preceding one is deliberate: a short
 `II. Short-Horizon Return` heading is the opening of what follows, not the tail of what came
-before.
+before. When it is last there is no following section, so it merges backwards — and its head travels
+with it as a line of text rather than being dropped, which is what the first implementation did.
 
 A chunk carries its `section` name, so a claim's provenance is "Predicting Returns" rather than
 "characters 18000-27000". One is information; the other is an offset.
@@ -200,7 +220,7 @@ documents cite it and how many do. **Stage 3 resolves no DOIs and decides no can
 
 Which references become candidates is a declared rule belonging to `discover`, and it needs care
 that this spec does not settle: capture-recapture requires the two channels to sample the *same*
-population, and 803 references include statistics textbooks and unrelated fields. Filtering them
+population, and 711 distinct references include statistics textbooks and unrelated fields. Filtering them
 by topic terms would fix the population and destroy the independence D10 needs. `citations_in_corpus`
 is the signal that makes the question answerable later — a work three corpus documents cite is
 not the same kind of candidate as one a survey cites once — and `synthesize` must state what its

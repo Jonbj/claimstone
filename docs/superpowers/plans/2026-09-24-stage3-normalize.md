@@ -124,7 +124,7 @@ def test_a_pdf_comes_back_as_tei():
 
 
 def test_consolidation_is_off_by_default():
-    # 803 references across 14 documents would be 803 Crossref lookups, and this stage is
+    # 817 references across 14 documents would be 817 Crossref lookups, and this stage is
     # otherwise pure local parsing. Resolution is not stage 3's job (spec §6).
     transport = FakeTransport()
     grobid.Grobid(transport=transport).full_text(b"%PDF-1.4")
@@ -149,7 +149,7 @@ Expected: FAIL with `ModuleNotFoundError: No module named 'claimstone.grobid'`
 ```python
 """The GROBID container, over HTTP.
 
-Consolidation is off. Resolving 803 references through Crossref is not this stage's job — stage 3
+Consolidation is off. Resolving 817 references through Crossref is not this stage's job — stage 3
 is otherwise pure local parsing, and which references become candidates is a decision that
 belongs to `discover` (spec §6).
 """
@@ -246,7 +246,7 @@ startup; it needs JAVA_TOOL_OPTIONS=-XX:-UseContainerSupport. That took twenty
 minutes to diagnose, so the failure path prints the whole docker run line and says
 why the flag is there rather than reporting a bare timeout.
 
-Consolidation is off: resolving 803 references through Crossref is not this stage's
+Consolidation is off: resolving 817 references through Crossref is not this stage's
 job, and which of them become candidates belongs to discover.
 
 Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
@@ -2327,7 +2327,7 @@ the wrong heading.
 
 **Stage 3 decides no candidacy.** Which references become candidates belongs to `discover`, and
 capture-recapture needs care that is not settled here: the two channels must sample the same
-population, and 803 references include statistics textbooks. `citations_in_corpus` is what makes
+population, and 710 references include statistics textbooks. `citations_in_corpus` is what makes
 the question answerable — a work three corpus documents cite is a different kind of candidate
 from one a survey cites once.
 ```
@@ -2362,7 +2362,7 @@ matches its text and that no table cell vanishes in rendering.
 
 ## What this plan does not do
 
-- **No HTML tables or references.** `html_doc` extracts sections and paragraphs only. Table extraction from arbitrary markup is the work TEI tables already received and is not repeated here; a filing has no bibliography to extract.
-- **No DOI resolution for references** (spec §6). 803 references would be 803 Crossref lookups, and which of them become candidates is `discover`'s declared rule, not stage 3's.
+- **No HTML references.** `html_doc` extracts sections, paragraphs and tables; a filing has no bibliography to extract. It does extract tables, against this plan's original decision — see D20, and the measurement that changed it.
+- **No DOI resolution for references** (spec §6). 710 references would be 710 Crossref lookups, and which of them become candidates is `discover`'s declared rule, not stage 3's.
 - **No OCR, no formula parsing, no figure images, no citation context** (spec §9). A scanned PDF fails confirmation and says so.
 - **No stage 4.** This produces chunks; nothing here builds a prompt or extracts a claim. `model_call` (planned separately) is the boundary that carries them to a model.
