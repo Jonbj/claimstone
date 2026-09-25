@@ -15,7 +15,22 @@ from typing import Any
 
 import yaml
 
-VERDICTS = ("SUPPORTED", "CONTRADICTED", "UNANSWERED_IN_LITERATURE", "NEVER_ASKED")
+VERDICTS = (
+    "SUPPORTED",
+    "CONTRADICTED",
+    # Added 2026-09-25. With the effect rule, a question where the bar is cleared in both
+    # directions is none of the other four, and calling it UNANSWERED would report silence while
+    # the literature is speaking and disagreeing.
+    "CONTESTED_IN_LITERATURE",
+    "UNANSWERED_IN_LITERATURE",
+    "NEVER_ASKED",
+)
+
+# What kind of thing a question asks, which decides the rule that judges it. `operational` asks
+# about the consuming system's own architecture and receives no verdict: no paper can confirm that
+# a versioned lane is the right design, and filing it under UNANSWERED_IN_LITERATURE would assert
+# that the literature is silent on a question it was never asked.
+QUESTION_KINDS = ("effect", "heterogeneity", "method", "premise", "operational")
 STANCES = ("SUPPORTS", "CONTRADICTS", "QUALIFIES", "METHOD_ONLY")
 REVIEW_VERDICTS = ("SUPPORTED", "OVERSTATED", "AMBIGUOUS", "NOT_APPLICABLE")
 
@@ -52,6 +67,7 @@ class Question:
     id: str
     text: str
     added: str | None = None
+    kind: str = ""
 
 
 @dataclass(frozen=True)
@@ -212,11 +228,18 @@ def load_questions(root: pathlib.Path) -> tuple[tuple[Question, ...], int, str]:
         added = entry.get("added")
         if isinstance(added, (_dt.date, _dt.datetime)):
             added = added.isoformat()[:10]
+        kind = str(entry.get("kind") or "").strip()
+        if kind and kind not in QUESTION_KINDS:
+            raise ConfigError(
+                f"questions.yaml: {entry.get('id')!r} has kind {kind!r}; "
+                f"known kinds are {', '.join(QUESTION_KINDS)}"
+            )
         questions.append(
             Question(
                 id=_require_str(entry.get("id"), field="id", where="questions.yaml"),
                 text=_require_str(entry.get("text"), field="text", where="questions.yaml"),
                 added=str(added) if added else None,
+                kind=kind,
             )
         )
     _require_unique([q.id for q in questions], what="question", where="questions.yaml")
@@ -232,8 +255,11 @@ def registry_digest(questions: tuple[Question, ...]) -> str:
     import hashlib
     import json as _json
 
+    # `kind` is in the digest because it decides which rule judges the question, and therefore
+    # its answer. A question silently moved from `method` to `effect` would be judged by a
+    # different standard with no trace — which is what invariant 5 exists to prevent.
     payload = _json.dumps(
-        [[q.id, q.text] for q in questions], ensure_ascii=False, separators=(",", ":")
+        [[q.id, q.text, q.kind] for q in questions], ensure_ascii=False, separators=(",", ":")
     )
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 

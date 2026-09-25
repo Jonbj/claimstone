@@ -6,46 +6,75 @@
 #
 # RULE: adding or changing a question is a dated registry bump, never a silent insert —
 # otherwise every round-over-round figure and every multiplicity correction loses meaning.
-registry_version: 1
-frozen_at: 2026-09-22
+#
+# v2 (2026-09-25) assigns a `kind` to every question: seven effects, four heterogeneity claims,
+# eight methodological requirements and one premise. The kind decides which rule judges the
+# question, so it is part of the registry digest and assigning it is a bump.
+#
+# Note what is absent: no question here has kind `operational`. This registry was built from public
+# literature, so nothing about a consuming system's own architecture crept in — whereas a real
+# instance found six such questions among twenty-eight, which a literature instrument cannot judge
+# and must not pretend to. See docs/superpowers/specs/2026-09-25-verdict-contract-design.md.
+registry_version: 2
+frozen_at: 2026-09-25
 questions:
   - id: Q01
     text: A future return is neither semantic ground truth about a news item nor proof that the news caused it.
+    kind: premise
   - id: Q02
     text: The sentiment or event content of news carries information about future returns beyond what prices already reflect.
+    kind: effect
   - id: Q03
     text: Positive and negative news are incorporated at different speeds and persist for different lengths of time.
+    kind: effect
   - id: Q04
     text: The information event, rather than the individual article, is the appropriate unit of inference.
+    kind: method
   - id: Q05
     text: Novelty and staleness of a news item change the size of the price reaction.
+    kind: heterogeneity
   - id: Q06
     text: Market- and sector-adjusted abnormal return is a better outcome than raw return for this question.
+    kind: method
   - id: Q07
     text: Issuer-specific, sector-level and macro news require different outcomes and different statistical units.
+    kind: method
   - id: Q08
     text: Matched no-news and neutral-news observations are distinct and complementary controls.
+    kind: method
   - id: Q09
     text: The first observable and executable timestamp, not the nominal publication time, determines what was tradable.
+    kind: method
   - id: Q10
     text: The effect varies materially by event type, and post-earnings drift does not transfer to generic news.
+    kind: heterogeneity
   - id: Q11
     text: A contextual or language-model measure of news adds information over a simple lexical baseline.
+    kind: effect
   - id: Q12
     text: Attention, firm size, liquidity and the information environment moderate underreaction.
+    kind: heterogeneity
   - id: Q13
     text: The effect survives realistic transaction costs, spreads and price impact at a plausible trading size.
+    kind: effect
   - id: Q14
     text: The effect survives correction for multiple testing at the significance bar the field now expects.
+    kind: method
   - id: Q15
     text: The effect persists after the publication that reported it, rather than decaying once it is known.
+    kind: effect
   - id: Q16
     text: The reported relationship is causally identified rather than merely predictive in sample.
+    kind: method
   - id: Q17
     text: A stated economic mechanism predicts where the effect should and should not appear, and that prediction holds.
+    kind: heterogeneity
   - id: Q18
     text: Inference accounts for overlapping event windows and cross-sectional dependence rather than assuming independence.
+    kind: method
   - id: Q19
     text: Measured latency between publication and market reaction is short enough to matter for an executable rule.
+    kind: effect
   - id: Q20
     text: Abnormal volume or price movement before publication indicates the information was already partly incorporated.
+    kind: effect

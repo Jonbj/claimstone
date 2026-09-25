@@ -101,3 +101,38 @@ def test_the_cli_reports_drift_as_an_error_not_a_traceback(tmp_path, capsys):
     code = main(["report", str(tmp_path), "--store", str(tmp_path / "store")])
     assert code == 2
     assert "registry_version 1" in capsys.readouterr().err
+
+
+def test_a_kind_change_is_drift_even_when_the_wording_is_identical(tmp_path):
+    # The kind decides which rule judges the question, so moving one from method to effect
+    # changes its answer. Leaving kind out of the digest would let that happen with no trace.
+    from claimstone.store import Store
+
+    def with_kind(kind: str):
+        (tmp_path / "sources.yaml").write_text(
+            "classes:\n  - id: ACA\n    name: a\n    weight_hint: highest\n"
+            "acquisition_floor: 0.8\n", encoding="utf-8")
+        (tmp_path / "topics.yaml").write_text(
+            "topics:\n  - id: T01\n    label: t\n    terms: [a]\n", encoding="utf-8")
+        (tmp_path / "questions.yaml").write_text(
+            "registry_version: 1\nfrozen_at: 2026-09-25\nquestions:\n"
+            f"  - id: Q01\n    text: An effect exists.\n    kind: {kind}\n", encoding="utf-8")
+        return config.load_project(tmp_path)
+
+    store = Store("t", base=tmp_path / "store")
+    config.check_registry_drift(with_kind("method"), store)
+    with pytest.raises(config.RegistryDrift):
+        config.check_registry_drift(with_kind("effect"), store)
+
+
+def test_an_unknown_kind_is_a_configuration_error(tmp_path):
+    (tmp_path / "sources.yaml").write_text(
+        "classes:\n  - id: ACA\n    name: a\n    weight_hint: highest\n"
+        "acquisition_floor: 0.8\n", encoding="utf-8")
+    (tmp_path / "topics.yaml").write_text(
+        "topics:\n  - id: T01\n    label: t\n    terms: [a]\n", encoding="utf-8")
+    (tmp_path / "questions.yaml").write_text(
+        "registry_version: 1\nfrozen_at: 2026-09-25\nquestions:\n"
+        "  - id: Q01\n    text: An effect exists.\n    kind: vibes\n", encoding="utf-8")
+    with pytest.raises(config.ConfigError, match="vibes"):
+        config.load_project(tmp_path)

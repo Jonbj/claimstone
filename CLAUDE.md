@@ -22,9 +22,13 @@ style preferences.
    checked, in code, to be an exact substring of the chunk it came from. Every number and
    every inequality in the claim must also appear in that quote. Failures go to the
    rejection ledger — they are never softened, defaulted, or passed through with a warning.
-2. **Four verdict states, not three.** `SUPPORTED`, `CONTRADICTED`,
-   `UNANSWERED_IN_LITERATURE`, `NEVER_ASKED`. Reporting "we found no evidence" as "there is
-   no effect" is the specific error this project exists to prevent.
+2. **Five verdict states, and none of them collapses into another.** `SUPPORTED`,
+   `CONTRADICTED`, `CONTESTED_IN_LITERATURE`, `UNANSWERED_IN_LITERATURE`, `NEVER_ASKED`.
+   Reporting "we found no evidence" as "there is no effect" is the specific error this project
+   exists to prevent; reporting a live disagreement as "we found no evidence" is the same error
+   one category over, which is why the fifth state was added (2026-09-25). A question of
+   `kind: operational` receives **no** verdict rather than a sixth state — see the verdict
+   contract spec.
 3. **The acquisition floor gates verdicts.** A round that obtained less than
    `acquisition_floor` of what it found is `INSUFFICIENT_ACQUISITION` and produces no
    verdicts. Do not add a flag to override this. A corpus read at 42% that certifies itself
@@ -34,7 +38,10 @@ style preferences.
    `claimstone/`, it is in the wrong place. Test: a project in an unrelated field must be
    expressible without touching the package.
 5. **A question registry change is a dated bump.** Never a silent insert; otherwise every
-   round-over-round figure and every multiplicity correction loses its meaning.
+   round-over-round figure and every multiplicity correction loses its meaning. Enforced, not
+   merely asked: the registry carries a digest of its questions — ids, texts **and kinds** — and
+   every command that opens a store refuses to run when the digest changed under an unchanged
+   version. `kind` is in the digest because it decides which rule judges the question.
 6. **Source class travels with every item.** A blog post and a refereed paper never share a
    pool without it being recorded which is which.
 7. **Vote counting is not synthesis.** Pooling is precision-weighted with publication-bias

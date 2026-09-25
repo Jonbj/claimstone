@@ -289,6 +289,41 @@ to bytes never goes stale. A later row that happens not to mention an artifact �
 does, since row-level `stored_path` means "what we accepted" — must not hide bytes that are still
 on disk.
 
+## D16 — A verdict's rule follows the kind of question, and one kind gets no verdict
+Adopted 2026-09-25, by reading all 28 questions of `alembic-s4` one at a time. This is D15's first
+step, done.
+
+| kind | count | judged by |
+|---|---|---|
+| `effect` | 5 | studies in the stated direction, from more than one dataset, with contrary evidence counted |
+| `heterogeneity` | 5 | a consistent moderation **and a reported case where the effect is absent** |
+| `method` | 11 | a methodological endorsement **and** a demonstrated failure mode |
+| `premise` | 1 | stated explicitly by at least one source, contradicted by none |
+| `operational` | 6 | **nothing. No verdict is produced** |
+
+**Five of twenty-eight are poolable effects.** Six are assertions about the consuming system's own
+architecture — versioned lanes, a frozen counterfactual policy, an exclusive first loss cause — and
+no paper can confirm them. Filing those under `UNANSWERED_IN_LITERATURE` would assert that the
+literature is silent on a question it was never asked, so they receive no verdict and the report
+says which kind they are.
+
+Two consequences follow, and both were already suspected by the review that prompted this.
+
+**The multiplicity family is the effect questions, not the registry.** Five, rising to at most ten
+if a heterogeneity verdict comes to rest on a pooled estimate. A correction applies to a family of
+statistical hypotheses and a methodological requirement is not one, so the declared number of tests
+is computed from the verdicts produced and stated beside the correction.
+
+**A fifth verdict state exists**: `CONTESTED_IN_LITERATURE`. Under the effect rule, a question where
+the bar is cleared in both directions is none of the other four, and calling it `UNANSWERED` reports
+silence while the literature is speaking and disagreeing — invariant 2's error, one category over.
+
+**And stage 4's extraction target now depends on the kind it extracts for.** A study-result record
+with an estimand and a variance is a different artifact from a claim bound to a quote; for a
+`method` question the target is an endorsement or a demonstrated failure instead. This is why the
+contract had to come before stages 4, 5 and 6 rather than after them. Full rules, thresholds and
+the argument for each in `docs/superpowers/specs/2026-09-25-verdict-contract-design.md`.
+
 ## D15 — Stage 6 is not specified until a verdict is defined
 Adopted 2026-09-24, on the recommendation of an adversarial review, which asked to be allowed to
 conclude that a subsystem should not exist and then did.
