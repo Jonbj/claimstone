@@ -27,41 +27,56 @@ input pays for it once per lane rather than once per call.
 
 ### `effect` — a study result
 
+What the model returns — **as-written forms only**:
+
 ```json
-{"question_id": "H02", "stance": "SUPPORTS",
+{"result_id": "r1", "question_id": "H02", "stance": "SUPPORTS",
  "claim": "News sentiment predicts next-week abnormal returns.",
  "evidence_quote": "…net sentiment of 2.4% (0.008) over one week…",
- "estimate_as_written": "2.4%",  "estimate": 0.024, "scale": "percent",
- "standard_error_as_written": "(0.008)", "standard_error": 0.008,
+ "estimate_as_written": "2.4%",
+ "uncertainty_as_written": "(0.008)",
  "horizon_as_written": "one week",
  "sample": "US equities 1996-2008",
  "design": "panel regression with firm and time fixed effects",
  "dependence": "standard errors clustered by firm and week"}
 ```
 
+**One record per result, not per question.** A chunk reporting three estimates that bear on H02
+produces three records with distinct `result_id`s. A record per `(chunk, question)` would force the
+second and third into the first or drop them, and the record is the unit of evidence.
+
+The stored row is a **different shape**: the engine adds `estimate`, `scale` and `uncertainty` by
+converting the as-written forms, and the model never sees those fields. That is the whole of §2.
+
 ### `heterogeneity` — a subgroup contrast
 
 ```json
-{"question_id": "H22", "stance": "SUPPORTS",
+{"result_id": "r1", "question_id": "H22", "stance": "SUPPORTS",
  "moderator": "firm size", "high_side": "small firms", "low_side": "large firms",
- "absent_case_reported": true,
  "contrast_as_written": "0.31% versus 0.04%",
+ "contrast_uncertainty_as_written": "(t = 3.4)",
+ "prespecified": true,
  "claim": "…", "evidence_quote": "…"}
 ```
 
-`absent_case_reported` exists because D16's rule needs it: a moderation supported only by the
-high side is a main effect wearing a moderation's clothes.
+**Revised 2026-09-25.** An earlier version asked for `absent_case_reported` and a rule required it.
+A review established that this is not a statement about moderation at all: **an effect can differ
+materially between two subgroups that are both non-zero**, so a reported absent case is neither
+necessary nor sufficient. What establishes moderation is the contrast and its uncertainty, and
+whether the subgroup analysis was planned or found.
 
 ### `method` — an endorsement or a demonstrated failure
 
 ```json
-{"question_id": "H28", "stance": "SUPPORTS",
+{"result_id": "r1", "question_id": "H28", "stance": "SUPPORTS",
  "support_type": "ENDORSEMENT",
  "claim": "…", "evidence_quote": "…"}
 ```
 
-`support_type` is `ENDORSEMENT` or `DEMONSTRATED_FAILURE`, which are the two ways the literature
-answers a methodological requirement and which D16's rule requires both of.
+`support_type` is `ENDORSEMENT` or `DEMONSTRATED_FAILURE` — the two ways the literature answers a
+methodological requirement. The source's **declared `role`** comes from `sources.yaml` and is added
+by the engine, not asked of the model: which classes are methodological is project data, and reading
+it off the class id `MET` would be domain knowledge in the package.
 
 ### `premise` — a statement or a contradiction
 
@@ -72,10 +87,16 @@ answers a methodological requirement and which D16's rule requires both of.
 A paper writes `2.4%`; a numeric field wants `0.024`. As strings they do not match, so an exact
 substring gate would reject a correct record — or be loosened until it verified nothing.
 
-So every numeric field appears twice: `*_as_written`, exactly as the source has it, and the
-normalised value with its `scale`. **The gate checks the as-written form. The engine does the
-conversion**, deterministically and in code. A model asked to convert is a model handed a way to be
-wrong that no quote check could catch.
+So **the model reports only the as-written form** and the engine converts, deterministically and in
+code. The gate checks that the as-written string is in the quote; the value never came from the model
+and so cannot be wrong in a way the quote cannot reveal.
+
+**Revised 2026-09-25.** The first version had the model report both forms and added a sixth gate
+check comparing them — the engine's conversion against the model's. A review pointed out the check is
+redundant if the engine alone computes the value, and it is right: the check existed only because I
+had asked for a field nobody needed. Removing the field removes the check and the design gets
+smaller. What the check would have caught — a model that misread a table — is not addressed here at
+all, and pretending it was is worse than the gap.
 
 ## 3. The gate
 
@@ -87,33 +108,49 @@ Six checks, in order, all code and no judgement:
 | 2 | `evidence_quote` is an exact substring of the chunk's text | `QUOTE_NOT_FOUND` |
 | 3 | every `*_as_written` field is an exact substring of the quote | `VALUE_NOT_IN_QUOTE` |
 | 4 | every numeral in `claim` appears in the quote | `NUMBER_NOT_IN_QUOTE` |
-| 5 | every comparative in `claim` appears in the quote | `COMPARATIVE_NOT_IN_QUOTE` |
-| 6 | the engine's normalisation of each as-written form **agrees with the value the model wrote** | `VALUE_DISAGREES` |
+| 5 | every comparative **class** in `claim` is present in the quote | `COMPARATIVE_NOT_IN_QUOTE` |
+| 6 | `stance` is admissible for the question's kind | `WRONG_STANCE` |
+| 7 | every as-written form the engine cannot convert | `UNPARSEABLE_VALUE` |
 
 Check 2 compares against `chunks.jsonl`'s stored `text`, which stage 3 guarantees is byte-for-byte
 what the model was shown. Rendering the chunk a second time here would turn any difference between
 the two renderings into the rejection of a true claim.
 
-**Check 6 is the one the project did not have.** Carrying both forms lets the engine verify the
-model's own arithmetic: a record saying `"2.4%"` and `0.03` is caught, and no check on the quote
-alone could catch it, because `"2.4%"` is in the quote and `0.03` is not a number the paper
-contains. The other five say the model quoted badly; this one says it **computed badly on a number
-it was looking at**, which is a different and worse failure.
+**What no check here establishes.** The gate verifies that a quote is present in the chunk and that
+the claim's numbers and comparisons are in the quote. It does not establish that the model read the
+right row of the table, that `(0.008)` is a standard error rather than a t-statistic, or that the
+uncertainty is on the same scale as the estimate. Those are estimand questions and nothing mechanical
+reaches them. The project's prose has been implying otherwise, and stage 5 exists because of the gap
+— but stage 5 is a model reading, not a verification.
 
 ### What counts as a numeral and a comparative
 
 Checks 4 and 5 need definitions, or an implementer invents them.
 
-A **numeral** is a run matching `-?\d[\d,.]*%?` — digits, optional thousands separators and
-decimal point, optional percent. Written-out numbers (`two-thirds`) are not numerals and are not
-checked: the rule exists to stop a fabricated figure, and a fabricated figure is written in digits.
+A **numeral** is a run matching `[-−]?\d[\d,.]*(?:[eE][-−+]?\d+)?%?` — digits, optional thousands
+separators and decimal point, optional scientific exponent, optional percent, and a leading ASCII
+hyphen **or Unicode minus**, which typeset papers use and an earlier draft of this rule did not
+match. Written-out numbers (`two-thirds`) are not numerals and are not checked: the rule exists to
+stop a fabricated figure, and a fabricated figure is written in digits.
 
-A **comparative** is a symbol from `>`, `<`, `≥`, `≤`, `=` or a phrase from a declared list —
-`more than`, `less than`, `higher than`, `lower than`, `at least`, `at most`, `greater than`,
-`exceeds`, `outperforms`, `underperforms`. That list is English, and by the lesson the content gate
-already taught, it belongs in `sources.yaml` under `extraction:` rather than in the package. The
-engine ships these as defaults; a project in another language declares its own, and the list in
-force rides on every ledger row.
+A **comparative** is matched by **class, not by phrase**, and this is a correction. Comparing phrases
+literally rejects a correct record whose claim says `exceeds` where the quote says `is greater than`
+— a false rejection for a synonym. So `extraction.comparatives` in `sources.yaml` declares a mapping
+from phrase to class, and the check asks whether the class is present:
+
+```yaml
+extraction:
+  comparatives:
+    ">":  [more than, higher than, greater than, exceeds, outperforms, above]
+    "<":  [less than, lower than, below, underperforms]
+    ">=": [at least, no less than]
+    "<=": [at most, no more than]
+```
+
+The symbols `>`, `<`, `≥`, `≤` map to their own classes. A claim introducing a class the quote does
+not contain is rejected; a claim using a different word for a class the quote does contain is not.
+The mapping is English by default and declared per project, for the reason the content gate already
+established.
 
 The same section declares which stances a kind may use, because they are not the same:
 
@@ -141,6 +178,13 @@ numerator without carrying what the denominator needs.
 A conversion the engine cannot perform is likewise a recorded rejection and never a `null`:
 `"about 2.4"` or `"2.4 (t=3.1)"` produce `UNPARSEABLE_VALUE` naming the form that was not
 understood, so the list of notations grows from real cases.
+
+**The first round must audit its rejections before the rate is quoted**, in the shape `gate-audit`
+already established for stage 2. A gate rejecting a quarter of what it is offered might be catching
+a sloppy model or throwing away correct records over a notation nobody anticipated, and only reading
+them tells you which. `extract-report --show-rejected` lists every rejection with its failed check
+and the record intact, and the cost of the whole-record rule is not established until that has been
+read once.
 
 ## 4. Two ledgers, two ratios, never fused
 
@@ -223,7 +267,7 @@ use.
 
 | file | covers |
 |---|---|
-| `test_claimgate.py` | all six checks; a record failing one is rejected **whole**; `VALUE_DISAGREES` on a wrong conversion; a `question_id` whose kind does not match the lane; a stance outside its kind's list; a declared comparative list replacing the English default |
+| `test_claimgate.py` | all seven checks; a record failing one is rejected **whole**; a `question_id` whose kind does not match the lane; a stance outside its kind's list; a synonym for a comparative class **accepted** and a class the quote lacks **rejected**; a declared mapping replacing the English default |
 | `test_numbers.py` | percentages, basis points, parenthesised standard errors, scientific notation; and a notation not understood producing `UNPARSEABLE_VALUE` rather than `null` |
 | `test_extract.py` | four lanes built and `operational` producing none; both ledgers; both ratios; studies counted by `source_id` and not by record |
 
