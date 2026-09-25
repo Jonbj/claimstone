@@ -1368,11 +1368,24 @@ from claimstone import normalize
 from claimstone.store import Store
 from tests.test_tei import DOC
 
+# `DOC` has two references and 87 body characters, so it satisfies neither clause of the
+# confirmation rule. A test that needed a confirmed document and used it anyway would be testing
+# a rule nobody runs. `PAPER` is `DOC` with three more references, and it confirms for a stated
+# reason: five references, not enough text.
+PAPER = DOC.replace(
+    b"</listBibl>",
+    b"".join(
+        b"<biblStruct><monogr><title level=\"m\">Filler study %d</title>"
+        b"<imprint><date type=\"published\" when=\"20%02d\"/></imprint></monogr></biblStruct>" % (n, n)
+        for n in range(10, 13)
+    ) + b"</listBibl>",
+)
+
 
 class FakeGrobid:
     """Returns prepared TEI. Counts calls, so idempotence is observable."""
 
-    def __init__(self, tei_by_call=None, tei=DOC):
+    def __init__(self, tei_by_call=None, tei=PAPER):
         self.tei, self.tei_by_call = tei, tei_by_call or {}
         self.calls = 0
 
@@ -1574,6 +1587,11 @@ CONFIRM_DEFAULTS: dict[str, int] = {
 
 NOT_A_DOCUMENT = "NOT_A_DOCUMENT"
 TEI_UNREADABLE = "TEI_UNREADABLE"
+# Not a verdict about the source. It writes no `documents.jsonl` row, so admissibility leaves the
+# source awaiting: the ceiling rises, the figure does not move, and the round cannot certify itself
+# until someone looks. Recording it as unconfirmed instead would count an absent file as an
+# established negative and lower the rate on an infrastructure failure.
+ARTIFACT_UNREADABLE = "ARTIFACT_UNREADABLE"
 
 
 def _now() -> str:

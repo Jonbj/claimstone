@@ -61,6 +61,7 @@ class SourceClass:
     # papers and regulatory filings cannot use one rule for both, and flipping the project-wide
     # switch to `structural_signal: none` was measured admitting four of six known summaries.
     gate_policy: dict[str, Any] = field(default_factory=dict)
+    normalize_thresholds: dict[str, int] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -102,6 +103,7 @@ class Project:
     manifest: tuple[ManifestEntry, ...] = ()
     gate_thresholds: dict[str, int] = field(default_factory=dict)
     gate_policy: dict[str, Any] = field(default_factory=dict)
+    normalize_thresholds: dict[str, int] = field(default_factory=dict)
     floor_version: int = 1
     floor_set_at: str = ""
     floor_rationale: str = ""
@@ -339,6 +341,10 @@ def check_registry_drift(project: Project, store: Any) -> None:
 
 MANIFEST_COLUMNS = ("source_id", "class", "format", "url", "title")
 GATE_THRESHOLD_NAMES = ("min_pdf_bytes", "min_text_chars", "paywall_doubt_chars", "fulltext_chars")
+NORMALIZE_THRESHOLD_NAMES = (
+    "min_section_chars", "merge_below", "max_chunk_chars",
+    "min_references", "confirm_chars",
+)
 
 
 GATE_POLICY_NAMES = ("paywall_phrases", "reference_headings", "structural_signal")
@@ -473,6 +479,27 @@ def load_gate_thresholds(root: pathlib.Path) -> dict[str, int]:
     return {str(k): int(v) for k, v in raw.items()}
 
 
+def load_normalize_thresholds(root: pathlib.Path) -> dict[str, int]:
+    """Per-project overrides for chunking and confirmation. Absent means engine defaults.
+
+    A misspelt key is an error rather than a silent no-op, for the same reason as the gate's: a
+    threshold the operator believed they had changed produces a figure they would trust wrongly.
+    """
+    raw = _read_yaml(pathlib.Path(root) / "sources.yaml").get("normalize") or {}
+    if not isinstance(raw, dict):
+        raise ConfigError("sources.yaml: 'normalize' must be a mapping")
+    unknown = sorted(set(raw) - set(NORMALIZE_THRESHOLD_NAMES))
+    if unknown:
+        raise ConfigError(
+            f"sources.yaml: unknown normalize threshold(s): {', '.join(unknown)} "
+            f"(known: {', '.join(NORMALIZE_THRESHOLD_NAMES)})"
+        )
+    for name, value in raw.items():
+        if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+            raise ConfigError(f"sources.yaml: normalize.{name} must be a non-negative integer")
+    return {str(k): int(v) for k, v in raw.items()}
+
+
 def load_floor_provenance(root: pathlib.Path) -> tuple[int, str, str]:
     """Where the floor came from. A bump without a reason is refused.
 
@@ -527,6 +554,7 @@ def load_project(root: str | pathlib.Path) -> Project:
     )
     gate_thresholds = load_gate_thresholds(path)
     gate_policy = load_gate_policy(path)
+    normalize_thresholds = load_normalize_thresholds(path)
     floor_version, floor_set_at, floor_rationale = load_floor_provenance(path)
 
     return Project(
@@ -543,6 +571,7 @@ def load_project(root: str | pathlib.Path) -> Project:
         manifest=manifest,
         gate_thresholds=gate_thresholds,
         gate_policy=gate_policy,
+        normalize_thresholds=normalize_thresholds,
         floor_version=floor_version,
         floor_set_at=floor_set_at,
         floor_rationale=floor_rationale,
