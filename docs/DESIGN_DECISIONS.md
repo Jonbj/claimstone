@@ -324,6 +324,32 @@ with an estimand and a variance is a different artifact from a claim bound to a 
 contract had to come before stages 4, 5 and 6 rather than after them. Full rules, thresholds and
 the argument for each in `docs/superpowers/specs/2026-09-25-verdict-contract-design.md`.
 
+## D17 — Defining the verdict removed the statistics
+Adopted 2026-09-25, on writing the stage 6 spec. D15 refused to specify the stage until a verdict
+was defined. D16 defined one, and most of what this stage was going to do turned out to be
+unnecessary.
+
+**No pooling in this version.** D16's rules require counts and coverage — three studies, two
+distinct datasets, contrary evidence counted, an absent case reported, an endorsement and a
+demonstrated failure. Not one of them needs an aggregated estimate. A random-effects pool would
+produce a magnitude, which is additional information and not the basis of any verdict the contract
+defines. **D6 is therefore deferred, not implemented**: its reasoning for `metafor` over hand-written
+pooling still holds for whenever a magnitude is wanted, and the contract is "a verdict per question",
+not "an effect size per question".
+
+**No multiplicity correction, and this contradicts the original registry's concern.** That control
+was wanted because the design assumed significance testing. D16's rules test no significance, so
+there is no p-value and no family-wise error rate to control, and a correction applied to
+count-based rules adjusts nothing. It would be rigour-shaped output with no object. What is mandatory
+instead is **disclosure**: how many questions were asked, of each kind, reaching each verdict, on how
+many sources each rests. That is not a correction and must never be labelled one. `H24` — whether
+the effect survives multiplicity correction in the literature — is unaffected: it is a `method`
+question about what the field did.
+
+So stage 6 is a deterministic aggregator with no model, no network and no R. What it gains instead is
+the first place in the project where **invariant 3 has something to gate**: it refuses to produce any
+verdict at all when the round is `INSUFFICIENT_ACQUISITION`, and the refusal is the entire output.
+
 ## D15 — Stage 6 is not specified until a verdict is defined
 Adopted 2026-09-24, on the recommendation of an adversarial review, which asked to be allowed to
 conclude that a subsystem should not exist and then did.
