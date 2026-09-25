@@ -90,3 +90,116 @@ def work_unit(
         "schema_sha256": schema_sha256,
         "created_at": _now(),
     }
+
+
+# Terminal for this backend: a retry changes nothing until the request or the backend does.
+# Transient: the next drain should try again. TRUNCATED is terminal because raising the cap
+# changes `call_id`, so a retry under a bigger cap is a different call and not a second
+# attempt at this one.
+TERMINAL = frozenset({"NOT_JSON", "SCHEMA_INVALID", "REFUSED", "PROMPT_MISMATCH", "TRUNCATED"})
+TRANSIENT = frozenset({"TIMEOUT", "RATE_LIMITED", "BACKEND_ERROR", "EMPTY"})
+
+
+def is_terminal(failure_class: str | None) -> bool:
+    """An unrecognised class counts as terminal: a typo must cost a retry, not a loop."""
+    return failure_class not in TRANSIENT
+
+
+def batch_name(*, registry_version: int, at: str | None = None) -> str:
+    """A batch says when it was built and which registry it was built against.
+
+    Both belong in the name so a batch is identifiable without reading it, and so a batch
+    built before a registry bump cannot be mistaken for one built after.
+    """
+    stamp = at or _now()
+    return f"{stamp[:10]}T{stamp[11:13]}{stamp[14:16]}Z-r{registry_version}"
+
+
+class Queue:
+    """One lane's batch on disk: requests in, results appended beside them."""
+
+    def __init__(self, store: Any, *, lane: str, batch: str) -> None:
+        if lane not in LANES:
+            raise ValueError(f"unknown lane {lane!r}: {', '.join(LANES)}")
+        self.store = store
+        self.lane = lane
+        self.batch = batch
+        self.root = f"calls/{lane}/{batch}"
+        self.requests_name = f"{self.root}/requests.jsonl"
+        self.results_name = f"{self.root}/results.jsonl"
+
+    def write(self, units: list[dict[str, Any]]) -> int:
+        """Append work units, merging any `call_id` already queued. Returns how many *new* calls
+        landed — a second chunk asking an identical question adds an asker, not a call.
+
+        Two chunks with identical text hash to one `call_id`, which is deliberate: the prompt is
+        paid for once. The first version then dropped the duplicate unit whole, and the second
+        chunk's id went with it, so a claim really present in that chunk could never be recorded
+        against it. One call, one answer, every place that asked.
+        """
+        from claimstone import jsonshape
+
+        held = self.store.latest_by(self.requests_name, "call_id")
+        written = 0
+        for unit in units:
+            # Refuse here, not when the answer arrives: a schema this validator cannot honour
+            # is a mistake by the stage that wrote it, and it should fail where it was made.
+            jsonshape.check_schema(unit["response_schema"])
+            asker = {"source_id": unit.get("source_id"), "chunk_id": unit.get("chunk_id")}
+            previous = held.get(unit["call_id"])
+            if previous is None:
+                row = {**unit, "asked_by": [asker]}
+                held[unit["call_id"]] = row
+                self.store.append(self.requests_name, row)
+                written += 1
+                continue
+            askers = list(previous.get("asked_by") or [])
+            if asker in askers:
+                continue
+            row = {**previous, "asked_by": askers + [asker]}
+            held[unit["call_id"]] = row
+            self.store.append(self.requests_name, row)
+        return written
+
+    def requests(self) -> list[dict[str, Any]]:
+        """One row per call, the latest. Never the raw rows: merging an asker appends a row, and a
+        drain reading raw rows would pay for the same call once per chunk that asked for it.
+        """
+        return list(self.store.latest_by(self.requests_name, "call_id").values())
+
+    def request_rows(self) -> list[dict[str, Any]]:
+        """Every row ever written, for auditing how a call's asker list grew."""
+        return list(self.store.read(self.requests_name))
+
+    def results(self, *, backend: str | None = None) -> dict[str, dict[str, Any]]:
+        """The latest result per call, **per backend**.
+
+        Collapsing on `call_id` alone was the first draft, and it destroyed the one property this
+        whole boundary exists for: after backend A answered a batch, draining it with backend B
+        produced nothing, because every call already looked done. Two backends over the same
+        requests file is the comparison primitive — it cannot be defeated by the resumability
+        logic.
+        """
+        latest: dict[str, dict[str, Any]] = {}
+        for row in self.store.read(self.results_name):
+            if backend is not None and row.get("backend") != backend:
+                continue
+            key = f"{row.get('call_id')}|{row.get('backend')}"
+            latest[key] = row
+        return latest
+
+    def attempts(self) -> list[dict[str, Any]]:
+        """Every result row ever written, in order. What cost money, not what is current."""
+        return list(self.store.read(self.results_name))
+
+    def pending(self, *, backend: str) -> list[dict[str, Any]]:
+        """Units this backend has not answered, plus those its last answer left transient."""
+        answered = self.results(backend=backend)
+        out: list[dict[str, Any]] = []
+        for unit in self.requests():
+            held = answered.get(f"{unit['call_id']}|{backend}")
+            if held is None:
+                out.append(unit)
+            elif not held.get("ok") and not is_terminal(held.get("failure_class")):
+                out.append(unit)
+        return out

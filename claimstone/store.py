@@ -59,7 +59,10 @@ class Store:
         never accepted by any reader, so discarding it loses nothing — but work between the last
         complete row and the restart is gone, which is why the repair leaves an audit row.
         """
-        self.root.mkdir(parents=True, exist_ok=True)
+        # The row's own directory, not just the project root: a ledger may sit under a subpath —
+        # `calls/<lane>/<batch>/requests.jsonl` is one — and creating only the root leaves the
+        # append raising FileNotFoundError on a name that is otherwise perfectly valid.
+        (self.root / name).parent.mkdir(parents=True, exist_ok=True)
         self._ensure_clean_tail(name)
         with (self.root / name).open("a", encoding="utf-8") as handle:
             handle.write(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n")

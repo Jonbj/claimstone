@@ -675,24 +675,44 @@ class Queue:
         self.results_name = f"{self.root}/results.jsonl"
 
     def write(self, units: list[dict[str, Any]]) -> int:
-        """Append work units, skipping any `call_id` already queued. Returns how many landed."""
-        known = set(self.store.latest_by(self.requests_name, "call_id"))
+        """Append work units, merging any `call_id` already queued. Returns how many *new* calls
+        landed — a second chunk asking an identical question adds an asker, not a call.
+
+        Two chunks with identical text hash to one `call_id`, which is deliberate: the prompt is
+        paid for once. The first version then dropped the duplicate unit whole, and the second
+        chunk's id went with it, so a claim really present in that chunk could never be recorded
+        against it. One call, one answer, every place that asked.
+        """
+        from claimstone import jsonshape
+
+        held = self.store.latest_by(self.requests_name, "call_id")
         written = 0
         for unit in units:
-            # Refuse here, not when the answer arrives: a schema this validator cannot honour
-            # is a mistake by the stage that wrote it, and it should fail where it was made.
-            from claimstone import jsonshape
-
             jsonshape.check_schema(unit["response_schema"])
-            if unit["call_id"] in known:
+            asker = {"source_id": unit.get("source_id"), "chunk_id": unit.get("chunk_id")}
+            previous = held.get(unit["call_id"])
+            if previous is None:
+                row = {**unit, "asked_by": [asker]}
+                held[unit["call_id"]] = row
+                self.store.append(self.requests_name, row)
+                written += 1
                 continue
-            known.add(unit["call_id"])
-            self.store.append(self.requests_name, unit)
-            written += 1
+            askers = list(previous.get("asked_by") or [])
+            if asker in askers:
+                continue
+            row = {**previous, "asked_by": askers + [asker]}
+            held[unit["call_id"]] = row
+            self.store.append(self.requests_name, row)
         return written
 
-    def requests(self) -> Any:
-        return self.store.read(self.requests_name)
+    def requests(self) -> list[dict[str, Any]]:
+        """One row per call, the latest. Never the raw rows: merging an asker appends a row, and a
+        drain reading raw rows would pay for the same call once per chunk that asked for it."""
+        return list(self.store.latest_by(self.requests_name, "call_id").values())
+
+    def request_rows(self) -> list[dict[str, Any]]:
+        """Every row ever written, for auditing how a call's asker list grew."""
+        return list(self.store.read(self.requests_name))
 
     def results(self, *, backend: str | None = None) -> dict[str, dict[str, Any]]:
         """The latest result per call, **per backend**.

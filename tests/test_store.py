@@ -109,3 +109,11 @@ def test_an_intact_ledger_gets_no_audit_row(tmp_path):
     store.append("x.jsonl", {"k": 1})
     store.append("x.jsonl", {"k": 2})
     assert list(store.read("ledger_repairs.jsonl")) == []
+
+
+def test_a_ledger_under_a_subpath_can_be_appended_to(tmp_path):
+    """`calls/<lane>/<batch>/requests.jsonl` is one. Creating only the project root left append
+    raising FileNotFoundError on a name that is otherwise perfectly valid."""
+    store = Store("t", base=tmp_path)
+    store.append("calls/extract/b1/requests.jsonl", {"call_id": "x"})
+    assert [row["call_id"] for row in store.read("calls/extract/b1/requests.jsonl")] == ["x"]
