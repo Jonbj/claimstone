@@ -324,3 +324,52 @@ def test_the_sweep_reads_an_html_document_with_the_html_parser(tmp_path):
     points = normalize.confirm_sweep(store, "confirm_chars", [1000, 10**9])
     assert [p["unreadable"] for p in points] == [0, 0]
     assert [p["confirmed"] for p in points] == [1, 0]
+
+
+def test_the_confirmed_rate_matches_what_normalize_wrote(tmp_path):
+    """End to end: acquire's ledger, normalize's verdicts, admissibility's arithmetic.
+
+    Each side was tested against fixtures of the other's shape. This asserts they agree on rows one
+    of them really produced — which is where a field name or a join key silently diverges.
+    """
+    from claimstone import admissibility
+
+    store = Store("t", base=tmp_path)
+    for source_id, body in (("S01", b"%PDF one"), ("S02", b"%PDF two"), ("IND008", b"%PDF three")):
+        acq = acquired(source_id, store, body=body)
+        store.append("candidates.jsonl", {"candidate_key": acq["candidate_key"],
+                                          "source_id": source_id, "source_class": "ACA"})
+        store.append("acquisitions.jsonl", acq)
+    # Two real documents and one vendor fact sheet.
+    list(normalize.run(store, FakeGrobid(tei_by_call={1: PAPER, 2: PAPER, 3: FACT_SHEET})))
+
+    result = admissibility.rate(store)
+    assert result["found"] == 3
+    assert result["obtained"] == 3
+    assert result["confirmed"] == 2
+    assert result["basis"] == "confirmed"
+    assert result["not_a_document"] == ["IND008"]
+    assert result["awaiting_normalize"] == 0
+    assert result["rate"] == 2 / 3
+
+
+def test_a_source_normalize_has_not_reached_is_not_counted_against_the_corpus(tmp_path):
+    from claimstone import admissibility
+
+    store = Store("t", base=tmp_path)
+    for source_id in ("S01", "S02"):
+        acq = acquired(source_id, store, body=f"%PDF {source_id}".encode())
+        store.append("candidates.jsonl", {"candidate_key": acq["candidate_key"],
+                                          "source_id": source_id, "source_class": "ACA"})
+        store.append("acquisitions.jsonl", acq)
+    list(normalize.run(store, FakeGrobid(), limit=1))
+
+    result = admissibility.rate(store)
+    # One normalized and confirmed, one not reached. Counting the second as unconfirmed would make
+    # the rate fall because stage 3 had not finished — measuring our own progress and reporting it as
+    # a property of the corpus.
+    assert result["confirmed"] == 1
+    assert result["awaiting_normalize"] == 1
+    assert result["not_a_document"] == []
+    assert (result["rate"], result["rate_upper"]) == (0.5, 1.0)
+    assert result["final"] is False

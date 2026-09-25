@@ -167,8 +167,11 @@ measurement that looked correct.
 ### 0.60 is an upper bound, 2026-09-24
 
 Running GROBID over the fourteen acquired PDFs found one that is not a document: `IND008` is
-`lseg-machine-readable-news-fact-sheet.pdf` — 4,618 characters of body, **zero references**, and
-sections titled "Key use cases" and "Find out more". Marketing, and the PDF twin of the six HTML
+`lseg-machine-readable-news-fact-sheet.pdf` — around 4,600 characters of body, **1 reference**, and
+sections titled "Key use cases" and "Find out more". (Both figures were sharpened when stage 3
+ran for real; see "stage 3, end to end" below. 4,618 counts
+section heads; `Document.body_chars`, which the confirmation rule uses, counts div prose and gives
+4,377. Neither is wrong and the difference is 241 characters of headings.) Marketing, and the PDF twin of the six HTML
 abstract pages, caught by the same signal: no bibliography, short body, commercial prose.
 
 It passed stage 2 because **the PDF gate there is structural** — magic bytes, `%%EOF`, size — and
@@ -521,3 +524,46 @@ opening the inner table cleared the buffer mid-cell.
 characters; this parser finds 232,084 of prose and 14,112 in cells. The gate strips tags without
 regard to block boundaries and this one does not. Neither number is wrong and they are not
 comparable, which is the same reason `chunk_version` and `gate_version` exist.
+
+## D21 — Stage 3, end to end: 14 of 25, and neither confirmation constant decides it
+The first run of stage 3 over the real corpus. GROBID was never called — the TEI is on disk under
+each PDF's hash, so the stage needed no network and no container.
+
+### Measured, 2026-09-25
+
+```
+normalized            15 sources        14 confirmed · 1 NOT_A_DOCUMENT · 0 awaiting
+rate                  14/25 = 0.56      lower bound and ceiling both 0.56, final
+floor                 0.80 (v1)         INSUFFICIENT_ACQUISITION
+by class              ACA 7/10 0.70 · IND 3/9 0.33 · MET 5/6 0.83
+chunks                 493              14 TEI documents plus IND001's 57
+```
+
+**The headline figure is 0.56, and it is now `final`.** Nothing is awaiting normalization, there are
+no orphan acquisitions, and the lower bound equals the ceiling — so the round is a settled
+measurement rather than a partial one, and it is 24 points under its own floor. That is the
+deliverable: a sentence with a number in it, and the number is not good enough.
+
+**`IND008` is the one rejection.** 1 reference and 4,377 characters of div prose, against the
+next-lowest legitimate document at 9 references and 20,844 characters. Sections titled "Key use
+cases" and "Find out more".
+
+**Both confirmation constants are flat.** Swept on the 15 documents:
+
+```
+min_references    0 -> 15 confirmed     confirm_chars    1,000 -> 15
+                  1 -> 15                                4,377 -> 15
+                  2 -> 14                                4,378 -> 14
+                  5 -> 14  (the default)                 15,000 -> 14  (the default)
+                 60 -> 14                              100,000 -> 14
+                                                       240,000 -> 13
+```
+
+`min_references: 5` could be anything from 2 to 60 without changing a single verdict, and
+`confirm_chars: 15000` anything from 4,378 to 100,000. Neither constant is doing the work; the gap
+in the corpus is. This is the same result the gate thresholds gave, and it means the same thing:
+the rule is structural, and a reviewer arguing about the numbers is arguing about the wrong thing.
+
+**One negative is one negative.** A flat sweep over a corpus with a single non-document says the
+rule is insensitive *here*, not that it is right. The next corpus with two marketing PDFs in it is
+the test, and until then this is evidence about robustness and not about accuracy.

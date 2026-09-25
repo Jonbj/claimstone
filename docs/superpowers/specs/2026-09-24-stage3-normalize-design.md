@@ -24,7 +24,7 @@ starts with `-e JAVA_TOOL_OPTIONS=-XX:-UseContainerSupport`, ready in ~15s. That
 the error message, not in someone's memory.
 
 **One acquired PDF is not a document.** `IND008` is `lseg-machine-readable-news-fact-sheet.pdf`:
-4,618 characters of body, **zero references**, sections titled "Key use cases" and "Find out
+around 4,600 characters of body, **1 reference**, sections titled "Key use cases" and "Find out
 more". It passed stage 2 because the PDF gate there is structural, which that spec declares. It
 is the PDF twin of the six HTML abstract pages, and the same signal catches it.
 
@@ -167,9 +167,10 @@ Same shape as the HTML gate, because it is the same question asked of a differen
 fulltext_confirmed = references >= min_references (5)  or  body_chars >= confirm_chars (15000)
 ```
 
-Against the 14 measured documents the lowest legitimate reference count is `MET005` with **8**,
-so all fourteen confirm on the first clause. `IND008` has 0 references and 4,618 characters and
-satisfies neither.
+Against the 14 measured documents the lowest legitimate reference count is `MET005` with **9**, so
+all fourteen confirm on the first clause. `IND008` has 1 reference and 4,377 characters of div
+prose and satisfies neither. Measured after the fact, **neither constant decides this**: the
+corpus separates at 1 reference against 9, and at 4,377 characters against 20,844. See D21.
 
 **Markup is normalized too, by a different parser.** GROBID reads PDFs, so an HTML source goes
 through `html_doc`, which produces the same `Document` dataclasses and extracts less: sections,

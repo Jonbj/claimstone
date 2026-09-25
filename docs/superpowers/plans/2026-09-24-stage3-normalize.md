@@ -1461,7 +1461,7 @@ def test_force_re_normalizes_without_calling_grobid_again(tmp_path):
 
 
 def test_a_fact_sheet_is_not_confirmed_and_produces_no_chunks(tmp_path):
-    # Measured: IND008 is a vendor fact sheet with no references and 4,618 characters. It
+    # Measured: IND008 is a vendor fact sheet with 1 reference and 4,377 characters of prose. It
     # passed stage 2 because that gate is structural, and this is the signal stage 2 promised.
     store = Store("t", base=tmp_path)
     store.append("acquisitions.jsonl", acquired("IND008", store))
@@ -1578,7 +1578,7 @@ from claimstone import html_doc, tei
 from claimstone.store import Store
 
 CONFIRM_DEFAULTS: dict[str, int] = {
-    # The lowest legitimate reference count in the measured corpus is 8 (MET005); the fact
+    # The lowest legitimate reference count in the measured corpus is 9 (MET005); the fact
     # sheet has 0.
     "min_references": 5,
     # A long document without a reference list is still a document — a regulatory filing, say.
