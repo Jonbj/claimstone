@@ -123,14 +123,16 @@ outcome and not a failure.
 
 ## Status
 
-Early, and measured. **Stage 2 is implemented**; stages 1 and 3-6 are specified with
+Early, and measured. **Stages 2 and 3 are implemented**; stages 1 and 4-6 are specified with
 implementation plans and not built. The dashboard is specified and deliberately last.
 
 The first deliverable is a sentence with a number in it, and here it is: on a real 25-source
-manifest whose acquisition rate was **0.42**, the rate is now **0.60** — fifteen sources obtained
-with OA status, licence and failure reason recorded for each, and an upper bound rather than a
-final figure, because one obtained PDF turned out to be a vendor fact sheet and stage 3 has not
-yet run to confirm the rest.
+manifest whose acquisition rate was **0.42**, the rate is **0.56** — fourteen sources obtained,
+read and confirmed to be documents, with OA status, licence and failure reason recorded for each.
+That figure is now `final`: nothing is awaiting normalization, there are no orphan rows, and the
+lower bound equals the ceiling, so it is a settled measurement rather than a partial one. 0.60 was
+the count before stage 3 read them; one of the fifteen is a vendor fact sheet with one reference
+and 4,377 characters, and it is named rather than absorbed.
 
 That is below the declared floor of 0.80, so the published result is `INSUFFICIENT_ACQUISITION`
 with the losses broken down: four publishers that refused twice, and six pages that are abstracts

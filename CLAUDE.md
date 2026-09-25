@@ -140,8 +140,9 @@ on D4 before applying it to any other backend.
 
 ## Status
 
-The contract and its validator exist. The six pipeline stages are specified in the README
-and **not implemented**; the CLI exits with a message for each.
+The contract and its validator exist. **Stages 2 (acquire) and 3 (normalize) are implemented**,
+with commands, ledgers and contracts under `docs/contracts/`. Stages 1, 4, 5 and 6 are specified
+with implementation plans and not built; the CLI exits with a message for each.
 
 Order of work, decided 2026-09-22: **stage 2, then a thin vertical slice** (stages 3-6 on the
 25-source manifest, through to real verdicts), **then the dashboard** — it is the one
@@ -150,10 +151,11 @@ schema, so it goes last and gets built against real rows.
 
 Acquisition is the first milestone, not extraction, because it is the binding constraint on
 the science (D8) — and since D13 it is the *only* remaining one. The first deliverable is a
-sentence with a number in it: the acquisition rate on a real 25-source manifest currently
-sitting at 0.42, with OA status, licence and failure reason recorded per source, **plus the
-sensitivity of that rate to the gate thresholds that produced it**. A rate quoted without its
-thresholds invites comparing two incomparable numbers.
+sentence with a number in it, and it exists: **14 of 25 = 0.56, `final`**, with OA status, licence
+and failure reason recorded per source, **plus the sensitivity of that rate to the thresholds that
+produced it**. A rate quoted without its thresholds invites comparing two incomparable numbers.
+Measured, none of the six thresholds decides it — the gate's four swept flat (D8) and both
+confirmation constants swept flat (D21). The rate is set by structure, not by a constant.
 
 That deliverable may legitimately be `INSUFFICIENT_ACQUISITION` with the losses broken down
 by failure class. That is a finding, not a failure. Lowering `acquisition_floor` because the
