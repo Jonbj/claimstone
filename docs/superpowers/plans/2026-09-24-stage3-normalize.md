@@ -62,7 +62,7 @@ Implements spec §7's liveness message.
 - Create: `claimstone/grobid.py`
 - Create: `tests/test_grobid.py`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `tests/test_grobid.py`:
 
@@ -139,12 +139,12 @@ def test_a_server_error_is_reported_with_its_status():
         client.full_text(b"%PDF-1.4")
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `.venv/bin/pytest tests/test_grobid.py -q`
 Expected: FAIL with `ModuleNotFoundError: No module named 'claimstone.grobid'`
 
-- [ ] **Step 3: Write `claimstone/grobid.py`**
+- [x] **Step 3: Write `claimstone/grobid.py`**
 
 ```python
 """The GROBID container, over HTTP.
@@ -230,12 +230,12 @@ class Grobid:
         return response.content
 ```
 
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
 
 Run: `.venv/bin/pytest tests/test_grobid.py -q`
 Expected: PASS, 6 passed
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add claimstone/grobid.py tests/test_grobid.py
@@ -262,7 +262,7 @@ Implements spec §3, plus corrections 1, 2 and 3.
 - Create: `claimstone/tei.py`
 - Create: `tests/test_tei.py`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `tests/test_tei.py`:
 
@@ -392,12 +392,12 @@ def test_a_tei_with_no_body_raises():
         tei.parse(b'<TEI xmlns="http://www.tei-c.org/ns/1.0"><teiHeader/></TEI>')
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `.venv/bin/pytest tests/test_tei.py -q`
 Expected: FAIL with `ModuleNotFoundError: No module named 'claimstone.tei'`
 
-- [ ] **Step 3: Write `claimstone/tei.py`**
+- [x] **Step 3: Write `claimstone/tei.py`**
 
 ```python
 """TEI as Python. No I/O, no rendering, no judgement.
@@ -577,12 +577,12 @@ def parse(payload: bytes) -> Document:
     )
 ```
 
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
 
 Run: `.venv/bin/pytest tests/test_tei.py -q`
 Expected: PASS, 12 passed
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add claimstone/tei.py tests/test_tei.py
@@ -615,7 +615,7 @@ Implements spec §4 and §5 — the sections that decide whether stage 4 can quo
 - Create: `claimstone/chunk.py`
 - Create: `tests/test_chunk.py`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `tests/test_chunk.py`:
 
@@ -807,12 +807,12 @@ def test_thresholds_can_be_overridden_per_project():
     assert len(chunk.chunks(doc, source_id="S01", thresholds={"max_chunk_chars": 4000})) == 2
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `.venv/bin/pytest tests/test_chunk.py -q`
 Expected: FAIL with `ModuleNotFoundError: No module named 'claimstone.chunk'`
 
-- [ ] **Step 3: Write `claimstone/chunk.py`**
+- [x] **Step 3: Write `claimstone/chunk.py`**
 
 ```python
 """A Document becomes chunks. Every rule with judgement in it lives here.
@@ -1043,12 +1043,12 @@ def chunks(
     return chunk_document(doc, source_id=source_id, thresholds=thresholds).chunks
 ```
 
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
 
 Run: `.venv/bin/pytest tests/test_chunk.py -q`
 Expected: PASS, 19 passed
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add claimstone/chunk.py tests/test_chunk.py
@@ -1092,7 +1092,7 @@ to apply it to.
 - Create: `claimstone/html_doc.py`
 - Create: `tests/test_html_doc.py`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `tests/test_html_doc.py`:
 
@@ -1164,12 +1164,12 @@ def test_markup_with_no_body_raises_rather_than_returning_nothing():
         html_doc.parse(b"<html><head><title>Only a head</title></head></html>")
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `.venv/bin/pytest tests/test_html_doc.py -q`
 Expected: FAIL with `ModuleNotFoundError: No module named 'claimstone.html_doc'`
 
-- [ ] **Step 3: Write `claimstone/html_doc.py`**
+- [x] **Step 3: Write `claimstone/html_doc.py`**
 
 ```python
 """HTML into the same `Document` that `tei.py` produces.
@@ -1285,12 +1285,12 @@ its start tag, which is why `handle_data` treats the first text of a freshly ope
 head. It is the simplest rule that keeps `<h1>Item 1</h1><p>body</p>` and
 `<h1><span>Item 1</span></h1><p>body</p>` behaving the same.
 
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
 
 Run: `.venv/bin/pytest tests/test_html_doc.py -q`
 Expected: PASS, 7 passed
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add claimstone/html_doc.py tests/test_html_doc.py
@@ -1319,7 +1319,7 @@ Implements spec §6 and §7's idempotence.
 - Create: `tests/test_normalize.py`
 - Modify: `claimstone/config.py`
 
-- [ ] **Step 1: Add the `normalize:` thresholds to `claimstone/config.py`**
+- [x] **Step 1: Add the `normalize:` thresholds to `claimstone/config.py`**
 
 Beside `load_gate_thresholds`, which this mirrors:
 
@@ -1355,7 +1355,7 @@ def load_normalize_thresholds(root: pathlib.Path) -> dict[str, int]:
 Add `normalize_thresholds: dict[str, int] = field(default_factory=dict)` to `Project`, and set it
 in `load_project` with `normalize_thresholds=load_normalize_thresholds(path)`.
 
-- [ ] **Step 2: Write the failing tests**
+- [x] **Step 2: Write the failing tests**
 
 Create `tests/test_normalize.py`:
 
@@ -1548,12 +1548,12 @@ def test_malformed_tei_is_recorded_not_raised(tmp_path):
     assert row["failure_class"] == "TEI_UNREADABLE"
 ```
 
-- [ ] **Step 3: Run to verify it fails**
+- [x] **Step 3: Run to verify it fails**
 
 Run: `.venv/bin/pytest tests/test_normalize.py -q`
 Expected: FAIL with `ModuleNotFoundError: No module named 'claimstone.normalize'`
 
-- [ ] **Step 4: Write `claimstone/normalize.py`**
+- [x] **Step 4: Write `claimstone/normalize.py`**
 
 ```python
 """Stage 3 — normalize: bytes become chunks, and a PDF that is not a document says so.
@@ -1736,12 +1736,12 @@ def run(
         yield row
 ```
 
-- [ ] **Step 5: Run to verify it passes**
+- [x] **Step 5: Run to verify it passes**
 
 Run: `.venv/bin/pytest tests/test_normalize.py -q`
 Expected: PASS, 12 passed
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add claimstone/normalize.py claimstone/config.py tests/test_normalize.py
@@ -1771,7 +1771,7 @@ Implements spec §6's "the thresholds are sweepable".
 - Modify: `claimstone/normalize.py`
 - Modify: `tests/test_normalize.py`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Append to `tests/test_normalize.py`:
 
@@ -1807,12 +1807,12 @@ def test_an_unknown_threshold_is_refused(tmp_path):
         normalize.confirm_sweep(store, "nonsense", [1])
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `.venv/bin/pytest tests/test_normalize.py -q -k sweep`
 Expected: FAIL with `AttributeError: module 'claimstone.normalize' has no attribute 'confirm_sweep'`
 
-- [ ] **Step 3: Append to `claimstone/normalize.py`**
+- [x] **Step 3: Append to `claimstone/normalize.py`**
 
 ```python
 def confirm_sweep(store: Store, name: str, values: list[int]) -> list[dict[str, Any]]:
@@ -1856,12 +1856,12 @@ def confirm_sweep(store: Store, name: str, values: list[int]) -> list[dict[str, 
     return points
 ```
 
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
 
 Run: `.venv/bin/pytest tests/test_normalize.py -q`
 Expected: PASS, 13 passed
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add claimstone/normalize.py tests/test_normalize.py
@@ -1895,7 +1895,7 @@ hand-made `documents.jsonl` rows, not against rows `normalize.run()` produced.
 **Files:**
 - Modify: `tests/test_normalize.py`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append to `tests/test_normalize.py`:
 
@@ -1948,14 +1948,14 @@ def test_a_source_normalize_has_not_reached_is_not_counted_against_the_corpus(tm
     assert result["awaiting_normalize"] == 1
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `.venv/bin/pytest tests/test_normalize.py -q -k "confirmed_rate or has_not_reached"`
 Expected: FAIL. The likely cause is the join key: `admissibility` looks up `documents.jsonl` by
 `source_id`, and `normalize.run()` must write that field with the same value the acquisition row
 carries. If the test fails on `not_a_document == []`, that join is what to fix.
 
-- [ ] **Step 3: Make them pass**
+- [x] **Step 3: Make them pass**
 
 No new module. Reconcile whichever side is wrong:
 
@@ -1967,12 +1967,12 @@ No new module. Reconcile whichever side is wrong:
 Do not make the test pass by loosening the assertion. The number this produces is the project's
 headline figure.
 
-- [ ] **Step 4: Run the whole suite**
+- [x] **Step 4: Run the whole suite**
 
 Run: `.venv/bin/pytest -q`
 Expected: PASS, all tests
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add tests/test_normalize.py claimstone/normalize.py claimstone/admissibility.py
@@ -1993,7 +1993,7 @@ Implements spec §7's commands.
 - Modify: `claimstone/cli.py`
 - Create: `tests/test_cli_normalize.py`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `tests/test_cli_normalize.py`:
 
@@ -2050,12 +2050,12 @@ def test_confirm_audit_does_not_need_grobid(tmp_path, capsys, monkeypatch):
     assert "no documents" in capsys.readouterr().out
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `.venv/bin/pytest tests/test_cli_normalize.py -q`
 Expected: FAIL — `normalize` is still bound to `_not_implemented`
 
-- [ ] **Step 3: Add the handler to `claimstone/cli.py`**
+- [x] **Step 3: Add the handler to `claimstone/cli.py`**
 
 ```python
 # The boundaries the corpus actually separates at are 1 vs 2 references and 4,377 vs 4,378
@@ -2152,7 +2152,7 @@ Finally remove `"normalize"` from `STAGES` so it stops registering a placeholder
 STAGES = ("extract", "review", "synthesize")
 ```
 
-- [ ] **Step 4: Run everything**
+- [x] **Step 4: Run everything**
 
 Run: `.venv/bin/pytest -q`
 Expected: PASS, all tests
@@ -2160,7 +2160,7 @@ Expected: PASS, all tests
 Run: `.venv/bin/claimstone normalize --help`
 Expected: usage showing `--confirm-audit` and `--grobid-url`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add claimstone/cli.py tests/test_cli_normalize.py
@@ -2187,7 +2187,7 @@ Implements spec §8 and lands the four corrections this plan made.
 - Create: `tests/test_real_tei.py`
 - Modify: `docs/superpowers/specs/2026-09-24-stage3-normalize-design.md`
 
-- [ ] **Step 1: Write `tests/test_real_tei.py`**
+- [x] **Step 1: Write `tests/test_real_tei.py`**
 
 ```python
 """Run the pure functions over real TEI, when there happens to be any.
@@ -2236,13 +2236,13 @@ def test_no_table_rendering_loses_a_cell(path):
                     assert cell in rendered, f"cell {cell!r} vanished from table {table.number}"
 ```
 
-- [ ] **Step 2: Verify it skips on a clean checkout**
+- [x] **Step 2: Verify it skips on a clean checkout**
 
 Run: `.venv/bin/pytest tests/test_real_tei.py -q`
 Expected: `no tests ran` or all skipped, depending on whether `store/` is populated. Both are
 correct; the test states its own precondition.
 
-- [ ] **Step 3: Land the three corrections in the spec**
+- [x] **Step 3: Land the three corrections in the spec**
 
 In `docs/superpowers/specs/2026-09-24-stage3-normalize-design.md`:
 
@@ -2267,7 +2267,7 @@ In §3, replace the `Document` fields line to include notes, and add:
 In §4, note that rule 1's marker list exists only for **mis-parsed** notes, since GROBID labels
 real ones itself.
 
-- [ ] **Step 4: Write `docs/contracts/normalize.md`**
+- [x] **Step 4: Write `docs/contracts/normalize.md`**
 
 ```markdown
 # `documents.jsonl`, `chunks.jsonl`, `references.jsonl` — the contract
@@ -2332,7 +2332,7 @@ the question answerable — a work three corpus documents cite is a different ki
 from one a survey cites once.
 ```
 
-- [ ] **Step 5: Run everything and commit**
+- [x] **Step 5: Run everything and commit**
 
 Run: `.venv/bin/pytest -q` — expected: all pass
 Run: `.venv/bin/claimstone validate --all-projects` — expected: OK for both
