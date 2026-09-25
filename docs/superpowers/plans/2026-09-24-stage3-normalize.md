@@ -1079,7 +1079,7 @@ so, because splitting mid-sentence is what the whole section rule exists to avoi
 Implements the second parser, before the orchestration that will call it.
 
 Spec §1 counts **14 of 25** as the honest figure. The corpus holds 15 obtained sources: 14 PDFs and
-one HTML full text, `IND001`, a SEC EDGAR filing of 247,993 characters. An earlier draft of this
+one HTML full text, `IND001`, a Credit Suisse 424B2 prospectus supplement filed on EDGAR, 247,993 characters by the content gate's count. An earlier draft of this
 plan had orchestration record every non-PDF as `NOT_PDF`, which would have reported **13** once
 `IND008` was correctly rejected — dropping a real document, silently. A review caught the
 contradiction between the two documents, and the fix is a parser rather than a state.
@@ -1176,13 +1176,17 @@ Expected: FAIL with `ModuleNotFoundError: No module named 'claimstone.html_doc'`
 
 Some sources have no PDF and are still documents — a regulatory filing, a technical standard, an
 agency page. Recording them as `NOT_PDF` drops a real document out of the corpus count, which is
-what the first draft of stage 3 did to a 247,993-character SEC filing.
+what the first draft of stage 3 did to a 247,993-character EDGAR prospectus supplement.
 
 This produces the same dataclasses as `tei.py`, so `chunk.py` and the confirmation rule do not
-know or care which parser they came from. It extracts less: **no tables, no references, no
-footnotes.** A filing has no bibliography, and its tables need the work that TEI tables already
-received. Saying so is better than pretending: the confirmation rule's second clause — long enough
-to stand without a reference list — is what admits these documents, and it does so honestly.
+know or care which parser they came from. It extracts **no references and no footnotes**: a filing
+has no bibliography, and the confirmation rule's second clause — long enough to stand without a
+reference list — is what admits these documents honestly.
+
+It does extract tables. This plan originally said it would not, on the reasoning that a filing's
+tables need the work TEI tables already received — written before anyone opened the file. See D20:
+140 tables hold 18% of its characters, and not extracting them does not leave them out, because
+`td` is a block and every cell then arrives as its own prose paragraph.
 """
 
 from __future__ import annotations
@@ -1293,13 +1297,13 @@ git add claimstone/html_doc.py tests/test_html_doc.py
 git commit -m "html_doc: a source without a PDF can still be a document
 
 An earlier draft of this plan had normalize record every non-PDF as NOT_PDF, which
-drops a 247,993-character SEC filing out of the corpus and turns the spec's 14 of 25
+drops a 247,993-character EDGAR prospectus supplement out of the corpus and turns 14 of 25
 into 13 with nobody noticing.
 
 This produces the same dataclasses tei does, so chunking and confirmation cannot tell
-which parser they came from. It extracts less and says so: no tables, no references,
-no footnotes. A filing has no bibliography, which is precisely the case the
-confirmation rule's second clause exists for.
+which parser they came from. It extracts no references and no footnotes: a filing has
+no bibliography, which is precisely the case the confirmation rule's second clause
+exists for. It does extract tables, against this plan's original decision — see D20.
 
 <trailer>"
 ```
@@ -1488,7 +1492,8 @@ FILING_HTML = """<html><head><title>FORM 10-K</title></head><body>
 
 
 def test_a_long_html_document_is_confirmed(tmp_path):
-    # IND001 in the real corpus: a SEC filing of 247,993 characters, with no bibliography. The
+    # IND001 in the real corpus: an EDGAR prospectus supplement, 247,993 characters by the
+    # content gate's count, with no bibliography. The
     # confirmation rule's second clause is for exactly this, and marking it NOT_PDF dropped a
     # real document out of the count.
     store = Store("t", base=tmp_path)

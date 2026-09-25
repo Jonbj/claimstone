@@ -18,6 +18,7 @@ a derivation that found nothing are different facts.
 from __future__ import annotations
 
 import collections
+import json
 import pathlib
 import sys
 import xml.etree.ElementTree as ET
@@ -25,6 +26,7 @@ import xml.etree.ElementTree as ET
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 
 from claimstone import chunk as chunker  # noqa: E402
+from claimstone import html_doc  # noqa: E402
 from claimstone import tei as tei_parser  # noqa: E402
 from claimstone.config import load_project  # noqa: E402
 from claimstone.ids import normalize_title  # noqa: E402
@@ -46,6 +48,49 @@ def reference_title(entry: ET.Element) -> str:
             if found:
                 return found
     return ""
+
+
+def html_figures(project_name: str) -> str:
+    """The HTML full texts, which have no TEI and so are invisible to the loop above.
+
+    The corpus holds exactly one, and it is the document `html_doc.py` exists for. Its tables are
+    most of the reason: the rules that decide what is a table and what is a publisher's spacing box
+    were chosen against this file, so the figures belong next to the TEI ones.
+    """
+    ledger = pathlib.Path("store") / project_name / "acquisitions.jsonl"
+    if not ledger.exists():
+        return "  no acquisitions ledger: HTML figures not derived\n"
+    artifacts: dict[str, str] = {}
+    for line in ledger.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        row = json.loads(line)
+        if (row.get("gate") or {}).get("kind") == "HTML_FULLTEXT":
+            stored = row.get("stored_path") or ""
+            if pathlib.Path(stored).exists():
+                artifacts[stored] = row.get("source_id") or "?"
+    if not artifacts:
+        return "  no HTML full text in the ledger: nothing to derive (not the same as zero)\n"
+
+    lines = [f"  HTML full texts                       {len(artifacts):>9}"]
+    for stored, source_id in sorted(artifacts.items(), key=lambda kv: kv[1]):
+        doc = html_doc.parse(pathlib.Path(stored).read_bytes())
+        result = chunker.chunk_document(doc, source_id=source_id)
+        kinds = collections.Counter(piece.kind for piece in result.chunks)
+        cells = sum(len(cell) for table in doc.tables for row in table.rows for cell in row)
+        lines += [
+            f"    {source_id}: prose characters             {doc.body_chars:>9,}",
+            f"    {source_id}: sections                     {len(doc.sections):>9}",
+            f"    {source_id}: tables                       {len(doc.tables):>9}"
+            f"  ({sum(len(t.rows) for t in doc.tables)} rows, {cells:,} characters of cells)",
+            f"    {source_id}: chunks                       {len(result.chunks):>9}"
+            f"  (prose {kinds[chunker.PROSE]} · table {kinds[chunker.TABLE]})",
+        ]
+    lines.append("")
+    lines.append("  A table needs two rows and two columns. Below that it is a publisher's spacing")
+    lines.append("  box and its text returns to the prose: on this document 140 tables were found")
+    lines.append("  and 110 were boxes, 104 of them 1x3. A chunk each would be 110 model calls.")
+    return "\n".join(lines) + "\n"
 
 
 def main(project_name: str) -> int:
@@ -130,6 +175,7 @@ def main(project_name: str) -> int:
     print(f"  divs dropped as bare heads            {dropped:>9}")
     print(f"  chunks over budget after splitting    {oversized:>9}")
     print()
+    print(html_figures(project_name))
     print(f"  manifest titles                       {len(manifest_titles):>9}")
     print(f"  overlap with references (exact title) {len(overlap):>9}")
     print()

@@ -172,11 +172,11 @@ so all fourteen confirm on the first clause. `IND008` has 0 references and 4,618
 satisfies neither.
 
 **Markup is normalized too, by a different parser.** GROBID reads PDFs, so an HTML source goes
-through `html_doc`, which produces the same `Document` dataclasses and extracts less: sections and
-paragraphs, no tables, no references, no footnotes. That is honest rather than limiting — a
+through `html_doc`, which produces the same `Document` dataclasses and extracts less: sections,
+paragraphs and tables, but no references and no footnotes. That is honest rather than limiting — a
 regulatory filing has no bibliography, and the confirmation rule's second clause exists for exactly
 that case. A first draft of the plan recorded every non-PDF as `NOT_PDF`, which would have dropped
-a 247,993-character SEC filing out of the corpus and turned the 14 of 25 below into 13 with nobody
+a 247,993-character EDGAR prospectus supplement out of the corpus and turned the 14 of 25 below into 13 with nobody
 noticing.
 
 A document that does not confirm **produces no chunks** and is recorded in `documents.jsonl` with

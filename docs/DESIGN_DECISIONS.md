@@ -136,7 +136,7 @@ those seven and no others.
 
 ```
 ACA009   PDF_FULLTEXT   unpaywall  1062 KB   accepted version in an institutional repository
-IND001   HTML_FULLTEXT  wayback     504 KB   a SEC EDGAR filing, 247,993 characters
+IND001   HTML_FULLTEXT  wayback     504 KB   a 424B2 prospectus supplement, 247,993 chars
 IND007   PDF_FULLTEXT   wayback     934 KB   an S&P Global PDF
 total   15/25  0.60   floor 0.80 (v1)   INSUFFICIENT_ACQUISITION
 failures  ABSTRACT_ONLY 6   PAYWALL_403 4   (sciencedirect 2, wiley 1, doi.org 1)
@@ -479,3 +479,45 @@ look at, and looking is what corrected both.
 **What decides a short div is what it is, not how long it is.** The 95 short divs are 28 bare
 heads, 2 figure notes and 65 genuine short sections. Length alone would have thrown away 65
 sections of real prose.
+
+## D20 — The HTML path extracts tables, because not extracting them does not remove them
+The stage 3 plan decided `html_doc` would skip tables: a filing has no bibliography, and its tables
+need the work TEI tables already received. That reasoning was written before anyone opened the file.
+
+### Measured, 2026-09-25
+
+`IND001` is the corpus's only HTML full text, and it is not the SEC 10-K three documents called it.
+It is a **Credit Suisse 424B2 prospectus supplement** filed on EDGAR, describing an index built on
+RavenPack event scores. It has **no `h1`, `h2` or `h3` anywhere** — EDGAR renders headings with font
+weight — so it is one unnamed section, and 140 `<table>` elements.
+
+```
+found                 140 tables      44,248 chars of cells, 18% of the document
+                      1,256 prose paragraphs, median 30 chars, 549 under 20
+a table (>=2 rows,     30 tables      222 rows, 14,112 chars of cells
+ >=2 columns)
+a layout box          110 tables      104 of them 1x3, text returned to prose
+after the rule          57 chunks     prose 27 · table 30, largest 8,995
+                        751 prose paragraphs, median 161 chars, 206 under 20
+```
+
+**Skipping tables does not skip them.** `td` is a block element, so every cell arrived as its own
+prose paragraph: a bare `4.2` packed next to unrelated prose, which a model attributes to whichever
+sentence precedes it. The median prose paragraph was 30 characters and 549 of 1,256 were under 20.
+The choice was never "tables or no tables"; it was "tables, or tables silently flattened into
+prose".
+
+**Two rows and two columns.** Below that it is a publisher's spacing box, and its text returns to
+the prose at the position it occupied. Keeping the boxes as tables would be 110 extra chunks on one
+document — at the measured local operating point of ~5 calls an hour, 22 hours of model time for
+spacing elements. The 30 that survive are real: a 54-row event-category scoring table, a 40-row
+one, the S&P sector tickers, worked headline-scoring examples.
+
+**Nothing leaves the document.** A demoted box's cells are asserted present in some chunk, and the
+cell that holds a nested table keeps its own words — the first implementation dropped them, because
+opening the inner table cleared the buffer mid-cell.
+
+**Two instruments, two counts, and no reconciliation offered.** The content gate recorded 247,993
+characters; this parser finds 232,084 of prose and 14,112 in cells. The gate strips tags without
+regard to block boundaries and this one does not. Neither number is wrong and they are not
+comparable, which is the same reason `chunk_version` and `gate_version` exist.
