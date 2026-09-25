@@ -1001,10 +1001,13 @@ def chunk_document(
         keep.append((head, paragraphs))
 
     if pending is not None:
-        # Nothing followed it, so it belongs to what came before.
+        # Nothing followed it, so it belongs to what came before. Its head travels with it as a
+        # line of text: dropping it would lose the provenance of the paragraphs that follow, and
+        # the forward merge keeps it.
         if keep:
             head, paragraphs = keep[-1]
-            keep[-1] = (head, paragraphs + pending[1])
+            trailing = ((pending[0],) if pending[0] else ()) + pending[1]
+            keep[-1] = (head, paragraphs + trailing)
             result.merged_sections += 1
         else:
             keep.append(pending)

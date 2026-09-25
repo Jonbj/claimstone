@@ -24,6 +24,8 @@ import xml.etree.ElementTree as ET
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 
+from claimstone import chunk as chunker  # noqa: E402
+from claimstone import tei as tei_parser  # noqa: E402
 from claimstone.config import load_project  # noqa: E402
 from claimstone.ids import normalize_title  # noqa: E402
 
@@ -92,6 +94,21 @@ def main(project_name: str) -> int:
 
     cited = collections.Counter(len(docs) for docs in references.values())
 
+    # The chunk figures come from the module itself, never from a second reading of the TEI: two
+    # implementations would drift, and then this number would describe the tool rather than the
+    # chunker whose output stage 4 actually reads.
+    kinds: collections.Counter[str] = collections.Counter()
+    chunk_chars = dropped = merged = oversized = largest = 0
+    for path in files:
+        result = chunker.chunk_document(tei_parser.parse(path.read_bytes()), source_id=path.stem[:8])
+        dropped += result.dropped_sections
+        merged += result.merged_sections
+        oversized += result.oversized_chunks
+        for piece in result.chunks:
+            kinds[piece.kind] += 1
+            chunk_chars += len(piece.text)
+            largest = max(largest, len(piece.text))
+
     print(f"{project_name}: derived from {len(files)} TEI files in {tei_dir}/")
     print()
     print(f"  body characters (div prose only)      {body_chars:>9,}")
@@ -102,6 +119,16 @@ def main(project_name: str) -> int:
     print(f"  distinct references                   {len(references):>9}")
     for n in sorted(cited):
         print(f"    cited by {n} document(s)               {cited[n]:>9}")
+    print()
+    print(f"  chunks (version {chunker.CHUNK_VERSION})                     {sum(kinds.values()):>9}")
+    for kind in sorted(kinds):
+        print(f"    {kind:<36s}{kinds[kind]:>9}")
+    print(f"  characters in chunks                  {chunk_chars:>9,}")
+    print(f"    largest single chunk                {largest:>9,}"
+          f"  (budget {chunker.DEFAULT_THRESHOLDS['max_chunk_chars']:,})")
+    print(f"  sections merged forward or back       {merged:>9}")
+    print(f"  divs dropped as bare heads            {dropped:>9}")
+    print(f"  chunks over budget after splitting    {oversized:>9}")
     print()
     print(f"  manifest titles                       {len(manifest_titles):>9}")
     print(f"  overlap with references (exact title) {len(overlap):>9}")

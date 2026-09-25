@@ -440,3 +440,42 @@ reaches 18 at best, so the gap is not closable by retrying publishers. A public 
 actually clears its own preregistered floor is what would let the vertical slice be validated while
 this one stays gated — and lowering the floor to make the path look usable is the one move that
 remains off the table.
+
+## D19 — The chunker is an instrument, at `chunk_version 1`
+A chunk is the unit stage 4 prompts with and the unit the quote gate checks a quote against. So
+the boundaries and the rendering are not formatting: change either and a claim that was
+extractable stops being extractable, or a true quote starts failing the gate. Rendered once,
+stored with its hash, never rendered a second time for the check.
+
+### Measured, 2026-09-25
+
+The same 14 TEI, chunked by `claimstone/chunk.py` at `chunk_version 1`. Every figure below is
+reproduced by `.venv/bin/python tools/derive_corpus_figures.py alembic-s4`, which calls the module
+rather than reading the TEI a second time:
+
+```
+chunks                352      prose 224 · table 117 · note 11
+characters        928,473      largest single chunk 8,983 (budget 9,000)
+merged forward/back    77
+dropped as bare heads  28
+over budget after split 0
+```
+
+**117 tables in, 117 tables out, and nothing else dropped.** The 28 dropped divs are exactly the
+28 bare heads the TEI measurement found; the 117 table chunks are exactly its 117 tables. The
+chunker discards nothing it was not asked to.
+
+**Conservation is tested, not asserted.** Every paragraph of 40 characters or more appears in the
+chunks exactly as many times as in the document. A lost paragraph is a claim that can never be
+made, and a doubled one is a claim counted twice — neither is visible in a total.
+
+**One count, two instruments, 48 phantom duplicates.** Counting exact paragraph equality in the
+source against substring occurrence in the chunks reported 48 duplicates. All were artefacts: the
+repeated text is JSTOR's per-page watermark, already repeated in the source, and a one-character
+paragraph `'.'` was "found" 1,086 times. Counting both sides the same way gives zero. This is the
+same error as calling all 95 short divs captions on length alone — the corpus is small enough to
+look at, and looking is what corrected both.
+
+**What decides a short div is what it is, not how long it is.** The 95 short divs are 28 bare
+heads, 2 figure notes and 65 genuine short sections. Length alone would have thrown away 65
+sections of real prose.
