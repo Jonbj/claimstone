@@ -169,6 +169,7 @@ def run(
 
         row = common | {
             "tei_path": parsed_from,
+            "format": "pdf" if is_pdf else "html",
             "fulltext_confirmed": confirmed,
             "failure_class": None if confirmed else NOT_A_DOCUMENT,
             "reason": reason,
@@ -188,3 +189,44 @@ def run(
         done.add(digest)
         attempted += 1
         yield row
+
+
+def confirm_sweep(store: Store, name: str, values: list[int]) -> list[dict[str, Any]]:
+    """How many documents confirm as one threshold moves. Re-reads what is on disk; no network.
+
+    `min_references: 5` and `confirm_chars: 15000` were chosen by looking at fourteen documents. Two
+    constants chosen at a desk are two constants to interrogate, and the bytes are on disk under
+    their hash, so interrogating them is free — the same arrangement as gate-audit.
+    """
+    if name not in CONFIRM_DEFAULTS:
+        raise ValueError(f"unknown threshold {name!r}: {sorted(CONFIRM_DEFAULTS)}")
+
+    parsed: list[tei.Document] = []
+    missing = 0
+    for row in store.latest_by("documents.jsonl", "source_id").values():
+        path = pathlib.Path(str(row.get("tei_path") or ""))
+        if not path.exists():
+            missing += 1
+            continue
+        # The parser follows the recorded format, never the stored suffix. Handing markup to the
+        # TEI parser would count the one source confirmed by characters as unreadable, and a sweep
+        # of `confirm_chars` that excludes it would report that the threshold decides nothing.
+        parse = html_doc.parse if row.get("format") == "html" else tei.parse
+        try:
+            parsed.append(parse(path.read_bytes()))
+        except tei.TeiError:
+            missing += 1
+
+    points = []
+    for value in values:
+        th = {**CONFIRM_DEFAULTS, name: value}
+        confirmed = sum(1 for doc in parsed if confirm(doc, th)[0])
+        points.append({
+            "value": value,
+            "confirmed": confirmed,
+            "documents": len(parsed),
+            # Counted, not hidden: a document that cannot be re-read is a gap in the audit, and an
+            # audit that silently skips what it cannot read reports a cleaner corpus than exists.
+            "unreadable": missing,
+        })
+    return points

@@ -1714,6 +1714,7 @@ def run(
 
         row = common | {
             "tei_path": parsed_from,
+            "format": "pdf" if is_pdf else "html",
             "fulltext_confirmed": confirmed,
             "failure_class": None if confirmed else NOT_A_DOCUMENT,
             "reason": reason,
@@ -1831,8 +1832,12 @@ def confirm_sweep(store: Store, name: str, values: list[int]) -> list[dict[str, 
         if not path.exists():
             missing += 1
             continue
+        # The parser follows the recorded format, never the stored suffix. Handing markup to the TEI
+        # parser would count the one source confirmed by characters as unreadable, and a sweep of
+        # `confirm_chars` that excludes it would report that the threshold decides nothing.
+        parse = html_doc.parse if row.get("format") == "html" else tei.parse
         try:
-            parsed.append(tei.parse(path.read_bytes()))
+            parsed.append(parse(path.read_bytes()))
         except tei.TeiError:
             missing += 1
 

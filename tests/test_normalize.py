@@ -275,3 +275,52 @@ def test_an_unreadable_artifact_leaves_the_round_unable_to_certify(tmp_path):
     assert (measured["rate"], measured["rate_upper"]) == (0.5, 1.0)
     assert measured["final"] is False
     assert "awaiting_normalize" in measured["blocking"]
+
+
+def test_the_confirm_sweep_reports_a_count_per_threshold_value(tmp_path):
+    store = Store("t", base=tmp_path)
+    store.append("acquisitions.jsonl", acquired("S01", store, body=b"%PDF one"))
+    store.append("acquisitions.jsonl", acquired("IND008", store, body=b"%PDF two"))
+    list(normalize.run(store, FakeGrobid(tei_by_call={1: DOC, 2: FACT_SHEET})))
+    points = normalize.confirm_sweep(store, "min_references", [1, 2, 5, 40])
+    assert [p["value"] for p in points] == [1, 2, 5, 40]
+    assert points[0]["confirmed"] == 1      # DOC has 2 references, the fact sheet none
+    assert points[-1]["confirmed"] == 0     # nothing has 40
+    assert all(p["unreadable"] == 0 for p in points)
+
+
+def test_the_sweep_opens_no_socket_and_calls_no_grobid(tmp_path, monkeypatch):
+    import socket
+
+    store = Store("t", base=tmp_path)
+    store.append("acquisitions.jsonl", acquired("S01", store))
+    list(normalize.run(store, FakeGrobid()))
+
+    def refuse(*args, **kwargs):
+        raise AssertionError("the sweep must re-read the TEI on disk, not the network")
+
+    monkeypatch.setattr(socket.socket, "connect", refuse)
+    normalize.confirm_sweep(store, "confirm_chars", [1000, 50000])
+
+
+def test_an_unknown_threshold_is_refused(tmp_path):
+    store = Store("t", base=tmp_path)
+    with pytest.raises(ValueError, match="nonsense"):
+        normalize.confirm_sweep(store, "nonsense", [1])
+
+
+def test_the_sweep_reads_an_html_document_with_the_html_parser(tmp_path):
+    """The one document that confirms on the second clause must be in the sweep of that clause.
+
+    Parsing it as TEI would count it unreadable, and a sweep of confirm_chars that excludes the
+    only source confirmed by characters reports that the threshold decides nothing.
+    """
+    store = Store("t", base=tmp_path)
+    row = acquired("IND001", store, body=FILING_HTML.encode())
+    row["content_type"] = "text/html"
+    store.append("acquisitions.jsonl", row)
+    list(normalize.run(store, FakeGrobid()))
+
+    points = normalize.confirm_sweep(store, "confirm_chars", [1000, 10**9])
+    assert [p["unreadable"] for p in points] == [0, 0]
+    assert [p["confirmed"] for p in points] == [1, 0]
