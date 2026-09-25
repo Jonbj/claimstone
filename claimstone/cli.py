@@ -118,6 +118,7 @@ def _acquire(args: argparse.Namespace) -> int:
         use_apis=not args.no_apis,
         thresholds=project.gate_thresholds,
         policy=project.gate_policy,
+        classes=project.classes,
         limit=args.limit,
     ):
         done += 1

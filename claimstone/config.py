@@ -53,6 +53,14 @@ class SourceClass:
     # engine guessing that "academic" means ACA would misclassify a source the moment the two
     # stop lining up, and invariant 6 exists to prevent exactly that.
     aliases: tuple[str, ...] = ()
+    # This class's role in synthesis. Declared, never read off the id: the method verdict rule
+    # needs to know which sources are methodological, and inferring that from "MET" would put
+    # domain knowledge back in the package (invariant 4).
+    role: str = ""
+    # The content gate's policy for sources of this class, overriding the project's. A corpus of
+    # papers and regulatory filings cannot use one rule for both, and flipping the project-wide
+    # switch to `structural_signal: none` was measured admitting four of six known summaries.
+    gate_policy: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -152,6 +160,10 @@ def load_sources(root: pathlib.Path) -> tuple[tuple[SourceClass, ...], float, tu
                 notes=str(entry.get("notes") or ""),
                 aliases=tuple(
                     str(a).strip() for a in (entry.get("aliases") or []) if str(a).strip()
+                ),
+                role=str(entry.get("role") or "").strip(),
+                gate_policy=_gate_policy_fields(
+                    entry.get("gate_policy") or {}, where=f"sources.yaml class {entry.get('id')!r}"
                 ),
             )
         )
@@ -332,6 +344,48 @@ GATE_THRESHOLD_NAMES = ("min_pdf_bytes", "min_text_chars", "paywall_doubt_chars"
 GATE_POLICY_NAMES = ("paywall_phrases", "reference_headings", "structural_signal")
 
 
+def _gate_policy_fields(raw: Any, *, where: str) -> dict[str, Any]:
+    """Validate one gate-policy mapping, wherever it was declared."""
+    if not isinstance(raw, dict):
+        raise ConfigError(f"{where}: 'gate_policy' must be a mapping")
+    unknown = sorted(set(raw) - set(GATE_POLICY_NAMES))
+    if unknown:
+        raise ConfigError(
+            f"{where}: unknown gate_policy key(s): {', '.join(unknown)} "
+            f"(known: {', '.join(GATE_POLICY_NAMES)})"
+        )
+    policy: dict[str, Any] = {}
+    for name in ("paywall_phrases", "reference_headings"):
+        if name in raw:
+            values = raw[name]
+            if not isinstance(values, list) or not values:
+                raise ConfigError(f"{where}: gate_policy.{name} must be a non-empty list")
+            policy[name] = tuple(str(v).strip().lower() for v in values)
+    if "structural_signal" in raw:
+        signal = str(raw["structural_signal"]).strip()
+        if signal not in ("reference_list", "none"):
+            raise ConfigError(
+                f"{where}: gate_policy.structural_signal must be 'reference_list' or 'none'"
+            )
+        policy["structural_signal"] = signal
+    return policy
+
+
+def resolve_gate_policy(
+    project_policy: dict[str, Any], classes: Any, source_class: str | None
+) -> dict[str, Any]:
+    """The policy for one candidate: the project's, overlaid by its class's.
+
+    The class carries the override because genre is a property of the source rather than of the
+    project. A corpus of papers and filings needs a reference list required for the first and not
+    for the second, and one project-wide switch admitted four of six known summaries when flipped.
+    """
+    for klass in classes or ():
+        if klass.id == source_class and klass.gate_policy:
+            return {**project_policy, **klass.gate_policy}
+    return dict(project_policy)
+
+
 def load_gate_policy(root: pathlib.Path) -> dict[str, Any]:
     """The gate's language and genre assumptions, declared per project.
 
@@ -340,31 +394,10 @@ def load_gate_policy(root: pathlib.Path) -> dict[str, Any]:
     English scholarly prose; a project in another language, or one reading regulatory filings that
     cite nothing, states its own here instead of editing the package.
     """
-    raw = _read_yaml(pathlib.Path(root) / "sources.yaml").get("gate_policy") or {}
-    if not isinstance(raw, dict):
-        raise ConfigError("sources.yaml: 'gate_policy' must be a mapping")
-    unknown = sorted(set(raw) - set(GATE_POLICY_NAMES))
-    if unknown:
-        raise ConfigError(
-            f"sources.yaml: unknown gate_policy key(s): {', '.join(unknown)} "
-            f"(known: {', '.join(GATE_POLICY_NAMES)})"
-        )
-
-    policy: dict[str, Any] = {}
-    for name in ("paywall_phrases", "reference_headings"):
-        if name in raw:
-            values = raw[name]
-            if not isinstance(values, list) or not values:
-                raise ConfigError(f"sources.yaml: gate_policy.{name} must be a non-empty list")
-            policy[name] = tuple(str(v).strip().lower() for v in values)
-    if "structural_signal" in raw:
-        signal = str(raw["structural_signal"]).strip()
-        if signal not in ("reference_list", "none"):
-            raise ConfigError(
-                "sources.yaml: gate_policy.structural_signal must be 'reference_list' or 'none'"
-            )
-        policy["structural_signal"] = signal
-    return policy
+    return _gate_policy_fields(
+        _read_yaml(pathlib.Path(root) / "sources.yaml").get("gate_policy") or {},
+        where="sources.yaml",
+    )
 
 
 def load_manifest(

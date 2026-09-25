@@ -50,6 +50,7 @@ def acquire_one(
     use_apis: bool = True,
     thresholds: dict[str, int] | None = None,
     policy: dict[str, Any] | None = None,
+    classes: Any = None,
 ) -> dict[str, Any]:
     """Try the cascade for one candidate. Returns the ledger row; never raises on a fetch."""
     if not candidate.get("source_class"):
@@ -59,6 +60,12 @@ def acquire_one(
         )
 
     th = {**fulltext.DEFAULT_THRESHOLDS, **(thresholds or {})}
+    # The gate's policy comes from the candidate's own class where that class declares one: a
+    # filing that cites nothing and a paper that must are not judged by one rule.
+    if classes is not None:
+        from claimstone.config import resolve_gate_policy
+
+        policy = resolve_gate_policy(policy or {}, classes, candidate.get("source_class"))
     locations, oa_status = resolve.plan(fetcher, candidate, use_apis=use_apis)
     attempts: list[dict[str, Any]] = []
     common = {
@@ -185,6 +192,7 @@ def run(
     use_apis: bool = True,
     thresholds: dict[str, int] | None = None,
     policy: dict[str, Any] | None = None,
+    classes: Any = None,
     limit: int | None = None,
 ) -> Iterator[dict[str, Any]]:
     """Acquire what the retry policy allows. A candidate it declines writes no row."""
@@ -198,7 +206,7 @@ def run(
             continue
         row = acquire_one(
             fetcher, store, candidate, campaign=campaign, use_apis=use_apis,
-            thresholds=thresholds, policy=policy,
+            thresholds=thresholds, policy=policy, classes=classes,
         )
         row["attempt_no"] = int((prior or {}).get("attempt_no") or 0) + 1
         store.append("acquisitions.jsonl", row)
