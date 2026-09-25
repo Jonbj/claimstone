@@ -67,6 +67,18 @@ reported standard errors in observational research are not trustworthy.
 Adopted: **GROBID** (Docker, REST — PDF to TEI with references and tables is genuinely
 hard and the boundary is HTTP), **SearXNG** (Docker), **metafor** (Rscript, file boundary).
 
+**The GROBID build is part of the instrument, recorded 2026-09-25.** Every corpus figure — body
+characters, sections, references, tables — was measured with `lfoppiano/grobid:0.8.1`, and the two
+images on hand are not interchangeable: on the same PDF `latest-crf` produced 508 KB of TEI against
+0.8.1's 91 KB, and it uses *more* memory rather than less. Switching would change every count
+without touching a version number, so `tools/check_instrument_versions.py` holds the declared image
+to this entry.
+
+On this machine the container needs `-e JAVA_TOOL_OPTIONS=-XX:-UseContainerSupport`: the image's JVM
+cannot read cgroup v2 under Docker 29 and dies at startup. Measured footprint, 2.4 GB idle and
+3.6 GB under load, which makes GROBID — not the language model — the binding constraint on where
+this runs.
+
 Rejected, with reasons:
 - **PaperQA2** — a framework that wants to own the data model, and it lacks the two things
   most needed here: it does not acquire PDFs and it does not verify quotes mechanically.

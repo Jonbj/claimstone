@@ -29,12 +29,26 @@ INSTRUMENTS = (
     ("claimstone/chunk.py", "CHUNK_VERSION", "chunk_version"),
 )
 
+# The parser is an instrument too, and a string rather than a number. Measured: lfoppiano/grobid
+# latest-crf produced 508 KB of TEI against 0.8.1's 91 KB on the same PDF, so a switch would change
+# every body-character, section and reference count without touching a version number.
+PARSERS = (("claimstone/grobid.py", "IMAGE"),)
+
 
 def declared(path: pathlib.Path, constant: str) -> int | None:
     if not path.exists():
         return None
     found = re.search(rf"^{constant}\s*=\s*(\d+)", path.read_text(encoding="utf-8"), re.M)
     return int(found.group(1)) if found else None
+
+
+def declared_string(path: pathlib.Path, constant: str) -> str | None:
+    if not path.exists():
+        return None
+    found = re.search(
+        rf'^{constant}\s*=\s*["\']([^"\']+)["\']', path.read_text(encoding="utf-8"), re.M
+    )
+    return found.group(1) if found else None
 
 
 def main() -> int:
@@ -58,6 +72,18 @@ def main() -> int:
                 f"docs/DESIGN_DECISIONS.md never mentions {phrase} {version}. "
                 f"A figure measured under a different instrument is not comparable to one "
                 f"measured under this; record what changed and which figures it supersedes."
+            )
+
+    for relative, constant in PARSERS:
+        image = declared_string(ROOT / relative, constant)
+        if image is None:
+            continue
+        checked += 1
+        if image not in record:
+            problems.append(
+                f"{relative} declares {constant} = {image!r}, and "
+                f"docs/DESIGN_DECISIONS.md never names it. Figures measured with a different "
+                f"parser build are not comparable to figures measured with this one."
             )
 
     for problem in problems:
