@@ -536,7 +536,8 @@ normalized            15 sources        14 confirmed · 1 NOT_A_DOCUMENT · 0 aw
 rate                  14/25 = 0.56      lower bound and ceiling both 0.56, final
 floor                 0.80 (v1)         INSUFFICIENT_ACQUISITION
 by class              ACA 7/10 0.70 · IND 3/9 0.33 · MET 5/6 0.83
-chunks                 493              14 TEI documents plus IND001's 57
+chunks                406              prose 249 · table 146 · note 11
+references            710              distinct, deduplicated across the corpus
 ```
 
 **The headline figure is 0.56, and it is now `final`.** Nothing is awaiting normalization, there are
