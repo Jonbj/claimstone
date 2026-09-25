@@ -12,7 +12,7 @@ from claimstone import config
 from claimstone.store import Store
 
 
-def project_at(tmp_path, questions, *, version=1):
+def project_at(tmp_path, questions, *, version=1, frozen="2026-09-22"):
     (tmp_path / "sources.yaml").write_text(
         "classes:\n  - id: ACA\n    name: a\n    weight_hint: highest\n"
         "acquisition_floor: 0.8\n", encoding="utf-8")
@@ -20,7 +20,7 @@ def project_at(tmp_path, questions, *, version=1):
         "topics:\n  - id: T01\n    label: t\n    terms: [a]\n", encoding="utf-8")
     body = "".join(f"  - id: {qid}\n    text: {text}\n" for qid, text in questions)
     (tmp_path / "questions.yaml").write_text(
-        f"registry_version: {version}\nfrozen_at: 2026-09-22\nquestions:\n{body}",
+        f"registry_version: {version}\nfrozen_at: {frozen}\nquestions:\n{body}",
         encoding="utf-8")
     return config.load_project(tmp_path)
 
@@ -84,7 +84,9 @@ def test_a_bumped_version_is_accepted_and_recorded(tmp_path):
     store = Store("t", base=tmp_path / "store")
     config.check_registry_drift(loaded, store)
 
-    bumped = project_at(tmp_path, [("Q01", "An effect exists at some horizon.")], version=2)
+    # A bump moves the version and the date: "dated" is half of what invariant 5 asks for.
+    bumped = project_at(tmp_path, [("Q01", "An effect exists at some horizon.")],
+                        version=2, frozen="2026-09-26")
     config.check_registry_drift(bumped, store)
     versions = [row["registry_version"] for row in store.read("registry.jsonl")]
     assert versions == [1, 2]
@@ -136,3 +138,48 @@ def test_an_unknown_kind_is_a_configuration_error(tmp_path):
         "  - id: Q01\n    text: An effect exists.\n    kind: vibes\n", encoding="utf-8")
     with pytest.raises(config.ConfigError, match="vibes"):
         config.load_project(tmp_path)
+
+
+def test_a_registry_version_must_increase(tmp_path):
+    # A version recorded once cannot be reused by a different registry, and a later version must
+    # be later: accepting v4 with an unchanged freeze date lets a bump be cosmetic.
+    from claimstone.store import Store
+
+    def at(version, frozen):
+        (tmp_path / "sources.yaml").write_text(
+            "classes:\n  - id: ACA\n    name: a\n    weight_hint: highest\n"
+            "acquisition_floor: 0.8\n", encoding="utf-8")
+        (tmp_path / "topics.yaml").write_text(
+            "topics:\n  - id: T01\n    label: t\n    terms: [a]\n", encoding="utf-8")
+        (tmp_path / "questions.yaml").write_text(
+            f"registry_version: {version}\nfrozen_at: {frozen}\nquestions:\n"
+            f"  - id: Q01\n    text: A question at v{version}.\n    kind: effect\n",
+            encoding="utf-8")
+        return config.load_project(tmp_path)
+
+    store = Store("t", base=tmp_path / "store")
+    config.check_registry_drift(at(2, "2026-09-25"), store)
+    with pytest.raises(config.RegistryDrift, match="not later"):
+        config.check_registry_drift(at(3, "2026-09-25"), store)
+    config.check_registry_drift(at(3, "2026-09-26"), store)
+
+
+def test_a_version_cannot_go_backwards(tmp_path):
+    from claimstone.store import Store
+
+    def at(version):
+        (tmp_path / "sources.yaml").write_text(
+            "classes:\n  - id: ACA\n    name: a\n    weight_hint: highest\n"
+            "acquisition_floor: 0.8\n", encoding="utf-8")
+        (tmp_path / "topics.yaml").write_text(
+            "topics:\n  - id: T01\n    label: t\n    terms: [a]\n", encoding="utf-8")
+        (tmp_path / "questions.yaml").write_text(
+            f"registry_version: {version}\nfrozen_at: 2026-09-2{version}\nquestions:\n"
+            f"  - id: Q01\n    text: A question at v{version}.\n    kind: effect\n",
+            encoding="utf-8")
+        return config.load_project(tmp_path)
+
+    store = Store("t", base=tmp_path / "store")
+    config.check_registry_drift(at(5), store)
+    with pytest.raises(config.RegistryDrift, match="below"):
+        config.check_registry_drift(at(4), store)

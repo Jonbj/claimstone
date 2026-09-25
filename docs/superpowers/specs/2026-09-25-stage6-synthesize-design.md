@@ -46,93 +46,131 @@ a multiple-comparisons disclosure. It is not a correction and must never be labe
 survives this unchanged. It is a `method` question about what the literature did, not a calculation
 this stage performs.
 
-## 2. What it does
+## 2. What it does, and what it refuses to decide
 
-Reads `claims.jsonl` joined to `reviews.jsonl`, keeps the claims whose review is `SUPPORTED`, applies
-the rule for each question's `kind`, and writes one verdict per question plus the evidence it rests
-on.
+**Revised 2026-09-25.** The first version applied a verdict rule automatically. A review established
+that the rule was vote counting with a threshold, and the verdict contract now splits the work in
+two (that spec, §3). This stage implements **layer 1 only.**
 
-**It refuses to produce any verdict when `admissibility.admit` reports
-`INSUFFICIENT_ACQUISITION`.** That is invariant 3, and this is the first place in the project where
-it has something to gate. The refusal is the whole output: the report says the round is inadmissible,
-gives the rate and the floor, and stops. There is no flag.
+It reads `claims.jsonl` joined to `reviews.jsonl`, keeps the results whose review is `SUPPORTED`, and
+writes an **evidence profile** per question: everything known, nothing concluded. It reads
+`adjudications.jsonl` if it exists and displays the verdicts recorded there, marking any whose
+profile hash no longer matches as **stale**.
 
-## 3. The verdict rules, as code
+It produces no verdict of its own. The one categorical thing it may say is `NO_VERIFIED_CLAIM`.
 
-From D16, with the thresholds declared in `sources.yaml` under `verdict_rules`:
+### Two gates, both refusals
 
-| kind | `SUPPORTED` when |
-|---|---|
-| `effect` | ≥ `min_studies` distinct `source_id` with stance `SUPPORTS`, spanning ≥ `min_distinct_data_sources` distinct `sample` values, **after** contrary claims are counted |
-| `heterogeneity` | ≥ `min_studies` distinct sources with a consistent `moderator` direction **and** ≥ 1 with `absent_case_reported: true` |
-| `method` | ≥ 1 source of a methodological class with `support_type: ENDORSEMENT` **and** ≥ 1 with `DEMONSTRATED_FAILURE` |
-| `premise` | ≥ 1 source stating it and none contradicting |
-| `operational` | never. No verdict is produced |
+**It refuses to write profiles at all when the round is not admissible.** `admissibility.admit`
+reporting `INSUFFICIENT_ACQUISITION` stops the stage: invariant 3, and this is the first place in the
+project with something to gate.
 
-`CONTRADICTED` is the same bar met by `CONTRADICTS` stances. `CONTESTED_IN_LITERATURE` is both bars
-met. `UNANSWERED_IN_LITERATURE` is supported claims existing and no bar met. `NEVER_ASKED` is no
-claim citing the question.
+**It marks every profile provisional when the round is not final.** `admit()` returns `final: False`
+while anything is awaiting normalization, an acquisition has no candidate, or a ledger had to be
+repaired — and a profile from an incomplete corpus is a profile that can still change. Claims
+awaiting review count the same way: one later `SUPPORTED` review can move a question out of
+`NO_VERIFIED_CLAIM`, so a profile with unreviewed claims is not settled.
 
-**Studies are counted by distinct `source_id`**, per stage 4 §5: a paper discussing an effect in five
-sections is one study. And `min_distinct_data_sources` counts distinct `sample` strings, which is a
-weak proxy and declared as one — two papers writing "US equities 1996-2008" differently will count as
-two, and the remedy is the independence rule stage 4 left open, not a cleverer string comparison
-here.
+A provisional profile is written, labelled, and **may not be adjudicated**. `synthesize` refuses to
+accept an adjudication whose profile was provisional, because a verdict recorded against evidence
+that was still arriving is a verdict about something that no longer exists.
 
-## 4. The evidence table
+## 3. What a profile contains
 
-One per question, and it is the actual deliverable: a verdict without it is an assertion.
+Per question, and the fields are the ones stage 4 extracted rather than a subset of them:
+
+- every verified result: estimate, scale, uncertainty as reported, horizon, sample label, design,
+  dependence, source, source class
+- **the same fields for every contrary result**, because a profile showing only the agreeing side is
+  a selection rather than a description
+- the **direction count**, labelled a count
+- coverage: sources speaking to the question over sources examined
+- gate rejections attributed to this question, by reason
+- claims awaiting review
+- `by_class` for both sides separately
+- **sample labels verbatim, with linkage declared unestablished** — no independence count, because
+  no string comparison establishes one
+
+For `heterogeneity`, the contrast and its uncertainty and whether the analysis was prespecified. For
+`method`, endorsements and demonstrated failures separately, each with its source's declared `role`.
+
+## 4. The profile as printed
 
 ```
-H02  effect                                          SUPPORTED
-  for       4 sources   ACA001 ACA002 ACA003 ACA009   (3 distinct samples)
-  against   1 source    ACA004
-  qualified 1 source    ACA007
-  awaiting review       2 claims
-  gate rejected         6 claims   QUOTE_NOT_FOUND 4  VALUE_DISAGREES 2
-  rests on  9 of 14 examined sources
+H02  effect                       provisional — 2 claims awaiting review
+  results
+    ACA001  +2.4%  (0.008)  1w   panel, clustered by firm and week   sample: US equities 1996-2008
+    ACA002  +1.1%  (0.005)  1w   panel, clustered by firm            sample: US equities 1996-2008
+    ACA003  +0.9%  [0.1,1.7] 4w  portfolio sort                      sample: CRSP 1993-2010
+    ACA004  -0.3%  (0.004)  1w   panel, clustered by firm            sample: US equities 1996-2008
+  direction count       3 positive, 1 negative   (a count, not a strength)
+  linkage               unestablished: three results share a sample label
+  coverage              4 of 14 examined sources
+  gate rejected         6   QUOTE_NOT_FOUND 4   VALUE_DISAGREES 2
+  by class              for ACA 3   against ACA 1
+  no controlled family-wise error rate across the 5 effect questions
 
-H25  effect                                UNANSWERED_IN_LITERATURE
-  for       1 source    ACA002
-  rests on  1 of 14 examined sources
-  reason    min_studies 3 not met
-
-H11  operational                                    no verdict
-  reason    no paper can confirm an architectural choice of the consuming system
+H11  operational                  LITERATURE_VERDICT_NOT_APPLICABLE
+  reason   no paper can confirm an architectural choice of the consuming system
+  see      H26, which asks the literature question underneath
 ```
 
-**The gate-rejected line is there on purpose.** A question whose claims were all discarded by the
-mechanical gate is not in the same state as one nobody wrote about, and a verdict that showed only
-what survived would hide the difference. The rejection ledger being "the denominator" means this:
-it appears beside the verdict it could have changed.
+Three things in that output exist because of a review.
 
-`awaiting review` likewise blocks nothing from being reported but is stated, because an unreviewed
-claim is not a supported claim (stage 5 §4) and a reader deciding how much to trust a verdict needs
-to know the review was incomplete.
+**`linkage unestablished`** replaces a count of distinct datasets. Three of those four results carry
+the same sample label, which may mean one dataset or three overlapping extracts of it, and the
+earlier rule would have called two spellings two datasets.
 
-## 5. What a verdict row carries
+**The negative result is shown with the same fields as the positives.** The earlier `by_class`
+counted supporting sources only, which would have hidden a verdict resting on vendor research
+disagreeing with refereed work.
+
+**The error-rate line is mandatory.** It is not a correction and must never be printed as one.
+
+## 5. What the two rows carry
+
+A **profile row**, written by this stage:
 
 ```json
-{"question_id": "H02", "kind": "effect", "verdict": "SUPPORTED",
- "for": ["ACA001", "ACA002", "ACA003", "ACA009"],
- "against": ["ACA004"], "qualified": ["ACA007"],
- "distinct_samples": 3,
- "awaiting_review": 2,
+{"question_id": "H02", "kind": "effect",
+ "state": null,
+ "results": [{"result_id": "ACA001#c2|r1", "source_id": "ACA001", "source_class": "ACA",
+              "stance": "SUPPORTS", "estimate": 0.024, "scale": "percent",
+              "uncertainty_as_written": "(0.008)", "horizon_as_written": "one week",
+              "sample": "US equities 1996-2008", "design": "panel regression",
+              "dependence": "clustered by firm and week"}],
+ "direction_count": {"SUPPORTS": 3, "CONTRADICTS": 1, "QUALIFIES": 0},
+ "linkage": "unestablished",
+ "coverage": {"sources": 4, "examined": 14},
  "gate_rejected": {"QUOTE_NOT_FOUND": 4, "VALUE_DISAGREES": 2},
- "examined_sources": 14,
- "by_class": {"ACA": 4, "MET": 0, "IND": 0},
- "rule": {"min_studies": 3, "min_distinct_data_sources": 2},
- "verdict_rules_version": 1,
+ "awaiting_review": 2,
+ "by_class": {"for": {"ACA": 3}, "against": {"ACA": 1}},
+ "provisional": true, "blocking": ["awaiting_review"],
+ "profile_sha256": "…",
+ "decision_contract_version": 1,
  "registry_version": 3, "registry_sha256": "…",
- "decided_at": "…"}
+ "built_at": "…"}
 ```
 
-The rule that decided it rides on the row, with its version, and so does the registry digest. A
-verdict is a statement about a question at a version under a rule, and without all three it cannot
-be compared to another verdict or defended against one.
+`state` is `null` for a profile that has results and `"NO_VERIFIED_CLAIM"` for one that has none. It
+is never a verdict.
 
-`by_class` is on every row because D3 requires classes reported before anything is pooled — and it is
-the line that would show a verdict resting entirely on vendor research.
+An **adjudication row**, written by a person and only read here:
+
+```json
+{"question_id": "H02", "verdict": "SUPPORTED",
+ "rationale": "…", "profile_sha256": "…",
+ "adjudicated_by": "…", "adjudicated_at": "…"}
+```
+
+`verdicts` displays an adjudication only when its `profile_sha256` matches the current profile. When
+it does not, the row is shown as **stale** with both hashes, because a judgement made against
+different evidence is a judgement about a different question and quietly keeping it on screen is how
+a verdict outlives its reason.
+
+Three identities ride on the profile: `decision_contract_version`, `registry_version` and
+`registry_sha256`. A profile is a statement about a question at a registry version under a decision
+contract, and two profiles are comparable only when all three agree.
 
 ## 6. Module boundaries and CLI
 
@@ -146,22 +184,28 @@ distinct samples, absent cases, rejections per question — and it must be testa
 `synthesize.py` reads, gates on admissibility, and writes.
 
 ```
-claimstone synthesize <project> [--batch B]     verdicts.jsonl, or the refusal
-claimstone verdicts <project> [--question H02] [--json]    the evidence tables
+claimstone synthesize <project> [--batch B]                 profiles.jsonl, or the refusal
+claimstone verdicts <project> [--question H02] [--json]     profiles with any adjudication
+claimstone adjudicate <project> H02 --verdict SUPPORTED --rationale-file r.md
 ```
 
 No `model-run` step: there is no model here.
+
+`adjudicate` refuses a provisional profile, refuses a rationale shorter than a declared minimum, and
+records the profile hash it was shown. It is the only command in the project that writes a human
+judgement, and it is the only place a verdict can come from.
 
 ## 7. Testing
 
 | file | covers |
 |---|---|
-| `test_evidence.py` | counting by `source_id` and not by record; distinct samples; an absent case present and missing; endorsement without demonstration and both; rejections attributed to the right question |
-| `test_synthesize.py` | each kind's rule at, below and above its bar; `CONTESTED_IN_LITERATURE` when both bars are met; `NEVER_ASKED` distinguished from `UNANSWERED_IN_LITERATURE`; an `operational` question producing no verdict; **`INSUFFICIENT_ACQUISITION` producing no verdicts at all**; unreviewed claims excluded but reported; the rule and both registry fields on every row |
+| `test_evidence.py` | one record per result carried through with all its fields; contrary results present with the same fields; direction counts; coverage; rejections attributed to the right question; `by_class` split for and against; sample labels verbatim and linkage always `unestablished` |
+| `test_synthesize.py` | `INSUFFICIENT_ACQUISITION` producing **no profiles at all**; a non-final round producing profiles marked provisional; unreviewed claims making a profile provisional; `NO_VERIFIED_CLAIM` where nothing survived; an `operational` question producing a `LITERATURE_VERDICT_NOT_APPLICABLE` row rather than no row; all three identities on every profile |
+| `test_adjudicate.py` | a provisional profile refused; a stale adjudication displayed as stale with both hashes; a matching one displayed; a too-short rationale refused |
 
-And one test that asserts the module contains no pooling and no multiplicity correction, in the shape
-`discover_report` already uses: adding either later should mean arguing with §1 rather than quietly
-shipping it.
+And one test asserting the module contains **no threshold that decides a verdict**, in the shape
+`discover_report` already uses for the population estimate: reintroducing an automatic `SUPPORTED`
+should mean arguing with the verdict contract's §3 rather than quietly shipping it.
 
 ## 8. Out of scope, deliberately
 
@@ -174,6 +218,13 @@ for the five `effect` questions when someone wants a magnitude; not needed for a
 registry version and digest — and the comparison itself is a separate report, written when there are
 two rounds to compare.
 
-**A confidence or strength score per verdict.** The five states plus the evidence table say what is
-known. A number on top of them would be a summary of a summary, and the first thing anyone would do
-is average it.
+**A confidence or strength score per verdict.** The five states plus the profile say what is known. A
+number on top of them would be a summary of a summary, and the first thing anyone would do is
+average it.
+
+**Any automatic verdict** (§2, and the verdict contract §3). Layer 1 describes; a person judges and
+signs. Reintroducing a threshold means showing it does not do what the first one did.
+
+**A material-effect threshold.** What magnitude matters is per question and belongs to whoever asked
+it. Until it is declared, an adjudication reasoning about magnitude is reasoning without a bar, and
+its rationale has to say so.

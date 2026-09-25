@@ -14,6 +14,9 @@ classes:
     name: methodological reference
     weight_hint: high
     notes: textbook, handbook chapter, methods guide; supports design not effect size
+    # Declared, never read off the id: the method verdict rule asks which classes are
+    # methodological, and inferring it from "MET" would put domain knowledge in the engine.
+    role: methodological
   - id: IND
     name: industry / practitioner research
     weight_hint: medium
@@ -26,6 +29,11 @@ classes:
     name: primary documentation
     weight_hint: context
     notes: exchange rules, provider API docs, regulatory filings
+    # A filing or a rulebook cites nothing. Requiring a reference list would reject every source
+    # of this class, so the genre carries its own gate policy rather than the project flipping a
+    # switch that also loosens the gate for papers.
+    gate_policy:
+      structural_signal: none
 
 # A round may not produce verdicts if fewer than this share of *found* sources
 # were actually obtained. See README, "Admissibility".

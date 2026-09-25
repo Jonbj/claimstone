@@ -75,19 +75,39 @@ may not use it, in the same shape as stage 3's `awaiting_normalize`: counting an
 supported would give the verdict rules an input nobody checked, and counting it as unsupported would
 make a verdict fall because stage 5 had not finished.
 
-## 5. The review rate is the yardstick D13 was waiting for
+## 5. The review rate is half a yardstick
 
-D13 deferred lane assignment to a measurement and did not say which. This is it.
+D13 deferred lane assignment to a measurement and did not say which. An earlier version of this
+section claimed this was it. **It is not, on its own**, and a review said why in one sentence: the
+`OVERSTATED` rate among accepted claims is a conditional precision, not extraction quality.
 
-**The `OVERSTATED` rate per extraction backend answers "which backend extracts better."** Two
-backends drain the same `requests.jsonl` (the `model_call` boundary guarantees their results line up
-per call), their claims pass the same mechanical gate, and the same reviewer judges both. The
-backend whose claims survive an adversarial read more often is better at this lane, and the
-difference is a number rather than a preference.
+**A backend emitting one bland, safe, well-quoted claim per chunk wins on that rate while missing ten
+material results.** Precision without recall rewards timidity, and the extractor whose claims survive
+best could be the one that claimed least.
 
-For that to hold, the reviewer must be **held fixed** while the extractor varies — the comparison is
-between extractors, and a reviewer that changed with them would measure nothing. `review-report`
-therefore groups by `extracted_by` and states the single `reviewed_by` used.
+So comparing extractors needs four numbers over **paired `(chunk, question)` units**, not one:
+
+| | what it says |
+|---|---|
+| verified useful results | how much was found and survived both the gate and the reader |
+| misses | results present in the chunk that this backend did not propose |
+| gate rejections, by reason | how much it proposed badly |
+| `OVERSTATED` share | how much it proposed beyond its evidence |
+
+**Misses cannot be measured without a reference**, which is the honest difficulty and the reason this
+is not a finished measurement. It needs a blind, human-adjudicated sample of chunks: someone reads
+the chunk and lists what a correct extraction would find, and both backends are scored against that.
+Until such a sample exists, the comparison can report the other three and must not present them as
+extraction quality.
+
+And one fixed reviewer controls reviewer *variation* while retaining reviewer *bias*. It is not
+ground truth: a reviewer that systematically accepts a certain kind of overreach will flatter every
+extractor equally. The fixed reviewer makes the comparison internally consistent, not correct.
+
+`review-report` therefore groups by `extracted_by`, states the single `reviewed_by`, and labels its
+output a **precision-side comparison** with the recall side named as missing. It also records a
+canonical model identity rather than a backend name, because two endpoints can serve the same
+underlying model and a comparison between them would measure nothing at all.
 
 ## 6. Module boundaries and CLI
 
@@ -114,7 +134,7 @@ backend was *asked*, and only the results know which answered.
 
 | file | covers |
 |---|---|
-| `test_review.py` | units built from claims with the chunk attached; the same-model refusal at build and at harvest; the four verdicts round-tripped; an unreviewed claim reported as awaiting and never as supported; `review-report` grouping by `extracted_by` with one `reviewed_by` |
+| `test_review.py` | units built from claims with the chunk attached; the same-model refusal at build and at harvest, matched on canonical model identity rather than backend name; the four verdicts round-tripped; an unreviewed claim reported as awaiting and never as supported; `review-report` grouping by `extracted_by`, stating one `reviewed_by`, and labelling itself precision-side with recall named as missing |
 
 No test reaches a model. Review units are built and inspected; harvest is fed prepared
 `results.jsonl` rows.

@@ -249,7 +249,9 @@ with an API key (Ollama Cloud), or a metered API. Every result row records `back
 **What decided it.** The local operating point (D4) implied weeks of wall-clock for a corpus
 of a few hundred documents, which forced a corpus ceiling — a limit on the science imposed by
 one machine. Measured against real rates instead: extraction of the 25-source manifest is
-~130 calls, and of a 300-source corpus ~1,500. On Ollama Cloud's hosted open models at
+~86 chunks, and since stage 4 asks one call per chunk per question kind, **~344 calls** (the ~130
+figure in an earlier version of this entry predated the four-lane design); a 300-source corpus is
+roughly 4,000. Stage 5 adds one review call per claim, about $5 for this corpus. On Ollama Cloud's hosted open models at
 $0.30/$1.20 per MTok that is **$0.23 and $2.63** respectively, inside the $60 of monthly
 credit a $20 plan includes; the adversarial reader of stage 5, whose input is compact by
 construction, is **~$1.30 for the whole corpus** on a frontier model. The ceiling was never
@@ -394,3 +396,35 @@ and conflicts", and forcing that into `UNANSWERED_IN_LITERATURE` would be the sa
 invariant 2 forbids, one category over. Invariant 2 forbids reporting absence as absence of effect;
 it does not forbid a fifth state, and an explicit abstention is the honest place for irreducible
 disagreement.
+
+## D18 — Stop specifying. The next artifact is a working vertical slice
+Adopted 2026-09-25, on the recommendation of a second adversarial review, which was asked whether
+the ratio of writing to working software was itself a finding and answered that it is.
+
+The state: 17 decisions before this one, 8 specifications, 4 implementation plans, ~2,400 lines of
+code, and **one stage of six actually built.** Stages 4, 5 and 6 were specified in a single day, and
+every threshold, independence assumption and false-rejection rate in them was chosen by reading
+documents rather than records.
+
+Two reviews found, between them, that the effect verdict was vote counting with a threshold, that
+the heterogeneity rule established nothing about moderation, that an independence count could be
+passed by two spellings of one dataset, that a gate check existed only because of a field nobody
+needed, and that the acquisition floor could pass a corpus read at 4%. **All five were errors of
+reasoning in a document, and all five would have been caught faster by one real record than by
+another specification.**
+
+So the next artifact is not a spec. It is **one complete effect question carried end to end** —
+normalize, extract, review, evidence profile — with at least one negative result and one duplicated
+dataset in it, because those are the two cases the removed rules got wrong. What that produces is
+what the rules get rewritten against.
+
+Three things stay blocked until it exists: what counts as an independent study, what magnitude is
+material per question, and whether the gate's whole-record rejection is affordable. None is
+answerable from a document, and answering them in one anyway is what this decision exists to stop.
+
+And in parallel, acquisition. The floor is 0.80; the corpus stands at 15 of 25 obtained, 14 once the
+fact sheet is excluded, and 20 confirmed documents are needed. Recovering the four remaining walls
+reaches 18 at best, so the gap is not closable by retrying publishers. A public pilot corpus that
+actually clears its own preregistered floor is what would let the vertical slice be validated while
+this one stays gated — and lowering the floor to make the path look usable is the one move that
+remains off the table.

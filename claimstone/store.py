@@ -17,6 +17,7 @@ to refuse.
 
 from __future__ import annotations
 
+import datetime as _dt
 import hashlib
 import json
 import pathlib
@@ -48,10 +49,54 @@ class Store:
     def path(self, name: str) -> pathlib.Path:
         return self.root / name
 
+    REPAIR_LEDGER = "ledger_repairs.jsonl"
+
     def append(self, name: str, row: dict[str, Any]) -> None:
+        """Append one row, repairing a half-written tail first.
+
+        Detecting a torn tail is not enough on its own: appending after one turns a recoverable
+        crash artefact into interior corruption that no reader can get past. The torn line was
+        never accepted by any reader, so discarding it loses nothing — but work between the last
+        complete row and the restart is gone, which is why the repair leaves an audit row.
+        """
         self.root.mkdir(parents=True, exist_ok=True)
+        self._ensure_clean_tail(name)
         with (self.root / name).open("a", encoding="utf-8") as handle:
             handle.write(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n")
+
+    def _ensure_clean_tail(self, name: str) -> None:
+        path = self.root / name
+        if not path.exists():
+            return
+        data = path.read_bytes()
+        if not data or data.endswith(b"\n"):
+            return
+        cut = data.rfind(b"\n")
+        discarded = len(data) - (cut + 1)
+        path.write_bytes(data[: cut + 1] if cut >= 0 else b"")
+        if name in self.torn_tail:
+            self.torn_tail.remove(name)
+        if name == self.REPAIR_LEDGER:
+            # The audit ledger repairs itself and does not record having done so: a recursive
+            # audit would be the only thing the audit ever recorded.
+            return
+        with (self.root / self.REPAIR_LEDGER).open("a", encoding="utf-8") as handle:
+            handle.write(
+                json.dumps(
+                    {
+                        "ledger": name,
+                        "discarded_bytes": discarded,
+                        "repaired_at": _dt.datetime.now(_dt.timezone.utc).isoformat(
+                            timespec="seconds"
+                        ),
+                        "note": "a half-written row was discarded; work since the last "
+                                "complete row needs redoing",
+                    },
+                    ensure_ascii=False,
+                    sort_keys=True,
+                )
+                + "\n"
+            )
 
     def append_many(self, name: str, rows: Iterable[dict[str, Any]]) -> int:
         count = 0

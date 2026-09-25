@@ -190,13 +190,21 @@ So `sources.yaml` may declare, under `gate_policy`:
 | `reference_headings` | replaces `references`, `bibliography`, `works cited` |
 | `structural_signal` | `reference_list` (default) or `none` |
 
-`structural_signal: none` asks only for length, and is **weaker on purpose**: a corpus of filings
-or API documentation has no bibliographies, and requiring one would reject every source in it. A
-project choosing it is accepting that `ABSTRACT_ONLY` cannot be detected structurally, and the
-verdict says so in its reason.
+The same three keys may appear **under an individual class**, where they override the project's for
+sources of that class.
 
-The policy in force is recorded on every ledger row beside the thresholds, for the same reason: a
-rate computed under a different policy is not comparable to one computed under this.
+`structural_signal: none` asks only for length, and is **weaker on purpose**: a corpus of filings or
+API documentation has no bibliographies, and requiring one would reject every source of that class.
+
+**It is declared per source class, not per project** — corrected 2026-09-25 after a review measured
+the project-wide switch admitting **four of the six artifacts already established to be abstract or
+product pages**. Genre is a property of the source, and a corpus holding both papers and filings
+needs the reference list required for the first and not the second. `DOC` declares it in both
+shipped projects; nothing else does.
+
+The policy in force is recorded as a **hash of the whole policy** on every ledger row. An earlier
+version stored only the count of paywall phrases, so two different lists of the same length were
+indistinguishable and a ledger could not tell two instruments apart.
 
 What this does **not** add is a "needs review" verdict. `gate-audit --show-rejected` already lists
 every rejection for a by-hand check, which is the same function without a state that nothing

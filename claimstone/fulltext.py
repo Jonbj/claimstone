@@ -102,13 +102,33 @@ class FullText:
             "gate_version": self.gate_version,
             "thresholds": dict(thresholds),
             # A rate computed under a different policy is not comparable to one computed under
-            # this, and without recording it the difference is invisible.
+            # this. An earlier version stored the *count* of paywall phrases, so two different
+            # lists of the same length were recorded identically and a ledger could not tell two
+            # instruments apart. The hash covers the whole policy.
             "policy": {
                 "structural_signal": applied["structural_signal"],
                 "reference_headings": list(applied["reference_headings"]),
                 "paywall_phrases": len(applied["paywall_phrases"]),
+                "sha256": _policy_digest(applied),
             },
         }
+
+
+def _policy_digest(policy: dict[str, Any]) -> str:
+    """One hash over everything the policy decides, so two instruments are distinguishable."""
+    import hashlib
+    import json as _json
+
+    payload = _json.dumps(
+        {
+            "structural_signal": policy["structural_signal"],
+            "reference_headings": sorted(policy["reference_headings"]),
+            "paywall_phrases": sorted(policy["paywall_phrases"]),
+        },
+        ensure_ascii=False,
+        separators=(",", ":"),
+    )
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
 class _VisibleText(HTMLParser):

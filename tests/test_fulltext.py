@@ -161,3 +161,51 @@ def test_the_policy_in_force_is_recorded_with_the_verdict():
     row = fulltext.classify(page(60), "text/html", "https://x.org/a",
                             policy=policy).as_row({}, policy=policy)
     assert row["policy"]["structural_signal"] == "none"
+
+
+# --- the policy belongs to a class, not to a whole project ---------------------
+
+def test_a_project_wide_none_would_admit_a_known_summary():
+    # Measured on the real corpus: switching the signal off project-wide admitted four of the six
+    # artifacts already established to be abstract or product pages. A project-wide switch is the
+    # wrong granularity, which is why the class carries it.
+    summary = page(60)
+    assert fulltext.classify(summary, "text/html", "https://vendor.example/research/x",
+                             policy={"structural_signal": "none"}).accepted is True
+    assert fulltext.classify(summary, "text/html", "https://vendor.example/research/x",
+                             policy={"structural_signal": "reference_list"}).accepted is False
+
+
+def test_the_policy_for_a_class_overrides_the_project_one():
+    from claimstone.config import SourceClass, resolve_gate_policy
+
+    classes = (
+        SourceClass(id="ACA", name="a", weight_hint="highest"),
+        SourceClass(id="DOC", name="d", weight_hint="context",
+                    gate_policy={"structural_signal": "none"}),
+    )
+    project_policy = {"structural_signal": "reference_list"}
+    # A filing cites nothing and is admitted; a paper must still cite.
+    assert resolve_gate_policy(project_policy, classes, "DOC")["structural_signal"] == "none"
+    assert resolve_gate_policy(project_policy, classes, "ACA")["structural_signal"] == \
+        "reference_list"
+
+
+def test_an_unknown_class_falls_back_to_the_project_policy():
+    from claimstone.config import SourceClass, resolve_gate_policy
+
+    classes = (SourceClass(id="ACA", name="a", weight_hint="highest"),)
+    assert resolve_gate_policy({"structural_signal": "none"}, classes, "NOPE") == \
+        {"structural_signal": "none"}
+
+
+def test_the_row_records_a_hash_of_the_whole_policy_not_a_count():
+    # Two different lists of the same length recorded identically, so a ledger could not tell two
+    # instruments apart.
+    a = fulltext.classify(page(60), "text/html", "https://x.org/a",
+                          policy={"paywall_phrases": ("buy now",)}).as_row(
+        {}, policy={"paywall_phrases": ("buy now",)})
+    b = fulltext.classify(page(60), "text/html", "https://x.org/a",
+                          policy={"paywall_phrases": ("rent it",)}).as_row(
+        {}, policy={"paywall_phrases": ("rent it",)})
+    assert a["policy"]["sha256"] != b["policy"]["sha256"]
