@@ -802,7 +802,7 @@ reason this boundary exists.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, field
 from typing import Any, Protocol
 
 
@@ -844,6 +844,7 @@ class Runner(Protocol):
 Add `FakeRunner` to `tests/fakes.py`:
 
 ```python
+from claimstone.model_call import rendered_prompt
 from claimstone.runners.base import RawAnswer
 
 
@@ -1429,6 +1430,9 @@ class CliRunner:
     # A floor, not a measurement: an interactive plan is not a queue, and pacing is the least
     # we can do about that.
     min_interval_s: float = 2.0
+    # Asked once. The drain reads harness_version per call, and a subprocess per call to print a
+    # version number is time spent on nothing.
+    _harness: str | None = field(default=None, repr=False, compare=False)
 
     @property
     def name(self) -> str:
@@ -1436,6 +1440,12 @@ class CliRunner:
 
     def harness_version(self) -> str:
         """The tool's own version. Mandatory: its harness changes with it."""
+        if self._harness is not None:
+            return self._harness
+        self._harness = self._ask_version()
+        return self._harness
+
+    def _ask_version(self) -> str:
         try:
             done = subprocess.run(
                 [self.tool, "--version"], capture_output=True, text=True, timeout=30
@@ -1470,7 +1480,11 @@ class CliRunner:
         return stdout.strip().encode()
 
     def run(self, request: dict[str, Any]) -> RawAnswer:
-        prompt = f"{request['system']}\n\n---\n\n{request['user']}"
+        # `model_call` owns this string. Rebuilding the join here would put a second copy of the
+        # separator in the repository, and it would diverge silently from the hash it is compared
+        # against — the echo check would then fail on every row for a reason that is not a bug in
+        # the prompt.
+        prompt = rendered_prompt(request["system"], request["user"])
         try:
             done = subprocess.run(
                 self._argv(), input=prompt, capture_output=True, text=True,
@@ -1484,13 +1498,18 @@ class CliRunner:
 
         if done.returncode != 0:
             return RawAnswer(
-                model=self.model, failure_class="BACKEND_ERROR",
+                model=self.model, failure_class="BACKEND_ERROR", prompt_sent=prompt,
                 detail=f"exit {done.returncode}: {(done.stderr or '').strip()}",
             )
 
+        # `prompt_sent` costs nothing here and it is what makes the echo check run at all: without
+        # it every row from this backend comes back prompt_verified false, which is honest but
+        # establishes nothing.
+        #
         # No usage and no price: a subscription reports neither, and inventing a 0.0 would make
         # a cost report add up to a number that is not true.
-        return RawAnswer(body=self._unwrap(done.stdout), model=self.model, cost_usd=None)
+        return RawAnswer(body=self._unwrap(done.stdout), model=self.model, cost_usd=None,
+                         prompt_sent=prompt)
 ```
 
 - [ ] **Step 4: Run to verify it passes**
