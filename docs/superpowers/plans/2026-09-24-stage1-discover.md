@@ -128,10 +128,20 @@ def test_a_similar_looking_host_does_not_match():
 
 
 def test_declaration_order_decides_when_two_classes_match():
-    # sources.yaml declares classes most-authoritative-first, so the order is already the
-    # right one and no separate priority system is needed.
-    both = candidate(source_api="arxiv", venue_type="journal")
+    """sources.yaml declares classes most-authoritative-first, so the order is already the right one
+    and no separate priority system is needed.
+
+    The candidate has to match two classes for this to test anything. An arXiv row with
+    `venue_type="journal"` does not: a venue type only counts alongside the API that reported it, and
+    arXiv does not report OpenAlex vocabulary — so that candidate matches WP alone and demonstrates
+    nothing about order. A real double match is a refereed paper whose open copy sits on SSRN:
+    OpenAlex calls the work a journal article and the URL is a working-paper host.
+    """
+    both = candidate(venue_type="journal", url="https://papers.ssrn.com/abstract=99")
     assert classify.classify(both, CLASSES) == "ACA"
+    # And it is the right answer: the work is refereed and we merely obtained the preprint copy,
+    # which `oa_status` and `version` record. Reading the host first would demote every paper whose
+    # only open copy is a preprint.
 
 
 def test_a_class_with_no_rules_never_matches():

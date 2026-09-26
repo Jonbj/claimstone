@@ -6,14 +6,27 @@ classes:
     name: peer-reviewed academic
     weight_hint: highest
     notes: version of record in a refereed venue
+    # Applied by the engine, declared here: "a journal article is refereed" is domain knowledge
+    # and invariant 4 keeps it out of the package. The first declared class to match wins, and
+    # classes are declared most-authoritative-first, so a refereed paper whose only open copy
+    # sits on a preprint host stays ACA.
+    assign_when:
+      openalex_source_type: [journal]
+      crossref_type: [journal-article]
   - id: WP
     name: working paper / preprint
     weight_hint: high
     notes: NBER, SSRN, arXiv; not refereed — never silently promoted to ACA
+    assign_when:
+      source_api: [arxiv]
+      openalex_source_type: [repository]
+      host: [papers.ssrn.com, ssrn.com, nber.org]
   - id: MET
     name: methodological reference
     weight_hint: high
     notes: textbook, handbook chapter, methods guide; supports design not effect size
+    assign_when:
+      crossref_type: [book, book-chapter, monograph, reference-book]
     # Declared, never read off the id: the method verdict rule asks which classes are
     # methodological, and inferring it from "MET" would put domain knowledge in the engine.
     role: methodological

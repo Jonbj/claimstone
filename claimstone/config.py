@@ -62,6 +62,10 @@ class SourceClass:
     # switch to `structural_signal: none` was measured admitting four of six known summaries.
     gate_policy: dict[str, Any] = field(default_factory=dict)
     normalize_thresholds: dict[str, int] = field(default_factory=dict)
+    # Conditions that assign a candidate to this class. Declared by the project, applied by the
+    # engine: invariant 4 says the engine holds no domain knowledge, and "a journal is refereed"
+    # is domain knowledge.
+    assign_when: dict[str, tuple[str, ...]] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -152,6 +156,24 @@ def load_sources(root: pathlib.Path) -> tuple[tuple[SourceClass, ...], float, tu
     for entry in entries:
         if not isinstance(entry, dict):
             raise ConfigError("sources.yaml: each class must be a mapping")
+
+        rules_raw = entry.get("assign_when") or {}
+        if not isinstance(rules_raw, dict):
+            raise ConfigError("sources.yaml: 'assign_when' must be a mapping")
+        unknown = sorted(set(rules_raw) - set(ASSIGN_PREDICATES))
+        if unknown:
+            raise ConfigError(
+                f"sources.yaml: unknown assign_when predicate(s): {', '.join(unknown)} "
+                f"(known: {', '.join(ASSIGN_PREDICATES)})"
+            )
+        rules: dict[str, tuple[str, ...]] = {}
+        for name, values in rules_raw.items():
+            if not isinstance(values, list) or not values:
+                raise ConfigError(
+                    f"sources.yaml: assign_when.{name} must be a non-empty list of values"
+                )
+            rules[str(name)] = tuple(str(v).strip() for v in values)
+
         classes.append(
             SourceClass(
                 id=_require_str(entry.get("id"), field="id", where="sources.yaml"),
@@ -167,6 +189,7 @@ def load_sources(root: pathlib.Path) -> tuple[tuple[SourceClass, ...], float, tu
                 gate_policy=_gate_policy_fields(
                     entry.get("gate_policy") or {}, where=f"sources.yaml class {entry.get('id')!r}"
                 ),
+                assign_when=rules,
             )
         )
     _require_unique([c.id for c in classes], what="source class", where="sources.yaml")
@@ -340,6 +363,8 @@ def check_registry_drift(project: Project, store: Any) -> None:
 
 
 MANIFEST_COLUMNS = ("source_id", "class", "format", "url", "title")
+ASSIGN_PREDICATES = ("source_api", "openalex_source_type", "crossref_type", "host")
+
 GATE_THRESHOLD_NAMES = ("min_pdf_bytes", "min_text_chars", "paywall_doubt_chars", "fulltext_chars")
 NORMALIZE_THRESHOLD_NAMES = (
     "min_section_chars", "merge_below", "max_chunk_chars",
