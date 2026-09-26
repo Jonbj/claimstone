@@ -1588,9 +1588,15 @@ class FakePost:
         return Response()
 
 
+# A key that cannot collide with anything else in the body. The first version used "k", and the
+# assertion "k" not in the body failed on the letter k in "deepseek" — a one-character substring
+# test verifies nothing.
+API_KEY = "sk-test-NOTINTHEBODY-7f3a"
+
+
 def runner(post, **kw):
     return ollama_cloud.OllamaCloudRunner(
-        model="deepseek-v4.1-flash", api_key="k", post=post, **kw)
+        model="deepseek-v4.1-flash", api_key=API_KEY, post=post, **kw)
 
 
 def test_the_stable_prefix_is_sent_as_its_own_message():
@@ -1613,8 +1619,8 @@ def test_the_output_cap_is_passed_through():
 def test_the_api_key_travels_in_the_header_not_the_body():
     post = FakePost({"message": {"content": "[]"}})
     runner(post).run(request())
-    assert "k" in post.headers.get("Authorization", "")
-    assert "k" not in json.dumps(post.sent)
+    assert API_KEY in post.headers.get("Authorization", "")
+    assert API_KEY not in json.dumps(post.sent)
 
 
 def test_usage_and_cost_are_carried_when_the_endpoint_reports_them():
@@ -1670,6 +1676,7 @@ import os
 from dataclasses import dataclass, field
 from typing import Any, Callable
 
+from claimstone.model_call import rendered_prompt
 from claimstone.runners.base import RawAnswer
 
 ENDPOINT = "https://ollama.com/api/chat"
@@ -1685,8 +1692,12 @@ def _default_post() -> Callable[..., Any]:
 class OllamaCloudRunner:
     model: str
     api_key: str | None = None
-    price_in: float | None = None      # USD per million input tokens
-    price_out: float | None = None     # USD per million output tokens
+    price_in: float | None = None          # USD per million input tokens
+    price_out: float | None = None         # USD per million output tokens
+    # Declared separately because the whole argument for this backend is that cached input costs a
+    # fiftieth of fresh input. Unset charges cached tokens at the fresh rate — the conservative
+    # reading, which can overstate a bill but never understate one.
+    price_cached_in: float | None = None   # USD per million cached input tokens
     timeout_s: int = 300
     max_concurrency: int = 4
     min_interval_s: float = 0.2
@@ -1706,8 +1717,12 @@ class OllamaCloudRunner:
         if self.price_in is None or self.price_out is None:
             # Unpriced, not free. A cost report that folded this in would be wrong.
             return None
+        cached = usage.get("cached_input_tokens", 0)
+        fresh = max(usage.get("input_tokens", 0) - cached, 0)
+        cached_rate = self.price_in if self.price_cached_in is None else self.price_cached_in
         return round(
-            usage.get("input_tokens", 0) / 1e6 * self.price_in
+            fresh / 1e6 * self.price_in
+            + cached / 1e6 * cached_rate
             + usage.get("output_tokens", 0) / 1e6 * self.price_out,
             8,
         )
@@ -1767,6 +1782,8 @@ class OllamaCloudRunner:
             usage=usage,
             cost_usd=self._price(usage),
             truncated=payload.get("done_reason") == "length",
+            # Two messages went out; the echo check compares one string, and this is that string.
+            prompt_sent=rendered_prompt(request["system"], request["user"]),
         )
 ```
 
