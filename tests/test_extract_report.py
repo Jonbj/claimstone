@@ -58,3 +58,42 @@ def test_failures_are_broken_down(tmp_path):
         {"claim_id": "r3", "failure": "QUOTE_NOT_FOUND", "call_id": "k1"}])
     assert extract_report.summarise(store)["failures"] == {
         "SECONDHAND_CLAIM": 2, "QUOTE_NOT_FOUND": 1}
+
+
+# The second ratio needs a denominator, and the registry is where it lives.
+
+class FakeProject:
+    from claimstone.config import Question as _Q
+    questions = (
+        _Q(id="H02", text="a", kind="effect"),
+        _Q(id="H23", text="b", kind="effect"),
+        _Q(id="H06", text="c", kind="heterogeneity"),
+        _Q(id="H11", text="d", kind="operational"),
+    )
+
+
+def test_coverage_is_against_the_questions_that_can_receive_a_verdict(tmp_path):
+    """Three of the four, because an `operational` question receives no verdict (invariant 2) and
+    counting it in the denominator would make full coverage unreachable by construction."""
+    store = _store(tmp_path, [claim(1, question="H02")])
+    summary = extract_report.summarise(store, project=FakeProject())
+    assert summary["questions_asked"] == 3
+    assert summary["questions_with_a_claim"] == 1
+    assert round(summary["coverage"], 2) == 0.33
+
+
+def test_a_question_nobody_asked_about_is_named_so_the_gap_is_visible(tmp_path):
+    """`UNANSWERED_IN_LITERATURE` and `NEVER_ASKED` are different states, and this is the difference:
+    a question with no claim after a complete round is the first, and one whose calls never ran is the
+    second. Naming them is what lets somebody tell which."""
+    store = _store(tmp_path, [claim(1, question="H02")])
+    summary = extract_report.summarise(store, project=FakeProject())
+    assert summary["questions_without_a_claim"] == ["H06", "H23"]
+
+
+def test_without_a_project_the_coverage_is_unknown_rather_than_zero(tmp_path):
+    """A ratio needs its denominator. Printing one without the registry would invent it."""
+    summary = extract_report.summarise(_store(tmp_path, [claim(1)]))
+    assert summary["questions_asked"] is None
+    assert summary["coverage"] is None
+    assert summary["questions_with_a_claim"] == 1

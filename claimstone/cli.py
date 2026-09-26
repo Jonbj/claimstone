@@ -625,7 +625,8 @@ def _extract_report(args: argparse.Namespace) -> int:
     from claimstone import extract_report
 
     project = load_project(args.project)
-    summary = extract_report.summarise(_checked_store(args, project), batch=args.batch)
+    summary = extract_report.summarise(_checked_store(args, project), batch=args.batch,
+                                       project=project)
 
     if args.json:
         import json
@@ -637,10 +638,18 @@ def _extract_report(args: argparse.Namespace) -> int:
     print(f"{project.name} extract/{summary['batch'] or 'all'}")
     print(f"  proposed     {summary['proposed']:>5}   accepted {summary['accepted']}  {rate}   "
           f"rejected {summary['rejected']}")
-    print(f"  questions with a claim  {summary['questions_with_a_claim']:>3}")
+    coverage = ("\u2014" if summary["coverage"] is None else f"{summary['coverage']:.2f}")
+    print(f"  coverage     {summary['questions_with_a_claim']:>5}/{summary['questions_asked']}  "
+          f"{coverage}   questions that can receive a verdict and have a claim")
     for question_id, bucket in summary["by_question"].items():
         print(f"    {question_id:<5} {bucket['claims']:>3} claims from {bucket['studies']:>2} "
               f"studies   {bucket['stances']}   {bucket['by_class']}")
+    if summary["questions_without_a_claim"]:
+        missing = summary["questions_without_a_claim"]
+        print(f"  no claim yet  {', '.join(missing[:14])}"
+              + (f" and {len(missing) - 14} more" if len(missing) > 14 else ""))
+        print("                a question with no claim after a complete round is "
+              "UNANSWERED_IN_LITERATURE; one whose calls never ran is NEVER_ASKED")
     if summary["failures"]:
         print("  rejected     " + "  ".join(f"{k} {v}" for k, v in summary["failures"].items()))
     print()

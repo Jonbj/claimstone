@@ -16,8 +16,15 @@ from typing import Any
 from claimstone.store import Store
 
 
-def summarise(store: Store, *, batch: str | None = None) -> dict[str, Any]:
-    """Both ratios, per question and per class, plus what was rejected and why."""
+def summarise(
+    store: Store, *, batch: str | None = None, project: Any = None
+) -> dict[str, Any]:
+    """Both ratios, per question and per class, plus what was rejected and why.
+
+    The second ratio needs a denominator and the registry is where it lives, so `project` is required to
+    compute coverage. Without it the coverage is `None` rather than a number: a ratio printed without its
+    denominator would be one this module invented.
+    """
     claims = [
         row for row in store.latest_by("claims.jsonl", "claim_id").values()
         if batch is None or str(row.get("call_id")) in _batch_calls(store, batch)
@@ -51,6 +58,14 @@ def summarise(store: Store, *, batch: str | None = None) -> dict[str, Any]:
         name = str(row.get("failure"))
         failures[name] = failures.get(name, 0) + 1
 
+    # Only the kinds that receive a verdict. An `operational` question gets none (invariant 2), and
+    # counting it in the denominator would make full coverage unreachable by construction.
+    asked: list[str] = []
+    if project is not None:
+        from claimstone.claimgate import STANCES_BY_KIND
+
+        asked = sorted(q.id for q in project.questions if q.kind in STANCES_BY_KIND)
+
     proposed = len(claims) + len(rejections)
     return {
         "batch": batch,
@@ -61,6 +76,11 @@ def summarise(store: Store, *, batch: str | None = None) -> dict[str, Any]:
         # nothing has no pass rate, and printing one would describe a measurement never taken.
         "gate_rate": (len(claims) / proposed) if proposed else None,
         "questions_with_a_claim": len(by_question),
+        "questions_asked": len(asked) if project is not None else None,
+        "coverage": (len(by_question) / len(asked)) if asked else None,
+        # Named, because a question with no claim after a complete round is UNANSWERED_IN_LITERATURE and
+        # one whose calls never ran is NEVER_ASKED, and only somebody who can see which is which can tell.
+        "questions_without_a_claim": [q for q in asked if q not in by_question],
         "by_question": dict(sorted(by_question.items())),
         "failures": dict(sorted(failures.items(), key=lambda kv: -kv[1])),
     }
