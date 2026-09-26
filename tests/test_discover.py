@@ -313,3 +313,75 @@ def test_a_resolved_doi_matching_an_existing_candidate_is_noted_as_a_duplicate(t
     discover.run_citations(project, store, fetcher=_resolving_fetcher(title))
     row = [r for r in store.read("candidates.jsonl") if r.get("channel") == "citation"][0]
     assert row["possible_duplicate_of"] == "doi:10.1111/j.1540-6261.2004.00662.x"
+
+
+def test_reclassify_reapplies_the_rules_without_a_request(tmp_path, monkeypatch):
+    """The third time this pattern has been needed: `regate` for the content gate, `--rejudge` for a
+    model answer, and now this. A judgement the engine makes over rules a project declares must be
+    re-appliable when the rules change, and re-requesting what is already on disk would be a toll on
+    editing a YAML file.
+    """
+    import socket
+
+    project = load_project(PROJECT)
+    store = Store("t", base=tmp_path)
+    # A candidate resolved under rules that did not yet cover it.
+    store.append("candidates.jsonl", {
+        "candidate_key": "title:a resolved work with a venue", "channel": "citation",
+        "source_api": "openalex", "venue_type": "journal", "source_class": None,
+        "resolution": "BY_TITLE", "round": "first", "title": "A resolved work with a venue",
+        "url": "https://x.example/a"})
+
+    def refuse(*args, **kwargs):
+        raise AssertionError("reclassify re-reads a ledger; it must open no socket")
+
+    monkeypatch.setattr(socket.socket, "connect", refuse)
+    result = discover.reclassify(project, store)
+    assert result["changed"] == 1
+    latest = store.latest_by("candidates.jsonl", "candidate_key")
+    assert latest["title:a resolved work with a venue"]["source_class"] == "ACA"
+
+
+def test_reclassify_writes_nothing_when_no_class_moves(tmp_path):
+    project = load_project(PROJECT)
+    store = Store("t", base=tmp_path)
+    store.append("candidates.jsonl", {
+        "candidate_key": "doi:10.1/x", "channel": "keyword", "source_api": "openalex",
+        "venue_type": "journal", "source_class": "ACA", "round": "first"})
+    before = len(list(store.read("candidates.jsonl")))
+    result = discover.reclassify(project, store)
+    assert result["changed"] == 0
+    assert len(list(store.read("candidates.jsonl"))) == before
+
+
+def test_reclassify_keeps_the_round_that_found_a_candidate(tmp_path):
+    project = load_project(PROJECT)
+    store = Store("t", base=tmp_path)
+    store.append("candidates.jsonl", {
+        "candidate_key": "title:a resolved work with a venue", "channel": "citation",
+        "source_api": "openalex", "venue_type": "journal", "source_class": None,
+        "round": "spring", "title": "A resolved work with a venue"})
+    discover.reclassify(project, store)
+    assert store.latest_by("candidates.jsonl", "candidate_key")[
+        "title:a resolved work with a venue"]["round"] == "spring"
+
+
+def test_reclassify_never_overrules_a_class_the_operator_declared(tmp_path):
+    """Reproduced on the real store, destructively: reclassify overwrote 9 IND and 4 MET manifest rows
+    with null and demoted 6 ACA to WP, because a manifest row has no venue type and the host rule
+    matched some of them. A manifest states its class; invariant 6 says the class travels with the item
+    and this is the item arriving with it. An inferred class must not replace a given one.
+    """
+    project = load_project(PROJECT)
+    store = Store("t", base=tmp_path)
+    store.append("candidates.jsonl", {
+        "candidate_key": "doi:10.1/declared", "channel": "keyword", "source_api": "manifest",
+        "venue_type": "", "url": "https://papers.ssrn.com/abstract=1", "source_class": "IND",
+        "source_id": "IND001", "round": "manifest", "title": "A vendor paper"})
+
+    result = discover.reclassify(project, store)
+    assert result["changed"] == 0
+    latest = store.latest_by("candidates.jsonl", "candidate_key")["doi:10.1/declared"]
+    assert latest["source_class"] == "IND"
+    # And it is not counted as an unclassified row needing a rule, because it needs none.
+    assert result["unclassified"] == 0

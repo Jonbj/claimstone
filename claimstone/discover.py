@@ -309,3 +309,51 @@ def import_manifest(
         known[row["candidate_key"]] = row
         store.append("candidates.jsonl", row)
     return {"rows": rows, "new": added, "updated": updated, "total": len(known)}
+
+
+def reclassify(project: Project, store: Store) -> dict[str, Any]:
+    """Re-apply the project's `assign_when` rules to every candidate held. Opens no socket.
+
+    The third time this shape has been needed: `regate` re-reads stored bytes under a corrected
+    content gate, `model-run --rejudge` re-reads a stored answer under a corrected classifier, and this
+    re-reads a stored candidate under corrected class rules. The pattern is not a coincidence — every
+    judgement the engine makes over rules a project declares needs a way back, or editing a line of
+    YAML costs a round of requests.
+
+    Measured on the real corpus: 35 references resolved to a venue while `alembic-s4` declared no
+    `assign_when` at all, so all 35 were written with a null class. Adding the rules changed nothing
+    until this existed, because a resolved candidate is skipped rather than re-requested.
+
+    Append-only: a candidate whose class moves gets a new row and keeps the round that found it.
+    """
+    changed = 0
+    declared = 0
+    moves: dict[str, int] = {}
+    unclassified: list[dict[str, Any]] = []
+
+    for row in store.latest_by("candidates.jsonl", "candidate_key").values():
+        if row.get("source_api") == "manifest":
+            # A manifest states its class. Invariant 6 says the class travels with the item, and this
+            # is the item arriving with it — an inferred class must not replace a given one.
+            # Reproduced destructively on the real store before this guard existed: 9 IND and 4 MET
+            # rows overwritten with null and 6 ACA demoted to WP, because a manifest row has no venue
+            # type and the host rule matched some of the URLs.
+            declared += 1
+            continue
+        assigned = classify.classify(row, project.classes)
+        if assigned is None:
+            unclassified.append(row)
+        if assigned == row.get("source_class"):
+            continue
+        key = f"{row.get('source_class')} -> {assigned}"
+        moves[key] = moves.get(key, 0) + 1
+        store.append("candidates.jsonl", {**row, "source_class": assigned})
+        changed += 1
+
+    return {
+        "changed": changed,
+        "declared": declared,
+        "moves": dict(sorted(moves.items(), key=lambda kv: -kv[1])),
+        "unclassified": len(unclassified),
+        "uncovered": classify.uncovered(unclassified, ()),
+    }

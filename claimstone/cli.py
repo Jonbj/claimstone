@@ -378,6 +378,19 @@ def _discover(args: argparse.Namespace) -> int:
 
     project = load_project(args.project)
     store = Store(project.name, base=args.store)
+
+    if args.reclassify:
+        # No socket: the rules are in sources.yaml and the candidates are on disk, so re-applying one
+        # to the other costs nothing. The counterpart of `regate` and `model-run --rejudge`.
+        result = discover.reclassify(project, store)
+        print(f"{result['changed']} candidate(s) reclassified, "
+              f"{result['declared']} left alone because the manifest declared their class")
+        for move, count in result["moves"].items():
+            print(f"  {move}  {count}")
+        if result["unclassified"]:
+            print(f"  {result['unclassified']} still unclassified: {result['uncovered']}")
+        return 0
+
     topics = tuple(t.strip() for t in args.topics.split(",")) if args.topics else None
 
     # Keyword first, then citations, and the order matters for more than tidiness. Both channels
@@ -621,6 +634,9 @@ def build_parser() -> argparse.ArgumentParser:
             command.add_argument("--per-query", type=int, default=25)
             command.add_argument("--channel", choices=("keyword", "citation", "both"),
                                  default="both")
+            command.add_argument("--reclassify", action="store_true",
+                                 help="re-apply sources.yaml's assign_when rules to held candidates; "
+                                      "no request, for when the rules changed")
             command.add_argument("--resolve", action="store_true",
                                  help="look up each admitted reference's venue and address; "
                                       "makes requests, so the citation channel is offline without it")
