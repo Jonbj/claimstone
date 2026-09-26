@@ -8,9 +8,15 @@ is answerable from a document. So this script builds the smallest thing that pro
 
 Two parts of it are deliberately hand-made and will be replaced:
 
-**Which chunks.** A keyword screen, listed below. Stage 4's rule for choosing chunks per question is
-unwritten, and a screen that counts the word "sentiment" is not a candidate for it. What the screen
-is good enough for is putting real passages about H02 in front of a model.
+**Which chunks.** A keyword screen, listed below, **plus a negative control**. Stage 4's rule for
+choosing chunks per question is unwritten, and a screen that counts the word "sentiment" is not a
+candidate for it. What the screen is good enough for is putting real passages about H02 in front of a
+model.
+
+The control is the chunk the screen ranks *last*, and it is not optional. The first two drained calls
+returned seven and nine claims and no empty array, which is consistent with a prompt that works and
+equally consistent with a model that agrees with whatever it is shown. A batch with nothing in it that
+should produce `[]` cannot tell those apart.
 
 **The prompt.** One question per call, not the whole registry. That is the narrow-window shape D4
 argues for, and with one question the instructions can be specific enough to argue with.
@@ -121,7 +127,13 @@ def main(project_name: str = "alembic-s4", how_many: int = 12) -> int:
         low = text.lower()
         return sum(low.count(term) for term in TERMS)
 
-    chosen = sorted(chunks, key=lambda c: (-score(c["text"]), c["chunk_id"]))[:how_many]
+    ranked = sorted(chunks, key=lambda c: (-score(c["text"]), c["chunk_id"]))
+    # The last-ranked prose chunk of a decent length: a real passage of a real paper that should have
+    # nothing to say about H02. A one-line table cell would be a control that proves nothing, since
+    # anything would answer [] to that.
+    control = next(c for c in reversed(ranked)
+                   if c["kind"] == "prose" and c["chars"] > 2000 and score(c["text"]) == 0)
+    chosen = [c for c in ranked[:how_many] if c["chunk_id"] != control["chunk_id"]] + [control]
     system = system_prompt(question.text)
 
     batch = model_call.batch_name(registry_version=project.registry_version)
@@ -147,7 +159,10 @@ def main(project_name: str = "alembic-s4", how_many: int = 12) -> int:
           f"store/{project.name}/calls/extract/{batch}/requests.jsonl")
     print(f"  question   {QUESTION_ID} ({question.kind}), registry v{project.registry_version}")
     print(f"  system     {len(system):,} chars, identical on every call")
-    print(f"  chunks     {', '.join(c['chunk_id'] for c in chosen)}")
+    print(f"  chunks     {', '.join(c['chunk_id'] for c in chosen[:-1])}")
+    print(f"  control    {control['chunk_id']} — screen score 0, {control['chars']:,} chars, "
+          f"section {(control['section'] or '—')[:40]!r}")
+    print("             It should answer []. If it does not, the prompt is not doing what it says.")
     print(f"  prompts    {prompt_chars:,} chars total ≈ {prompt_chars // 4:,} tokens in, "
           f"{written * 2000:,} capped out")
     print()
