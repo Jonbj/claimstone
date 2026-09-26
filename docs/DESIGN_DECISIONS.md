@@ -736,3 +736,75 @@ does not name.
 What supersedes what: any candidate count for `alembic-s4`'s citation channel taken before this is not
 comparable to one taken after. The manifest round is untouched, because a manifest row's key was
 derived from a DOI or title that resolution never changes.
+
+## D25 — Invariant 1 is executable, and the gate's first audit found six of its own faults
+`claimgate.py` makes invariant 1 code: a record and a chunk's text in, a verdict out, no store and no
+model. Seven checks, the first failure is the verdict, and a failing record goes to the rejection ledger
+whole. D23 named two checks the spec did not have; the other five are spec §3.
+
+### Measured on 66 real claims, 2026-09-26
+
+The H02 harvest, run through the gate. The spec says the first round must audit its rejections before
+the rate is quoted, so every rejection below was read by hand.
+
+```
+first run     58 accepted  88%   8 rejected
+              NUMBER_NOT_IN_QUOTE 3 · SECONDHAND 2 · COMPARATIVE 2 · QUOTE_TOO_THIN 1
+by hand       2 of 8 were true rejections. Six were the gate's fault.
+after         63 accepted  95%   SECONDHAND 2 · COMPARATIVE 1
+```
+
+**Six false rejections, four distinct causes, none of them visible without real claims.**
+
+`day-0` and `reversals-3.7`. The numeral rule read the hyphen in a compound word as a minus sign, so a
+claim about "the day-0 market reaction" asserted a figure of `-0` that no quote had reason to contain.
+Three rejections from this. A digit hanging off a word is a name, not a figure — and on the other side,
+extracting the *quote's* numerals found neither figure in `return reversals-3.7 bps versus 16.7`, which
+is how the paper typesets it. The quote is now searched as a string, bounded by digits so a claim of
+`1.5` does not pass on a quote of `11.5`.
+
+`exceeds` against `exceeding`. The comparative list held exact words, and the spec had already corrected
+phrase-matching to class-matching for precisely this reason without going far enough. Stems, not words.
+
+`Tetlock (2007)`. A citation's year is a numeral, and every one of the 4 claims naming another work
+would have been rejected for a year its quote had no reason to carry. A rule whose purpose is to catch a
+*fabricated* figure was rejecting bibliography.
+
+**And one fault I introduced while fixing another.** Adding `over` to the `>` class rescued "over 90% of
+stocks … exceeding one" and broke "over a much longer horizon than", where `over` is a preposition. It is
+out. A stem that is sometimes a preposition manufactures a comparison the claim never made.
+
+### The thinness check earns nothing, so it ships off
+
+D23 asked for a check that a quote carries its claim and not merely appears in the chunk. Length ratio
+was the obvious instrument and the sweep says it is the wrong one:
+
+```
+min_quote_ratio     0-34  →  0 rejected
+                      35  →  1 rejected, and it is a TRUE claim
+                      60  →  2
+                      80  →  13
+quote/claim ratio   min 25%, median 104%, max 204%
+```
+
+At 35 — the value I chose at a desk — it rejects a claim whose 57-character quote carries both the figure
+(15.9%) and the direction (much lower). The one case the check was written for, Roll (1988) at 25%, is
+caught by `SECONDHAND_CLAIM`, which is about attribution rather than length. So the check stays,
+declarable per project, and **defaults to zero**. Shipping a constant that earns nothing and costs a true
+claim is the desk-chosen threshold this project keeps finding and removing.
+
+### The two rejections that stand, and the one that is a real cost
+
+Both `SECONDHAND_CLAIM` rejections are correct: `ACA001` reporting Tetlock and Loughran, and `ACA002`
+reporting Roll (1988). Without this check an unread paper votes, which invariant 7 calls vote counting.
+
+The remaining `COMPARATIVE_NOT_IN_QUOTE` is a **true claim rejected for a defensible reason**: the claim
+says one kind of news "moves prices more than" another, and the quote states only "a substantial
+difference" with medians of 1.5 and 2.2. The claim is right, and establishing it means comparing two
+numbers — which §3 of the spec says this gate does not do. One in 66 is what that costs. It is recorded
+rather than fixed, because fixing it means the gate reasoning about magnitudes, and a gate that reasons
+is not a gate.
+
+**What 95% is not.** It is one prompt, one question, one corpus, and a gate whose rules were corrected
+*against these same claims* — so it is a floor on the false-rejection rate and no kind of estimate of
+the true one. The next question's harvest is the test.
