@@ -618,3 +618,73 @@ measured will throw away good evidence, and that the first one did.
 nothing about the harvest rate: two passages of one paper, chosen by a screen that counts the word
 "sentiment". The `QUALIFIES` stance was used seven times in sixteen, which is either the prompt
 working or a model hedging, and two calls cannot tell those apart.
+
+## D23 — Thirteen calls, sixty-six claims, and the one that would decide the verdict is the weakest
+The second drain of the hand-built H02 batch, with the item cap removed and a negative control added.
+This is the harvest D18 was waiting for, and it is one prompt against one question on one corpus.
+
+### Measured, 2026-09-26
+
+```
+calls                    13      all valid, 0 NOT_JSON, prompt_verified true on all
+claims                   66      8 productive chunks, 5 answering []
+exact quotes          66/66      100%, checked in code against the chunk
+quote length         median 132 chars, min 48, max 348
+stances          SUPPORTS 25 · QUALIFIES 40 · CONTRADICTS 1
+throughput            132 attempts/hour, unpriced (subscription)
+```
+
+**Every quote was exact, 66 for 66.** Invariant 1's gate has now passed on sixty-six real claims with
+no failure. That is a corpus of one question and one prompt, and it is the failure the whole design
+feared not occurring.
+
+**The empty answer works, and it caught a mistake the screen made.** The negative control —
+`MET005#c5`, "II. New Delisting Data", a methods passage with a screen score of zero — answered `[]`.
+So did the three `IND001` chunks the keyword screen had ranked *in the top ten*, scoring 54 to 59.
+`IND001` is the Credit Suisse prospectus: it says "news" and "sentiment" on every page and makes no
+empirical claim about whether either predicts returns, and the model declined to manufacture one. The
+screen is a bad selector and the prompt is a good gate, which is the opposite of the risk anyone
+worries about.
+
+**The item cap would have destroyed a third of the batch.** `maxItems: 8` — chosen at a desk — fails 4
+of 13 records, and those four hold 41 of the 66 claims. Two thirds of the harvest, for a number nobody
+measured. It is gone; see D22.
+
+**The fence is intermittent, at 2 of 13.** The prompt forbids a code fence in as many words and the
+model obeyed eleven times. An instruction honoured 85% of the time is not a guarantee, which is why
+the tolerance belongs in the classifier and not in the prompt.
+
+### The finding that matters: exact is necessary and not sufficient
+
+The single `CONTRADICTS` in sixty-six claims is this:
+
+```
+claim  Roll (1988) found little discernible difference in return variation between days with and
+       without financial-press news stories, implying news added little explanatory power for firm
+       returns.                                                                        (190 chars)
+quote  Roll (1988) finds little discernible difference.                                 (48 chars)
+```
+
+The quote is exact. It is also the shortest in the batch, it carries almost none of what the claim
+asserts, and the finding is **not this paper's** — `ACA002` is citing Roll (1988), which is not in the
+corpus. So the one piece of evidence that could make H02 anything other than `SUPPORTED` is the
+weakest claim present and belongs to a source nobody read.
+
+Two rules stage 4 needs, both now with an instance rather than an argument:
+
+1. **A claim must be about what this source establishes**, not about what it reports another source
+   establishing. 4 of 66 claims (6%) name another work in the claim text. Without this rule a citation
+   network is double-counted and an unread paper votes — and invariant 7 says vote counting is not
+   synthesis, which is exactly what that would be.
+2. **A quote must carry its claim**, not merely appear in the chunk. 2 of 66 (3%) are under sixty
+   characters against claims three times as long. The numeric rule already in invariant 1 does not
+   reach this: neither of those claims contains a figure.
+
+Neither rule is written here. What is settled is that quote-exactness at 100% is not the same as
+evidence adequacy at 100%, and a review that read only the first number would have concluded otherwise.
+
+**And what thirteen calls still do not answer.** `QUALIFIES` took 40 of 66, which is either the
+literature hedging or the model hedging, and one prompt cannot separate those. Nothing about
+independence between sources. Nothing about material magnitude. And no reason yet to believe any
+backend other than this one behaves the same way — the queue exists so that is measurable, and it has
+not been measured.
