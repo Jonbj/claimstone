@@ -66,7 +66,7 @@ Implements spec §3.
 - Create: `claimstone/classify.py`
 - Create: `tests/test_classify.py`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `tests/test_classify.py`:
 
@@ -186,12 +186,12 @@ def test_a_predicate_must_hold_a_list(tmp_path):
         load_sources(tmp_path)
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `.venv/bin/pytest tests/test_classify.py -q`
 Expected: FAIL with `TypeError: SourceClass.__init__() got an unexpected keyword argument 'assign_when'`
 
-- [ ] **Step 3: Extend `SourceClass` and validate the rules in `claimstone/config.py`**
+- [x] **Step 3: Extend `SourceClass` and validate the rules in `claimstone/config.py`**
 
 Add the field to `SourceClass`, after `aliases`:
 
@@ -234,7 +234,7 @@ And in `load_sources`, inside the per-entry loop, before constructing `SourceCla
 
 Then pass `assign_when=rules` to the `SourceClass(...)` construction.
 
-- [ ] **Step 4: Write `claimstone/classify.py`**
+- [x] **Step 4: Write `claimstone/classify.py`**
 
 ```python
 """Which source class a candidate belongs to, according to rules the project declared.
@@ -318,12 +318,12 @@ def uncovered(
     return seen
 ```
 
-- [ ] **Step 5: Run to verify it passes**
+- [x] **Step 5: Run to verify it passes**
 
 Run: `.venv/bin/pytest tests/test_classify.py -q`
 Expected: PASS, 12 passed
 
-- [ ] **Step 6: Declare the rules in the shipped example**
+- [x] **Step 6: Declare the rules in the shipped example**
 
 In `projects/example-news-and-returns/sources.yaml`, add `assign_when` to the three classes a
 search can produce, and leave the other three without — they arrive from the manifest:
@@ -355,7 +355,7 @@ classes:
       crossref_type: [book, book-chapter, monograph, reference-book]
 ```
 
-- [ ] **Step 7: Run everything and commit**
+- [x] **Step 7: Run everything and commit**
 
 Run: `.venv/bin/pytest -q` — expected: all pass
 Run: `.venv/bin/claimstone validate --all-projects` — expected: OK for both
@@ -392,7 +392,7 @@ Implements spec §7, and the two missing API fields.
 - Create: `claimstone/searchers.py`
 - Create: `tests/test_searchers.py`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `tests/test_searchers.py`:
 
@@ -493,12 +493,12 @@ def test_a_row_records_the_query_that_found_it():
     assert row["query_hash"]
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `.venv/bin/pytest tests/test_searchers.py -q`
 Expected: FAIL with `ModuleNotFoundError: No module named 'claimstone.searchers'`
 
-- [ ] **Step 3: Create `claimstone/searchers.py`**
+- [x] **Step 3: Create `claimstone/searchers.py`**
 
 Move `_row`, `_now`, `CHANNEL_KEYWORD`, `CHANNEL_CITATION`, the three `search_*` functions, the
 `SEARCHERS` mapping and `_limit_kw` out of `claimstone/discover.py` into this new module. Then make
@@ -593,12 +593,12 @@ instead of two:
 Finally change every `fetcher: net.Fetcher` annotation in this module to `fetcher: net.FetcherLike`,
 so the searchers accept the fake as well as the real thing.
 
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
 
 Run: `.venv/bin/pytest tests/test_searchers.py -q`
 Expected: PASS, 7 passed
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add claimstone/searchers.py claimstone/discover.py tests/test_searchers.py
@@ -627,7 +627,7 @@ Implements spec §4's keyword half.
 - Rewrite: `claimstone/discover.py`
 - Create: `tests/test_discover.py`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `tests/test_discover.py`:
 
@@ -706,12 +706,12 @@ def test_only_the_requested_topics_are_searched(tmp_path):
     assert len(fetcher.calls) == len(topic.terms)
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `.venv/bin/pytest tests/test_discover.py -q`
 Expected: FAIL with `TypeError: run() got an unexpected keyword argument 'round_name'`
 
-- [ ] **Step 3: Rewrite the keyword half of `claimstone/discover.py`**
+- [x] **Step 3: Rewrite the keyword half of `claimstone/discover.py`**
 
 Replace the module's head and its `run`, keeping `import_manifest` at the bottom unchanged except
 for the one field the new `_row` requires:
@@ -812,13 +812,13 @@ def import_manifest(
 
 with `row["round"] = round_name` before the dedup check.
 
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
 
 Run: `.venv/bin/pytest tests/test_discover.py tests/test_import_manifest.py -q`
 Expected: PASS. `tests/test_import_manifest.py` needs `"updated": 0` results unchanged and one new
 key; if it asserts an exact dict, widen that assertion to check the three counts it cares about.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add claimstone/discover.py tests/test_discover.py tests/test_import_manifest.py
@@ -847,7 +847,7 @@ Implements spec §4's citation half.
 - Modify: `claimstone/discover.py`
 - Modify: `tests/test_discover.py`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Append to `tests/test_discover.py`:
 
@@ -955,12 +955,12 @@ def test_an_unknown_citation_setting_is_an_error(tmp_path):
         load_citation_channel(tmp_path)
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `.venv/bin/pytest tests/test_discover.py -q -k citation`
 Expected: FAIL with `AttributeError: module 'claimstone.discover' has no attribute 'run_citations'`
 
-- [ ] **Step 3: Add the thresholds to `claimstone/config.py`**
+- [x] **Step 3: Add the thresholds to `claimstone/config.py`**
 
 ```python
 CITATION_CHANNEL_NAMES = ("min_citations_in_corpus", "min_year", "require_title_chars")
@@ -996,7 +996,7 @@ def load_citation_channel(root: pathlib.Path) -> dict[str, int]:
 Add `citation_channel: dict[str, int] = field(default_factory=dict)` to `Project` and set it in
 `load_project` with `citation_channel=load_citation_channel(path)`.
 
-- [ ] **Step 4: Add `run_citations` to `claimstone/discover.py`**
+- [x] **Step 4: Add `run_citations` to `claimstone/discover.py`**
 
 ```python
 def run_citations(
@@ -1075,12 +1075,12 @@ def run_citations(
     }
 ```
 
-- [ ] **Step 5: Run to verify it passes**
+- [x] **Step 5: Run to verify it passes**
 
 Run: `.venv/bin/pytest -q`
 Expected: PASS, all tests
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add claimstone/discover.py claimstone/config.py tests/test_discover.py
@@ -1114,7 +1114,7 @@ Implements spec §5.
 - Modify: `claimstone/discover.py`
 - Modify: `tests/test_discover.py`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Append to `tests/test_discover.py`:
 
@@ -1169,12 +1169,12 @@ def test_containment_is_the_declared_rule_and_its_false_positive_is_known():
         "title:media coverage and the cross section of expected returns"
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `.venv/bin/pytest tests/test_discover.py -q -k "duplicate or near_match"`
 Expected: FAIL with `AttributeError: module 'claimstone.discover' has no attribute 'near_match'`
 
-- [ ] **Step 3: Add `near_match` to `claimstone/discover.py`**
+- [x] **Step 3: Add `near_match` to `claimstone/discover.py`**
 
 ```python
 NEAR_MATCH_MIN_CHARS = 25
@@ -1235,12 +1235,12 @@ Then the same in `run`'s keyword loop, after `row["round"] = round_name`:
 with `possible_duplicates = 0` initialised beside `new = 0`, and
 `"possible_duplicates": possible_duplicates` added to that function's returned dict too.
 
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
 
 Run: `.venv/bin/pytest -q`
 Expected: PASS, all tests
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add claimstone/discover.py tests/test_discover.py
@@ -1270,7 +1270,7 @@ Implements spec §6.
 - Create: `claimstone/discover_report.py`
 - Create: `tests/test_discover_report.py`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `tests/test_discover_report.py`:
 
@@ -1348,12 +1348,12 @@ def test_the_summary_says_what_it_refuses_to_say(tmp_path):
     assert "estimate" in summary["caveat"].lower()
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `.venv/bin/pytest tests/test_discover_report.py -q`
 Expected: FAIL with `ModuleNotFoundError: No module named 'claimstone.discover_report'`
 
-- [ ] **Step 3: Write `claimstone/discover_report.py`**
+- [x] **Step 3: Write `claimstone/discover_report.py`**
 
 ```python
 """What the two channels found, as three separate numbers.
@@ -1445,12 +1445,12 @@ def summarise(store: Store, *, round_name: str | None = None) -> dict[str, Any]:
     }
 ```
 
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
 
 Run: `.venv/bin/pytest tests/test_discover_report.py -q`
 Expected: PASS, 6 passed
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add claimstone/discover_report.py tests/test_discover_report.py
@@ -1480,7 +1480,7 @@ Implements spec §8.
 - Modify: `claimstone/cli.py`
 - Create: `tests/test_cli_discover.py`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `tests/test_cli_discover.py`:
 
@@ -1532,12 +1532,12 @@ def test_the_report_prints_the_caveat_not_an_estimate(tmp_path, capsys):
     assert "coverage" not in out.lower()
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `.venv/bin/pytest tests/test_cli_discover.py -q`
 Expected: FAIL — `discover` is not a known command
 
-- [ ] **Step 3: Add both handlers to `claimstone/cli.py`**
+- [x] **Step 3: Add both handlers to `claimstone/cli.py`**
 
 ```python
 APIS = ("openalex", "crossref", "arxiv")
@@ -1647,7 +1647,7 @@ and their flags:
             command.add_argument("--json", action="store_true")
 ```
 
-- [ ] **Step 4: Run everything**
+- [x] **Step 4: Run everything**
 
 Run: `.venv/bin/pytest -q`
 Expected: PASS, all tests
@@ -1655,7 +1655,7 @@ Expected: PASS, all tests
 Run: `.venv/bin/claimstone discover --help`
 Expected: usage showing `--channel`, `--round`, repeatable `--api`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add claimstone/cli.py tests/test_cli_discover.py
@@ -1681,7 +1681,7 @@ Implements spec §9's remaining surface: the row stage 2 reads.
 **Files:**
 - Create: `docs/contracts/candidates.md`
 
-- [ ] **Step 1: Write `docs/contracts/candidates.md`**
+- [x] **Step 1: Write `docs/contracts/candidates.md`**
 
 ```markdown
 # `candidates.jsonl` — the contract
@@ -1730,7 +1730,7 @@ D10's completeness reasoning to mean anything, which is why the citation rule fi
 `citations_in_corpus` — a property of that channel — and never on the topic terms.
 ```
 
-- [ ] **Step 2: Run everything and commit**
+- [x] **Step 2: Run everything and commit**
 
 Run: `.venv/bin/pytest -q` — expected: all pass
 Run: `.venv/bin/claimstone validate --all-projects` — expected: OK for both
