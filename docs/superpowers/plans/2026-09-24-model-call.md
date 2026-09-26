@@ -1891,6 +1891,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Callable
 
+from claimstone.model_call import rendered_prompt
 from claimstone.runners.base import RawAnswer
 
 ENDPOINT = "http://127.0.0.1:8080/v1/chat/completions"
@@ -1957,6 +1958,8 @@ class LlamaCppRunner:
             # Electricity is a cost and not a per-call price. Unpriced, not free.
             cost_usd=None,
             truncated=first.get("finish_reason") == "length",
+            # Two messages went out; the echo check compares one string, and this is that string.
+            prompt_sent=rendered_prompt(request["system"], request["user"]),
         )
 ```
 
