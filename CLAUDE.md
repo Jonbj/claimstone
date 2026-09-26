@@ -140,9 +140,16 @@ on D4 before applying it to any other backend.
 
 ## Status
 
-The contract and its validator exist. **Stages 2 (acquire) and 3 (normalize) are implemented**,
-with commands, ledgers and contracts under `docs/contracts/`. Stages 1, 4, 5 and 6 are specified
-with implementation plans and not built; the CLI exits with a message for each.
+The contract and its validator exist. **Stages 1 (discover), 2 (acquire) and 3 (normalize) are
+implemented**, along with `model_call` — the file boundary every model-using stage goes through — with
+commands, ledgers and contracts under `docs/contracts/`. Stages 4, 5 and 6 are specified and not built;
+the CLI exits with a message for each.
+
+Two things stage 1 does not do, both recorded rather than hidden. The citation channel produces
+candidates nothing can classify — a reference carries no venue type and 25 of 37 carry no URL — so the
+resolution step from title or DOI to a venue and an address is stage 1's and is missing; see
+`docs/contracts/candidates.md`. And no API searcher has been run against the live internet on a real
+project, so the keyword channel is tested against saved payloads only.
 
 Order of work, decided 2026-09-22: **stage 2, then a thin vertical slice** (stages 3-6 on the
 25-source manifest, through to real verdicts), **then the dashboard** — it is the one

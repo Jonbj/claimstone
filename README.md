@@ -123,8 +123,14 @@ outcome and not a failure.
 
 ## Status
 
-Early, and measured. **Stages 2 and 3 are implemented**; stages 1 and 4-6 are specified with
-implementation plans and not built. The dashboard is specified and deliberately last.
+Early, and measured. **Stages 1, 2 and 3 are implemented**, along with the model boundary every
+model-using stage goes through; stages 4-6 are specified with implementation plans and not built. The
+dashboard is specified and deliberately last.
+
+The first extraction records exist: 66 claims for one question, every one of the 66 evidence quotes an
+exact substring of the passage it came from, checked in code. The finding that matters is not that
+number — it is that the single claim contradicting the question is the weakest one present and reports
+a paper that is not in the corpus. See D22 and D23.
 
 The first deliverable is a sentence with a number in it, and here it is: on a real 25-source
 manifest whose acquisition rate was **0.42**, the rate is **0.56** — fourteen sources obtained,
