@@ -316,3 +316,91 @@ def test_a_truncated_empty_body_is_truncated_and_not_retried_forever(tmp_path):
     queue, rows = _drain(tmp_path, runner)
     assert rows[0]["failure_class"] == "TRUNCATED"
     assert queue.pending(backend="fake") == []
+
+
+# --- What the first real batch showed ------------------------------------------------------------
+#
+# Two calls on claude-cli against real chunks about H02. Both produced exactly the asked-for shape,
+# with 16 of 16 evidence quotes exact substrings of their chunk — and both were recorded NOT_JSON,
+# because the answer arrived wrapped in a ```json fence the prompt had explicitly forbidden.
+
+def test_a_fenced_answer_is_unwrapped_rather_than_called_malformed(tmp_path):
+    runner = FakeRunner(default=answer(
+        b'```json\n[{"question_id": "Q07"}]\n```'))
+    _, rows = _drain(tmp_path, runner)
+    assert rows[0]["ok"] is True
+    assert rows[0]["output"] == [{"question_id": "Q07"}]
+
+
+def test_a_bare_fence_without_a_language_is_unwrapped_too(tmp_path):
+    runner = FakeRunner(default=answer(b'```\n[{"question_id": "Q07"}]\n```'))
+    _, rows = _drain(tmp_path, runner)
+    assert rows[0]["ok"] is True
+
+
+def test_prose_outside_the_fence_is_still_malformed(tmp_path):
+    """Narrow on purpose. A fence around the whole body is an envelope; prose beside it is a model
+    saying something the schema cannot see, and accepting it would let that something pass unread."""
+    runner = FakeRunner(default=answer(
+        b'Here are the claims I found:\n```json\n[{"question_id": "Q07"}]\n```\nHope that helps.'))
+    _, rows = _drain(tmp_path, runner)
+    assert rows[0]["ok"] is False
+    assert rows[0]["failure_class"] == "NOT_JSON"
+
+
+def test_an_unclosed_fence_is_malformed(tmp_path):
+    runner = FakeRunner(default=answer(b'```json\n[{"question_id": "Q07"}]'))
+    _, rows = _drain(tmp_path, runner)
+    assert rows[0]["failure_class"] == "NOT_JSON"
+
+
+def test_a_rejudgement_reclassifies_stored_bytes_without_calling_the_backend(tmp_path):
+    """The answer was paid for. A classifier fix must not orphan it, and must not re-buy it.
+
+    Stage 2 has `regate` for exactly this reason; the first classifier fix here — the code fence —
+    would otherwise have left two answers we had already paid for permanently mis-recorded.
+    """
+    runner = FakeRunner(default=answer(b'```json\n[{"question_id": "Q07"}]\n```'))
+    queue, first = _drain(tmp_path, runner)
+    assert first[0]["ok"] is True
+    assert len(runner.calls) == 1
+
+    rows = list(model_call.rejudge(queue))
+    assert len(rows) == 1
+    assert rows[0]["ok"] is True
+    assert len(runner.calls) == 1, "a re-judgement must open nothing and call nobody"
+
+
+def test_a_rejudgement_is_not_an_attempt_and_costs_nothing(tmp_path):
+    """D14: a retry and a re-judgement collapse differently. It is the same answer read again, so
+    counting it as an attempt would inflate the queue's cost and deflate its throughput."""
+    runner = FakeRunner(default=answer(b'[{"question_id": "Q07"}]'))
+    queue, _ = _drain(tmp_path, runner)
+    row = next(iter(model_call.rejudge(queue)))
+    assert row["rejudged_from"] is not None
+    assert row["cost_usd"] is None
+    assert row["latency_s"] == 0.0
+    assert row["attempt_no"] == 1, "the attempt it re-reads, not a new one"
+
+
+def test_a_rejudgement_can_turn_a_failure_into_a_success_and_the_reverse(tmp_path):
+    runner = FakeRunner(default=answer(b'```json\n[{"question_id": "Q07"}]\n```'))
+    queue, _ = _drain(tmp_path, runner)
+
+    # A schema tightened after the fact: the same bytes now fail, and the latest row says so.
+    strict = {"type": "array", "maxItems": 0, "items": {"type": "object"}}
+    rows = list(model_call.rejudge(queue, response_schema=strict))
+    assert rows[0]["ok"] is False
+    assert rows[0]["failure_class"] == "SCHEMA_INVALID"
+    assert queue.results(backend="fake")[f"{rows[0]['call_id']}|fake"]["ok"] is False
+
+
+def test_a_rejudgement_skips_a_row_whose_bytes_are_gone(tmp_path):
+    """No bytes, no re-reading. Inventing a verdict for an answer nobody can show is the opposite
+    of what keeping the raw bytes is for."""
+    import pathlib
+
+    runner = FakeRunner(default=answer(b'[{"question_id": "Q07"}]'))
+    queue, first = _drain(tmp_path, runner)
+    pathlib.Path(first[0]["raw_path"]).unlink()
+    assert list(model_call.rejudge(queue)) == []

@@ -41,9 +41,15 @@ TERMS = ("sentiment", "news", "abnormal return", "predict", "drift", "incrementa
 
 # One claim per row, and the quote is the row's reason to exist. `additionalProperties: false` is
 # what stops a model adding a confidence score nobody asked for and nobody would know how to weigh.
+#
+# There is no `maxItems`, and there was. The first drain of this batch put `maxItems: 8` on it and
+# threw away a whole record for holding **nine** claims whose nine quotes were every one an exact
+# substring of the chunk. A cap on item count is a cost bound dressed as a shape, and the cost bound
+# already exists and is honest about itself: `max_output_tokens` is inside `call_id`, so raising it is
+# a different call. What stops a model padding the array is the quote gate, which is the defence that
+# actually reads what was written. See D22.
 SCHEMA = {
     "type": "array",
-    "maxItems": 8,
     "items": {
         "type": "object",
         "additionalProperties": False,

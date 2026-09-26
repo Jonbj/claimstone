@@ -16,15 +16,23 @@ from claimstone.store import Store
 
 def summarise(store: Store, *, lane: str, batch: str) -> dict[str, Any]:
     """Per backend and model: calls, outcomes, tokens, cost, observed throughput."""
-    # Every attempt, not the latest per call: a timeout that cost money and was retried is two
-    # payments, and collapsing them reports one. Correctness is counted on the collapse below.
-    attempts = list(store.read(f"calls/{lane}/{batch}/results.jsonl"))
+    # Every row, then two readings of it. The collapse says what stands now; the attempts say what
+    # was paid for and waited on, which a retry makes a different number — a timeout that cost money
+    # and was retried is two payments, and collapsing them reports one.
+    rows = list(store.read(f"calls/{lane}/{batch}/results.jsonl"))
     current: dict[str, dict[str, Any]] = {}
-    for row in attempts:
+    for row in rows:
         current[f"{row.get('call_id')}|{row.get('backend')}"] = row
 
+    # A re-judgement is not an attempt (D14). It re-reads bytes already paid for, so counting it
+    # would inflate what the queue cost and deflate how fast it went — while its verdict is the one
+    # that now stands, which is why the collapse above keeps it and this does not.
+    attempts = [row for row in rows if not row.get("rejudged_from")]
+
     by_backend: dict[str, dict[str, Any]] = {}
-    for row in attempts:
+    # Iterated over every row, so a call answered only by a re-judgement is still counted as
+    # answered; the per-row guard below is what keeps it out of the paid-for figures.
+    for row in rows:
         key = str(row.get("backend") or "unknown")
         bucket = by_backend.setdefault(key, {
             # `attempts` is what was paid for and waited on; `calls` is how many distinct calls
@@ -32,19 +40,33 @@ def summarise(store: Store, *, lane: str, batch: str) -> dict[str, Any]:
             # them, so they have different names — a single field called `calls` made
             # sum(by_backend[*]["calls"]) disagree with summary["calls"] with no explanation,
             # inside the one artifact whose whole job is to be trusted about numbers.
+            # `ok` follows `calls`: distinct calls whose current answer stands valid, so it sums to
+            # summary["ok"]. `attempt_failures_by_class` follows `attempts`: every failure that
+            # happened, including ones a retry or a re-judgement later fixed. Counting successful
+            # attempts under the name `ok` made it disagree with the total it looked like part of —
+            # the third time one name in this structure meant two things.
             "attempts": 0, "calls": 0, "ok": 0, "unpriced": 0,
             "cost_usd": None, "latency_total_s": 0.0,
             "input_tokens": 0, "cached_input_tokens": 0, "output_tokens": 0,
-            "models": set(), "answered": set(), "failures_by_class": {},
+            "models": set(), "answered": set(), "valid": set(),
+            "attempt_failures_by_class": {},
         })
-        bucket["attempts"] += 1
-        bucket["answered"].add(str(row.get("call_id")))
+        call_id = str(row.get("call_id"))
+        bucket["answered"].add(call_id)
         bucket["models"].add(str(row.get("model") or "unknown"))
+        # Latest wins, for a retry and for a re-judgement alike: the last row about a call is what
+        # stands, which is the collapse `summary` uses.
+        bucket["valid"].discard(call_id)
         if row.get("ok"):
-            bucket["ok"] += 1
-        else:
+            bucket["valid"].add(call_id)
+        if row.get("rejudged_from"):
+            continue
+
+        bucket["attempts"] += 1
+        if not row.get("ok"):
             name = str(row.get("failure_class"))
-            bucket["failures_by_class"][name] = bucket["failures_by_class"].get(name, 0) + 1
+            bucket["attempt_failures_by_class"][name] = (
+                bucket["attempt_failures_by_class"].get(name, 0) + 1)
 
         cost = row.get("cost_usd")
         if cost is None:
@@ -60,13 +82,14 @@ def summarise(store: Store, *, lane: str, batch: str) -> dict[str, Any]:
     for bucket in by_backend.values():
         spent = bucket.pop("latency_total_s")
         bucket["calls"] = len(bucket.pop("answered"))
+        bucket["ok"] = len(bucket.pop("valid"))
         # Observed, not promised: the rate this queue actually ran at on this backend. Named for
         # attempts because that is what it counts — every attempt is time the queue spent, and it is
         # the figure that answers "how long will the rest of this take".
         bucket["attempts_per_hour"] = (bucket["attempts"] / spent * 3600) if spent else None
         bucket["models"] = sorted(bucket["models"])
-        bucket["failures_by_class"] = dict(
-            sorted(bucket["failures_by_class"].items(), key=lambda kv: -kv[1])
+        bucket["attempt_failures_by_class"] = dict(
+            sorted(bucket["attempt_failures_by_class"].items(), key=lambda kv: -kv[1])
         )
 
     # Both totals are the sum of their per-backend parts, by construction. A report whose parts do

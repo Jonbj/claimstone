@@ -568,3 +568,53 @@ the rule is structural, and a reviewer arguing about the numbers is arguing abou
 **One negative is one negative.** A flat sweep over a corpus with a single non-document says the
 rule is insensitive *here*, not that it is right. The next corpus with two marketing PDFs in it is
 the test, and until then this is evidence about robustness and not about accuracy.
+
+## D22 — The first real extraction records, and what they cost
+D18 blocked three questions on records that did not exist: what counts as an independent study, what
+magnitude is material per question, and whether the gate's whole-record rejection is affordable. Two
+calls answered the third and nothing else, which is what two calls are worth.
+
+### Measured, 2026-09-26
+
+One hand-built `extract` batch for **H02** (kind `effect`), twelve calls queued by
+`tools/handbuilt_h02_batch.py`, two drained on `claude-cli` with `claude-opus-5`.
+
+```
+answered                   2      54.3s and 110.8s
+recorded valid             0      both NOT_JSON
+prompt_verified         true      on both
+evidence quotes        16/16      exact substrings of their chunk
+after unfencing        1 of 2      the other: 9 claims against a maxItems of 8
+```
+
+**16 of 16 quotes were exact.** Every one a literal substring of the chunk it came from, checked in
+code, with numbers and t-statistics inside the span. Invariant 1's gate passed on the first real
+output it ever saw. That is one prompt against two passages of one paper and is not a rate, but the
+failure mode it was built to catch did not occur.
+
+**Both answers were recorded `NOT_JSON`, and both were valid.** The model wrapped the array in a
+```json fence, which the prompt forbade in as many words. `model_call` now unwraps a body that is
+*exactly* one fenced block — the fence is the harness's presentation habit, one envelope outside the
+answer, and the schema still judges what is inside. Prose *beside* a fence stays `NOT_JSON`: a model
+saying something the schema cannot see must not have that something pass unread.
+
+**A classifier fix must not orphan answers already paid for.** Stage 2 has `regate` for exactly this;
+`model_call` had nothing, so the fence fix would have left two paid answers permanently mis-recorded.
+`model-run --rejudge` re-reads the stored bytes under the current rules, opens nothing, and writes a
+row carrying `rejudged_from` that D14 keeps out of what the queue cost and how fast it went while
+letting it stand as the verdict. Run on those two: **1 recovered, for nothing.**
+
+**Whole-record rejection is not affordable, and the cap was mine.** The record that still fails holds
+nine claims with nine exact quotes, discarded entire because I wrote `maxItems: 8` at a desk. A cap on
+item count is a cost bound dressed as a shape, and the cost bound already exists and is honest about
+itself — `max_output_tokens` is inside `call_id`, so raising it is a different call. The builder no
+longer caps item count. What stops a model padding the array is the quote gate, which is the defence
+that actually reads what was written.
+
+That does not settle the unit of rejection for stage 4. It settles that a shape constraint nobody
+measured will throw away good evidence, and that the first one did.
+
+**What two calls did not answer.** Nothing about independence, nothing about material magnitude, and
+nothing about the harvest rate: two passages of one paper, chosen by a screen that counts the word
+"sentiment". The `QUALIFIES` stance was used seven times in sixteen, which is either the prompt
+working or a model hedging, and two calls cannot tell those apart.

@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import datetime as _dt
 import json
+import re
 from typing import Any
 
 from claimstone.store import sha256_text
@@ -32,6 +33,23 @@ def canonical(value: Any) -> str:
 
 
 PROMPT_SEPARATOR = "\n\n---\n\n"
+
+# A body that is nothing but a fenced block. Measured on the first real batch: two calls on
+# claude-cli returned exactly the asked-for shape, with 16 of 16 evidence quotes exact substrings of
+# their chunk, and both were recorded NOT_JSON because the answer arrived inside a ```json fence the
+# prompt had forbidden in as many words.
+#
+# Unwrapping it is not softening a verdict about the literature: the fence is a presentation habit of
+# the harness, one envelope layer outside the answer, and the schema still judges what is inside.
+# Narrow on purpose — prose *beside* the fence stays NOT_JSON, because a model saying something the
+# schema cannot see must not have that something pass unread.
+_FENCED = re.compile(r"\A\s*```[A-Za-z0-9_+-]*[ \t]*\r?\n(.*?)\r?\n?\s*```\s*\Z", re.S)
+
+
+def unfence(body: str) -> str:
+    """The contents of a body that is exactly one fenced block, or the body unchanged."""
+    found = _FENCED.match(body)
+    return found.group(1) if found else body
 
 
 def rendered_prompt(system: str, user: str) -> str:
@@ -228,7 +246,7 @@ def _classify(answer: Any, request: dict[str, Any]) -> tuple[Any, str | None, li
         # runner returning zero bytes has not made it.
         return None, "EMPTY", []
     try:
-        parsed = json.loads(answer.body.decode("utf-8", "replace"))
+        parsed = json.loads(unfence(answer.body.decode("utf-8", "replace")))
     except ValueError:
         return None, "NOT_JSON", []
 
@@ -350,4 +368,74 @@ def drain(queue: Queue, runner: Any, *, limit: int | None = None) -> Any:
         )
         queue.store.append(queue.results_name, row)
         done += 1
+        yield row
+
+
+def rejudge(
+    queue: Queue,
+    *,
+    backend: str | None = None,
+    response_schema: dict[str, Any] | None = None,
+) -> Any:
+    """Re-read every stored answer under the current rules. Opens nothing and calls nobody.
+
+    The counterpart of stage 2's `regate`, and it exists for the same reason: the bytes were paid
+    for, they are on disk under their hash, and a fix to the classifier must neither orphan them nor
+    re-buy them. The first such fix — a ```json fence the model added and the prompt had
+    forbidden — would otherwise have left two answers already paid for permanently mis-recorded as
+    NOT_JSON.
+
+    D14 governs the row it writes. A re-judgement is **not** an attempt: it is the same answer read
+    again, so it carries `rejudged_from`, no cost and no latency, and `model_report` leaves it out of
+    what the queue cost and how fast it went. But it *is* authoritative about that answer, so plain
+    latest-wins is right — a tightened schema turns a success into a failure, and the queue says so.
+
+    `response_schema` overrides what the request carried, for asking what a different shape would
+    have accepted without writing a new batch.
+    """
+    import pathlib
+
+    from claimstone.runners.base import RawAnswer
+
+    requests = {row["call_id"]: row for row in queue.requests()}
+    for held in queue.results(backend=backend).values():
+        request = requests.get(str(held.get("call_id")))
+        if request is None:
+            continue
+        stored = held.get("raw_path") or ""
+        if not stored or not pathlib.Path(stored).exists():
+            # No bytes, no re-reading. Inventing a verdict for an answer nobody can show is the
+            # opposite of what keeping the raw bytes is for.
+            continue
+        if response_schema is not None:
+            request = {**request, "response_schema": response_schema}
+
+        # Rebuilt from what was recorded, not re-fetched. `truncated` and `refused` are facts the
+        # backend reported at the time and cannot be re-derived, so they are carried across.
+        answer = RawAnswer(
+            body=pathlib.Path(stored).read_bytes(),
+            model=str(held.get("model") or ""),
+            prompt_sent=None,
+            usage=dict(held.get("usage") or {}),
+            cost_usd=None,
+            truncated=bool(held.get("failure_class") == "TRUNCATED"),
+        )
+        row = build_result(
+            request, answer,
+            attempt_no=int(held.get("attempt_no") or 1),
+            backend=str(held.get("backend") or "unknown"),
+            harness_version=str(held.get("harness_version") or ""),
+            raw_sha256=held.get("raw_sha256"),
+            raw_path=stored,
+            started_at=str(held.get("started_at") or ""),
+            finished_at=_now(),
+            latency_s=0.0,
+        )
+        # The echo check cannot run on stored bytes: the runner is not here to say what it sent. The
+        # earlier row's answer to that question stands, rather than being downgraded by a re-reading
+        # that was never in a position to ask.
+        row["prompt_sha256"] = held.get("prompt_sha256")
+        row["prompt_verified"] = bool(held.get("prompt_verified"))
+        row["rejudged_from"] = held.get("finished_at") or held.get("started_at") or ""
+        queue.store.append(queue.results_name, row)
         yield row

@@ -2082,7 +2082,7 @@ def test_failures_are_broken_down_by_class(tmp_path):
                               result("c", backend="x", ok=True)])
     bucket = model_report.summarise(store, lane="extract", batch="b1")["by_backend"]["x"]
     assert bucket["ok"] == 1
-    assert bucket["failures_by_class"] == {"SCHEMA_INVALID": 2}
+    assert bucket["attempt_failures_by_class"] == {"SCHEMA_INVALID": 2}
 
 
 def test_an_empty_batch_has_no_throughput_rather_than_zero(tmp_path):
@@ -2137,7 +2137,7 @@ def summarise(store: Store, *, lane: str, batch: str) -> dict[str, Any]:
             "attempts": 0, "calls": 0, "ok": 0, "unpriced": 0,
             "cost_usd": None, "latency_total_s": 0.0,
             "input_tokens": 0, "cached_input_tokens": 0, "output_tokens": 0,
-            "models": set(), "answered": set(), "failures_by_class": {},
+            "models": set(), "answered": set(), "attempt_failures_by_class": {},
         })
         bucket["attempts"] += 1
         bucket["answered"].add(str(row.get("call_id")))
@@ -2146,7 +2146,7 @@ def summarise(store: Store, *, lane: str, batch: str) -> dict[str, Any]:
             bucket["ok"] += 1
         else:
             name = str(row.get("failure_class"))
-            bucket["failures_by_class"][name] = bucket["failures_by_class"].get(name, 0) + 1
+            bucket["attempt_failures_by_class"][name] = bucket["attempt_failures_by_class"].get(name, 0) + 1
 
         cost = row.get("cost_usd")
         if cost is None:
@@ -2167,8 +2167,8 @@ def summarise(store: Store, *, lane: str, batch: str) -> dict[str, Any]:
         # the figure that answers "how long will the rest of this take".
         bucket["attempts_per_hour"] = (bucket["attempts"] / spent * 3600) if spent else None
         bucket["models"] = sorted(bucket["models"])
-        bucket["failures_by_class"] = dict(
-            sorted(bucket["failures_by_class"].items(), key=lambda kv: -kv[1])
+        bucket["attempt_failures_by_class"] = dict(
+            sorted(bucket["attempt_failures_by_class"].items(), key=lambda kv: -kv[1])
         )
 
     # Both totals are the sum of their per-backend parts, by construction. A report whose parts do
@@ -2339,9 +2339,9 @@ def _model_report(args: argparse.Namespace) -> int:
         rate = "—" if bucket["attempts_per_hour"] is None else f"{bucket['attempts_per_hour']:.0f}/h"
         print(f"  {backend:<14} {bucket['ok']}/{bucket['calls']}  {cost:<24} {rate:>9}"
               f"  {', '.join(bucket['models'])}")
-        if bucket["failures_by_class"]:
+        if bucket["attempt_failures_by_class"]:
             print("                 " + "  ".join(
-                f"{k} {v}" for k, v in bucket["failures_by_class"].items()))
+                f"{k} {v}" for k, v in bucket["attempt_failures_by_class"].items()))
     return 0
 ```
 

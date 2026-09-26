@@ -81,7 +81,7 @@ def test_failures_are_broken_down_by_class(tmp_path):
                               result("c", backend="x", ok=True)])
     bucket = model_report.summarise(store, lane="extract", batch="b1")["by_backend"]["x"]
     assert bucket["ok"] == 1
-    assert bucket["failures_by_class"] == {"SCHEMA_INVALID": 2}
+    assert bucket["attempt_failures_by_class"] == {"SCHEMA_INVALID": 2}
 
 
 def test_an_empty_batch_has_no_throughput_rather_than_zero(tmp_path):
@@ -120,3 +120,31 @@ def test_throughput_counts_every_attempt_because_every_attempt_took_time(tmp_pat
     # backend did; 1.0 would be the rate if the timed-out half hour had not happened, and it did.
     assert bucket["calls"] == 1
     assert round(bucket["attempts_per_hour"], 2) == 2.0
+
+
+def test_a_rejudgement_is_current_but_is_not_an_attempt(tmp_path):
+    """D14 again, in the report. A re-judgement re-reads bytes already paid for, so counting it
+    would inflate what the queue cost and deflate how fast it went — while its verdict is the one
+    that now stands."""
+    store = _store(tmp_path, [
+        result("a", backend="x", cost=0.002, latency=60.0, ok=False, failure="NOT_JSON"),
+        {**result("a", backend="x", cost=None, latency=0.0, ok=True), "rejudged_from": "then"},
+    ])
+    summary = model_report.summarise(store, lane="extract", batch="b1")
+    bucket = summary["by_backend"]["x"]
+    assert summary["attempts"] == 1
+    assert (bucket["attempts"], bucket["calls"]) == (1, 1)
+    assert bucket["cost_usd"] == 0.002
+    assert round(bucket["attempts_per_hour"]) == 60
+    # And the answer that stands is the re-read one.
+    assert summary["ok"] == 1
+    assert bucket["ok"] == 1
+
+
+def test_a_batch_that_is_only_rejudgements_has_no_throughput_rather_than_infinity(tmp_path):
+    store = _store(tmp_path, [
+        {**result("a", backend="x", cost=None, latency=0.0, ok=True), "rejudged_from": "then"}])
+    bucket = model_report.summarise(store, lane="extract", batch="b1")["by_backend"]["x"]
+    assert bucket["attempts"] == 0
+    assert bucket["calls"] == 1
+    assert bucket["attempts_per_hour"] is None

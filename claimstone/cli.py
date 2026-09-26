@@ -372,6 +372,19 @@ def _model_run(args: argparse.Namespace) -> int:
     store = Store(project.name, base=args.store)
     queue = model_call.Queue(store, lane=args.lane, batch=args.batch)
 
+    if args.rejudge:
+        # No backend is contacted: the answers are on disk under their hashes, so asking what the
+        # current rules make of them costs nothing. The counterpart of `regate`.
+        done = ok = 0
+        for row in model_call.rejudge(queue, backend=runner.name):
+            done += 1
+            ok += bool(row["ok"])
+            mark = "ok  " if row["ok"] else "fail"
+            print(f"[{done:>4}] {mark}  {row['call_id'][:12]}"
+                  f"  {row.get('failure_class') or ''}", file=sys.stderr)
+        print(f"{done} re-read, {ok} now valid — no call was made and nothing was paid")
+        return 0
+
     # Per backend, like everything else about the queue: how much is left to do depends on who is
     # doing it, which is the whole point of two backends draining one requests file.
     pending = len(queue.pending(backend=runner.name))
@@ -415,9 +428,9 @@ def _model_report(args: argparse.Namespace) -> int:
         rate = "—" if bucket["attempts_per_hour"] is None else f"{bucket['attempts_per_hour']:.0f}/h"
         print(f"  {backend:<14} {bucket['ok']}/{bucket['calls']}  {cost:<24} {rate:>9}"
               f"  {', '.join(bucket['models'])}")
-        if bucket["failures_by_class"]:
+        if bucket["attempt_failures_by_class"]:
             print("                 " + "  ".join(
-                f"{k} {v}" for k, v in bucket["failures_by_class"].items()))
+                f"{k} {v}" for k, v in bucket["attempt_failures_by_class"].items()))
     return 0
 
 
@@ -501,6 +514,8 @@ def build_parser() -> argparse.ArgumentParser:
                                  help="one of " + ", ".join(BACKENDS))
             command.add_argument("--model", help="model id for backends that need one")
             command.add_argument("--limit", type=int, default=None)
+            command.add_argument("--rejudge", action="store_true",
+                                 help="re-read stored answers under the current rules; no call")
         if name == "model-report":
             command.add_argument("--json", action="store_true")
 

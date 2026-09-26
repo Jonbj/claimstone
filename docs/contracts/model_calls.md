@@ -102,6 +102,24 @@ retry cut off in the same place.
 failed call has not earned. Stage 4's rejection ledger is the denominator, and it can only be that
 if a failure stays a failure.
 
+## Re-judging what was already paid for
+
+`claimstone model-run --rejudge` re-reads every stored answer under the current rules. It opens
+nothing and calls nobody: the bytes are on disk under their hash, so asking what the current
+classifier makes of them costs nothing. This is stage 2's `regate`, one module over, and it exists for
+the same reason — the first classifier fix here would otherwise have left two answers already paid for
+permanently mis-recorded.
+
+D14 governs the row it writes. A re-judgement is **not** an attempt: it carries `rejudged_from`, no
+cost and no latency, and `model-report` leaves it out of what the queue cost and how fast it went. It
+*is* authoritative about that answer, so latest-wins is right — a tightened schema turns a success
+into a failure and the queue says so. A row whose bytes are gone is skipped rather than given an
+invented verdict.
+
+The echo check cannot run on stored bytes, because the runner is not there to say what it sent. The
+earlier row's `prompt_verified` stands rather than being downgraded by a re-reading that was never in
+a position to ask.
+
 ## Cost and throughput
 
 `claimstone model-report` sums `results.jsonl`. Two rules, both about not producing a figure that
@@ -115,8 +133,11 @@ can compute and how many rows it left out.
 paid for and waited on — and `calls`, how many distinct calls it answered; a retry is what separates
 them. `summary["attempts"]` and `summary["calls"]` are the sums of their parts by construction,
 because a report whose parts disagree with its totals is a report nobody can use.
-`attempts_per_hour` counts attempts, since a timed-out attempt is time the queue spent, and it is
-the figure that answers how long the rest will take. The local server runs at about five an hour
+Each bucket's `ok` follows `calls` — distinct calls whose current answer stands valid, so it sums to
+`summary["ok"]` — and `attempt_failures_by_class` follows `attempts`, holding every failure that
+happened, including ones a retry or a re-judgement later fixed. `attempts_per_hour` counts attempts,
+since a timed-out attempt is time the queue spent, and it is the figure that answers how long the rest
+will take. The local server runs at about five an hour
 where a hosted endpoint finishes the same queue in an afternoon, so there is no aggregate.
 
 ## Resuming, and the comparison
