@@ -223,3 +223,93 @@ def test_containment_is_the_declared_rule_and_its_false_positive_is_known():
     held = {"title:media coverage and the cross section of expected returns"}
     assert discover.near_match("title:and the cross section of expected returns", held) == \
         "title:media coverage and the cross section of expected returns"
+
+
+# --- Resolution: the citation channel's candidates become fetchable ------------------------------
+
+def _resolving_fetcher(work_title="Is all that talk just noise? A long enough title"):
+    from tests.test_resolve_reference import OPENALEX, WORK
+
+    return FakeFetcher(json_pages={OPENALEX: {"results": [{**WORK, "title": work_title}]}})
+
+
+def test_resolution_gives_a_citation_candidate_a_class_and_an_address(tmp_path):
+    """Before this, all 37 citation candidates on the real corpus were unclassified and 25 had no URL."""
+    project = load_project(PROJECT)
+    store = Store("t", base=tmp_path)
+    title = "Is all that talk just noise? A long enough title"
+    store.append("references.jsonl", reference("title:is all that talk just noise a long enough title",
+                                              title=title, cited=3))
+    result = discover.run_citations(project, store, fetcher=_resolving_fetcher(title))
+    row = next(iter(store.read("candidates.jsonl")))
+    assert row["source_class"] == "ACA"
+    assert row["url"] == "https://x.example/talk"
+    assert row["venue_type"] == "journal"
+    assert row["resolution"] == "BY_TITLE"
+    assert result["resolved"] == 1
+
+
+def test_resolution_does_not_move_the_candidate_key(tmp_path):
+    """The trap. `candidate_key` prefers a DOI, so a row that gains one on resolution would land under
+    a second key — and the same work would be two candidates, one of them a ghost nothing supersedes.
+    The citation channel keys on the reference, which is stable across resolution.
+    """
+    project = load_project(PROJECT)
+    store = Store("t", base=tmp_path)
+    title = "Is all that talk just noise? A long enough title"
+    key = "title:is all that talk just noise a long enough title"
+    store.append("references.jsonl", reference(key, title=title, cited=3))
+
+    discover.run_citations(project, store)                                   # no network, unresolved
+    discover.run_citations(project, store, fetcher=_resolving_fetcher(title))  # then resolved
+    rows = list(store.read("candidates.jsonl"))
+    assert {r["candidate_key"] for r in rows} == {key}
+    latest = store.latest_by("candidates.jsonl", "candidate_key")[key]
+    assert latest["doi"] == "10.1111/j.1540-6261.2004.00662.x"
+    assert latest["source_class"] == "ACA"
+
+
+def test_an_unresolved_candidate_records_why_and_is_retried_next_time(tmp_path):
+    project = load_project(PROJECT)
+    store = Store("t", base=tmp_path)
+    title = "A title that resolves to nothing at all here"
+    store.append("references.jsonl", reference("title:a title that resolves to nothing at all here",
+                                               title=title, cited=3))
+    result = discover.run_citations(project, store, fetcher=FakeFetcher())
+    assert result["resolved"] == 0
+    assert result["unresolved"] == {"LOOKUP_FAILED": 1}
+    row = next(iter(store.read("candidates.jsonl")))
+    assert row["resolution"] == "LOOKUP_FAILED"
+    assert row["source_class"] is None
+
+    # A second pass with a working fetcher supersedes it rather than skipping it as already seen.
+    again = discover.run_citations(project, store, fetcher=_resolving_fetcher(title))
+    assert again["resolved"] == 1
+
+
+def test_without_a_fetcher_nothing_is_resolved_and_nothing_is_requested(tmp_path):
+    """`--channel citation` promises to read a ledger and open no socket. Resolution is opt-in."""
+    project = load_project(PROJECT)
+    store = Store("t", base=tmp_path)
+    store.append("references.jsonl", reference("title:a perfectly good long title here",
+                                               title="A perfectly good long title here", cited=3))
+    result = discover.run_citations(project, store)
+    assert result["resolved"] == 0
+    assert result["unresolved"] == {"NOT_ATTEMPTED": 1}
+    assert next(iter(store.read("candidates.jsonl")))["resolution"] == "NOT_ATTEMPTED"
+
+
+def test_a_resolved_doi_matching_an_existing_candidate_is_noted_as_a_duplicate(tmp_path):
+    """A certain duplicate, not a near-match: the same DOI under two keys. Still only noted, because
+    a wrong merge loses a source and a duplicate costs one wasted fetch."""
+    project = load_project(PROJECT)
+    store = Store("t", base=tmp_path)
+    title = "Is all that talk just noise? A long enough title"
+    store.append("candidates.jsonl", {
+        "candidate_key": "doi:10.1111/j.1540-6261.2004.00662.x",
+        "doi": "10.1111/j.1540-6261.2004.00662.x", "channel": "keyword", "title": "Whatever"})
+    store.append("references.jsonl", reference("title:is all that talk just noise a long enough title",
+                                               title=title, cited=3))
+    discover.run_citations(project, store, fetcher=_resolving_fetcher(title))
+    row = [r for r in store.read("candidates.jsonl") if r.get("channel") == "citation"][0]
+    assert row["possible_duplicate_of"] == "doi:10.1111/j.1540-6261.2004.00662.x"

@@ -388,13 +388,35 @@ def _discover(args: argparse.Namespace) -> int:
             print("  declare an assign_when rule in sources.yaml rather than loosening one")
 
     if args.channel in ("citation", "both"):
-        result = discover.run_citations(project, store, round_name=args.round)
+        # A fetcher only when asked for. Without --resolve this channel reads a ledger and opens no
+        # socket, which is the promise that lets it re-run for free — so resolution is opt-in rather
+        # than something the channel does because it can.
+        resolver = None
+        if args.resolve:
+            from claimstone import net
+
+            try:
+                net.contact_email()
+            except net.ContactNotConfigured as exc:
+                print(str(exc), file=sys.stderr)
+                return 2
+            resolver = net.Fetcher(excluded_hosts=frozenset(project.excluded_hosts))
+
+        result = discover.run_citations(project, store, round_name=args.round, fetcher=resolver)
         if not result["references_available"]:
             print("citation channel: nothing to read — no references.jsonl yet "
                   "(run `claimstone normalize` first)")
         else:
             print(f"citation channel: {result['new']} new of {result['admitted']} admitted, "
                   f"from {result['considered']} references")
+            if result["resolved"]:
+                print(f"  {result['resolved']} resolved to a venue and an address")
+            if result["unresolved"]:
+                print("  unresolved: " + "  ".join(
+                    f"{k} {v}" for k, v in result["unresolved"].items()))
+                if "NOT_ATTEMPTED" in result["unresolved"]:
+                    print("  pass --resolve to look these up; without a venue or an address "
+                          "stage 2 refuses them, correctly")
             if result["possible_duplicates"]:
                 print(f"  {result['possible_duplicates']} noted as possible duplicates, "
                       f"none merged")
@@ -582,6 +604,9 @@ def build_parser() -> argparse.ArgumentParser:
             command.add_argument("--per-query", type=int, default=25)
             command.add_argument("--channel", choices=("keyword", "citation", "both"),
                                  default="both")
+            command.add_argument("--resolve", action="store_true",
+                                 help="look up each admitted reference's venue and address; "
+                                      "makes requests, so the citation channel is offline without it")
         if name == "discover-report":
             command.add_argument("--round", default=None, help="isolate one round")
             command.add_argument("--json", action="store_true")

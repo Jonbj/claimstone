@@ -42,10 +42,14 @@ def _row(
     is_oa: bool | None = None,
     citations: int | None = None,
     extra: dict[str, Any] | None = None,
+    candidate_key: str | None = None,
 ) -> dict[str, Any]:
     doi = ids.normalize_doi(doi)
     return {
-        "candidate_key": ids.candidate_key(doi=doi, title=title, url=url),
+        # An override exists for one caller. The citation channel keys on the reference stage 3 gave
+        # it, because `candidate_key` prefers a DOI and resolution *adds* one — so a derived key would
+        # move, and the same work would become two candidates with nothing superseding either.
+        "candidate_key": candidate_key or ids.candidate_key(doi=doi, title=title, url=url),
         "title": title,
         "url": url,
         "doi": doi,
@@ -174,3 +178,91 @@ SEARCHERS = {"openalex": search_openalex, "crossref": search_crossref, "arxiv": 
 
 def _limit_kw(api: str) -> str:
     return {"openalex": "per_page", "crossref": "rows", "arxiv": "max_results"}[api]
+
+
+# --- Resolving a reference into something fetchable ----------------------------------------------
+#
+# Stage 3 extracts a bibliography and resolves nothing, deliberately: 817 references would be 817
+# lookups. What no spec said is who resolves them, and the answer is here, because this is the module
+# that already knows what an OpenAlex work looks like.
+#
+# Measured before this existed: the citation channel wrote 37 candidates, all 37 unclassified and 25
+# with no URL at all. A reference is a title, sometimes a DOI, and nothing else.
+
+# The floor `resolve_doi_by_title` already uses. A shorter fragment matches many works, and taking the
+# first is how a bibliography parsing error becomes a confident citation of the wrong paper.
+MIN_TITLE_CHARS = 15
+
+WORK_SELECT = "id,doi,title,publication_year,primary_location,open_access,cited_by_count"
+
+UNRESOLVED = {"doi": None, "title": "", "url": "", "venue": "", "venue_type": "",
+              "year": None, "is_oa": None, "citations": None, "api": ""}
+
+
+def _work_fields(work: dict[str, Any]) -> dict[str, Any]:
+    """An OpenAlex work in the shape the keyword channel's rows already carry.
+
+    Same shape on purpose: `classify` then reads a resolved citation candidate through the same
+    predicates, and nothing downstream needs to know which channel a row came through.
+    """
+    location = work.get("primary_location") or {}
+    source = (location.get("source") or {}) if isinstance(location, dict) else {}
+    return {
+        # Which API's vocabulary `venue_type` is in. A resolved row carries it as its `source_api`,
+        # because `classify` refuses to read a venue type without knowing whose word it is — and after
+        # resolution the word is OpenAlex's, whatever channel found the reference.
+        "api": "openalex",
+        "doi": ids.normalize_doi(work.get("doi")),
+        "title": str(work.get("title") or "").strip(),
+        "url": str(location.get("pdf_url") or location.get("landing_page_url")
+                   or work.get("id") or ""),
+        "venue": str(source.get("display_name") or ""),
+        "venue_type": str(source.get("type") or ""),
+        "year": work.get("publication_year"),
+        "is_oa": (work.get("open_access") or {}).get("is_oa"),
+        "citations": work.get("cited_by_count"),
+    }
+
+
+def resolve_work(
+    fetcher: net.FetcherLike, *, title: str, doi: str | None = None
+) -> dict[str, Any]:
+    """A reference's title and optional DOI, into a work. Never into the wrong work.
+
+    `resolution` says which way it went and is recorded on the candidate: `BY_DOI`, `BY_TITLE`,
+    `NO_MATCH`, `TITLE_TOO_SHORT`, `LOOKUP_FAILED`. The last two are distinct from `NO_MATCH` because
+    the remedies differ — a swallowed request failure looks exactly like a reference that does not
+    exist, and only one of those is worth retrying.
+
+    **A title match is exact on the folded title, on both paths.** Including the DOI path: GROBID
+    mis-parses a DOI often enough that a confident lookup can return a real, different paper, and
+    attaching the wrong work would attribute its claims to a source that never made them. That is
+    worse than a candidate stage 2 refuses, so a DOI whose work does not carry the reference's title
+    falls back to the title search rather than being believed.
+    """
+    folded = ids.normalize_title(title)
+    if len(folded) < MIN_TITLE_CHARS:
+        return {**UNRESOLVED, "resolution": "TITLE_TOO_SHORT"}
+
+    failed = False
+
+    if doi:
+        url = (f"https://api.openalex.org/works/doi:{urllib.parse.quote(doi, safe='/.')}?"
+               + urllib.parse.urlencode({"mailto": net.contact_email(), "select": WORK_SELECT}))
+        payload, outcome = fetcher.get_json(url)
+        if isinstance(payload, dict) and payload:
+            if ids.normalize_title(payload.get("title")) == folded:
+                return {**_work_fields(payload), "resolution": "BY_DOI"}
+        elif not outcome.ok:
+            failed = True
+
+    url = "https://api.openalex.org/works?" + urllib.parse.urlencode(
+        {"search": title, "per-page": 5, "mailto": net.contact_email(), "select": WORK_SELECT}
+    )
+    payload, outcome = fetcher.get_json(url)
+    if payload is None and not outcome.ok:
+        return {**UNRESOLVED, "resolution": "LOOKUP_FAILED"}
+    for work in (payload or {}).get("results") or []:
+        if ids.normalize_title(work.get("title")) == folded:
+            return {**_work_fields(work), "resolution": "BY_TITLE"}
+    return {**UNRESOLVED, "resolution": "LOOKUP_FAILED" if failed else "NO_MATCH"}

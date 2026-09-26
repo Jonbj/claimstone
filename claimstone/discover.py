@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from typing import Any, Iterable
 
-from claimstone import classify, ids, net
+from claimstone import classify, ids, net, searchers
 from claimstone.config import Project
 from claimstone.searchers import CHANNEL_CITATION, CHANNEL_KEYWORD, SEARCHERS, _limit_kw, _row
 from claimstone.store import Store
@@ -114,13 +114,27 @@ def run(
     }
 
 
+RESOLVED = frozenset({"BY_DOI", "BY_TITLE"})
+
+
 def run_citations(
-    project: Project, store: Store, *, round_name: str = ROUTINE
+    project: Project,
+    store: Store,
+    *,
+    round_name: str = ROUTINE,
+    fetcher: net.FetcherLike | None = None,
 ) -> dict[str, Any]:
     """Admit references extracted in stage 3 as candidates, by the project's declared rule.
 
-    Opens no socket: this reads a ledger. So it is re-runnable at no cost when the threshold
-    changes — the same arrangement as `gate-audit` and `normalize --confirm-audit`.
+    Without a `fetcher` this opens no socket: it reads a ledger, so it is re-runnable at no cost when
+    the threshold changes — the same arrangement as `gate-audit` and `normalize --confirm-audit`. That
+    promise is why resolution is opt-in rather than automatic.
+
+    **With one, each admitted reference is resolved into a work.** A reference carries a title,
+    sometimes a DOI, and nothing else — no venue, no venue type, no address — so measured on the real
+    corpus every one of the 37 candidates this wrote was unclassified and 25 had no URL at all. Stage
+    3 resolves nothing by design and no spec said who does; this does, through the same API the
+    keyword channel queries, and records which way each one went.
 
     The rule filters on `citations_in_corpus`, which is a property of this channel and not of the
     keyword channel's terms, so the two channels stay independent — the condition D10 needs. What
@@ -133,12 +147,15 @@ def run_citations(
         # would read as the bibliography having found nothing.
         return {"references_available": False, "considered": 0, "admitted": 0, "new": 0,
                 "unclassified": 0, "uncovered": {}, "possible_duplicates": 0,
-                "round": round_name}
+                "resolved": 0, "unresolved": {}, "round": round_name}
 
     # config.load_citation_channel already merged the engine defaults, so this is complete.
     rule = dict(project.citation_channel)
-    known = set(store.latest_by("candidates.jsonl", "candidate_key"))
-    admitted = new = possible_duplicates = 0
+    held = store.latest_by("candidates.jsonl", "candidate_key")
+    known = set(held)
+    by_doi = {str(row["doi"]): key for key, row in held.items() if row.get("doi")}
+    admitted = new = possible_duplicates = resolved = 0
+    unresolved: dict[str, int] = {}
     unclassified: list[dict[str, Any]] = []
 
     for reference in references.values():
@@ -152,37 +169,69 @@ def run_citations(
             continue
         admitted += 1
 
+        key = str(reference.get("key") or "")
+        previous = held.get(key)
+        if previous is not None and (
+            previous.get("resolution") in RESOLVED or fetcher is None
+        ):
+            # Already resolved, or there is nothing new to say about it without a fetcher. A
+            # previously unresolved row *is* retried when one is given, and supersedes itself.
+            continue
+
         doi = reference.get("doi")
+        found = (
+            searchers.resolve_work(fetcher, title=title, doi=doi)
+            if fetcher is not None
+            else {**searchers.UNRESOLVED, "resolution": "NOT_ATTEMPTED"}
+        )
+        if found["resolution"] in RESOLVED:
+            resolved += 1
+        else:
+            unresolved[found["resolution"]] = unresolved.get(found["resolution"], 0) + 1
+
+        found_doi = found["doi"] or ids.normalize_doi(doi)
         row = _row(
             title=title,
-            url=f"https://doi.org/{doi}" if doi else "",
-            doi=doi,
-            year=int(year) if year else None,
-            venue="",
-            venue_type="",
-            source_api="citation",
+            # The resolved location if there is one, else the DOI's own address, else nothing to
+            # fetch — which stage 2 will refuse, correctly.
+            url=found["url"] or (f"https://doi.org/{found_doi}" if found_doi else ""),
+            doi=found_doi,
+            year=found["year"] or (int(year) if year else None),
+            venue=found["venue"],
+            venue_type=found["venue_type"],
+            # The API that told us about the work, which after resolution is the resolver's and not
+            # "citation". `channel` is what records that the reference came from a bibliography, and
+            # `query` names the ledger it came out of. Without this the resolved venue type is a word
+            # in a vocabulary nobody owns, and no predicate can read it.
+            source_api=found["api"] or "citation",
             query="references.jsonl",
             topic_id="",
             channel=CHANNEL_CITATION,
+            is_oa=found["is_oa"],
             citations=int(reference.get("citations_in_corpus") or 0),
+            candidate_key=key,
             extra={
                 "cited_by": list(reference.get("cited_by") or []),
                 "citations_in_corpus": int(reference.get("citations_in_corpus") or 0),
+                "resolution": found["resolution"],
             },
         )
-        if row["candidate_key"] in known:
-            continue
         row["source_class"] = classify.classify(row, project.classes)
         row["round"] = round_name
-        note = near_match(row["candidate_key"], known)
-        if note:
+        # A shared DOI under two keys is a *certain* duplicate rather than a near-match, and it only
+        # becomes reachable once resolution can put a DOI on a title-keyed row. Still only noted: a
+        # wrong merge loses a source, a duplicate costs one wasted fetch.
+        note = (by_doi.get(str(found_doi)) if found_doi else None) or near_match(key, known)
+        if note and note != key:
             row["possible_duplicate_of"] = note
             possible_duplicates += 1
         if row["source_class"] is None:
             unclassified.append(row)
-        known.add(row["candidate_key"])
+        if key not in known:
+            known.add(key)
+            new += 1
+        held[key] = row
         store.append("candidates.jsonl", row)
-        new += 1
 
     return {
         "references_available": True,
@@ -192,6 +241,8 @@ def run_citations(
         "unclassified": len(unclassified),
         "uncovered": classify.uncovered(unclassified, project.classes),
         "possible_duplicates": possible_duplicates,
+        "resolved": resolved,
+        "unresolved": dict(sorted(unresolved.items(), key=lambda kv: -kv[1])),
         "round": round_name,
     }
 
