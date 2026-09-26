@@ -385,3 +385,105 @@ def test_reclassify_never_overrules_a_class_the_operator_declared(tmp_path):
     assert latest["source_class"] == "IND"
     # And it is not counted as an unclassified row needing a rule, because it needs none.
     assert result["unclassified"] == 0
+
+
+# --- The feedback D26 asked for -------------------------------------------------------------------
+#
+# The gate rejected H02's only contradicting claim, correctly: ACA002 was reporting Roll (1988), a source
+# nobody had read. Roll (1988) is in the bibliography as "R-squared", cited once — nine folded characters
+# — so it fails both min_citations_in_corpus and require_title_chars and is invisible. Every rule behaved
+# as declared, and the effect was that a question with a cited contradiction read as uncontested.
+
+def rejection(claim, *, chunk="ACA002#c7", source="ACA002", failure="SECONDHAND_CLAIM"):
+    return {"claim_id": f"r-{abs(hash(claim)) % 9999}", "failure": failure, "source_id": source,
+            "chunk_id": chunk, "record": {"claim": claim, "question_id": "H02"}}
+
+
+def test_a_work_named_in_a_secondhand_rejection_is_promoted_however_little_cited(tmp_path):
+    """A work cited once for a contradiction is worth more here than a textbook cited three times."""
+    project = load_project(PROJECT)
+    store = Store("t", base=tmp_path)
+    store.append("references.jsonl", {"key": "title:r squared", "title": "R-squared",
+                                      "authors": ["Roll"], "year": 1988, "doi": None,
+                                      "cited_by": ["ACA002"], "citations_in_corpus": 1})
+    store.append("rejections.jsonl", rejection(
+        "Roll (1988) found little discernible difference in return variation."))
+
+    result = discover.promote_contested(project, store)
+    assert result["named"] == 1
+    assert result["promoted"] == 1
+    row = next(iter(store.read("candidates.jsonl")))
+    assert row["candidate_key"] == "title:r squared"
+    assert row["promoted_by"] == "SECONDHAND_CLAIM"
+    assert row["citations_in_corpus"] == 1
+
+
+def test_only_a_secondhand_rejection_promotes_anything(tmp_path):
+    """A quote that was not in the chunk names nothing and says nothing about another work."""
+    project = load_project(PROJECT)
+    store = Store("t", base=tmp_path)
+    store.append("references.jsonl", {"key": "title:r squared", "title": "R-squared",
+                                      "authors": ["Roll"], "citations_in_corpus": 1})
+    store.append("rejections.jsonl", rejection("Roll (1988) found nothing.",
+                                               failure="QUOTE_NOT_FOUND"))
+    assert discover.promote_contested(project, store)["promoted"] == 0
+
+
+def test_a_named_work_absent_from_the_bibliography_is_counted_and_not_invented(tmp_path):
+    """Nothing here knows the work's title or address; the reference is what carries those. A name with
+    no reference is reported so somebody can look, never guessed into a candidate."""
+    project = load_project(PROJECT)
+    store = Store("t", base=tmp_path)
+    store.append("rejections.jsonl", rejection("Roll (1988) found little difference."))
+    result = discover.promote_contested(project, store)
+    assert result["named"] == 1
+    assert result["promoted"] == 0
+    assert result["unmatched"] == [["Roll", "1988"]]
+    assert list(store.read("candidates.jsonl")) == []
+
+
+def test_promoting_twice_adds_nothing(tmp_path):
+    project = load_project(PROJECT)
+    store = Store("t", base=tmp_path)
+    store.append("references.jsonl", {"key": "title:r squared", "title": "R-squared",
+                                      "authors": ["Roll"], "year": 1988,
+                                      "citations_in_corpus": 1})
+    store.append("rejections.jsonl", rejection("Roll (1988) found little difference."))
+    discover.promote_contested(project, store)
+    assert discover.promote_contested(project, store)["promoted"] == 0
+
+
+def test_promotion_opens_no_socket(tmp_path, monkeypatch):
+    import socket
+
+    project = load_project(PROJECT)
+    store = Store("t", base=tmp_path)
+    store.append("rejections.jsonl", rejection("Roll (1988) found little difference."))
+
+    def refuse(*args, **kwargs):
+        raise AssertionError("promotion reads two ledgers")
+
+    monkeypatch.setattr(socket.socket, "connect", refuse)
+    discover.promote_contested(project, store)
+
+
+def test_a_surname_in_the_bibliography_without_a_usable_year_is_reported_as_ambiguous(tmp_path):
+    """Measured: the corpus holds ten Roll references. One is titled `R-squared` with no year at all —
+    which is the 1988 paper the rejected claim named — and one is titled `Journal of Finance`, GROBID
+    having taken the venue for the title. Matching on the surname alone would promote all ten, and
+    guessing which is the 1988 one is the fabrication this whole module refuses. It says so instead.
+    """
+    project = load_project(PROJECT)
+    store = Store("t", base=tmp_path)
+    store.append("references.jsonl", {"key": "title:r squared", "title": "R-squared",
+                                      "authors": ["Roll"], "year": None,
+                                      "citations_in_corpus": 1})
+    store.append("references.jsonl", {"key": "title:orange juice and weather",
+                                      "title": "Orange Juice and Weather", "authors": ["Roll"],
+                                      "year": None, "citations_in_corpus": 1})
+    store.append("rejections.jsonl", rejection("Roll (1988) found little difference."))
+
+    result = discover.promote_contested(project, store)
+    assert result["promoted"] == 0
+    assert result["ambiguous"] == [["Roll", "1988", 2]]
+    assert list(store.read("candidates.jsonl")) == []

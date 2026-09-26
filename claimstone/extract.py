@@ -186,7 +186,7 @@ def harvest(project: Any, store: Store, *, batch: str) -> dict[str, Any]:
     thresholds = dict(getattr(project, "extraction", {}) or {})
     comparatives = thresholds.pop("comparatives", None)
 
-    proposed = accepted = rejected = unanswered = kind_unverified = 0
+    proposed = accepted = rejected = unanswered = kind_unverified = already = 0
     failures: dict[str, int] = {}
 
     for row in queue.attempts():
@@ -256,6 +256,7 @@ def harvest(project: Any, store: Store, *, batch: str) -> dict[str, Any]:
 
                 if verdict.ok:
                     if identifier in seen:
+                        already += 1
                         continue
                     seen.add(identifier)
                     store.append("claims.jsonl", common | converted)
@@ -263,6 +264,7 @@ def harvest(project: Any, store: Store, *, batch: str) -> dict[str, Any]:
                 else:
                     failures[verdict.failure or "?"] = failures.get(verdict.failure or "?", 0) + 1
                     if identifier in seen_rejections:
+                        already += 1
                         continue
                     seen_rejections.add(identifier)
                     # The record whole, so a rejection is examinable rather than merely counted.
@@ -276,8 +278,11 @@ def harvest(project: Any, store: Store, *, batch: str) -> dict[str, Any]:
     return {
         "batch": batch,
         "proposed": proposed,
+        # What was newly written. `already_held` is the rest of `proposed`, so "0 accepted" beside
+        # "SECONDHAND_CLAIM 2" stops reading as a contradiction on a re-harvest.
         "accepted": accepted,
         "rejected": rejected,
+        "already_held": already,
         # Not zero claims: a call with no valid answer says nothing about its chunk.
         "calls_without_an_answer": unanswered,
         "kind_unverified": kind_unverified,

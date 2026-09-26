@@ -274,3 +274,18 @@ def test_a_value_the_engine_cannot_read_is_a_recorded_rejection_not_a_null(tmp_p
     assert rejection["failure"] == "UNPARSEABLE_VALUE"
     assert "two-thirds" in rejection["detail"]
     assert list(store.read("claims.jsonl")) == []
+
+
+def test_a_re_harvest_says_what_it_already_held_rather_than_reporting_zero(tmp_path):
+    """`0 accepted, 0 rejected` beside `SECONDHAND_CLAIM 2` reads as a contradiction. The counts are
+    what was newly written; what was judged is a different number and both are printed."""
+    store = _store(tmp_path)
+    extract.build(FakeProject(), store, batch="b1")
+    _answer(store, records=[{"question_id": "H02", "stance": "SUPPORTS",
+                             "claim": "News tone affects returns.",
+                             "evidence_quote": "news tone does indeed have an effect"}])
+    extract.harvest(FakeProject(), store, batch="b1")
+    again = extract.harvest(FakeProject(), store, batch="b1")
+    assert (again["accepted"], again["rejected"]) == (0, 0)
+    assert again["already_held"] == 1
+    assert again["proposed"] == 1

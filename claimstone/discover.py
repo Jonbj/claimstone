@@ -14,6 +14,7 @@ candidates; it never writes another stage's ledger.
 
 from __future__ import annotations
 
+import re
 from typing import Any, Iterable
 
 from claimstone import classify, ids, net, searchers
@@ -356,4 +357,122 @@ def reclassify(project: Project, store: Store) -> dict[str, Any]:
         "moves": dict(sorted(moves.items(), key=lambda kv: -kv[1])),
         "unclassified": len(unclassified),
         "uncovered": classify.uncovered(unclassified, ()),
+    }
+
+
+# The citation as it appears in a rejected claim's text: a surname and a year, in the claim's subject
+# position, which is what `claimgate.SECONDHAND` matched to reject it.
+_NAMED_WORK = re.compile(
+    r"\b([A-Z][A-Za-zÀ-ɏ'’-]+)"
+    r"(?:\s*(?:,|and|&|et al\.?)\s*[A-Z][A-Za-zÀ-ɏ'’-]+)*"
+    r"\s*\((\d{4})[a-z]?\)"
+)
+
+
+def promote_contested(project: Project, store: Store, *, round_name: str = ROUTINE) -> dict[str, Any]:
+    """Admit a work a rejected claim named, whatever the citation channel's threshold says.
+
+    D26's finding, with its instance. The gate rejected H02's only contradicting claim, correctly: it was
+    `ACA002` reporting Roll (1988), a source nobody had read. Roll (1988) is in the bibliography as
+    `R-squared`, cited once, nine folded characters — so it failed both `min_citations_in_corpus` and
+    `require_title_chars` and was invisible. Every rule behaved as declared, and a question with a cited
+    contradiction read as uncontested.
+
+    So a rejected `SECONDHAND_CLAIM` is a discovery signal and not only a rejection: a work cited once
+    for a contradiction is worth more to this project than a textbook cited three times. The threshold
+    still governs the ordinary channel; this is the named exception, and it is recorded on the row as
+    `promoted_by` so a corpus can be read back without it.
+
+    Opens no socket: it reads `rejections.jsonl` against `references.jsonl`. A name with no matching
+    reference is **reported and never invented** — nothing here knows a work's title or address, and the
+    reference is what carries those.
+    """
+    references = store.latest_by("references.jsonl", "key")
+    by_author_year: dict[tuple[str, str], dict[str, Any]] = {}
+    for reference in references.values():
+        year = str(reference.get("year") or "")
+        for author in reference.get("authors") or []:
+            surname = str(author).strip().split()[-1] if str(author).strip() else ""
+            if surname and year:
+                by_author_year.setdefault((surname.lower(), year), reference)
+
+    # Every reference by surname regardless of year, so a name that matched no (surname, year) pair can
+    # be reported as ambiguous rather than as absent. Measured: the corpus holds ten Roll references, one
+    # titled `R-squared` with no year — the 1988 paper the rejected claim named — and one titled
+    # `Journal of Finance`, GROBID having taken the venue for the title.
+    by_author: dict[str, int] = {}
+    for reference in references.values():
+        for author in reference.get("authors") or []:
+            surname = str(author).strip().split()[-1].lower() if str(author).strip() else ""
+            if surname:
+                by_author[surname] = by_author.get(surname, 0) + 1
+
+    held = store.latest_by("candidates.jsonl", "candidate_key")
+    named = promoted = 0
+    unmatched: list[list[str]] = []
+    ambiguous: list[list[Any]] = []
+    seen: set[tuple[str, str]] = set()
+
+    for row in store.latest_by("rejections.jsonl", "claim_id").values():
+        if row.get("failure") != "SECONDHAND_CLAIM":
+            continue
+        claim = str((row.get("record") or {}).get("claim") or "")
+        for surname, year in _NAMED_WORK.findall(claim):
+            if (surname.lower(), year) in seen:
+                continue
+            seen.add((surname.lower(), year))
+            named += 1
+            reference = by_author_year.get((surname.lower(), year))
+            if reference is None:
+                count = by_author.get(surname.lower(), 0)
+                if count:
+                    # The surname is in the bibliography and the year is not. Matching on the surname
+                    # alone would promote every one of them, and guessing which is the right year is the
+                    # fabrication this module exists to refuse.
+                    ambiguous.append([surname, year, count])
+                else:
+                    unmatched.append([surname, year])
+                continue
+            key = str(reference.get("key") or "")
+            if key in held:
+                continue
+
+            doi = ids.normalize_doi(reference.get("doi"))
+            candidate = _row(
+                title=str(reference.get("title") or ""),
+                url=f"https://doi.org/{doi}" if doi else "",
+                doi=doi,
+                year=int(reference["year"]) if reference.get("year") else None,
+                venue="",
+                venue_type="",
+                source_api="citation",
+                query="rejections.jsonl",
+                topic_id="",
+                channel=CHANNEL_CITATION,
+                citations=int(reference.get("citations_in_corpus") or 0),
+                candidate_key=key,
+                extra={
+                    "cited_by": list(reference.get("cited_by") or []),
+                    "citations_in_corpus": int(reference.get("citations_in_corpus") or 0),
+                    "resolution": "NOT_ATTEMPTED",
+                    # Why this one is here despite the threshold, so the exception is visible and a
+                    # corpus can be read back without it.
+                    "promoted_by": "SECONDHAND_CLAIM",
+                    "promoted_for": str((row.get("record") or {}).get("question_id") or ""),
+                    "promoted_from": row.get("chunk_id"),
+                },
+            )
+            candidate["source_class"] = classify.classify(candidate, project.classes)
+            candidate["round"] = round_name
+            held[key] = candidate
+            store.append("candidates.jsonl", candidate)
+            promoted += 1
+
+    return {
+        "named": named,
+        "promoted": promoted,
+        # Both reported so somebody can look, neither guessed into a candidate.
+        "unmatched": unmatched,
+        "ambiguous": ambiguous,
+        "round": round_name,
     }

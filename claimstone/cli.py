@@ -379,6 +379,21 @@ def _discover(args: argparse.Namespace) -> int:
     project = load_project(args.project)
     store = Store(project.name, base=args.store)
 
+    if args.promote_contested:
+        # Reads two ledgers, opens no socket. D26: a rejected SECONDHAND_CLAIM names a work the corpus
+        # relies on, and a work cited once for a contradiction is worth more than a textbook cited
+        # three times.
+        result = discover.promote_contested(project, store, round_name=args.round)
+        print(f"{result['named']} work(s) named in rejected secondhand claims, "
+              f"{result['promoted']} promoted past the citation threshold")
+        for surname, year in result["unmatched"]:
+            print(f"  {surname} ({year}) is named and is not in the bibliography — "
+                  f"nothing here knows its title or address, so nothing was invented")
+        for surname, year, count in result["ambiguous"]:
+            print(f"  {surname} ({year}): {count} reference(s) by that name and none with that year. "
+                  f"Promoting on the surname alone would admit all {count}; read them by hand")
+        return 0
+
     if args.reclassify:
         # No socket: the rules are in sources.yaml and the candidates are on disk, so re-applying one
         # to the other costs nothing. The counterpart of `regate` and `model-run --rejudge`.
@@ -573,8 +588,9 @@ def _extract(args: argparse.Namespace) -> int:
         # No socket: the answers are on disk, so re-running after a gate change costs nothing — the
         # arrangement gate-audit, normalize --confirm-audit and model-run --rejudge already use.
         result = extract.harvest(project, store, batch=args.batch)
+        held = (f", {result['already_held']} already held" if result["already_held"] else "")
         print(f"{result['proposed']} proposed, {result['accepted']} accepted, "
-              f"{result['rejected']} rejected")
+              f"{result['rejected']} rejected{held}")
         if result["failures"]:
             print("  " + "  ".join(f"{k} {v}" for k, v in result["failures"].items()))
         if result["calls_without_an_answer"]:
@@ -709,6 +725,9 @@ def build_parser() -> argparse.ArgumentParser:
             command.add_argument("--per-query", type=int, default=25)
             command.add_argument("--channel", choices=("keyword", "citation", "both"),
                                  default="both")
+            command.add_argument("--promote-contested", action="store_true",
+                                 help="admit works named in rejected secondhand claims, whatever the "
+                                      "citation threshold says; no request")
             command.add_argument("--reclassify", action="store_true",
                                  help="re-apply sources.yaml's assign_when rules to held candidates; "
                                       "no request, for when the rules changed")
