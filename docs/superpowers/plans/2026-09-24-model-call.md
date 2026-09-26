@@ -2072,8 +2072,8 @@ def test_throughput_is_per_backend(tmp_path):
     store = _store(tmp_path, [result("a", backend="llamacpp", latency=696.0),
                               result("b", backend="ollama-cloud", latency=3.0)])
     by_backend = model_report.summarise(store, lane="extract", batch="b1")["by_backend"]
-    assert round(by_backend["llamacpp"]["calls_per_hour"], 1) == 5.2
-    assert round(by_backend["ollama-cloud"]["calls_per_hour"]) == 1200
+    assert round(by_backend["llamacpp"]["attempts_per_hour"], 1) == 5.2
+    assert round(by_backend["ollama-cloud"]["attempts_per_hour"]) == 1200
 
 
 def test_failures_are_broken_down_by_class(tmp_path):
@@ -2124,18 +2124,23 @@ def summarise(store: Store, *, lane: str, batch: str) -> dict[str, Any]:
     current: dict[str, dict[str, Any]] = {}
     for row in attempts:
         current[f"{row.get('call_id')}|{row.get('backend')}"] = row
-    rows = {key: row for key, row in current.items()}
 
     by_backend: dict[str, dict[str, Any]] = {}
     for row in attempts:
         key = str(row.get("backend") or "unknown")
         bucket = by_backend.setdefault(key, {
-            "calls": 0, "ok": 0, "unpriced": 0,
+            # `attempts` is what was paid for and waited on; `calls` is how many distinct calls
+            # this backend answered. They are different numbers and a retry is what separates
+            # them, so they have different names — a single field called `calls` made
+            # sum(by_backend[*]["calls"]) disagree with summary["calls"] with no explanation,
+            # inside the one artifact whose whole job is to be trusted about numbers.
+            "attempts": 0, "calls": 0, "ok": 0, "unpriced": 0,
             "cost_usd": None, "latency_total_s": 0.0,
             "input_tokens": 0, "cached_input_tokens": 0, "output_tokens": 0,
-            "models": set(), "failures_by_class": {},
+            "models": set(), "answered": set(), "failures_by_class": {},
         })
-        bucket["calls"] += 1
+        bucket["attempts"] += 1
+        bucket["answered"].add(str(row.get("call_id")))
         bucket["models"].add(str(row.get("model") or "unknown"))
         if row.get("ok"):
             bucket["ok"] += 1
@@ -2156,19 +2161,24 @@ def summarise(store: Store, *, lane: str, batch: str) -> dict[str, Any]:
 
     for bucket in by_backend.values():
         spent = bucket.pop("latency_total_s")
-        # Observed, not promised: it is the rate this queue actually ran at on this backend.
-        bucket["calls_per_hour"] = (bucket["calls"] / spent * 3600) if spent else None
+        bucket["calls"] = len(bucket.pop("answered"))
+        # Observed, not promised: the rate this queue actually ran at on this backend. Named for
+        # attempts because that is what it counts — every attempt is time the queue spent, and it is
+        # the figure that answers "how long will the rest of this take".
+        bucket["attempts_per_hour"] = (bucket["attempts"] / spent * 3600) if spent else None
         bucket["models"] = sorted(bucket["models"])
         bucket["failures_by_class"] = dict(
             sorted(bucket["failures_by_class"].items(), key=lambda kv: -kv[1])
         )
 
+    # Both totals are the sum of their per-backend parts, by construction. A report whose parts do
+    # not add up to its total is a report nobody can use.
     return {
         "lane": lane,
         "batch": batch,
         # Distinct (call, backend) pairs currently answered, and how many of those stand valid.
-        "calls": len(rows),
-        "ok": sum(1 for row in rows.values() if row.get("ok")),
+        "calls": len(current),
+        "ok": sum(1 for row in current.values() if row.get("ok")),
         # What was actually paid for and waited on, retries included.
         "attempts": len(attempts),
         "by_backend": dict(sorted(by_backend.items())),
@@ -2324,7 +2334,7 @@ def _model_report(args: argparse.Namespace) -> int:
         cost = "unpriced" if bucket["cost_usd"] is None else f"${bucket['cost_usd']:.4f}"
         if bucket["unpriced"] and bucket["cost_usd"] is not None:
             cost += f" (+{bucket['unpriced']} unpriced)"
-        rate = "—" if bucket["calls_per_hour"] is None else f"{bucket['calls_per_hour']:.0f}/h"
+        rate = "—" if bucket["attempts_per_hour"] is None else f"{bucket['attempts_per_hour']:.0f}/h"
         print(f"  {backend:<14} {bucket['ok']}/{bucket['calls']}  {cost:<24} {rate:>9}"
               f"  {', '.join(bucket['models'])}")
         if bucket["failures_by_class"]:
