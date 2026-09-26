@@ -237,3 +237,40 @@ def test_a_request_recording_its_kind_gets_the_check_and_says_so(tmp_path):
     result = extract.harvest(FakeProject(), store, batch="b1")
     assert result["kind_unverified"] == 0
     assert next(iter(store.read("claims.jsonl")))["kind_verified"] is True
+
+
+def test_an_accepted_claim_carries_the_engine_converted_value(tmp_path):
+    """The model reports `2.4%` and never `0.024`: the gate checks the as-written string against the
+    quote, so the value cannot be wrong in a way the quote could not reveal."""
+    text = "net sentiment of 2.4% (0.008) over one week predicts returns"
+    store = _store(tmp_path, chunks=(("S01", "S01#c1", text),))
+    extract.build(FakeProject(), store, batch="b1")
+    _answer(store, records=[{"question_id": "H02", "stance": "SUPPORTS",
+                             "claim": "Net sentiment of 2.4% predicts returns.",
+                             "evidence_quote": "net sentiment of 2.4% (0.008) over one week",
+                             "estimate_as_written": "2.4%",
+                             "uncertainty_as_written": "(0.008)"}])
+    assert extract.harvest(FakeProject(), store, batch="b1")["accepted"] == 1
+    claim = next(iter(store.read("claims.jsonl")))
+    assert claim["estimate"] == pytest.approx(0.024)
+    assert claim["estimate_scale"] == "fraction"
+    assert claim["uncertainty_bracketed"] is True
+    assert claim["estimate_as_written"] == "2.4%"
+
+
+def test_a_value_the_engine_cannot_read_is_a_recorded_rejection_not_a_null(tmp_path):
+    """A null would read as "no estimate reported", which is a claim about the paper that a parser
+    failure has not earned."""
+    text = "sentiment of two-thirds of a standard deviation predicts returns"
+    store = _store(tmp_path, chunks=(("S01", "S01#c1", text),))
+    extract.build(FakeProject(), store, batch="b1")
+    _answer(store, records=[{"question_id": "H02", "stance": "SUPPORTS",
+                             "claim": "Sentiment predicts returns.",
+                             "evidence_quote": "sentiment of two-thirds of a standard deviation",
+                             "estimate_as_written": "two-thirds"}])
+    result = extract.harvest(FakeProject(), store, batch="b1")
+    assert (result["accepted"], result["rejected"]) == (0, 1)
+    rejection = next(iter(store.read("rejections.jsonl")))
+    assert rejection["failure"] == "UNPARSEABLE_VALUE"
+    assert "two-thirds" in rejection["detail"]
+    assert list(store.read("claims.jsonl")) == []

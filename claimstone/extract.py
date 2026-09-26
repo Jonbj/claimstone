@@ -21,7 +21,7 @@ from __future__ import annotations
 import datetime as _dt
 from typing import Any, Iterable
 
-from claimstone import claimgate, model_call
+from claimstone import claimgate, model_call, numbers
 from claimstone.store import Store, sha256_text
 
 # The registry's word, not "lane". `model_call.LANES` is ("extract", "review") — the boundary's two
@@ -246,16 +246,19 @@ def harvest(project: Any, store: Store, *, batch: str) -> dict[str, Any]:
                     "registry_version": request.get("registry_version"),
                     "harvested_at": _now(),
                 }
+                converted, unreadable = numbers.convert(record) if verdict.ok else (record, [])
+                if unreadable:
+                    # A conversion the engine cannot perform is a recorded rejection and never a null:
+                    # a null would read as "no estimate reported", which is a claim about the paper
+                    # that a parser failure has not earned.
+                    verdict = claimgate.Verdict(
+                        False, "UNPARSEABLE_VALUE", "; ".join(unreadable), record)
+
                 if verdict.ok:
                     if identifier in seen:
                         continue
                     seen.add(identifier)
-                    store.append("claims.jsonl", common | {
-                        "question_id": record.get("question_id"),
-                        "stance": record.get("stance"),
-                        "claim": record.get("claim"),
-                        "evidence_quote": record.get("evidence_quote"),
-                    })
+                    store.append("claims.jsonl", common | converted)
                     accepted += 1
                 else:
                     failures[verdict.failure or "?"] = failures.get(verdict.failure or "?", 0) + 1

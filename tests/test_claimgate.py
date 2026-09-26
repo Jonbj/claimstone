@@ -203,7 +203,7 @@ def test_every_failure_name_is_declared():
     assert claimgate.FAILURES == (
         "UNKNOWN_QUESTION_ID", "WRONG_KIND", "QUOTE_NOT_FOUND", "VALUE_NOT_IN_QUOTE",
         "NUMBER_NOT_IN_QUOTE", "COMPARATIVE_NOT_IN_QUOTE", "WRONG_STANCE",
-        "SECONDHAND_CLAIM", "QUOTE_TOO_THIN",
+        "SECONDHAND_CLAIM", "QUOTE_TOO_THIN", "UNPARSEABLE_VALUE",
     )
 
 

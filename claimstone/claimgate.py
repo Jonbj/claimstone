@@ -28,6 +28,10 @@ FAILURES = (
     "UNKNOWN_QUESTION_ID", "WRONG_KIND", "QUOTE_NOT_FOUND", "VALUE_NOT_IN_QUOTE",
     "NUMBER_NOT_IN_QUOTE", "COMPARATIVE_NOT_IN_QUOTE", "WRONG_STANCE",
     "SECONDHAND_CLAIM", "QUOTE_TOO_THIN",
+    # Raised by `numbers.convert` rather than by a check here, because the gate compares strings while
+    # conversion produces the values stage 6 consumes. It is a rejection all the same: a null would
+    # read as "no estimate reported", which a parser failure has not earned.
+    "UNPARSEABLE_VALUE",
 )
 
 # Digits, optional thousands separators and decimal point, optional exponent, optional percent, and a
