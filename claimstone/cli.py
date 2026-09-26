@@ -19,6 +19,10 @@ if TYPE_CHECKING:  # import cost at startup matters for a CLI; these are annotat
 
 STAGES = ("extract", "review", "synthesize")
 
+# Named here rather than imported, because building the parser must not pull in three runner
+# modules. `test_cli_model.py` pins this list against `runners.available()`.
+BACKENDS = ("claude-cli", "codex-cli", "llamacpp", "ollama-cloud", "opencode-cli")
+
 # The boundaries the corpus actually separates at are 1 vs 2 references and 4,377 vs 4,378
 # characters, so both ranges reach below the default: an audit whose lowest value already confirms
 # everything reports "flat" without ever finding the edge. See D21.
@@ -349,6 +353,74 @@ def _normalize(args: argparse.Namespace) -> int:
     return 0
 
 
+def _model_run(args: argparse.Namespace) -> int:
+    from claimstone import model_call, runners
+    from claimstone.store import Store
+
+    if args.lane not in model_call.LANES:
+        print(f"unknown lane {args.lane!r}: {', '.join(model_call.LANES)}", file=sys.stderr)
+        return 2
+    try:
+        runner = runners.build(args.backend, model=args.model)
+    except ValueError as exc:
+        # Includes "this backend needs --model": a missing model is a usage error with a sentence,
+        # not a TypeError from a constructor.
+        print(str(exc), file=sys.stderr)
+        return 2
+
+    project = load_project(args.project)
+    store = Store(project.name, base=args.store)
+    queue = model_call.Queue(store, lane=args.lane, batch=args.batch)
+
+    # Per backend, like everything else about the queue: how much is left to do depends on who is
+    # doing it, which is the whole point of two backends draining one requests file.
+    pending = len(queue.pending(backend=runner.name))
+    done = ok = 0
+    for row in model_call.drain(queue, runner, limit=args.limit):
+        done += 1
+        if row["ok"]:
+            ok += 1
+        mark = "ok  " if row["ok"] else "fail"
+        detail = "" if row["ok"] else f"  {row['failure_class']}"
+        print(f"[{done:>4}/{pending}] {ok / done:.2f}  {mark}  {row['call_id'][:12]}"
+              f"  {row['latency_s']:.1f}s{detail}", file=sys.stderr)
+    print(f"{done} answered, {ok} valid, on {runner.name} ({runner.harness_version()})")
+    return 0
+
+
+def _model_report(args: argparse.Namespace) -> int:
+    from claimstone import model_report
+    from claimstone.store import Store
+
+    project = load_project(args.project)
+    summary = model_report.summarise(
+        Store(project.name, base=args.store), lane=args.lane, batch=args.batch)
+
+    if args.json:
+        import json
+
+        print(json.dumps(summary, indent=2, sort_keys=True))
+        return 0
+
+    if not summary["calls"]:
+        print(f"{project.name} {args.lane}/{args.batch}: no calls recorded")
+        return 0
+
+    print(f"{project.name} {args.lane}/{args.batch} — {summary['calls']} calls, "
+          f"{summary['ok']} valid")
+    for backend, bucket in summary["by_backend"].items():
+        cost = "unpriced" if bucket["cost_usd"] is None else f"${bucket['cost_usd']:.4f}"
+        if bucket["unpriced"] and bucket["cost_usd"] is not None:
+            cost += f" (+{bucket['unpriced']} unpriced)"
+        rate = "—" if bucket["attempts_per_hour"] is None else f"{bucket['attempts_per_hour']:.0f}/h"
+        print(f"  {backend:<14} {bucket['ok']}/{bucket['calls']}  {cost:<24} {rate:>9}"
+              f"  {', '.join(bucket['models'])}")
+        if bucket["failures_by_class"]:
+            print("                 " + "  ".join(
+                f"{k} {v}" for k, v in bucket["failures_by_class"].items()))
+    return 0
+
+
 def _not_implemented(args: argparse.Namespace) -> int:
     print(
         f"stage '{args.stage_name}' is not implemented yet — see README.md, 'The six stages'",
@@ -412,6 +484,25 @@ def build_parser() -> argparse.ArgumentParser:
                                  help="sweep a confirmation threshold; needs no GROBID")
             command.add_argument("--sweep", choices=sorted(CONFIRM_SWEEP_VALUES),
                                  help="which threshold --confirm-audit moves")
+
+    for name, handler, help_text in (
+        ("model-run", _model_run, "drain a lane's queue on a named backend"),
+        ("model-report", _model_report, "what a queue cost and how fast it went"),
+    ):
+        command = sub.add_parser(name, help=help_text)
+        command.add_argument("project", help="path to a project directory")
+        command.add_argument("lane", help="extract or review")
+        command.add_argument("--batch", required=True, help="which batch to work on")
+        command.add_argument("--store", default="store", help="where generated data lives")
+        command.set_defaults(func=handler)
+        if name == "model-run":
+            # Required: which backend serves a lane is a finding, not a default (D13).
+            command.add_argument("--backend", required=True,
+                                 help="one of " + ", ".join(BACKENDS))
+            command.add_argument("--model", help="model id for backends that need one")
+            command.add_argument("--limit", type=int, default=None)
+        if name == "model-report":
+            command.add_argument("--json", action="store_true")
 
     for stage in STAGES:
         placeholder = sub.add_parser(stage, help=f"(not implemented) stage: {stage}")

@@ -2296,7 +2296,9 @@ def _model_run(args: argparse.Namespace) -> int:
     store = Store(project.name, base=args.store)
     queue = model_call.Queue(store, lane=args.lane, batch=args.batch)
 
-    pending = len(queue.pending())
+    # Per backend, like everything else about the queue: how much is left to do depends on who is
+    # doing it, which is the whole point of two backends draining one requests file.
+    pending = len(queue.pending(backend=runner.name))
     done = ok = 0
     for row in model_call.drain(queue, runner, limit=args.limit):
         done += 1
