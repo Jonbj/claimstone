@@ -863,3 +863,57 @@ predates a field, and was already paid for, would be the alternative.
 **What 0.95 is not.** One question, one prompt, one corpus, and a gate whose rules were corrected against
 these same claims (D25). It is a floor on the false-rejection rate. `numbers.py` is not built, so no
 as-written value has been converted and nothing yet feeds stage 6.
+
+## D27 — The citation channel obtains almost nothing, and that was predicted
+The bibliography channel run end to end for the first time: 710 references, 39 admitted, 34 with a class
+and an address, acquired. Three defects surfaced on the way and all three killed a whole sweep or a whole
+budget; each is fixed and each is recorded here because the fix changes what a figure means.
+
+### Measured, 2026-09-27
+
+```
+round stage1-first     51 found · 34 classified · 51 attempted · 2 obtained · 0.04
+failures               PAYWALL_403 25 · UNCLASSIFIED 17 · ABSTRACT_ONLY 6
+obtained               an NYU working paper and an LSE eprint, both PDF_FULLTEXT
+```
+
+**Two of thirty-four, and the stage 1 spec said so before the run.** The citation channel admits works the
+corpus cites most, and a canonical paper's open copy is the exception: 25 of 34 are publisher paywalls and
+6 are abstract pages. This sinks an acquisition rate for a reason that says nothing about the cascade,
+which is why the floor is judged per round (D24) and why the manifest round's 0.56 is untouched.
+
+The 17 `UNCLASSIFIED` are the ghosts of the key-rule change (D24) plus the four references OpenAlex could
+not resolve. They carry no class, `acquire` refuses them, and that refusal is invariant 6 working.
+
+### Three sweeps that died, and one budget spent on the wrong host
+
+**One unclassified candidate ended the acquisition sweep.** `acquire_one` raises `MissingSourceClass`,
+correctly — a caller handing it an unclassified candidate has made a mistake — and the raise reached the
+top, so the run died on the first of the 17 having acquired none of the other 34. The same defect shape as
+an unreadable artifact ending a normalize sweep, one module over. The sweep now records an `UNCLASSIFIED`
+row, which is terminal because a host budget has nothing to do with it, and moves on.
+
+**The failure budget was charged to a redirector, and it cost 17 candidates.** Every citation candidate's
+only address is a `doi.org` URL and the fetcher follows redirects, so a doi.org request landing on Wiley
+and taking a 403 charged the failure to **doi.org** — one budget shared by every publisher the resolver
+points at, spending itself on 403s from journals the next candidate had nothing to do with. First run: 18
+of 34 came back `DOMAIN_BUDGET_EXHAUSTED`, 17 on doi.org.
+
+Charged now to the host of the response's final URL. A timeout reaches no final URL, so the requested host
+keeps that charge. Re-run under a named campaign — the mechanism for re-requesting, and the reason was a
+fixed defect rather than impatience — those 18 became **13 real paywalls and 3 abstract pages**. Every
+candidate reached its publisher and got an answer. The number did not improve and the *meaning* did: 0.04
+is now what the publishers said, not what our own bookkeeping said.
+
+**And a rule change could not be re-applied.** 35 references resolved to a venue while `alembic-s4`
+declared no `assign_when` at all, so every one was written with a null class; adding the rules changed
+nothing, because a resolved candidate is skipped rather than re-requested. `discover --reclassify` exists
+for that, and **its first run was destructive**: it re-judged the manifest candidates too, overwriting 9
+`IND` and 4 `MET` rows with null and demoting 6 `ACA` to `WP`, because a manifest row has no venue type and
+the host rule matched some URLs. A manifest states its class. An inferred class must not replace a given
+one, and the guard, the test and the repair are in the history.
+
+That is the third re-judge path this project has needed — `regate`, `model-run --rejudge`,
+`discover --reclassify` — and a fourth in `extract --harvest`. The pattern is not a coincidence: every
+judgement the engine makes over rules a project declares needs a way back that costs no request, or
+editing a line of YAML costs a round of fetching.
