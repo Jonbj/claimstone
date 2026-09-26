@@ -60,6 +60,8 @@ The questions, verbatim from a frozen registry:
 
 Return a JSON array. Each element is one claim the passage makes that bears on one of those questions:
 
+  result_id        a short id you choose, distinct per result within this answer. A passage
+                   reporting two estimates for one question gives two records, not one
   question_id      one of the ids above, and only those
   claim            one sentence, in your words, stating what THIS passage asserts
   evidence_quote   a span copied EXACTLY from the passage, character for character, containing the
@@ -90,8 +92,12 @@ def response_schema(kind: str, questions: Iterable[Any]) -> dict[str, Any]:
         "items": {
             "type": "object",
             "additionalProperties": False,
-            "required": ["question_id", "claim", "evidence_quote", "stance"],
+            "required": ["result_id", "question_id", "claim", "evidence_quote", "stance"],
             "properties": {
+                # One record per result, not per question: a chunk reporting three estimates that bear
+                # on one question produces three records, and a table row quoted once can support
+                # several. Without this, two of them citing the same sentence would collapse into one.
+                "result_id": {"type": "string"},
                 "question_id": {"type": "string", "enum": [q.id for q in questions]},
                 "claim": {"type": "string"},
                 "evidence_quote": {"type": "string"},
@@ -178,9 +184,17 @@ def build(
     }
 
 
-def claim_id(chunk_id: str, question_id: str, quote: str) -> str:
-    """Stable across a re-harvest, so gating the same answer twice does not double a claim."""
-    return sha256_text(f"{chunk_id}|{question_id}|{quote}")[:16]
+def claim_id(chunk_id: str, question_id: str, quote: str, result_id: str = "") -> str:
+    """Stable across a re-harvest, so gating the same answer twice does not double a claim.
+
+    `result_id` joins the hash only when the record supplies one. A batch built before the field existed
+    cannot, and re-deriving every stored claim's id would write the already-harvested ones a second time
+    for nothing — the same reasoning as `kind_verified`. Two records sharing a quote and supplying no
+    result_id therefore still collapse, which is a known limit of those batches and not of this one.
+    """
+    parts = [chunk_id, question_id, quote] if not result_id else [
+        chunk_id, question_id, result_id, quote]
+    return sha256_text("|".join(parts))[:16]
 
 
 def harvest(project: Any, store: Store, *, batch: str) -> dict[str, Any]:
@@ -226,7 +240,8 @@ def harvest(project: Any, store: Store, *, batch: str) -> dict[str, Any]:
                     continue
                 proposed += 1
                 identifier = claim_id(chunk_id, str(record.get("question_id")),
-                                      str(record.get("evidence_quote")))
+                                      str(record.get("evidence_quote")),
+                                      str(record.get("result_id") or ""))
                 # WRONG_KIND catches a model answering about a question outside the kind it was asked
                 # about. A request that never recorded which kind was asked cannot support that check,
                 # so the question's own kind is used and the claim says the check did not run — the

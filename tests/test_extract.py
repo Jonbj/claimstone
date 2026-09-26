@@ -314,3 +314,41 @@ def test_the_limit_applies_within_a_kind_and_not_across_all_four(tmp_path):
     # Three chunks of each kind, not three units in total: a limit that stopped after the first kind
     # would silently measure one lane and call it a sample of four.
     assert result["by_kind"] == {"effect": 3, "heterogeneity": 3, "method": 3, "premise": 3}
+
+
+def test_two_results_sharing_a_quote_are_two_claims_when_they_say_so(tmp_path):
+    """The spec's `result_id`: a chunk reporting three estimates that bear on one question produces three
+    records, and a claim_id keyed on the quote alone would collapse any two that cite the same sentence.
+    Zero collisions in the 66 measured claims, and reachable — a table row quoted once supports several
+    estimates."""
+    text = "the coefficient is 2.4% at one week and 1.1% at four weeks, both significant"
+    store = _store(tmp_path, chunks=(("S01", "S01#c1", text),))
+    extract.build(FakeProject(), store, batch="b1")
+    quote = "the coefficient is 2.4% at one week and 1.1% at four weeks"
+    _answer(store, records=[
+        {"result_id": "r1", "question_id": "H02", "stance": "SUPPORTS",
+         "claim": "The one-week coefficient is 2.4%.", "evidence_quote": quote},
+        {"result_id": "r2", "question_id": "H02", "stance": "SUPPORTS",
+         "claim": "The four-week coefficient is 1.1%.", "evidence_quote": quote}])
+    assert extract.harvest(FakeProject(), store, batch="b1")["accepted"] == 2
+    assert len({c["claim_id"] for c in store.read("claims.jsonl")}) == 2
+
+
+def test_a_record_without_a_result_id_keeps_the_identity_it_already_had(tmp_path):
+    """A batch built before the field cannot supply one, and re-deriving every stored claim's id would
+    write the 63 already harvested a second time for nothing. Same reasoning as `kind_verified`."""
+    store = _store(tmp_path)
+    extract.build(FakeProject(), store, batch="b1")
+    _answer(store, records=[{"question_id": "H02", "stance": "SUPPORTS",
+                             "claim": "News tone affects returns.",
+                             "evidence_quote": "news tone does indeed have an effect"}])
+    extract.harvest(FakeProject(), store, batch="b1")
+    stored = next(iter(store.read("claims.jsonl")))["claim_id"]
+    assert stored == extract.claim_id("S01#c1", "H02", "news tone does indeed have an effect")
+
+
+def test_the_built_schema_asks_for_a_result_id(tmp_path):
+    store = _store(tmp_path)
+    extract.build(FakeProject(), store, batch="b1")
+    unit = model_call.Queue(store, lane="extract", batch="b1").requests()[0]
+    assert "result_id" in unit["response_schema"]["items"]["required"]
