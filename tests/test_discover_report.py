@@ -44,8 +44,11 @@ def test_unclassified_candidates_are_reported_with_their_attributes(tmp_path):
             {**candidate("c", channel="keyword", klass=None), "venue_type": "book-series"}]
     summary = discover_report.summarise(_store(tmp_path, rows))
     assert summary["unclassified"] == 3
-    # "3 unclassified" is not actionable; naming the values is what points at the missing rule.
-    assert summary["uncovered"] == {"conference": 2, "book-series": 1}
+    # "3 unclassified" is not actionable; naming the values is what points at the missing rule. The
+    # shape is `classify.uncovered`'s, keyed by the predicate a rule would have to use, because this
+    # module used to keep its own copy that counted venue types only — and printed `{}` for the 37
+    # citation candidates that carry no venue type at all.
+    assert summary["uncovered"] == {"openalex_source_type": {"conference": 2, "book-series": 1}}
 
 
 def test_a_round_can_be_isolated(tmp_path):

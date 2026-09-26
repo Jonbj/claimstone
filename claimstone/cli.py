@@ -353,6 +353,89 @@ def _normalize(args: argparse.Namespace) -> int:
     return 0
 
 
+APIS = ("openalex", "crossref", "arxiv")
+
+
+def _discover(args: argparse.Namespace) -> int:
+    from claimstone import discover
+    from claimstone.store import Store
+
+    unknown = [api for api in (args.api or ()) if api not in APIS]
+    if unknown:
+        print(f"unknown api: {', '.join(unknown)} (known: {', '.join(APIS)})", file=sys.stderr)
+        return 2
+
+    project = load_project(args.project)
+    store = Store(project.name, base=args.store)
+    topics = tuple(t.strip() for t in args.topics.split(",")) if args.topics else None
+
+    # Keyword first, then citations, and the order matters for more than tidiness. Both channels
+    # skip a candidate_key already present, so whichever runs first owns a work both found. A
+    # keyword row carries its topic and query; a citation row does not. And the overlap in
+    # discover-report is computed as keyword keys against reference keys, so letting citations
+    # claim a shared work first would make that number undercount the very thing it measures.
+    if args.channel in ("keyword", "both"):
+        from claimstone import net
+
+        fetcher = net.Fetcher(excluded_hosts=frozenset(project.excluded_hosts))
+        result = discover.run(project, store, fetcher,
+                              apis=tuple(args.api) if args.api else APIS,
+                              topics=topics, per_query=args.per_query, round_name=args.round)
+        print(f"keyword channel: {result['new']} new of {result['returned']} returned, "
+              f"{result['queries']} queries")
+        if result["unclassified"]:
+            print(f"  {result['unclassified']} unclassified: {result['uncovered']}")
+            print("  declare an assign_when rule in sources.yaml rather than loosening one")
+
+    if args.channel in ("citation", "both"):
+        result = discover.run_citations(project, store, round_name=args.round)
+        if not result["references_available"]:
+            print("citation channel: nothing to read — no references.jsonl yet "
+                  "(run `claimstone normalize` first)")
+        else:
+            print(f"citation channel: {result['new']} new of {result['admitted']} admitted, "
+                  f"from {result['considered']} references")
+            if result["possible_duplicates"]:
+                print(f"  {result['possible_duplicates']} noted as possible duplicates, "
+                      f"none merged")
+    return 0
+
+
+def _discover_report(args: argparse.Namespace) -> int:
+    from claimstone import discover_report
+    from claimstone.store import Store
+
+    project = load_project(args.project)
+    summary = discover_report.summarise(
+        Store(project.name, base=args.store), round_name=args.round)
+
+    if args.json:
+        import json
+
+        print(json.dumps(summary, indent=2, sort_keys=True))
+        return 0
+
+    if not summary["candidates"]:
+        print(f"{project.name}: no candidates recorded")
+        return 0
+
+    print(f"{project.name} — round {summary['round'] or 'all'}")
+    keyword, citation = summary["keyword"], summary["citation"]
+    print(f"  keyword channel   {keyword['candidates']:>5} candidates   "
+          f"{keyword['topics']} topics, {keyword['queries']} queries")
+    print(f"  citation channel  {citation['candidates']:>5} candidates   "
+          f"of {citation['references_seen']} references")
+    print(f"  overlap           {summary['overlap']:>5} works found by both channels")
+    if summary["unclassified"]:
+        print(f"  unclassified      {summary['unclassified']:>5}   {summary['uncovered']}")
+    for name in ("keyword", "citation"):
+        by_class = summary[name]["by_class"]
+        if by_class:
+            print(f"  {name:<17} " + "  ".join(f"{k} {v}" for k, v in by_class.items()))
+    print(f"\n  {summary['caveat']}")
+    return 0
+
+
 def _model_run(args: argparse.Namespace) -> int:
     from claimstone import model_call, runners
     from claimstone.store import Store
@@ -459,6 +542,8 @@ def build_parser() -> argparse.ArgumentParser:
         ("acquire", _acquire, "stage 2: obtain the full texts"),
         ("report", _report, "acquisition rate, per class, against the floor"),
         ("gate-audit", _gate_audit, "how much the rate depends on the gate thresholds"),
+        ("discover", _discover, "stage 1: topics and citations become candidates"),
+        ("discover-report", _discover_report, "what the two channels found"),
         ("regate", _regate, "re-judge bytes already held under the current gate; no network"),
         ("normalize", _normalize, "stage 3: TEI, chunks and references"),
     ):
@@ -487,6 +572,18 @@ def build_parser() -> argparse.ArgumentParser:
                                  help="which threshold to sweep (default min_text_chars)")
             command.add_argument("--show-rejected", action="store_true",
                                  help="list every rejected artifact for a by-hand check")
+            command.add_argument("--json", action="store_true")
+        if name == "discover":
+            command.add_argument("--round", default="routine",
+                                 help="name this round; it lands on every candidate")
+            command.add_argument("--topics", help="comma-separated topic ids; default all")
+            command.add_argument("--api", action="append",
+                                 help=f"repeatable; one of {', '.join(APIS)}. Default all")
+            command.add_argument("--per-query", type=int, default=25)
+            command.add_argument("--channel", choices=("keyword", "citation", "both"),
+                                 default="both")
+        if name == "discover-report":
+            command.add_argument("--round", default=None, help="isolate one round")
             command.add_argument("--json", action="store_true")
         if name == "normalize":
             command.add_argument("--grobid-url", default=grobid_url_default())

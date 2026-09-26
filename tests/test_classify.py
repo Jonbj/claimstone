@@ -111,3 +111,17 @@ def test_a_predicate_must_hold_a_list(tmp_path):
         "    assign_when:\n      source_api: arxiv\n", encoding="utf-8")
     with pytest.raises(ConfigError, match="source_api"):
         load_sources(tmp_path)
+
+
+def test_a_candidate_with_nothing_to_match_on_is_named_as_such():
+    """Silence is the wrong diagnostic. Run on the real corpus, the citation channel produced 37
+    unclassified candidates and `uncovered` reported `{}` — so the report could not say what rule was
+    missing, at the one moment that was the only thing worth knowing. A citation row carries no venue
+    type at all, which is a different gap from an unmatched value.
+    """
+    rows = [candidate(source_api="citation", venue_type="", url=""),
+            candidate(source_api="citation", venue_type="", url=""),
+            candidate(venue_type="book-series")]
+    seen = classify.uncovered(rows, CLASSES)
+    assert seen["openalex_source_type"] == {"book-series": 1}
+    assert seen[classify.NOTHING_TO_MATCH] == {"citation": 2}

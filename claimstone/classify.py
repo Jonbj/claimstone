@@ -24,6 +24,13 @@ _VENUE_PREDICATES = {
     "crossref_type": "crossref",
 }
 
+# Reported when a candidate carries nothing any predicate can read. Measured: the citation channel
+# produced 37 unclassified candidates on the real corpus and `uncovered` reported `{}` — silence at the
+# one moment the missing rule was the only thing worth knowing. A row with no venue type at all is a
+# different gap from a row with a venue type no rule mentions, and the remedies differ: the first needs
+# a resolution step or a rule on `source_api`, the second needs one more value in a list.
+NOTHING_TO_MATCH = "(nothing to match on)"
+
 
 def _host_matches(url: str, patterns: Sequence[str]) -> bool:
     host = net.host_of(url)
@@ -70,10 +77,16 @@ def uncovered(
         if classify(candidate, classes) is not None:
             continue
         api = str(candidate.get("source_api") or "")
-        for predicate, required_api in _VENUE_PREDICATES.items():
-            if api == required_api:
-                value = str(candidate.get("venue_type") or "")
-                if value:
-                    bucket = seen.setdefault(predicate, {})
-                    bucket[value] = bucket.get(value, 0) + 1
+        value = str(candidate.get("venue_type") or "")
+        predicate = next(
+            (name for name, required in _VENUE_PREDICATES.items() if api == required), None
+        )
+        if predicate is not None and value:
+            bucket = seen.setdefault(predicate, {})
+            bucket[value] = bucket.get(value, 0) + 1
+            continue
+        # Nothing readable: no venue type, or an API whose vocabulary no predicate covers. Counted by
+        # the API that produced it, because that is what a rule would have to name.
+        bucket = seen.setdefault(NOTHING_TO_MATCH, {})
+        bucket[api or "unknown"] = bucket.get(api or "unknown", 0) + 1
     return seen

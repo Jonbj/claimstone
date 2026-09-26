@@ -22,6 +22,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from claimstone import classify
 from claimstone.store import Store
 
 CAVEAT = (
@@ -40,8 +41,7 @@ def summarise(store: Store, *, round_name: str | None = None) -> dict[str, Any]:
     references = store.latest_by("references.jsonl", "key")
 
     channels: dict[str, dict[str, Any]] = {}
-    unclassified = 0
-    uncovered: dict[str, int] = {}
+    unclassified: list[dict[str, Any]] = []
     for row in candidates:
         name = str(row.get("channel") or "unknown")
         bucket = channels.setdefault(name, {
@@ -54,10 +54,7 @@ def summarise(store: Store, *, round_name: str | None = None) -> dict[str, Any]:
             bucket["queries"].add(row["query_hash"])
         klass = row.get("source_class")
         if klass is None:
-            unclassified += 1
-            value = str(row.get("venue_type") or "")
-            if value:
-                uncovered[value] = uncovered.get(value, 0) + 1
+            unclassified.append(row)
         else:
             bucket["by_class"][klass] = bucket["by_class"].get(klass, 0) + 1
 
@@ -81,7 +78,10 @@ def summarise(store: Store, *, round_name: str | None = None) -> dict[str, Any]:
         "keyword": channels["keyword"],
         "citation": channels["citation"],
         "overlap": overlap,
-        "unclassified": unclassified,
-        "uncovered": dict(sorted(uncovered.items(), key=lambda kv: -kv[1])),
+        "unclassified": len(unclassified),
+        # Delegated, not recomputed. This module had its own copy that counted venue types only, so
+        # when the citation channel produced 37 unclassified candidates with no venue type at all,
+        # the report printed `{}` — one implementation of a diagnostic is the whole point of it.
+        "uncovered": classify.uncovered(unclassified, ()),
         "caveat": CAVEAT,
     }
