@@ -75,6 +75,82 @@ def run(
     }
 
 
+def run_citations(
+    project: Project, store: Store, *, round_name: str = ROUTINE
+) -> dict[str, Any]:
+    """Admit references extracted in stage 3 as candidates, by the project's declared rule.
+
+    Opens no socket: this reads a ledger. So it is re-runnable at no cost when the threshold
+    changes — the same arrangement as `gate-audit` and `normalize --confirm-audit`.
+
+    The rule filters on `citations_in_corpus`, which is a property of this channel and not of the
+    keyword channel's terms, so the two channels stay independent — the condition D10 needs. What
+    it does introduce is a bias toward canonical works, recorded in the spec as a limit of any
+    completeness estimate rather than hidden.
+    """
+    references = store.latest_by("references.jsonl", "key")
+    if not references:
+        # Distinct from "zero admitted": nothing was there to read, and reporting 0 candidates
+        # would read as the bibliography having found nothing.
+        return {"references_available": False, "considered": 0, "admitted": 0, "new": 0,
+                "unclassified": 0, "uncovered": {}, "round": round_name}
+
+    # config.load_citation_channel already merged the engine defaults, so this is complete.
+    rule = dict(project.citation_channel)
+    known = set(store.latest_by("candidates.jsonl", "candidate_key"))
+    admitted = new = 0
+    unclassified: list[dict[str, Any]] = []
+
+    for reference in references.values():
+        title = str(reference.get("title") or "")
+        year = reference.get("year")
+        if int(reference.get("citations_in_corpus") or 0) < rule["min_citations_in_corpus"]:
+            continue
+        if len(title) < rule["require_title_chars"]:
+            continue
+        if year is not None and int(year) < rule["min_year"]:
+            continue
+        admitted += 1
+
+        doi = reference.get("doi")
+        row = _row(
+            title=title,
+            url=f"https://doi.org/{doi}" if doi else "",
+            doi=doi,
+            year=int(year) if year else None,
+            venue="",
+            venue_type="",
+            source_api="citation",
+            query="references.jsonl",
+            topic_id="",
+            channel=CHANNEL_CITATION,
+            citations=int(reference.get("citations_in_corpus") or 0),
+            extra={
+                "cited_by": list(reference.get("cited_by") or []),
+                "citations_in_corpus": int(reference.get("citations_in_corpus") or 0),
+            },
+        )
+        if row["candidate_key"] in known:
+            continue
+        row["source_class"] = classify.classify(row, project.classes)
+        row["round"] = round_name
+        if row["source_class"] is None:
+            unclassified.append(row)
+        known.add(row["candidate_key"])
+        store.append("candidates.jsonl", row)
+        new += 1
+
+    return {
+        "references_available": True,
+        "considered": len(references),
+        "admitted": admitted,
+        "new": new,
+        "unclassified": len(unclassified),
+        "uncovered": classify.uncovered(unclassified, project.classes),
+        "round": round_name,
+    }
+
+
 def import_manifest(
     store: Store, entries: Iterable[Any], *, round_name: str = ROUTINE
 ) -> dict[str, Any]:

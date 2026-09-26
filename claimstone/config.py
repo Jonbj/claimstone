@@ -108,6 +108,7 @@ class Project:
     gate_thresholds: dict[str, int] = field(default_factory=dict)
     gate_policy: dict[str, Any] = field(default_factory=dict)
     normalize_thresholds: dict[str, int] = field(default_factory=dict)
+    citation_channel: dict[str, int] = field(default_factory=dict)
     floor_version: int = 1
     floor_set_at: str = ""
     floor_rationale: str = ""
@@ -363,6 +364,36 @@ def check_registry_drift(project: Project, store: Any) -> None:
 
 
 MANIFEST_COLUMNS = ("source_id", "class", "format", "url", "title")
+CITATION_CHANNEL_NAMES = ("min_citations_in_corpus", "min_year", "require_title_chars")
+
+CITATION_CHANNEL_DEFAULTS = {
+    # 54 of the 711 references measured on the first corpus, against 711 if this were 1.
+    "min_citations_in_corpus": 2,
+    "min_year": 1990,
+    # Discards parsing fragments: GROBID produced references whose whole title was "See Example".
+    "require_title_chars": 25,
+}
+
+
+def load_citation_channel(root: pathlib.Path) -> dict[str, int]:
+    """The rule admitting a reference as a candidate. Absent means the defaults."""
+    raw = _read_yaml(pathlib.Path(root) / "sources.yaml").get("citation_channel") or {}
+    if not isinstance(raw, dict):
+        raise ConfigError("sources.yaml: 'citation_channel' must be a mapping")
+    unknown = sorted(set(raw) - set(CITATION_CHANNEL_NAMES))
+    if unknown:
+        raise ConfigError(
+            f"sources.yaml: unknown citation_channel setting(s): {', '.join(unknown)} "
+            f"(known: {', '.join(CITATION_CHANNEL_NAMES)})"
+        )
+    for name, value in raw.items():
+        if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+            raise ConfigError(
+                f"sources.yaml: citation_channel.{name} must be a non-negative integer"
+            )
+    return {**CITATION_CHANNEL_DEFAULTS, **{str(k): int(v) for k, v in raw.items()}}
+
+
 ASSIGN_PREDICATES = ("source_api", "openalex_source_type", "crossref_type", "host")
 
 GATE_THRESHOLD_NAMES = ("min_pdf_bytes", "min_text_chars", "paywall_doubt_chars", "fulltext_chars")
@@ -580,6 +611,7 @@ def load_project(root: str | pathlib.Path) -> Project:
     gate_thresholds = load_gate_thresholds(path)
     gate_policy = load_gate_policy(path)
     normalize_thresholds = load_normalize_thresholds(path)
+    citation_channel = load_citation_channel(path)
     floor_version, floor_set_at, floor_rationale = load_floor_provenance(path)
 
     return Project(
@@ -597,6 +629,7 @@ def load_project(root: str | pathlib.Path) -> Project:
         gate_thresholds=gate_thresholds,
         gate_policy=gate_policy,
         normalize_thresholds=normalize_thresholds,
+        citation_channel=citation_channel,
         floor_version=floor_version,
         floor_set_at=floor_set_at,
         floor_rationale=floor_rationale,
