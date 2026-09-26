@@ -145,11 +145,14 @@ implemented**, along with `model_call` — the file boundary every model-using s
 commands, ledgers and contracts under `docs/contracts/`. Stages 4, 5 and 6 are specified and not built;
 the CLI exits with a message for each.
 
-Two things stage 1 does not do, both recorded rather than hidden. The citation channel produces
-candidates nothing can classify — a reference carries no venue type and 25 of 37 carry no URL — so the
-resolution step from title or DOI to a venue and an address is stage 1's and is missing; see
-`docs/contracts/candidates.md`. And no API searcher has been run against the live internet on a real
-project, so the keyword channel is tested against saved payloads only.
+**The floor is judged per round** (D24). A discovery sweep changes the denominator by design, so
+`report --round <name>` is how a settled population is read: one citation sweep took `alembic-s4` from
+14/25 = 0.56 to 14/75 = 0.19, and only the first compares like with like.
+
+One thing stage 1 does not do: no request has ever left this repository. The searchers and the
+reference resolver are tested against saved payloads only, and running either needs
+`CLAIMSTONE_CONTACT_EMAIL` set to an address the operator chooses — identifying the crawler is a
+condition of using these APIs politely, and the code refuses to guess one.
 
 Order of work, decided 2026-09-22: **stage 2, then a thin vertical slice** (stages 3-6 on the
 25-source manifest, through to real verdicts), **then the dashboard** — it is the one
