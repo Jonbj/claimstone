@@ -1,150 +1,179 @@
-# Claimstone
+# CLAUDE.md
 
-Give it a set of **topics** and a frozen list of **questions**. It finds the readable
-literature on those topics, obtains the full text legally, extracts what each source
-actually claims — each claim tied to a verbatim quote from the source — weighs the
-claims per question, and returns an evidence profile for each question — with a verdict where
-someone has read the profile and signed one.
+Guidance for Claude Code working in this repository.
 
-Its defining constraint: **nothing enters the evidence base unless a verbatim excerpt
-backs it, verified mechanically.** A claim whose quote is not an exact substring of the
-source text is rejected, not softened.
+## What this project is
 
-It is domain-agnostic. The topics, the questions and the admissible source classes are
-**input data**, not code.
+Claimstone takes a set of **topics** and a frozen list of numbered **questions**, finds and
+legally obtains the readable literature on those topics, extracts what each source claims —
+every claim bound to a verbatim quote — weighs the claims per question, and returns a
+**verdict per question** with its coverage.
 
-## Why this exists
+Read `README.md` for the contract and the six stages. Read `docs/DESIGN_DECISIONS.md`
+before proposing any architectural change: it records twelve decisions **with the
+measurement that decided each**, so they are not relitigated from first principles.
 
-Two existing pipelines do this same work for two different domains — one on spirulina
-cultivation, one on financial news and price behaviour. The machinery in the middle
-(obtaining texts, defeating paywalls legally, deduplicating, extracting with
-verification, weighing evidence) knows nothing about either domain. Claimstone is that
-machinery, extracted once so the third topic costs a config file instead of a project.
+## Non-negotiable invariants
 
-## The contract
+Violating any of these silently destroys the value of everything downstream. They are not
+style preferences.
 
-Per project, three input files — all data:
+1. **No claim without a verified quote.** Every claim carries an `evidence_quote` that is
+   checked, in code, to be an exact substring of the chunk it came from. Every number and
+   every inequality in the claim must also appear in that quote. Failures go to the
+   rejection ledger — they are never softened, defaulted, or passed through with a warning.
+2. **Five verdict states, and none of them collapses into another.** `SUPPORTED`,
+   `CONTRADICTED`, `CONTESTED_IN_LITERATURE`, `UNANSWERED_IN_LITERATURE`, `NEVER_ASKED`.
+   Reporting "we found no evidence" as "there is no effect" is the specific error this project
+   exists to prevent; reporting a live disagreement as "we found no evidence" is the same error
+   one category over, which is why the fifth state was added (2026-09-25). A question of
+   `kind: operational` receives **no** verdict rather than a sixth state — see the verdict
+   contract spec.
+3. **The acquisition floor gates verdicts.** A round that obtained less than
+   `acquisition_floor` of what it found is `INSUFFICIENT_ACQUISITION` and produces no
+   verdicts. Do not add a flag to override this. A corpus read at 42% that certifies itself
+   complete is worse than no corpus, and that is the real state that motivated the project.
+4. **The engine holds no domain knowledge.** Topics, questions and source classes are input
+   data under `projects/`. If something finance-specific or biology-specific is appearing in
+   `claimstone/`, it is in the wrong place. Test: a project in an unrelated field must be
+   expressible without touching the package.
+5. **A question registry change is a dated bump.** Never a silent insert; otherwise every
+   round-over-round figure and every multiplicity correction loses its meaning. Enforced, not
+   merely asked: the registry carries a digest of its questions — ids, texts **and kinds** — and
+   every command that opens a store refuses to run when the digest changed under an unchanged
+   version. `kind` is in the digest because it decides which rule judges the question.
+6. **Source class travels with every item.** A blog post and a refereed paper never share a
+   pool without it being recorded which is which.
+7. **Vote counting is not synthesis.** Pooling is precision-weighted with publication-bias
+   correction, delegated to R. "Four papers say yes, one says no" is not a result.
 
-| File | Purpose |
-|---|---|
-| `topics.yaml` | broad search terms; used to **find** things |
-| `questions.yaml` | numbered, frozen before results are seen; used to **say what was learned** |
-| `sources.yaml` | admissible source classes and their hierarchy |
+## Acquisition conduct
 
-Output: one row per question. An **evidence profile** built by code — every verified result with its
-uncertainty, design and dependence, the counter-evidence with the same fields, the coverage and what
-the gate threw away — and, where a person has read that profile and signed a judgement, a verdict
-from `SUPPORTED` / `CONTRADICTED` / `CONTESTED_IN_LITERATURE` / `UNANSWERED_IN_LITERATURE` /
-`NEVER_ASKED`.
+Honour `robots.txt`. Respect the per-domain failure budget: a host that returned 403 is not
+re-requested outside a named campaign. Never route through a shadow library — the
+`excluded_hosts` list in a project's `sources.yaml` is deliberate, not a placeholder.
+Prefer the open-access copy by construction; record `licence`, `oa_status` and
+`failure_class` for every attempt, successful or not.
 
-**The profile is automatic; the verdict is not.** An earlier design applied a threshold to counts of
-agreeing sources, and that is vote counting with a better name — three small imprecise positives
-would have outvoted one large precise negative. Code describes the evidence; a person judges it and
-is recorded doing so.
+## Privacy rule
 
-**Topics in, questions out.** A tool whose job is "gather information on topics" has no
-stopping condition and no way to say "we don't know" — because *not knowing* is only
-definable relative to a question. The questions are what make this an instrument rather
-than a scraper.
+**This repository is public.** Real project instances under `projects/` are gitignored
+because they encode a consuming system's internal design. Only
+`projects/example-news-and-returns/` ships. Before committing anything under `projects/`,
+check that it does not disclose someone's internal architecture. If a fresh instance is
+needed for a test, build it from public literature.
 
-## The six stages
+## Layout
 
-Each stage reads and writes JSONL. No stage owns another stage's data.
+```
+claimstone/          the engine — no domain knowledge, ever
+  config.py          loads and validates a project's three input files
+  cli.py             entry point; unimplemented stages say so rather than pretending
+projects/<name>/     one instance: topics.yaml, questions.yaml, sources.yaml
+store/<project>/     generated, gitignored; append-only JSONL plus fetched bytes
+docs/                DESIGN_DECISIONS.md and data contracts
+tools/               scripts that derive a reported figure from the store, committed
+                     because the data they read cannot be
+tests/
+```
 
-1. **discover** — topics → candidates. Direct HTTP against OpenAlex, Crossref, arXiv for
-   scholarly work; a SearXNG container for the rest. Deterministic; no model involved.
-   Every candidate carries its source class and the hash of the query that found it, so
-   "how many are new this round" is reproducible.
-2. **acquire** — candidates → frozen texts. Unpaywall and OpenAlex resolve the legal open
-   copy; a cascade of OA sources is tried in order; a publisher 403/429 with a known DOI
-   falls back to OpenAlex locations. Per-domain circuit breaker and failure TTL stop the
-   crawler hammering a paywall. Records `http_status`, licence, OA status and failure
-   class for every attempt.
-3. **normalize** — PDF/HTML → text, tables, references. GROBID over REST for scholarly
-   PDFs; a plain path for everything else. Chunks get stable ids and hashes.
-   The extracted bibliography feeds back into `discover` as a **second, independent
-   discovery channel** — which is what makes completeness estimable rather than merely
-   asserted.
-4. **extract** — chunks → claims bound to questions. The question registry is in every
-   prompt; a claim must cite an existing question id and carry the exact sentence it came
-   from. The model sits behind a **file boundary**: work units in JSONL, results in JSONL,
-   so any backend can serve the queue and two backends can be compared on the same units.
-   Then the gate, which is code and not judgement: the quote must be an exact substring;
-   every number and inequality in the claim must appear in the quote; the question id must
-   exist. Rejects go to a ledger — that ledger is the denominator.
-5. **review** — an adversarial second read marking each claim
-   `SUPPORTED` / `OVERSTATED` / `AMBIGUOUS` / `NOT_APPLICABLE`. On the existing finance
-   corpus this step caught roughly a quarter of the claims that had already passed the
-   mechanical gate; it is the control that pays best. Its input is a claim and its quote,
-   not the chunk, so the whole corpus costs about a dollar on a frontier model: it runs over
-   every claim, and on a different model from the one that produced them — a reader sharing
-   the extractor's blind spots is not a control.
-6. **synthesize** — claims → a verdict per question. Deterministic Python for coverage,
-   acquisition and completeness metrics. The statistics are delegated to an R script using
-   `metafor`, called across a file boundary: random-effects pooling plus publication-bias
-   correction in the form economics uses (PET-PEESE, MAIVE), which exists precisely because
-   reported standard errors in observational research are not trustworthy.
+A number quoted in a spec names the command that produces it. `tools/derive_corpus_figures.py`
+exists because the corpus figures were once measured outside the repository and could not be
+checked — and running it corrected one of them on the first attempt.
 
-## Admissibility
+## Storage model
 
-A round that could not obtain enough of what it found cannot produce verdicts. The
-acquisition rate is reported every round and gates the rest: below the declared floor the
-round is `INSUFFICIENT_ACQUISITION`. This is deliberate — a corpus read at 42% that
-certifies itself as complete is worse than no corpus, and that is the observed state of
-the corpus that motivated this project.
+**Append-only JSONL is the source of truth** — hashable, diffable, auditable with `grep`, and
+resumable after a crash in one specific sense: a process killed mid-append leaves a final line
+with no newline, which `Store.read` skips and records and `Store.repair` truncates. Damage
+anywhere else raises, because silently skipping a row removes it from a denominator. SQLite, if introduced, is a derived read model rebuildable from the
+JSONL, never the primary. Do not add Postgres (single writer, megabytes of data), a vector
+database (a few hundred documents: similarity is one matrix multiplication) or a graph
+database (a citation graph is a table of edges).
 
-Counting how many sources agree is not a method. Vote counting ignores precision, effect
-magnitude and the fact that significant results are the ones that get published.
+Per project under `store/<project>/`:
 
-## Tools
+| File | Written by | Contains |
+|---|---|---|
+| `candidates.jsonl` | discover | one row per candidate, with source class and the hash of the query that found it |
+| `acquisitions.jsonl` | acquire | one row per attempt: `http_status`, resolved OA location, licence, `failure_class` |
+| `raw/<sha256>.<ext>` | acquire | the fetched bytes, content-addressed |
+| `rejections.jsonl` | extract | what was discarded and why — this is the denominator |
+| `registry.jsonl` | any command | one row per question-registry version seen, with its hash. A changed hash under an unchanged version refuses to run (invariant 5) |
 
-Python spine (`requests`, `numpy`; no framework) · one GROBID container · one SearXNG
-container · one R script using `metafor` · and, behind a file boundary, whatever model
-backend is serving a lane: a local `llama.cpp` server, a CLI on the machine, a hosted
-open-model endpoint, or a metered API. The engine holds no vendor SDK and no lane is
-hard-coded to a vendor — which backend is better at a lane is answered by running both over
-the same work units.
+## Working conventions
 
-Storage is **append-only JSONL as the source of truth** — hashable, diffable, and resumable
-after a crash in a specific sense: a process killed mid-append leaves a final line with no
-newline, which readers skip and report and `Store.repair` truncates. Damage anywhere else raises,
-because silently skipping a row drops it out of a denominator. SQLite is a derived view that can
-be rebuilt from it. No Postgres,
-no vector database, no graph database: this is a few hundred documents, similarity is a
-matrix multiplication and a citation graph is a table of edges.
+- Python ≥ 3.11, stdlib plus `requests`, `PyYAML`, `numpy`. **No framework.** Dependencies
+  must sit behind a process or file boundary — see D7. PaperQA2, ASReview, ASySD, statcheck
+  and prismAId were each evaluated and rejected with reasons; do not reintroduce them
+  without addressing those reasons.
+- Every network call: explicit timeout, a descriptive User-Agent with contact, and a
+  recorded outcome. A silent `except: pass` around a fetch is a defect here, because a
+  swallowed failure inflates the acquisition rate.
+- Idempotent and resumable by content hash. Never re-fetch or re-extract the same bytes.
+- Run `.venv/bin/pytest -q` and `.venv/bin/claimstone validate --all-projects`.
 
-## What it is not
+## Model backends
 
-Not a search engine, not a chatbot over papers, not a backtester. It does not touch the
-consuming project's data or decisions. And it is not a machine for justifying a
-hypothesis: concluding that a question is unsupported, or that an effect exists only at
-horizons that do not apply, or that it disappears once costs are counted, is a successful
-outcome and not a failure.
+**One boundary, several backends** (D13). A stage that needs a model writes work units to
+JSONL and reads results from JSONL; it never imports a vendor SDK. Backends available on this
+machine: the local `llama.cpp` server, `claude -p --output-format json`, `codex exec`,
+`opencode`, Ollama Cloud (API key, $60/month of credit on the $20 plan), and a metered API if
+one is opened. Every result row records `backend`, `model`, `harness_version` and
+`prompt_sha256`.
+
+Which backend serves which lane is **a measurement, not a decision**: the same work units go
+to two backends and the results are compared. Do not hard-code a lane to a vendor.
+
+Two standing constraints. High-volume lanes go where throughput is priced per token —
+interactive subscription plans are not batch infrastructure and are not driven as though they
+were. And a CLI inserts its own harness between the prompt and the model, so where a result
+must be exactly reproducible, prefer the metered API and always record `harness_version`.
+
+**The local backend's operating point**, when it is the one serving a lane: narrow window,
+many calls, short structured outputs. Measured at Q8_0, 11.6 min per call on ~8K-token
+prompts, ~5 calls/hour, 1.43 tok/s generation against 121 tok/s prefill, with harvest per
+call roughly constant at ~2 claims regardless of window size — so widening the window reduces
+total harvest and "one JSON per document" is the worst available call shape. This is the
+operating point of *that machine*, not a general property of models: see the perimeter note
+on D4 before applying it to any other backend.
 
 ## Status
 
-Early, and measured. **Stages 1, 2, 3 and 4 are implemented**, along with the model boundary every
-model-using stage goes through; stages 5 and 6 are specified and not built. The dashboard is specified
-and deliberately last.
+The contract and its validator exist. **Stages 1 (discover), 2 (acquire), 3 (normalize) and 4 (extract)
+are implemented**, along with `model_call` — the file boundary every model-using stage goes through.
+Stages 5 and 6 are specified and not built; the CLI exits with a message for each. `numbers.py` is not
+built, so no as-written value has been converted and nothing yet feeds stage 6.
 
-The first extraction records exist: 66 claims for one question, every one of the 66 evidence quotes an
-exact substring of the passage it came from, checked in code. The finding that matters is not that
-number — it is that the single claim contradicting the question is the weakest one present and reports
-a paper that is not in the corpus. See D22 and D23.
+**The vertical slice reaches a stored claim.** 112 claims across two kinds, every evidence quote verified
+in code against the chunk it came from. The gate accepts 0.97 overall and 0.98 on a kind it was never tuned
+against (D28), so that rate is not an artefact of the fitting. Coverage is 6 of 22 verdict-bearing
+questions from 26 chunks of 472, and a full extraction is 1,888 calls — about sixteen hours on `claude-cli`
+at the observed rate.
 
-The first deliverable is a sentence with a number in it, and here it is: on a real 25-source
-manifest whose acquisition rate was **0.42**, the rate is **0.56** — fourteen sources obtained,
-read and confirmed to be documents, with OA status, licence and failure reason recorded for each.
-That figure is now `final`: nothing is awaiting normalization, there are no orphan rows, and the
-lower bound equals the ceiling, so it is a settled measurement rather than a partial one. 0.60 was
-the count before stage 3 read them; one of the fifteen is a vendor fact sheet with one reference
-and 4,377 characters, and it is named rather than absorbed.
+**The floor is judged per round** (D24). A discovery sweep changes the denominator by design, so
+`report --round <name>` is how a settled population is read: one citation sweep took `alembic-s4` from
+14/25 = 0.56 to 14/75 = 0.19, and only the first compares like with like.
 
-That is below the declared floor of 0.80, so the published result is `INSUFFICIENT_ACQUISITION`
-with the losses broken down: four publishers that refused twice, and six pages that are abstracts
-or product sheets rather than documents. **That is a finding, not a failure** — and the floor stays
-where it is. Lowering it because a round came out awkward is the one response that is off the table.
+One thing stage 1 does not do: no request has ever left this repository. The searchers and the
+reference resolver are tested against saved payloads only, and running either needs
+`CLAIMSTONE_CONTACT_EMAIL` set to an address the operator chooses — identifying the crawler is a
+condition of using these APIs politely, and the code refuses to guess one.
 
-None of the thresholds that produced the number are deciding it: all four sweep flat, and every
-rejection was checked by hand. `docs/DESIGN_DECISIONS.md` carries the derivation under D8, and
-`tools/derive_corpus_figures.py` reproduces the corpus figures from the store.
+Order of work, decided 2026-09-22: **stage 2, then a thin vertical slice** (stages 3-6 on the
+25-source manifest, through to real verdicts), **then the dashboard** — it is the one
+component whose value needs data in every stage and whose spec depends on every other stage's
+schema, so it goes last and gets built against real rows.
+
+Acquisition is the first milestone, not extraction, because it is the binding constraint on
+the science (D8) — and since D13 it is the *only* remaining one. The first deliverable is a
+sentence with a number in it, and it exists: **14 of 25 = 0.56, `final`**, with OA status, licence
+and failure reason recorded per source, **plus the sensitivity of that rate to the thresholds that
+produced it**. A rate quoted without its thresholds invites comparing two incomparable numbers.
+Measured, none of the six thresholds decides it — the gate's four swept flat (D8) and both
+confirmation constants swept flat (D21). The rate is set by structure, not by a constant.
+
+That deliverable may legitimately be `INSUFFICIENT_ACQUISITION` with the losses broken down
+by failure class. That is a finding, not a failure. Lowering `acquisition_floor` because the
+number came out awkward is the one response that is off the table: a floor change is a dated,
+versioned, motivated event, on the same terms as a question-registry bump.
