@@ -237,6 +237,7 @@ class Fetcher:
                 headers={"Accept": "application/json"} if as_json else None,
             )
         except requests.Timeout as exc:
+            # No response, so no final URL: the host we asked is all we know.
             self._record_failure(host)
             return Outcome(url, False, failure_class=TIMEOUT, detail=str(exc),
                            elapsed_s=time.time() - started)
@@ -249,17 +250,25 @@ class Fetcher:
         ctype = (response.headers.get("Content-Type") or "").split(";")[0].strip().lower()
         status = response.status_code
 
+        # Charged to the host that actually refused us, which after a redirect is not the one we asked.
+        # Measured, and it cost 17 candidates: every citation candidate's only address is a `doi.org`
+        # URL, so a doi.org request landing on Wiley and taking a 403 charged the failure to doi.org —
+        # one budget shared by every publisher the resolver points at, spending itself on 403s from
+        # journals the next candidate had nothing to do with. The budget exists so a host that refused us
+        # is not hammered, and a redirector is not that host.
+        refused_by = host_of(getattr(response, "url", "") or url) or host
+
         if status == 403:
-            self._record_failure(host)
+            self._record_failure(refused_by)
             return Outcome(url, False, status, PAYWALL, "forbidden", ctype, elapsed_s=elapsed)
         if status == 429:
-            self._record_failure(host)
+            self._record_failure(refused_by)
             return Outcome(url, False, status, RATE_LIMITED, "rate limited", ctype,
                            elapsed_s=elapsed)
         if status == 404:
             return Outcome(url, False, status, NOT_FOUND, "not found", ctype, elapsed_s=elapsed)
         if status >= 500:
-            self._record_failure(host)
+            self._record_failure(refused_by)
             return Outcome(url, False, status, SERVER_ERROR, f"status {status}", ctype,
                            elapsed_s=elapsed)
         if status >= 400:
