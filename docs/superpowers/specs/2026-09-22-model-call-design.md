@@ -66,15 +66,36 @@ prompt caching possible on backends that price cached input separately (Ollama C
 $0.006 against $0.30 per MTok, fifty-fold), and it puts the cacheability in the *file* rather
 than in a runner's cleverness. A runner that ignores the split still works; it just pays more.
 
-**`call_id` is derived, not assigned:** `sha256(lane | schema_version | prompt_sha256)`. So the
-same work unit produced twice is the same unit, a batch is resumable by skipping `call_id`s
-already answered, and — the point — **two backends can drain the same `requests.jsonl` into two
-`results.jsonl` files and their answers line up per `call_id`.** That is the comparison
-primitive D13 exists to preserve; without a content-derived id, comparing backends means
-trusting that two runs saw the same inputs.
+**`call_id` is derived, not assigned:**
+`sha256(lane | schema_version | prompt_sha256 | max_output_tokens | schema_sha256)`, where
+`prompt_sha256 = sha256(rendered_prompt(system, user))`. So the same work unit produced twice is the
+same unit, a batch is resumable by skipping the `call_id`s a backend already answered, and — the
+point — **two backends can drain the same `requests.jsonl` and their answers line up per
+`call_id`.** That is the comparison primitive D13 exists to preserve; without a content-derived id,
+comparing backends means trusting that two runs saw the same inputs.
+
+The cap and the schema are inside the id because §5 makes a retry under a bigger cap "honestly a
+different call", and an earlier version of this formula omitted both. `prompt_sha256` stays narrower,
+covering the prompt alone, because it is what the echo check verifies — widening it would make a
+mismatch ambiguous between a mangled prompt and a changed cap.
+
+Two chunks with identical text therefore hash to one call, which is a real saving and costs
+provenance. The request row carries `asked_by`, every `{source_id, chunk_id}` that asked, so one
+answer fans back out to all of them: see `docs/contracts/model_calls.md`.
 
 **`response_schema` travels with the request.** The validator is not a property of the runner,
 so every backend is held to the same shape and a schema change is visible in the queue.
+
+**The validator is `jsonshape.py`, a closed subset.** `type`, `properties`, `required`, `items`,
+`enum`, `additionalProperties`, `minItems`, `maxItems` — and **an unsupported keyword raises** rather
+than being ignored, checked when the request is written so the failure lands on the stage that wrote
+it. A `jsonschema` dependency would be spec-complete and would not sit behind a process boundary
+(D7); a validator that silently skipped `pattern` would tell a stage its output was checked when it
+was not, which is the class of false assurance this project exists to prevent.
+
+Closed covers each keyword's *shape*, not only its name. `additionalProperties: {"type": "string"}`
+is legal JSON Schema this module does not check, and `required: "question_id"` is a typo a
+name-only check accepted and then iterated character by character. Both are refused.
 
 ## 5. The result
 

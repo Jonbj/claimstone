@@ -90,7 +90,7 @@ Implements spec §4 and correction 1.
 - Create: `claimstone/model_call.py`
 - Create: `tests/test_model_call.py`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `tests/test_model_call.py`:
 
@@ -147,12 +147,12 @@ def test_key_order_does_not_change_the_hash():
     assert a["call_id"] == b["call_id"]
 ```
 
-- [ ] **Step 2: Run it to verify it fails**
+- [x] **Step 2: Run it to verify it fails**
 
 Run: `.venv/bin/pytest tests/test_model_call.py -q`
 Expected: FAIL with `ModuleNotFoundError: No module named 'claimstone.model_call'`
 
-- [ ] **Step 3: Write the identity half of `claimstone/model_call.py`**
+- [x] **Step 3: Write the identity half of `claimstone/model_call.py`**
 
 ```python
 """The boundary between a stage that needs a model and whatever backend answers.
@@ -249,12 +249,12 @@ def work_unit(
     }
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `.venv/bin/pytest tests/test_model_call.py -q`
 Expected: PASS, 7 passed
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add claimstone/model_call.py tests/test_model_call.py
@@ -283,7 +283,7 @@ Implements spec §4's "the validator is not a property of the runner", and corre
 - Create: `claimstone/jsonshape.py`
 - Create: `tests/test_jsonshape.py`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `tests/test_jsonshape.py`:
 
@@ -363,12 +363,12 @@ def test_check_schema_accepts_the_subset_it_documents():
     jsonshape.check_schema(CLAIM)  # must not raise
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `.venv/bin/pytest tests/test_jsonshape.py -q`
 Expected: FAIL with `ModuleNotFoundError: No module named 'claimstone.jsonshape'`
 
-- [ ] **Step 3: Write `claimstone/jsonshape.py`**
+- [x] **Step 3: Write `claimstone/jsonshape.py`**
 
 ```python
 """Validate a model's answer against the shape the request carried.
@@ -507,12 +507,12 @@ def errors(value: Any, schema: dict[str, Any], path: str = "$") -> list[str]:
     return problems
 ```
 
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
 
 Run: `.venv/bin/pytest tests/test_jsonshape.py -q`
 Expected: PASS, 9 passed
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add claimstone/jsonshape.py tests/test_jsonshape.py
@@ -541,7 +541,7 @@ Implements spec §1's file layout.
 - Modify: `claimstone/model_call.py`
 - Modify: `tests/test_model_call.py`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Append to `tests/test_model_call.py`:
 
@@ -630,12 +630,12 @@ def test_pending_retries_a_transient_failure_but_not_a_terminal_one(tmp_path):
     assert pending == [units[0]["call_id"]]
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `.venv/bin/pytest tests/test_model_call.py -q`
 Expected: FAIL with `AttributeError: module 'claimstone.model_call' has no attribute 'batch_name'`
 
-- [ ] **Step 3: Append the queue to `claimstone/model_call.py`**
+- [x] **Step 3: Append the queue to `claimstone/model_call.py`**
 
 ```python
 # Terminal for this backend: a retry changes nothing until the request or the backend does.
@@ -752,12 +752,12 @@ Add `from typing import Any` if it is not already imported, and note that `Store
 deliberately typed as `Any` here: `model_call` does not need the class, only `append`,
 `read` and `latest_by`, and keeping it loose is what lets a test pass a stub.
 
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
 
 Run: `.venv/bin/pytest tests/test_model_call.py -q`
 Expected: PASS, 13 passed
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add claimstone/model_call.py tests/test_model_call.py
@@ -788,7 +788,7 @@ Implements spec §5 and §6's drain.
 - Modify: `tests/fakes.py`
 - Modify: `tests/test_model_call.py`
 
-- [ ] **Step 1: Write `claimstone/runners/base.py`**
+- [x] **Step 1: Write `claimstone/runners/base.py`**
 
 ```python
 """What a runner is, and — just as much — what it is not.
@@ -839,7 +839,7 @@ class Runner(Protocol):
     def run(self, request: dict[str, Any]) -> RawAnswer: ...
 ```
 
-- [ ] **Step 2: Write the failing tests**
+- [x] **Step 2: Write the failing tests**
 
 Add `FakeRunner` to `tests/fakes.py`:
 
@@ -999,12 +999,12 @@ def test_draining_twice_does_not_repeat_a_success(tmp_path):
 `test_a_runner_that_mangled_the_prompt_is_caught` is the point of the whole echo check: the
 runner is handed the request and edits it, which is exactly what a templating bug looks like.
 
-- [ ] **Step 3: Run to verify it fails**
+- [x] **Step 3: Run to verify it fails**
 
 Run: `.venv/bin/pytest tests/test_model_call.py -q`
 Expected: FAIL with `ModuleNotFoundError: No module named 'claimstone.runners'`
 
-- [ ] **Step 4: Write `claimstone/runners/__init__.py`**
+- [x] **Step 4: Write `claimstone/runners/__init__.py`**
 
 ```python
 """Backends, one module each. Nothing else in the repository names a vendor.
@@ -1051,7 +1051,7 @@ def build(name: str, *, model: str | None = None, **kwargs: Any) -> Runner:
 __all__ = ["RawAnswer", "Runner", "available", "build"]
 ```
 
-- [ ] **Step 5: Append the result and the drain to `claimstone/model_call.py`**
+- [x] **Step 5: Append the result and the drain to `claimstone/model_call.py`**
 
 ```python
 def _classify(answer: Any, request: dict[str, Any]) -> tuple[Any, str | None, list[str]]:
@@ -1202,7 +1202,7 @@ def drain(queue: Queue, runner: Any, *, limit: int | None = None) -> Any:
         yield row
 ```
 
-- [ ] **Step 6: Add `store_bytes_at` to `claimstone/store.py`**
+- [x] **Step 6: Add `store_bytes_at` to `claimstone/store.py`**
 
 `store_bytes` writes into `raw/` at the project root. A batch's answers belong beside the batch,
 so the same content-addressing is needed under a given subdirectory:
@@ -1228,12 +1228,12 @@ Then express the original in terms of it, so there is one implementation:
         return self.store_bytes_at("raw", data, suffix)
 ```
 
-- [ ] **Step 7: Run to verify it passes**
+- [x] **Step 7: Run to verify it passes**
 
 Run: `.venv/bin/pytest -q`
 Expected: PASS, all tests
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add claimstone/model_call.py claimstone/runners/ claimstone/store.py \
@@ -1271,7 +1271,7 @@ Implements spec §6's `runners/cli.py`.
 - Create: `claimstone/runners/cli.py`
 - Create: `tests/test_runner_cli.py`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `tests/test_runner_cli.py`:
 
@@ -1374,12 +1374,12 @@ def test_the_cli_runner_is_serial_and_paced():
     assert runner.min_interval_s >= 1.0
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `.venv/bin/pytest tests/test_runner_cli.py -q`
 Expected: FAIL with `ModuleNotFoundError: No module named 'claimstone.runners.cli'`
 
-- [ ] **Step 3: Write `claimstone/runners/cli.py`**
+- [x] **Step 3: Write `claimstone/runners/cli.py`**
 
 ```python
 """A coding-assistant CLI as a backend, through its documented non-interactive mode.
@@ -1512,12 +1512,12 @@ class CliRunner:
                          prompt_sent=prompt)
 ```
 
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
 
 Run: `.venv/bin/pytest tests/test_runner_cli.py -q`
 Expected: PASS, 8 passed
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add claimstone/runners/cli.py tests/test_runner_cli.py
@@ -1549,7 +1549,7 @@ Implements spec §6's `runners/ollama_cloud.py`.
 - Create: `claimstone/runners/ollama_cloud.py`
 - Create: `tests/test_runner_ollama.py`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `tests/test_runner_ollama.py`:
 
@@ -1651,12 +1651,12 @@ def test_a_500_is_a_backend_error():
     assert runner(post).run(request()).failure_class == "BACKEND_ERROR"
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `.venv/bin/pytest tests/test_runner_ollama.py -q`
 Expected: FAIL with `ModuleNotFoundError: No module named 'claimstone.runners.ollama_cloud'`
 
-- [ ] **Step 3: Write `claimstone/runners/ollama_cloud.py`**
+- [x] **Step 3: Write `claimstone/runners/ollama_cloud.py`**
 
 ```python
 """A hosted open-model endpoint, priced per token against a monthly credit.
@@ -1787,12 +1787,12 @@ class OllamaCloudRunner:
         )
 ```
 
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
 
 Run: `.venv/bin/pytest tests/test_runner_ollama.py -q`
 Expected: PASS, 8 passed
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add claimstone/runners/ollama_cloud.py tests/test_runner_ollama.py
@@ -1821,7 +1821,7 @@ Implements spec §6's `runners/llamacpp.py`.
 - Create: `claimstone/runners/llamacpp.py`
 - Create: `tests/test_runner_llamacpp.py`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `tests/test_runner_llamacpp.py`:
 
@@ -1868,12 +1868,12 @@ def test_a_dead_server_is_a_backend_error():
     assert runner(refuse).run(request()).failure_class == "BACKEND_ERROR"
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `.venv/bin/pytest tests/test_runner_llamacpp.py -q`
 Expected: FAIL with `ModuleNotFoundError: No module named 'claimstone.runners.llamacpp'`
 
-- [ ] **Step 3: Write `claimstone/runners/llamacpp.py`**
+- [x] **Step 3: Write `claimstone/runners/llamacpp.py`**
 
 ```python
 """The local `llama.cpp` server, over its OpenAI-compatible chat endpoint.
@@ -1963,12 +1963,12 @@ class LlamaCppRunner:
         )
 ```
 
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
 
 Run: `.venv/bin/pytest tests/test_runner_llamacpp.py -q`
 Expected: PASS, 5 passed
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add claimstone/runners/llamacpp.py tests/test_runner_llamacpp.py
@@ -1994,7 +1994,7 @@ Implements spec §7.
 - Create: `claimstone/model_report.py`
 - Create: `tests/test_model_report.py`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `tests/test_model_report.py`:
 
@@ -2092,12 +2092,12 @@ def test_an_empty_batch_has_no_throughput_rather_than_zero(tmp_path):
     assert summary["calls"] == 0
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `.venv/bin/pytest tests/test_model_report.py -q`
 Expected: FAIL with `ModuleNotFoundError: No module named 'claimstone.model_report'`
 
-- [ ] **Step 3: Write `claimstone/model_report.py`**
+- [x] **Step 3: Write `claimstone/model_report.py`**
 
 ```python
 """What a queue cost and how fast it went.
@@ -2185,12 +2185,12 @@ def summarise(store: Store, *, lane: str, batch: str) -> dict[str, Any]:
     }
 ```
 
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
 
 Run: `.venv/bin/pytest tests/test_model_report.py -q`
 Expected: PASS, 6 passed
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add claimstone/model_report.py tests/test_model_report.py
@@ -2215,7 +2215,7 @@ Implements spec §6's `model-run` and §7's `model-report`.
 - Modify: `claimstone/cli.py`
 - Create: `tests/test_cli_model.py`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `tests/test_cli_model.py`:
 
@@ -2269,12 +2269,12 @@ def test_model_report_on_an_empty_batch_says_so(tmp_path, capsys):
     assert "no calls" in capsys.readouterr().out
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `.venv/bin/pytest tests/test_cli_model.py -q`
 Expected: FAIL — `model-run` is not a known command
 
-- [ ] **Step 3: Add both handlers to `claimstone/cli.py`**
+- [x] **Step 3: Add both handlers to `claimstone/cli.py`**
 
 ```python
 def _model_run(args: argparse.Namespace) -> int:
@@ -2375,7 +2375,7 @@ Building the parser must not import three runner modules, so the names are a lit
 BACKENDS = ("claude-cli", "codex-cli", "llamacpp", "ollama-cloud", "opencode-cli")
 ```
 
-- [ ] **Step 4: Pin the literal against the registry**
+- [x] **Step 4: Pin the literal against the registry**
 
 Two lists that must agree. Append to `tests/test_cli_model.py`:
 
@@ -2389,7 +2389,7 @@ def test_the_backend_list_in_help_matches_the_registry():
     assert set(BACKENDS) == set(runners.available())
 ```
 
-- [ ] **Step 5: Run everything**
+- [x] **Step 5: Run everything**
 
 Run: `.venv/bin/pytest -q`
 Expected: PASS, all tests
@@ -2397,7 +2397,7 @@ Expected: PASS, all tests
 Run: `.venv/bin/claimstone model-run --help`
 Expected: usage showing `--backend` as required
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add claimstone/cli.py tests/test_cli_model.py
@@ -2425,7 +2425,7 @@ Implements spec §8's live test and lands the two corrections this plan made.
 - Create: `tests/test_live_runners.py`
 - Modify: `docs/superpowers/specs/2026-09-22-model-call-design.md`
 
-- [ ] **Step 1: Write `tests/test_live_runners.py`**
+- [x] **Step 1: Write `tests/test_live_runners.py`**
 
 ```python
 """One real call per backend. Skipped everywhere by default, including CI.
@@ -2479,12 +2479,12 @@ def test_a_backend_returns_something_the_validator_accepts(backend, model):
 An unavailable backend **skips** rather than fails: a missing API key or a stopped local server
 is not a defect in this repository.
 
-- [ ] **Step 2: Verify it is skipped by default**
+- [x] **Step 2: Verify it is skipped by default**
 
 Run: `.venv/bin/pytest tests/test_live_runners.py -q`
 Expected: `3 skipped`
 
-- [ ] **Step 3: Land the two corrections in the spec**
+- [x] **Step 3: Land the two corrections in the spec**
 
 In `docs/superpowers/specs/2026-09-22-model-call-design.md`, §4, replace the `call_id` formula
 paragraph's first sentence:
@@ -2510,7 +2510,7 @@ And add to §4, after the `response_schema` paragraph:
 > its output was checked when it was not, which is the class of false assurance this project
 > exists to prevent.
 
-- [ ] **Step 4: Write `docs/contracts/model_calls.md`**
+- [x] **Step 4: Write `docs/contracts/model_calls.md`**
 
 ```markdown
 # `calls/<lane>/<batch>/` — the contract
@@ -2586,7 +2586,7 @@ produces a second `results.jsonl` whose rows line up per `call_id` — which is 
 backend A better than B at this lane" a question with an answer.
 ```
 
-- [ ] **Step 5: Run everything and commit**
+- [x] **Step 5: Run everything and commit**
 
 Run: `.venv/bin/pytest -q` — expected: all pass, 6 skipped
 Run: `.venv/bin/claimstone validate --all-projects` — expected: OK for both
