@@ -23,6 +23,39 @@ from claimstone.store import Store
 
 ROUTINE = "routine"
 
+NEAR_MATCH_MIN_CHARS = 25
+
+
+def near_match(key: str, known: Iterable[str]) -> str | None:
+    """A key whose title looks like an existing one. Recorded, never acted on.
+
+    "Approximate" is defined rather than left to judgement: one folded title contains the other
+    and the shorter of the two is at least 25 characters. That is the check that found both the 15
+    banner cases in the measured corpus and its one false positive — "And the Cross-Section of
+    Expected Returns" inside "Media coverage and the cross-section of expected returns", which are
+    different papers.
+
+    The rule survives that false positive because of an asymmetry. A duplicate costs one wasted
+    acquisition attempt, and not even a second download, since bytes are content-addressed. A
+    wrong merge loses a source permanently and attributes its claims to another work. So the
+    outcome here is a note on a row and nothing else.
+    """
+    if not key.startswith("title:"):
+        return None
+    mine = key[len("title:"):]
+    if len(mine) < NEAR_MATCH_MIN_CHARS:
+        return None
+    for other in known:
+        if other == key or not other.startswith("title:"):
+            continue
+        theirs = other[len("title:"):]
+        shorter = mine if len(mine) <= len(theirs) else theirs
+        if len(shorter) < NEAR_MATCH_MIN_CHARS:
+            continue
+        if mine in theirs or theirs in mine:
+            return other
+    return None
+
 
 def run(
     project: Project,
@@ -38,6 +71,7 @@ def run(
     wanted = set(topics) if topics else None
     known = set(store.latest_by("candidates.jsonl", "candidate_key"))
     new = 0
+    possible_duplicates = 0
     seen_this_run = 0
     unclassified: list[dict[str, Any]] = []
     queries = 0
@@ -57,6 +91,10 @@ def run(
                         continue
                     row["source_class"] = classify.classify(row, project.classes)
                     row["round"] = round_name
+                    note = near_match(row["candidate_key"], known)
+                    if note:
+                        row["possible_duplicate_of"] = note
+                        possible_duplicates += 1
                     if row["source_class"] is None:
                         unclassified.append(row)
                     known.add(row["candidate_key"])
@@ -71,6 +109,7 @@ def run(
         "unclassified": len(unclassified),
         # Which attribute values went unmatched, so the remedy is a declared rule.
         "uncovered": classify.uncovered(unclassified, project.classes),
+        "possible_duplicates": possible_duplicates,
         "round": round_name,
     }
 
@@ -93,12 +132,13 @@ def run_citations(
         # Distinct from "zero admitted": nothing was there to read, and reporting 0 candidates
         # would read as the bibliography having found nothing.
         return {"references_available": False, "considered": 0, "admitted": 0, "new": 0,
-                "unclassified": 0, "uncovered": {}, "round": round_name}
+                "unclassified": 0, "uncovered": {}, "possible_duplicates": 0,
+                "round": round_name}
 
     # config.load_citation_channel already merged the engine defaults, so this is complete.
     rule = dict(project.citation_channel)
     known = set(store.latest_by("candidates.jsonl", "candidate_key"))
-    admitted = new = 0
+    admitted = new = possible_duplicates = 0
     unclassified: list[dict[str, Any]] = []
 
     for reference in references.values():
@@ -134,6 +174,10 @@ def run_citations(
             continue
         row["source_class"] = classify.classify(row, project.classes)
         row["round"] = round_name
+        note = near_match(row["candidate_key"], known)
+        if note:
+            row["possible_duplicate_of"] = note
+            possible_duplicates += 1
         if row["source_class"] is None:
             unclassified.append(row)
         known.add(row["candidate_key"])
@@ -147,6 +191,7 @@ def run_citations(
         "new": new,
         "unclassified": len(unclassified),
         "uncovered": classify.uncovered(unclassified, project.classes),
+        "possible_duplicates": possible_duplicates,
         "round": round_name,
     }
 

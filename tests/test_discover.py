@@ -173,3 +173,53 @@ def test_an_unknown_citation_setting_is_an_error(tmp_path):
         encoding="utf-8")
     with pytest.raises(ConfigError, match="min_fame"):
         load_citation_channel(tmp_path)
+
+
+def test_a_banner_title_is_noted_as_a_possible_duplicate(tmp_path):
+    # Measured: GROBID took an NBER cover banner as a title, so one work has two keys. 15 such
+    # cases in the first corpus.
+    project = load_project(PROJECT)
+    store = Store("t", base=tmp_path)
+    store.append("candidates.jsonl", {
+        "candidate_key": "title:which news moves stock prices a textual analysis",
+        "title": "Which News Moves Stock Prices? A Textual Analysis", "source_class": "ACA"})
+    store.append("references.jsonl", reference(
+        "title:nber working paper series which news moves stock prices a textual analysis",
+        title="NBER WORKING PAPER SERIES WHICH NEWS MOVES STOCK PRICES A TEXTUAL ANALYSIS",
+        cited=2))
+    discover.run_citations(project, store)
+    added = [r for r in store.read("candidates.jsonl") if r.get("channel") == "citation"]
+    assert added[0]["possible_duplicate_of"] == \
+        "title:which news moves stock prices a textual analysis"
+
+
+def test_a_noted_duplicate_is_still_written_as_its_own_candidate(tmp_path):
+    # A duplicate costs one wasted fetch, and not even a second download since bytes are
+    # content-addressed. A wrong merge loses a source and misattributes its claims.
+    project = load_project(PROJECT)
+    store = Store("t", base=tmp_path)
+    store.append("candidates.jsonl", {
+        "candidate_key": "title:which news moves stock prices a textual analysis",
+        "title": "Which News Moves Stock Prices? A Textual Analysis"})
+    store.append("references.jsonl", reference(
+        "title:nber working paper series which news moves stock prices a textual analysis",
+        title="NBER WORKING PAPER SERIES WHICH NEWS MOVES STOCK PRICES A TEXTUAL ANALYSIS",
+        cited=2))
+    result = discover.run_citations(project, store)
+    assert result["new"] == 1
+    assert result["possible_duplicates"] == 1
+
+
+def test_a_short_shared_prefix_is_not_a_near_match(tmp_path):
+    # The check needs 25 characters of the shorter title, or every paper about returns would
+    # look like every other one.
+    assert discover.near_match("title:on returns", {"title:on returns and news and more"}) is None
+
+
+def test_containment_is_the_declared_rule_and_its_false_positive_is_known():
+    # Measured: "And the Cross-Section of Expected Returns" (Harvey, Liu, Zhu) is contained in
+    # "Media coverage and the cross-section of expected returns" (Fang, Peress) and they are
+    # different papers. The rule keeps it because the outcome is a note, never a merge.
+    held = {"title:media coverage and the cross section of expected returns"}
+    assert discover.near_match("title:and the cross section of expected returns", held) == \
+        "title:media coverage and the cross section of expected returns"
