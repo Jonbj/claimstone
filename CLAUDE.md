@@ -140,10 +140,14 @@ on D4 before applying it to any other backend.
 
 ## Status
 
-The contract and its validator exist. **Stages 1 (discover), 2 (acquire) and 3 (normalize) are
-implemented**, along with `model_call` — the file boundary every model-using stage goes through — with
-commands, ledgers and contracts under `docs/contracts/`. Stages 4, 5 and 6 are specified and not built;
-the CLI exits with a message for each.
+The contract and its validator exist. **Stages 1 (discover), 2 (acquire), 3 (normalize) and 4 (extract)
+are implemented**, along with `model_call` — the file boundary every model-using stage goes through.
+Stages 5 and 6 are specified and not built; the CLI exits with a message for each. `numbers.py` is not
+built, so no as-written value has been converted and nothing yet feeds stage 6.
+
+**The vertical slice reaches a stored claim.** 63 claims for H02 from 4 studies, every evidence quote
+verified in code against the chunk it came from (D26). 0.95 is a floor on the gate's pass rate, not an
+estimate: one question, one prompt, and rules corrected against those same claims (D25).
 
 **The floor is judged per round** (D24). A discovery sweep changes the denominator by design, so
 `report --round <name>` is how a settled population is read: one citation sweep took `alembic-s4` from
