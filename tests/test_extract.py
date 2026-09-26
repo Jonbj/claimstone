@@ -289,3 +289,28 @@ def test_a_re_harvest_says_what_it_already_held_rather_than_reporting_zero(tmp_p
     assert (again["accepted"], again["rejected"]) == (0, 0)
     assert again["already_held"] == 1
     assert again["proposed"] == 1
+
+
+def test_a_single_kind_can_be_built_alone(tmp_path):
+    """So one lane can be measured on its own budget. Without it, testing the gate on a kind it has
+    never seen means building all four and draining in request order, which is the first document's
+    chunks four times over."""
+    store = _store(tmp_path)
+    result = extract.build(FakeProject(), store, batch="b1", kind="heterogeneity")
+    assert result["by_kind"] == {"heterogeneity": 1}
+    assert result["units"] == 1
+
+
+def test_an_unknown_kind_is_refused_by_name(tmp_path):
+    store = _store(tmp_path)
+    with pytest.raises(ValueError, match="nonsense"):
+        extract.build(FakeProject(), store, batch="b1", kind="nonsense")
+
+
+def test_the_limit_applies_within_a_kind_and_not_across_all_four(tmp_path):
+    chunks = tuple((f"S{n:02d}", f"S{n:02d}#c1", f"{CHUNK_TEXT} {n}") for n in range(5))
+    store = _store(tmp_path, chunks=chunks)
+    result = extract.build(FakeProject(), store, batch="b1", limit=3)
+    # Three chunks of each kind, not three units in total: a limit that stopped after the first kind
+    # would silently measure one lane and call it a sample of four.
+    assert result["by_kind"] == {"effect": 3, "heterogeneity": 3, "method": 3, "premise": 3}

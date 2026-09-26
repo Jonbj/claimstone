@@ -117,8 +117,24 @@ def _source_classes(store: Store) -> dict[str, str]:
     }
 
 
-def build(project: Any, store: Store, *, batch: str, limit: int | None = None) -> dict[str, Any]:
-    """One work unit per lane per chunk of every confirmed document."""
+def build(
+    project: Any,
+    store: Store,
+    *,
+    batch: str,
+    limit: int | None = None,
+    kind: str | None = None,
+) -> dict[str, Any]:
+    """One work unit per kind per chunk of every confirmed document.
+
+    `kind` builds one alone, so a lane can be measured on its own budget — without it, testing the gate
+    on a kind it has never seen means building all four and draining in request order, which is the
+    first document's chunks four times over. `limit` counts **within** each kind, because a limit that
+    stopped after the first would measure one lane and call it a sample of four.
+    """
+    wanted = KINDS if kind is None else (kind,)
+    if kind is not None and kind not in KINDS:
+        raise ValueError(f"unknown kind {kind!r}: {', '.join(KINDS)}")
     confirmed = _confirmed_sources(store)
     chunks = [
         row for row in store.latest_by("chunks.jsonl", "chunk_id").values()
@@ -127,13 +143,13 @@ def build(project: Any, store: Store, *, batch: str, limit: int | None = None) -
     by_kind: dict[str, int] = {}
     units: list[dict[str, Any]] = []
 
-    for kind in KINDS:
+    for kind in wanted:
         questions = [q for q in project.questions if q.kind == kind]
         if not questions:
             continue
         system = system_prompt(kind, questions)
         schema = response_schema(kind, questions)
-        for chunk in chunks:
+        for chunk in chunks[:limit] if limit is not None else chunks:
             unit = model_call.work_unit(
                 lane="extract",
                 system=system,
@@ -149,8 +165,6 @@ def build(project: Any, store: Store, *, batch: str, limit: int | None = None) -
             unit["kind"] = kind
             units.append(unit)
             by_kind[kind] = by_kind.get(kind, 0) + 1
-            if limit is not None and len(units) >= limit:
-                break
 
     queue = model_call.Queue(store, lane="extract", batch=batch)
     written = queue.write(units)

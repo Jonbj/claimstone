@@ -39,6 +39,13 @@ SWEEP_VALUES = {
 }
 
 
+def extract_kinds() -> tuple[str, ...]:
+    """Named for the parser's help without importing the stage at startup."""
+    from claimstone.claimgate import STANCES_BY_KIND
+
+    return tuple(STANCES_BY_KIND)
+
+
 def grobid_url_default() -> str:
     import os
 
@@ -601,7 +608,7 @@ def _extract(args: argparse.Namespace) -> int:
               "`extract-report --show-rejected`")
         return 0
 
-    result = extract.build(project, store, batch=args.batch, limit=args.limit)
+    result = extract.build(project, store, batch=args.batch, limit=args.limit, kind=args.kind)
     print(f"batch {result['batch']}: {result['units']} work units over {result['chunks']} chunks "
           f"of {result['sources']} confirmed sources")
     if result["by_kind"]:
@@ -741,7 +748,10 @@ def build_parser() -> argparse.ArgumentParser:
             command.add_argument("--batch", required=True, help="which batch to build or harvest")
             command.add_argument("--harvest", action="store_true",
                                  help="gate the drained answers into the two ledgers; no request")
-            command.add_argument("--limit", type=int, default=None)
+            command.add_argument("--limit", type=int, default=None,
+                                 help="chunks per kind, not units in total")
+            command.add_argument("--kind", default=None,
+                                 help="build one kind alone: " + ", ".join(extract_kinds()))
         if name == "extract-report":
             command.add_argument("--batch", default=None, help="one batch; default every claim held")
             command.add_argument("--show-rejected", action="store_true",

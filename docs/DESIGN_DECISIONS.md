@@ -917,3 +917,29 @@ That is the third re-judge path this project has needed — `regate`, `model-run
 `discover --reclassify` — and a fourth in `extract --harvest`. The pattern is not a coincidence: every
 judgement the engine makes over rules a project declares needs a way back that costs no request, or
 editing a line of YAML costs a round of fetching.
+
+### The corpus grew, and the figures above are the fourteen-document measurement
+
+Normalizing the two obtained references takes `alembic-s4` to **16 confirmed documents**. Re-derived with
+`tools/derive_corpus_figures.py alembic-s4`:
+
+```
+                 14 documents        16 documents
+body characters     775,266             905,189
+sections                318                 363
+tables                  117                 144
+footnotes               103                 124
+raw references          817                 909
+distinct                711                 789
+chunks                  352                 472
+```
+
+Every figure in D19, D21 and D25 is the fourteen-document measurement and stays that, which is the whole
+reason they carry dates and a command. The corpus-totals test **skipped** rather than failed —
+`if len(CORPUS) != 14: pytest.skip(...)` — which is the guard doing its job: a number measured on one
+corpus is not a number about another, and an assertion that quietly re-fit itself would have hidden that.
+
+A full extraction over the 16 documents is **1,888 calls**: 472 chunks × 4 kinds, 2.4M tokens in and 4.7M
+capped out. On `claude-cli` at the observed 30 seconds a call that is about sixteen hours; on the local
+server at D4's measured 11.6 minutes a call it is fifteen days. The arithmetic is why `model_call` exists
+and why D13 refuses to assign a lane to a backend in advance.
