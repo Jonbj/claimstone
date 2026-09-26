@@ -808,3 +808,58 @@ is not a gate.
 **What 95% is not.** It is one prompt, one question, one corpus, and a gate whose rules were corrected
 *against these same claims* — so it is a floor on the false-rejection rate and no kind of estimate of
 the true one. The next question's harvest is the test.
+
+## D26 — Stage 4 closes the vertical slice, and a rejected claim is a discovery signal
+`extract build` → `model-run` → `extract --harvest` → `extract-report`. Two commands around the file
+boundary, which is honest rather than awkward. Only `extract.py` touches a store; `claimgate` stays pure.
+
+**One call per kind per chunk, not one per question.** The kind's system prompt is identical across every
+chunk, which is what a cached-input price applies to: four calls a chunk instead of twenty-three. The
+spec calls these lanes; they are `kind` in the code, because `model_call.LANES` already means the
+boundary's two queues and one name for two things is the defect this project keeps finding — three times
+in `model_report` alone.
+
+### Measured, 2026-09-26
+
+The H02 batch harvested into the ledgers. These are the first claims this project has ever stored.
+
+```
+proposed         66
+accepted         63   0.95      claims.jsonl
+rejected          3             rejections.jsonl, each with its failed check and the record whole
+H02              63 claims from 4 studies    QUALIFIES 38 · SUPPORTS 25 · CONTRADICTS 0
+```
+
+**Sixty-three claims from four studies, and the count that matters is four.** Ten claims from one paper
+are one study; calling them ten is the vote counting invariant 7 forbids, so `extract-report` counts by
+`source_id`. The gate's ratio and the corpus's coverage are printed as separate numbers and never fused:
+a clean gate on a silent corpus would otherwise read like a well-covered one.
+
+### `CONTRADICTS 0`, and why that is the finding
+
+Before the gate, H02 had exactly one contradicting claim in 66. The gate rejected it, correctly — it was
+`ACA002` reporting Roll (1988), a source nobody here has read. So the accepted set contains **no
+contradicting evidence at all**, and a verdict machinery fed it would see four studies that support or
+qualify and nothing against.
+
+Then: is Roll (1988) reachable? It is in the bibliography as **`R-squared`**, cited **once**, which is the
+title of his 1988 *Journal of Finance* paper as GROBID recovered it. Nine folded characters. So it fails
+two of the citation channel's three conditions — `min_citations_in_corpus: 2` and
+`require_title_chars: 25` — and would fail `TITLE_TOO_SHORT` in resolution too. Every rule behaved as
+declared, and the effect is that H02's only contradiction is invisible and nothing points at it.
+
+**A rejected `SECONDHAND_CLAIM` is therefore a discovery signal, not only a rejection.** It names a work
+the corpus is relying on for a claim, and the rejection ledger already holds the claim text with the
+citation inside it. Feeding those names to the citation channel *regardless of citation count* is the
+remedy, because a work cited once for a contradiction is worth more to this project than a textbook cited
+three times. Not built; recorded with its instance, which is the standard D18 set.
+
+**And one honest third state, the second in this codebase.** `WRONG_KIND` catches a model answering about
+a question outside the kind it was asked about, and a request built before that field existed cannot
+support the check. So the question's own kind is used and the claim carries `kind_verified: false` — not a
+pass, not a failure — exactly as `prompt_verified` does for the echo check. Rejecting a whole batch that
+predates a field, and was already paid for, would be the alternative.
+
+**What 0.95 is not.** One question, one prompt, one corpus, and a gate whose rules were corrected against
+these same claims (D25). It is a floor on the false-rejection rate. `numbers.py` is not built, so no
+as-written value has been converted and nothing yet feeds stage 6.

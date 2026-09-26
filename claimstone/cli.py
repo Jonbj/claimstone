@@ -17,7 +17,7 @@ if TYPE_CHECKING:  # import cost at startup matters for a CLI; these are annotat
     from claimstone.config import Project
     from claimstone.store import Store
 
-STAGES = ("extract", "review", "synthesize")
+STAGES = ("review", "synthesize")
 
 # Named here rather than imported, because building the parser must not pull in three runner
 # modules. `test_cli_model.py` pins this list against `runners.available()`.
@@ -563,6 +563,79 @@ def _model_report(args: argparse.Namespace) -> int:
     return 0
 
 
+def _extract(args: argparse.Namespace) -> int:
+    from claimstone import extract
+
+    project = load_project(args.project)
+    store = _checked_store(args, project)
+
+    if args.harvest:
+        # No socket: the answers are on disk, so re-running after a gate change costs nothing — the
+        # arrangement gate-audit, normalize --confirm-audit and model-run --rejudge already use.
+        result = extract.harvest(project, store, batch=args.batch)
+        print(f"{result['proposed']} proposed, {result['accepted']} accepted, "
+              f"{result['rejected']} rejected")
+        if result["failures"]:
+            print("  " + "  ".join(f"{k} {v}" for k, v in result["failures"].items()))
+        if result["calls_without_an_answer"]:
+            # Not zero claims. A call with no valid answer says nothing about its chunk.
+            print(f"  {result['calls_without_an_answer']} call(s) returned no valid answer and are "
+                  f"not counted as chunks without claims")
+        print("  read the rejections before quoting the rate: "
+              "`extract-report --show-rejected`")
+        return 0
+
+    result = extract.build(project, store, batch=args.batch, limit=args.limit)
+    print(f"batch {result['batch']}: {result['units']} work units over {result['chunks']} chunks "
+          f"of {result['sources']} confirmed sources")
+    if result["by_kind"]:
+        print("  " + "  ".join(f"{k} {v}" for k, v in sorted(result["by_kind"].items())))
+    print(f"  {result['prompt_chars']:,} prompt characters "
+          f"\u2248 {result['prompt_chars'] // 4:,} tokens in, "
+          f"{result['units'] * extract.MAX_OUTPUT_TOKENS:,} capped out")
+    print(f"  drain with: claimstone model-run {args.project} extract "
+          f"--batch {result['batch']} --backend <name>")
+    return 0
+
+
+def _extract_report(args: argparse.Namespace) -> int:
+    from claimstone import extract_report
+
+    project = load_project(args.project)
+    summary = extract_report.summarise(_checked_store(args, project), batch=args.batch)
+
+    if args.json:
+        import json
+
+        print(json.dumps(summary, indent=2, sort_keys=True))
+        return 0
+
+    rate = "\u2014" if summary["gate_rate"] is None else f"{summary['gate_rate']:.2f}"
+    print(f"{project.name} extract/{summary['batch'] or 'all'}")
+    print(f"  proposed     {summary['proposed']:>5}   accepted {summary['accepted']}  {rate}   "
+          f"rejected {summary['rejected']}")
+    print(f"  questions with a claim  {summary['questions_with_a_claim']:>3}")
+    for question_id, bucket in summary["by_question"].items():
+        print(f"    {question_id:<5} {bucket['claims']:>3} claims from {bucket['studies']:>2} "
+              f"studies   {bucket['stances']}   {bucket['by_class']}")
+    if summary["failures"]:
+        print("  rejected     " + "  ".join(f"{k} {v}" for k, v in summary["failures"].items()))
+    print()
+    print("  The two ratios are never fused: a clean gate on a silent corpus would read like a "
+          "well-covered one.")
+    if args.show_rejected:
+        from claimstone.store import Store
+
+        store = Store(project.name, base=args.store)
+        print()
+        for row in store.latest_by("rejections.jsonl", "claim_id").values():
+            print(f"  {row.get('chunk_id')}  {row.get('failure')}")
+            print(f"    {row.get('detail')}")
+            print(f"    claim: {str((row.get('record') or {}).get('claim'))[:100]}")
+            print(f"    quote: {str((row.get('record') or {}).get('evidence_quote'))[:100]}")
+    return 0
+
+
 def _not_implemented(args: argparse.Namespace) -> int:
     print(
         f"stage '{args.stage_name}' is not implemented yet — see README.md, 'The six stages'",
@@ -592,6 +665,8 @@ def build_parser() -> argparse.ArgumentParser:
         ("discover-report", _discover_report, "what the two channels found"),
         ("regate", _regate, "re-judge bytes already held under the current gate; no network"),
         ("normalize", _normalize, "stage 3: TEI, chunks and references"),
+        ("extract", _extract, "stage 4: build the work units, or --harvest the answers"),
+        ("extract-report", _extract_report, "the gate's ratio and the corpus's, never fused"),
     ):
         command = sub.add_parser(name, help=help_text)
         command.add_argument("project", help="path to a project directory")
@@ -642,6 +717,16 @@ def build_parser() -> argparse.ArgumentParser:
                                       "makes requests, so the citation channel is offline without it")
         if name == "discover-report":
             command.add_argument("--round", default=None, help="isolate one round")
+            command.add_argument("--json", action="store_true")
+        if name == "extract":
+            command.add_argument("--batch", required=True, help="which batch to build or harvest")
+            command.add_argument("--harvest", action="store_true",
+                                 help="gate the drained answers into the two ledgers; no request")
+            command.add_argument("--limit", type=int, default=None)
+        if name == "extract-report":
+            command.add_argument("--batch", default=None, help="one batch; default every claim held")
+            command.add_argument("--show-rejected", action="store_true",
+                                 help="every rejection with its failed check, for a by-hand read")
             command.add_argument("--json", action="store_true")
         if name == "normalize":
             command.add_argument("--grobid-url", default=grobid_url_default())
