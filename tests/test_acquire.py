@@ -177,3 +177,37 @@ def test_attempt_no_increments_across_campaigns(tmp_path):
                              campaign="elsevier", retry_classes=frozenset({net.PAYWALL})))
     assert again[0]["attempt_no"] == 2
     assert again[0]["campaign"] == "elsevier"
+
+
+def test_one_unclassified_candidate_does_not_end_the_sweep(tmp_path):
+    """The refusal is right and killing the run is not — the same defect shape as an unreadable artifact
+    ending a normalize sweep. Reproduced on the real store: 34 fetchable citation candidates and the run
+    died on the first of the 16 that carry no class, having acquired none of them.
+
+    `acquire_one` still raises, because a caller handing it an unclassified candidate has made a mistake.
+    The sweep catches it, records it, and moves on.
+    """
+    store = Store("t", base=tmp_path)
+    candidates = [
+        {"candidate_key": "title:no class here at all", "url": "https://x.example/a", "title": "A"},
+        {"candidate_key": "doi:10.1/ok", "url": "https://x.example/b", "title": "B",
+         "source_class": "ACA"},
+    ]
+    fetcher = FakeFetcher(pages={"https://x.example/b": ok("https://x.example/b", pdf())})
+    rows = list(acquire.run(candidates, store, fetcher, use_apis=False))
+
+    assert [r["candidate_key"] for r in rows] == ["title:no class here at all", "doi:10.1/ok"]
+    assert rows[0]["acquired"] is False
+    assert rows[0]["failure_class"] == "UNCLASSIFIED"
+    assert rows[1]["acquired"] is True
+    # Recorded, so the refusal is countable rather than a crash somebody has to read a traceback for.
+    assert "invariant 6" in rows[0]["notes"]
+
+
+def test_an_unclassified_refusal_is_not_retried_as_though_a_host_had_refused_us(tmp_path):
+    """It is terminal until the candidate changes, and a host budget has nothing to do with it."""
+    store = Store("t", base=tmp_path)
+    candidate = {"candidate_key": "title:no class", "url": "https://x.example/a", "title": "A"}
+    list(acquire.run([candidate], store, FakeFetcher(), use_apis=False))
+    again = list(acquire.run([candidate], store, FakeFetcher(), use_apis=False))
+    assert again == []

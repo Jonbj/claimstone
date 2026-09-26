@@ -204,10 +204,33 @@ def run(
         prior = previous.get(str(candidate["candidate_key"]))
         if not should_attempt(prior, retry_classes=retry_classes, retry_after_s=retry_after_s):
             continue
-        row = acquire_one(
-            fetcher, store, candidate, campaign=campaign, use_apis=use_apis,
-            thresholds=thresholds, policy=policy, classes=classes,
-        )
+        try:
+            row = acquire_one(
+                fetcher, store, candidate, campaign=campaign, use_apis=use_apis,
+                thresholds=thresholds, policy=policy, classes=classes,
+            )
+        except MissingSourceClass as exc:
+            # The refusal is right and ending the sweep is not — the same defect shape as an unreadable
+            # artifact ending a normalize sweep. Measured on the real store: 34 fetchable citation
+            # candidates, and the run died on the first of the 16 carrying no class having acquired none.
+            #
+            # `acquire_one` still raises, because a caller handing it an unclassified candidate has made
+            # a mistake. Here it is recorded so the refusal is countable, and the next candidate is
+            # tried. UNCLASSIFIED is terminal: a host budget has nothing to do with it, and it stays
+            # refused until the candidate gains a class — which `discover --reclassify` is for.
+            row = {
+                "candidate_key": candidate["candidate_key"],
+                "source_id": candidate.get("source_id"),
+                "source_class": None,
+                "url": candidate.get("url") or "",
+                "acquired": False,
+                "failure_class": "UNCLASSIFIED",
+                "notes": str(exc),
+                "attempts": [],
+                "fetched_at": _now(),
+                "campaign": campaign,
+                "oa_status": None,
+            }
         row["attempt_no"] = int((prior or {}).get("attempt_no") or 0) + 1
         store.append("acquisitions.jsonl", row)
         attempted += 1
