@@ -4,8 +4,15 @@ Written by stage 4 (`claimstone extract --harvest`). Append-only. Stage 4 owns b
 writes them. Stage 6 reads `claims.jsonl`; **`rejections.jsonl` is the denominator** and reading it is
 not optional before a rate is quoted.
 
-Both are keyed by `claim_id` = `sha256(chunk_id | question_id | evidence_quote)[:16]`, so re-harvesting
-the same answer after a gate change does not double a claim. A record that moves from rejected to
+Both are keyed by `claim_id` = `sha256(chunk_id | question_id | result_id | evidence_quote)[:16]`, so
+re-harvesting the same answer after a gate change does not double a claim.
+
+**One record per result, not per question.** A chunk reporting three estimates that bear on one question
+produces three records with distinct `result_id`s, because a table row quoted once can support several and
+an id keyed on the quote alone would collapse them. `result_id` joins the hash only when the record
+supplies one: a batch built before the field cannot, and re-deriving every stored claim's id would rewrite
+the already-harvested ones for nothing. Two records sharing a quote with no `result_id` still collapse,
+which is a known limit of those batches. A record that moves from rejected to
 accepted appears in both files; the ledgers are separate logs, not a partition, and `extract-report`
 counts the latest row per `claim_id` in each.
 
@@ -14,6 +21,7 @@ counts the latest row per `claim_id` in each.
 | field | meaning |
 |---|---|
 | `claim_id` | identity, stable across a re-harvest |
+| `result_id` | the model's own id for this result within its answer |
 | `question_id`, `stance` | which question, and which way. The stance is admissible for the question's kind |
 | `claim` | one sentence, the model's words, about what **this** source establishes |
 | `evidence_quote` | an exact substring of the chunk, verified in code |
@@ -85,6 +93,19 @@ rejections and admits the named work whatever the citation threshold says, becau
 contradiction is worth more than a textbook cited three times. It invents nothing: a name with no
 reference is reported, and a name whose surname is in the bibliography while the year is not is reported
 as ambiguous. See D26.
+
+## The two ratios
+
+`extract-report` prints them separately and never fused.
+
+**The gate's ratio** is `accepted / proposed`: how much of what a model offered survived invariant 1.
+**The corpus's coverage** is `questions with a claim / questions that can receive a verdict` — the
+denominator is the registry, so the report needs the project, and without one the coverage is `None` rather
+than a number a module invented. An `operational` question is not in the denominator: it receives no
+verdict (invariant 2), and counting it would make full coverage unreachable by construction.
+
+Questions with no claim are **named**, because `UNANSWERED_IN_LITERATURE` and `NEVER_ASKED` are different
+states and only somebody who can see which questions were asked can tell them apart.
 
 ## What no check here establishes
 
