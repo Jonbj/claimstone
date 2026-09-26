@@ -943,3 +943,41 @@ A full extraction over the 16 documents is **1,888 calls**: 472 chunks × 4 kind
 capped out. On `claude-cli` at the observed 30 seconds a call that is about sixteen hours; on the local
 server at D4's measured 11.6 minutes a call it is fifteen days. The arithmetic is why `model_call` exists
 and why D13 refuses to assign a lane to a backend in advance.
+
+## D28 — The gate holds on a kind it was never tuned against
+D25 said 0.95 was a floor on the false-rejection rate and not an estimate, because the gate's rules had
+been corrected against the very claims they were measured on. This is the test that was missing.
+
+### Measured, 2026-09-27
+
+Thirteen chunks of one document through the `heterogeneity` lane — five questions the gate had never seen,
+a stance vocabulary it had never exercised, and no rule changed afterwards.
+
+```
+hetero-probe    50 proposed · 49 accepted · 0.98 · 1 rejected
+                all five heterogeneity questions produced claims: H06 H20 H21 H22 H27
+both batches   116 proposed · 112 accepted · 0.97 · 4 rejected
+               SECONDHAND_CLAIM 2 · COMPARATIVE_NOT_IN_QUOTE 2
+coverage         6 of 22 questions that can receive a verdict, 0.27
+```
+
+**0.98 on unseen claims, against 0.95 on the tuned ones.** The false-rejection rate is not an artefact of
+having fitted the rules to one question's harvest. That is what the number was uncertain about and it is
+now measured — on one document and one kind, which is a second data point and not a population.
+
+**Both `COMPARATIVE_NOT_IN_QUOTE` rejections are the same case, and one of them explains where it lives.**
+A claim says one thing is *larger* than another and the quote is a table row: `| 0 | 3.37% | 41.08 | 4.22%
+| 24.46 |`. The comparison is true and established by comparing two figures the quote contains, which §3 of
+the stage 4 spec says this gate does not do. 5 of 112 accepted claims came from table chunks, so this is
+where that rejection will keep happening, and it is the cost of a gate that does not reason about
+magnitudes. Recorded rather than fixed, for the reason D25 gave: a gate that reasons is not a gate.
+
+**One claim I doubted and was wrong about.** The surviving `CONTRADICTS` for H22 rests on a quote I first
+read as describing a procedure rather than a result. Read whole, it carries the result — "The results show
+that size and momentum not subsume the return predictability of news", typo and all, from the paper. The
+claim is supported. Reading a truncated quote is how a reviewer invents a defect, and it is the same
+mistake as counting a one-character paragraph's occurrences.
+
+**What the coverage says.** 6 of 22 verdict-bearing questions have a claim, from 26 chunks of 472 — so
+`no claim yet` on sixteen questions means nothing yet about the literature. That distinction is the whole
+of invariant 2: `UNANSWERED_IN_LITERATURE` requires a complete round, and this is not one.
