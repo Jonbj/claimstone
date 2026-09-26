@@ -217,7 +217,9 @@ def run_citations(
             },
         )
         row["source_class"] = classify.classify(row, project.classes)
-        row["round"] = round_name
+        # The round that first found it, as in `import_manifest`: a retry that resolves a candidate
+        # must not move it out of the round that admitted it.
+        row["round"] = str((previous or {}).get("round") or round_name)
         # A shared DOI under two keys is a *certain* duplicate rather than a near-match, and it only
         # becomes reachable once resolution can put a DOI on a title-keyed row. Still only noted: a
         # wrong merge loses a source, a duplicate costs one wasted fetch.
@@ -282,18 +284,24 @@ def import_manifest(
                 "declared_format": entry.declared_format,
             },
         )
-        # Every candidate in the ledger carries a round, manifest imports included: "how many are
-        # new this round" is a round-over-round figure, and reconstructing it from timestamps is what
-        # append-only storage exists to make unnecessary.
-        row["round"] = round_name
-        held = known.get(row["candidate_key"])
+        # `round` is the round that **first** found this candidate, not the one that last mentioned
+        # it. "How many are new this round" is a round-over-round figure, and a re-import under a new
+        # name must not move a candidate out of the round that found it — latest-wins would do that
+        # silently and empty the earlier round's population.
+        previous = known.get(row["candidate_key"])
+        row["round"] = str((previous or {}).get("round") or round_name)
+        held = previous
         if held is not None:
             # Append-only: a candidate whose recorded facts changed gets a new row rather than an
             # edit, and `latest_by` prefers it. Skipping on the key alone would freeze a stale
             # source_class — an earlier import stored the manifest's own word for the class
             # instead of the id it resolves to, which would quietly split one class into two.
+            # `round` is in the comparison so a row written before rounds existed can be stamped by
+            # a re-import; without it those candidates can never be given one, and `report --round`
+            # finds nothing where the whole corpus is.
             if all(held.get(f) == row.get(f)
-                   for f in ("source_class", "source_id", "url", "title", "declared_format")):
+                   for f in ("source_class", "source_id", "url", "title", "declared_format",
+                             "round")):
                 continue
             updated += 1
         else:

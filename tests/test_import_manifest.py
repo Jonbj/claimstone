@@ -49,3 +49,33 @@ def test_a_doi_in_the_url_becomes_the_candidate_key(tmp_path):
         store, [entry(url="https://doi.org/10.1016/j.jfineco.2019.05.001")])
     row = next(iter(store.read("candidates.jsonl")))
     assert row["candidate_key"] == "doi:10.1016/j.jfineco.2019.05.001"
+
+
+def test_a_round_is_the_one_that_first_found_a_candidate(tmp_path):
+    """Not the one that last mentioned it. `round` answers "which round brought this into the corpus",
+    so a re-import under a new name must not move a candidate out of the round that found it — which
+    latest-wins would do silently, emptying the earlier round's population.
+    """
+    store = Store("t", base=tmp_path)
+    entries = [entry(), entry(source_id="S02", url="https://x.example/b", title="Another")]
+    discover.import_manifest(store, entries, round_name="manifest")
+    second = discover.import_manifest(store, entries, round_name="autumn")
+    assert second["new"] == 0
+    assert {r["round"] for r in store.latest_by("candidates.jsonl", "candidate_key").values()} \
+        == {"manifest"}
+
+
+def test_a_row_written_before_rounds_existed_is_stamped_on_re_import(tmp_path):
+    """Otherwise the 25 manifest candidates already in a store can never be given a round, and
+    `report --round` finds nothing where the whole corpus is."""
+    store = Store("t", base=tmp_path)
+    entries = [entry(), entry(source_id="S02", url="https://x.example/b", title="Another")]
+    discover.import_manifest(store, entries, round_name="manifest")
+    # Simulate the pre-round ledger: the same rows with no round recorded.
+    for row in list(store.latest_by("candidates.jsonl", "candidate_key").values()):
+        store.append("candidates.jsonl", {k: v for k, v in row.items() if k != "round"})
+
+    result = discover.import_manifest(store, entries, round_name="manifest")
+    assert result["updated"] == len(entries)
+    assert all(r.get("round") == "manifest"
+               for r in store.latest_by("candidates.jsonl", "candidate_key").values())

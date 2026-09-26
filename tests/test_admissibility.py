@@ -395,3 +395,39 @@ def test_before_normalize_runs_nothing_is_final(tmp_path):
     verdict = admissibility.admit(load_project("projects/example-news-and-returns"), store)
     assert verdict["final"] is False
     assert "normalize_not_started" in verdict["blocking"]
+
+
+def test_a_round_can_be_isolated_so_two_populations_are_not_one_figure(tmp_path):
+    """A discovery round changes the denominator by design, which is why the floor is per round.
+
+    Reproduced on the real store: running the citation channel against alembic-s4 took the settled
+    figure from 14/25 = 0.56 to 14/75 = 0.19 — correct for the whole store and meaningless as a
+    comparison, because 50 of those 75 are references admitted by a rule that deliberately favours
+    canonical works, many of which have no open copy at all.
+    """
+    store = Store("t", base=tmp_path)
+    for n in range(2):
+        key = f"doi:10.1/manifest{n}"
+        store.append("candidates.jsonl", {"candidate_key": key, "source_class": "ACA",
+                                          "round": "manifest", "channel": "keyword"})
+        store.append("acquisitions.jsonl", {"candidate_key": key, "source_id": f"M{n}",
+                                            "acquired": True, "sha256": f"h{n}",
+                                            "source_class": "ACA"})
+        store.append("documents.jsonl", {"source_id": f"M{n}", "sha256": f"h{n}",
+                                         "fulltext_confirmed": True})
+    for n in range(8):
+        store.append("candidates.jsonl", {"candidate_key": f"title:a cited work {n}",
+                                          "source_class": None, "round": "citations",
+                                          "channel": "citation"})
+
+    whole = admissibility.rate(store)
+    assert (whole["found"], whole["confirmed"]) == (10, 2)
+
+    manifest = admissibility.rate(store, round_name="manifest")
+    assert (manifest["found"], manifest["confirmed"]) == (2, 2)
+    assert manifest["rate"] == 1.0
+    assert manifest["final"] is True
+
+    citations = admissibility.rate(store, round_name="citations")
+    assert citations["found"] == 8
+    assert citations["classified"] == 0

@@ -688,3 +688,51 @@ literature hedging or the model hedging, and one prompt cannot separate those. N
 independence between sources. Nothing about material magnitude. And no reason yet to believe any
 backend other than this one behaves the same way — the queue exists so that is measurable, and it has
 not been measured.
+
+## D24 — A round is the unit the floor is judged on, and a candidate's identity is an instrument
+Resolving the citation channel's references exposed two things about accounting that nothing had
+tested, and both were found by running the real commands rather than by reading them.
+
+### The floor is per round, 2026-09-26
+
+Running `discover --channel citation` against `alembic-s4` took the settled figure from **14/25 = 0.56
+to 14/75 = 0.19**. Both are true. Only the first means anything:
+
+```
+report --round manifest       25 found · 15 obtained · 14 confirmed · 0.56   final
+report --round stage1-first    50 found ·  0 obtained ·  0 confirmed · 0.00
+report (every candidate)       75 found · 15 obtained · 14 confirmed · 0.19
+```
+
+The second round is 39 references admitted by a rule that deliberately favours works the corpus
+cites most, and the stage 1 spec already said why that sinks a rate for a reason that says nothing
+about the cascade: a canonical textbook has no open copy. Judging one floor across both populations
+compares a curated manifest with a bibliography sweep and calls the result a corpus.
+
+So `report` takes `--round`, and `admissibility.rate` already did. **`round` is the round that first
+found a candidate**, not the one that last mentioned it: a re-import under a new name would otherwise
+move a candidate out of the round that found it, and latest-wins would empty the earlier round's
+population without a word. `import-manifest` defaults to `manifest` for the same reason — a round
+nobody named is a round nobody can isolate.
+
+A named round matching nothing prints that it matched nothing. Without a named round, zero candidates
+against existing acquisition rows is a broken ledger and still reaches the gate — the two look
+identical in a count and are not the same fact.
+
+### `candidate_key_version 2`, 2026-09-26
+
+The citation channel now keys on the reference stage 3 gave it rather than on a derived key.
+Preferring a DOI is right for a search result and wrong for a reference, because **resolution adds a
+DOI**: a derived key would move the moment a candidate was resolved, and the same work would become
+two candidates with nothing superseding either.
+
+Measured when the rule changed under an existing store: **13 ghost rows** for 39 references, a `found`
+count of 50, and each ghost correctly carrying `possible_duplicate_of` pointing at its twin. The
+design noticed; nothing silently double-counted. But a denominator that grows by a third because an
+identity rule changed is the same hazard `gate_version` and `chunk_version` exist for, so the
+derivation now carries a version and `tools/check_instrument_versions.py` refuses a bump this record
+does not name.
+
+What supersedes what: any candidate count for `alembic-s4`'s citation channel taken before this is not
+comparable to one taken after. The manifest round is untouched, because a manifest row's key was
+derived from a DOI or title that resolution never changes.

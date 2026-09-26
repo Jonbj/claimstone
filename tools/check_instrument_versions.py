@@ -27,6 +27,7 @@ RECORD = ROOT / "docs" / "DESIGN_DECISIONS.md"
 INSTRUMENTS = (
     ("claimstone/fulltext.py", "GATE_VERSION", "gate_version"),
     ("claimstone/chunk.py", "CHUNK_VERSION", "chunk_version"),
+    ("claimstone/ids.py", "CANDIDATE_KEY_VERSION", "candidate_key_version"),
 )
 
 # The parser is an instrument too, and a string rather than a number. Measured: lfoppiano/grobid

@@ -66,17 +66,47 @@ source_class assigned      0 of 37
 carrying any URL          12 of 37
 ```
 
-**The channel works and its output is not yet usable.** All 37 candidates are unclassified: a
-reference carries no venue type, so no declared predicate can read anything, and the only rule that
-could fire would be one naming `source_api: [citation]` — which would assign every reference to a
-single class regardless of what it is. 25 of the 37 carry no URL at all, so stage 2 would have nothing
-to fetch even if they were classified.
+**Before resolution existed, all 37 were unclassified and 25 had no URL.** A reference carries a title,
+sometimes a DOI, and nothing else — no venue, no venue type, no address — so no declared predicate could
+read anything and there was nothing to request. Stage 3 resolves nothing by design and no spec said who
+does. Stage 1 does, and it is opt-in.
 
-So a resolution step is missing: reference title or DOI to a venue and an address, through the same
-APIs the keyword channel already queries. Stage 3's spec says it resolves nothing, deliberately — 817
-references would be 817 Crossref lookups — and it never said who does. This contract records that it
-is stage 1's, and that it is not built.
+## Resolution
 
-Until it is, `--channel citation` produces rows that are honest, counted, and refused downstream. That
-is the correct failure: invariant 6 refusing an unclassified source is the boundary working, and a
-channel that guessed a class to get past it would be the defect.
+`discover --channel citation --resolve` looks each admitted reference up. Without `--resolve` the
+channel reads a ledger and opens no socket, which is the promise that lets it re-run for free.
+
+| `resolution` | meaning |
+|---|---|
+| `BY_DOI` | the reference's DOI resolved to a work **whose title matches** |
+| `BY_TITLE` | matched on an exact folded title |
+| `NO_MATCH` | looked up, nothing carried this title. Not a failure — a fact about the reference |
+| `TITLE_TOO_SHORT` | under 15 folded characters; not requested, because a fragment matches many works |
+| `LOOKUP_FAILED` | the request failed. Worth retrying, which `NO_MATCH` is not |
+| `NOT_ATTEMPTED` | no `--resolve` |
+
+**A title match is exact on both paths, including the DOI path.** GROBID mis-parses a DOI often enough
+that a confident lookup can return a real, different paper, and attaching the wrong work would attribute
+its claims to a source that never made it — worse than a candidate stage 2 refuses. A DOI whose work does
+not carry the reference's title falls back to the title search rather than being believed.
+
+A resolved row carries the **resolver** as its `source_api`, not `citation`. `classify` refuses to read a
+venue type without knowing whose vocabulary it is, and after resolution the word is OpenAlex's; `channel`
+is what records that the reference came from a bibliography. With `source_api` left as `citation` the
+resolved venue type was a word nobody owned and the class stayed null anyway.
+
+## The citation channel's key is the reference's key
+
+`candidate_key` prefers a DOI, and resolution **adds** one — so a derived key would move the moment a
+candidate resolved, and the same work would become two candidates with nothing superseding either.
+Citation rows therefore key on the reference stage 3 gave them, which is stable across resolution.
+
+That derivation is an instrument: see `candidate_key_version` in D24, and the 13 ghost rows measured when
+the rule changed under an existing store. A shared DOI under two keys is now reachable and is noted as a
+certain duplicate — still only noted, for the same asymmetry as a near-match.
+
+## The floor is judged per round
+
+`round` is the round that **first** found a candidate. A discovery sweep changes the denominator by
+design, so `report --round <name>` is how a settled population is read: measured, one citation sweep took
+`alembic-s4` from 14/25 = 0.56 to 14/75 = 0.19, and only the first compares like with like. See D24.

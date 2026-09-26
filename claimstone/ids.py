@@ -11,6 +11,13 @@ _ARXIV_RE = re.compile(r"(?:arxiv\.org/(?:abs|pdf)/|arXiv:)\s*([0-9]{4}\.[0-9]{4
 _PUNCT_RE = re.compile(r"[^a-z0-9 ]+")
 _SPACE_RE = re.compile(r"\s+")
 
+# How a candidate's identity is derived is an instrument, like the content gate's version and the
+# chunker's: change it and every row written under the old rule lands under a different key, so the
+# same work becomes two candidates and a denominator silently grows. Measured, on a store of 39
+# references: 13 ghost rows, each correctly noting the other as a possible duplicate, and a found
+# count of 50. `tools/check_instrument_versions.py` refuses a bump the design record does not name.
+CANDIDATE_KEY_VERSION = 2
+
 
 def normalize_doi(value: str | None) -> str | None:
     """Return a bare lowercase DOI, or None. Accepts URLs, `doi:` prefixes and raw DOIs."""
@@ -69,6 +76,10 @@ def candidate_key(*, doi: str | None, title: str | None, url: str | None) -> str
 
     Title is used before URL deliberately: the same work appears at many URLs (preprint,
     repository, publisher), and collapsing those is the point of version lineage.
+
+    Version 2: unchanged here, but the citation channel now overrides it, keying on the reference
+    stage 3 gave it. Preferring a DOI is right for a search result and wrong for a reference, because
+    resolution *adds* a DOI and a derived key would move. See `CANDIDATE_KEY_VERSION`.
     """
     if doi:
         return f"doi:{doi}"

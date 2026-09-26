@@ -83,7 +83,8 @@ def _import_manifest(args: argparse.Namespace) -> int:
     if not project.manifest:
         print(f"no manifest.tsv under {args.project}/", file=sys.stderr)
         return 1
-    result = discover.import_manifest(_checked_store(args, project), project.manifest)
+    result = discover.import_manifest(_checked_store(args, project), project.manifest,
+                                      round_name=args.round)
     print(f"{project.name}: {result['new']} new, {result['updated']} corrected, "
           f"of {result['rows']} manifest rows")
     return 0
@@ -166,7 +167,11 @@ def _report(args: argparse.Namespace) -> int:
     from claimstone.store import Store
 
     project = load_project(args.project)
-    result = admissibility.admit(project, _checked_store(args, project))
+    # A round is the unit the floor is judged on. Without this, a discovery sweep's candidates join a
+    # settled manifest round in one denominator and the figure compares two populations: measured on
+    # the real store, one citation sweep took 14/25 = 0.56 to 14/75 = 0.19, which is true of the store
+    # and means nothing as a comparison.
+    result = admissibility.admit(project, _checked_store(args, project), round_name=args.round)
 
     if args.json:
         import json
@@ -189,6 +194,12 @@ def _report(args: argparse.Namespace) -> int:
         print(f"  {'attempted':<14} {result['attempted']}/{found}")
         share = "—" if not found else f"{result['obtained'] / found:.2f}"
         print(f"  {'obtained':<14} {result['obtained']}/{found}  {share}")
+        if not found and args.round:
+            # A named round matching nothing is a real answer, and a different one from a round that
+            # found nothing obtainable. Only when a round was named: without one, no candidates at all
+            # while acquisitions exist is a broken ledger, and it must still reach the gate below.
+            print(f"  no candidate carries round {args.round!r}")
+            return 0
         if result["basis"] == "confirmed":
             print(f"  {'confirmed':<14} {result['confirmed']}/{found}"
                   f"  {result['rate']:.2f}  <- the figure")
@@ -573,6 +584,10 @@ def build_parser() -> argparse.ArgumentParser:
         command.add_argument("project", help="path to a project directory")
         command.add_argument("--store", default="store", help="where generated data lives")
         command.set_defaults(func=handler)
+        if name == "import-manifest":
+            command.add_argument("--round", default="manifest",
+                                 help="name this import; it lands on every candidate, and the floor "
+                                      "is judged per round")
         if name == "acquire":
             command.add_argument("--campaign", help="name this run; required with --retry-class")
             command.add_argument("--retry-class", action="append",
@@ -584,6 +599,8 @@ def build_parser() -> argparse.ArgumentParser:
                                  help="print the planned cascade and fetch nothing")
         if name == "report":
             command.add_argument("--json", action="store_true")
+            command.add_argument("--round", default=None,
+                                 help="judge one round's candidates; default every candidate held")
             command.add_argument("--gate", action="store_true",
                                  help="exit 3 when the round is INSUFFICIENT_ACQUISITION")
         if name == "regate":
