@@ -1763,3 +1763,66 @@ closed**: a candidate whose channel recorded nothing stays outside this populati
 Measured on `alembic-s4`: 7,021 claims over 22 questions, median 250, smallest 43. One adjudicable profile
 costs 43 review calls rather than seven thousand — which is what takes stage 5 from "needs batch
 infrastructure" to "runs now".
+
+---
+
+## D40 — Stage 5 ran, the reviewer discriminates, and coverage is inflated
+
+Date: 2026-09-27 · Batch `h15-opus-2026-09-27` · Reviewer `claude-cli/claude-opus-5`
+
+The first real execution of stage 5 in this project. 43 review units for `H15` — one question, chosen
+because it is the smallest at 43 claims of 7,021, which is what `review --question` exists for. 43
+answered, 41 valid, 2 `NOT_JSON`.
+
+```
+NOT_APPLICABLE  23   (56%)
+SUPPORTED       12   (29%)
+OVERSTATED       6   (15%)
+```
+
+### The reviewer question is closed for this reader
+
+D38's retracted table could not measure discrimination because the mechanical ground truth held seven
+usable rows. Forty-one real claims settle it a different way: by whether the reasons are checkable.
+
+`H15` is a `method` question — *"Semantic accuracy requires representative, blind human annotation,
+distinct from the diagnostic cohort."* The `NOT_APPLICABLE` claims are about earnings-announcement timing,
+the magnitude of return reversals after stale news, and whether headlines reveal good from bad. None of
+them is about annotation. The `SUPPORTED` claims are a 3,000-article triple-annotated training sample with
+randomised annotation order, and an anonymisation pass over 100,401 of 129,431 stories. Those are about
+blind human annotation, exactly.
+
+It neither passes everything nor flags everything, and every verdict sampled is right on inspection. That
+is the control stage 5 was specified to be, and it is not the reviewer that is the constraint.
+
+### Coverage after one reading was a statement about the extractor, and it was too high
+
+**23 of 41 claims that passed the mechanical gate do not speak to the question they cite.** Every one of
+them was extracted in the `method` lane with `kind_verified: true`, so the gate's `WRONG_KIND` check passed
+them correctly: it verifies that the question is of the lane's kind, never that the claim bears on *that*
+question. The stage 5 spec drew this boundary in one sentence — "nothing mechanical can verify that the
+claim the quote supports is the claim that was made" — and this is the first measurement of how wide it is.
+
+The mechanism is visible in the sources. `IND001` is vendor documentation that genuinely discusses
+annotation and splits 6 supported to 10 not-applicable, which is a reasonable mix. But three
+`NOT_APPLICABLE` claims come from a paper on AI and online job vacancies and two from one on illiquidity
+and the cross-section of returns. Those sources say nothing about annotation methodology, and the extract
+lane asked them anyway — every chunk is asked about every question of its kind, and the model answers
+rather than declining.
+
+**So `coverage: 22 of 22` is inflated**, and that figure is the one that made `UNANSWERED_IN_LITERATURE`
+sayable (D33). A question whose claims all turn out to be `NOT_APPLICABLE` is not covered; it is unread.
+The honest coverage figure is post-review, and it does not exist yet for 21 of the 22 questions.
+
+**One question, and the rate elsewhere is unmeasured.** This is `method`, which asks whether the
+literature endorses a practice, and a chunk about anything can be made to gesture at a methodological
+requirement more easily than at an effect size. The same measurement on an `effect` question could come out
+very differently, and the fourth overestimate of the day is four reasons not to guess which way. The next
+step is a second question of a different kind, and the cost is now known: 43 to 250 calls.
+
+### What this does not change
+
+It does not change the floor. `alembic-s4` is `INSUFFICIENT_ACQUISITION` at 0.56 on its manifest, so
+`synthesize` still writes no profile for `H15` and there is still nothing to adjudicate. The reviews sit in
+the ledger waiting for a corpus that clears its bar, which is the correct order: invariant 3 gates
+verdicts, and a profile built from a corpus read at 0.56 would invite one.
