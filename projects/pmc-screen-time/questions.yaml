@@ -1,0 +1,40 @@
+# Frozen question registry for the pilot corpus.
+#
+# RULE: adding or changing a question is a dated registry bump, never a silent insert — otherwise every
+# round-over-round figure compares two different registries. The digest covers id, text and kind, because
+# `kind` decides which rule judges the question.
+#
+# v1 (2026-09-28). Eight questions, not twenty-eight, and that is deliberate: a registry is frozen the moment
+# it is written, and writing more than can be defended is how a registry stops meaning anything. Three
+# effects, two heterogeneity claims, two methodological requirements, one premise. No `operational` questions,
+# because this instance has no consuming system whose architecture could be asserted.
+#
+# The wording asks; it does not answer. `Q01` is the premise the rest rest on, and it is stated as something
+# the literature may contradict rather than as a fact.
+registry_version: 1
+frozen_at: 2026-09-28
+questions:
+  - id: Q01
+    text: Self-reported screen time is a valid measure of actual device use.
+    kind: premise
+  - id: Q02
+    text: Greater screen or social media use is associated with lower adolescent wellbeing.
+    kind: effect
+  - id: Q03
+    text: The association between screen use and wellbeing is causal rather than confounded or reversed.
+    kind: effect
+  - id: Q04
+    text: The effect survives preregistration and correction for multiple comparisons.
+    kind: effect
+  - id: Q05
+    text: The effect varies materially by sex, and is larger for adolescent girls.
+    kind: heterogeneity
+  - id: Q06
+    text: The relationship is dose-dependent rather than present only at extreme use.
+    kind: heterogeneity
+  - id: Q07
+    text: Objectively logged use and self-report are distinct measures requiring different inference.
+    kind: method
+  - id: Q08
+    text: Between-person and within-person designs answer different questions and must not be pooled.
+    kind: method

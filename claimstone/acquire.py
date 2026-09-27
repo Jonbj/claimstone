@@ -76,7 +76,13 @@ def acquire_one(
         "fetched_at": _now(),
     }
 
-    for location in locations:
+    # A worklist rather than a loop over a fixed list: a record page names the deposited file, and the
+    # cascade has to be able to add what it just learned. `followed` keeps that one level deep — a link
+    # read off a page never yields more links, so this cannot become a crawl.
+    pending = list(locations)
+    followed = False
+    while pending:
+        location = pending.pop(0)
         expect = PDF_TYPES if location.url.lower().endswith(".pdf") else PDF_TYPES + HTML_TYPES
         outcome = fetcher.get(location.url, expect=expect)
         attempt = outcome.as_row() | {
@@ -111,6 +117,21 @@ def acquire_one(
             # the gate and the by-hand rejection check has nothing to look at — and the
             # thresholds that produced the headline rate were chosen at a desk.
             attempt["failure_class"] = verdict.kind
+            # And the page it refused may name the file. Measured on the pilot: 7 of 25 open-access
+            # misses had the deposited PDF's link in bytes already on disk, because Unpaywall names a
+            # Pure or DSpace record page as the free location and the cascade stopped at it.
+            if (
+                not followed
+                and verdict.kind in (fulltext.LANDING_PAGE_ONLY, fulltext.ABSTRACT_ONLY)
+                and "html" in (outcome.content_type or "").lower()
+            ):
+                found = resolve.deposited_files(
+                    outcome.body.decode("utf-8", "replace"), location.url)
+                if found:
+                    followed = True
+                    # Ahead of the rest: a file this page points at is a better warrant than the next
+                    # guess, and the remaining locations are still tried if it does not pan out.
+                    pending = found + pending
             continue
 
         return common | {

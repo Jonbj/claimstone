@@ -266,3 +266,53 @@ def test_a_candidate_with_no_oa_field_is_unknown_and_not_closed(tmp_path):
     fetcher = FakeFetcher()
     candidates = [{"candidate_key": "c", "source_class": "ACA", "url": "https://x.example/c"}]
     assert [r["candidate_key"] for r in acquire.run(candidates, store, fetcher, use_apis=False)] == ["c"]
+
+
+LANDING = (
+    b"<html><body><h1>Screen time and well-being</h1>"
+    b"<p>Abstract. We study adolescents.</p>"
+    b"<a href='/ws/files/69982711/main.pdf'>Full text</a>"
+    b"</body></html>"
+)
+
+
+def test_the_cascade_follows_a_record_page_to_the_file_it_names(tmp_path):
+    """Measured on the pilot: 7 of 25 open-access misses had the deposited PDF's link in bytes already on
+    disk, because Unpaywall names a Pure or DSpace record page as the free location."""
+    store = Store("t", base=tmp_path)
+    landing = "https://pure.example/en/publications/abc"
+    fetcher = FakeFetcher(pages={
+        landing: ok(landing, LANDING, "text/html"),
+        "https://pure.example/ws/files/69982711/main.pdf": ok(
+            "https://pure.example/ws/files/69982711/main.pdf", pdf(), "application/pdf"),
+    })
+    row = acquire.acquire_one(fetcher, store, candidate(url=landing), use_apis=False)
+    assert row["acquired"] is True
+    # The warrant is weaker than a metadata API's and the ledger says so.
+    assert row["provenance"] == "landing"
+
+
+def test_a_followed_link_does_not_itself_get_followed(tmp_path):
+    """One level deep. A link read off a page never yields more links, so this cannot become a crawl."""
+    store = Store("t", base=tmp_path)
+    first = "https://pure.example/en/publications/abc"
+    second = "https://pure.example/ws/files/1/main.pdf"
+    # The "file" is another landing page naming a third file, which must never be fetched.
+    fetcher = FakeFetcher(pages={
+        first: ok(first, LANDING.replace(b"69982711/main.pdf", b"1/main.pdf"), "text/html"),
+        second: ok(second, LANDING.replace(b"69982711/main.pdf", b"99/deeper.pdf"), "text/html"),
+    })
+    row = acquire.acquire_one(fetcher, store, candidate(url=first), use_apis=False)
+    assert row["acquired"] is False
+    tried = [a["url"] for a in row["attempts"]]
+    assert tried == [first, second]
+
+
+def test_a_record_page_with_no_file_link_changes_nothing(tmp_path):
+    store = Store("t", base=tmp_path)
+    url = "https://pure.example/en/publications/abc"
+    bare = b"<html><body><h1>Title</h1><p>Abstract only.</p></body></html>"
+    fetcher = FakeFetcher(pages={url: ok(url, bare, "text/html")})
+    row = acquire.acquire_one(fetcher, store, candidate(url=url), use_apis=False)
+    assert row["acquired"] is False
+    assert [a["url"] for a in row["attempts"]] == [url]

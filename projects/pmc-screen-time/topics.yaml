@@ -1,0 +1,39 @@
+# A public pilot corpus, and the only real instance in this repository besides the example.
+#
+# It exists for one reason: `alembic-s4` stands at 14 of 25 = 0.56 against a floor of 0.80, so it produces
+# no verdicts (invariant 3) and cannot validate stages 5 and 6. Measured, that gap is not closable by
+# retrying publishers — recovering the four remaining walls reaches 18 of 25 and 20 are needed. So the
+# vertical slice needs a corpus that clears its own floor, built from public literature, which is what the
+# privacy rule prescribes when a fresh instance is needed for a test.
+#
+# The field was chosen for three properties, in this order:
+#   1. Abundant open access, because the floor is the thing being tested.
+#   2. A genuinely contested effect, because a corpus that agrees with itself tests no verdict rule.
+#   3. Every source class really present — refereed papers, preprints, meta-analyses, industry research and
+#      journalism — because invariant 6 and the verdict rules are about class and a single-class corpus
+#      exercises neither.
+#
+# The question wording in questions.yaml is mine and is reviewable. The *findings* are not asserted here:
+# the registry asks, it does not answer.
+topics:
+  - id: T01
+    label: screen time and adolescent wellbeing
+    terms:
+      - screen time adolescent mental health
+      - social media use adolescent depression
+      - smartphone use wellbeing adolescents
+  - id: T02
+    label: measurement of screen use
+    terms:
+      - self-reported screen time validity
+      - objective smartphone logging versus self-report
+  - id: T03
+    label: causal identification
+    terms:
+      - social media causal effect wellbeing natural experiment
+      - preregistered social media wellbeing experiment
+  - id: T04
+    label: heterogeneity and dose
+    terms:
+      - screen time dose response adolescent
+      - gender differences social media wellbeing

@@ -23,3 +23,9 @@ claimstone.egg-info/
 # above, because being readable is the point of it.
 projects/*/manifest.tsv
 !projects/pilot-screen-time/manifest.tsv
+
+# The PMC-scoped round ships for the same reason the pilot does: it is built from public literature and
+# discloses its own restriction, so publishing it reveals nothing but that literature and the rule that
+# selected it. See its sources.yaml for what the restriction excludes.
+!projects/pmc-screen-time/
+!projects/pmc-screen-time/manifest.tsv

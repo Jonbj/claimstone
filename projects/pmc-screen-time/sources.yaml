@@ -1,0 +1,103 @@
+# A round scoped, in advance, to literature deposited in PubMed Central.
+#
+# WHY THIS EXISTS. Two corpora in this repository stand below the acquisition floor and produce no
+# verdicts (invariant 3). `alembic-s4` is 14 of 25 = 0.56 and its ceiling is 18 of 25 = 0.72, because six
+# of its eleven misses are vendor product pages with no open copy in existence (D35, D36).
+# `pilot-screen-time` reached 0.45 over 199 candidates after three cascade fixes, and its 28-source
+# manifest 14 of 28 = 0.50. Measured on the open-access subset of that corpus — candidates OpenAlex marks
+# `is_oa`, a property recorded at discovery — legal routes obtain 0.64, and the gap is hosts refusing the
+# crawler and metadata naming repository record pages as free copies (D39). Neither is closable by retrying.
+#
+# So stages 5 and 6 have never run on an admissible corpus, and the pipeline has never produced a verdict.
+#
+# THE SCOPE, AND WHAT IT COSTS. This round reads only sources for which a PubMed Central copy exists.
+# PMC is a public archive built for automated full-text access, and measured across every attempt this
+# project has made to it, 29 of 34 succeeded — the two robots refusals among them being paths we correctly
+# decline, not walls.
+#
+# The restriction is a statement about **deposits, not about findings**: membership is decided by whether a
+# PMC copy exists, which Unpaywall and OpenAlex report, and never by whether we obtained it or by what the
+# paper concludes. The same 40 sources were identifiable before any document was fetched.
+#
+# **It excludes 159 of the 199 candidates discovered on these topics.** That is the price, it is large, and
+# a verdict from this corpus is a verdict about PMC-deposited literature on screen time and adolescent
+# mental health — not about the literature. A finding that exists only outside PMC is outside this round,
+# and any adjudication here has to say so in its rationale.
+#
+# Its questions and topics are `pilot-screen-time`'s, unchanged, at registry v1: a scope restriction is not
+# a registry change, and bumping the registry would make two rounds incomparable for no reason.
+#
+# Classes are the pilot's vocabulary entire, though this manifest is ACA throughout. A class list is the
+# project's admissible vocabulary and not a description of one reading list.
+
+acquisition_floor: 0.80
+floor_version: 1
+floor_set_at: 2026-09-27
+floor_rationale: >
+  The project floor, unchanged and deliberately not tuned to this round. Declared before acquiring, on the
+  same terms as every other instance: a floor set after seeing a rate is a bar somebody moved. If this
+  round misses 0.80 the finding is INSUFFICIENT_ACQUISITION, as it is for the other two.
+
+excluded_hosts:
+  # Never a shadow library. Deliberate, not a placeholder — see the acquisition conduct rules.
+  - sci-hub.se
+  - sci-hub.st
+  - sci-hub.ru
+  - libgen.is
+  - libgen.rs
+  - z-lib.org
+
+classes:
+  - id: ACA
+    name: peer-reviewed academic
+    weight_hint: highest
+    notes: version of record in a refereed venue
+    aliases: [academic]
+    assign_when:
+      openalex_source_type: [journal]
+      # A refereed conference paper is refereed. Declared for this field, where proceedings carry real
+      # results; a field where they do not would leave the rule out.
+      crossref_type: [journal-article, proceedings-article]
+  - id: WP
+    name: working paper / preprint
+    weight_hint: high
+    notes: PsyArXiv, SSRN, arXiv; not refereed — never silently promoted to ACA
+    assign_when:
+      source_api: [arxiv]
+      openalex_source_type: [repository]
+      # `posted-content` is Crossref's word for a preprint, and discovery found 24 of them. Declared here
+      # rather than promoted to ACA: the class note says a preprint is never silently promoted.
+      crossref_type: [posted-content]
+      host: [psyarxiv.com, osf.io, papers.ssrn.com, ssrn.com, arxiv.org]
+  - id: MET
+    name: methodological reference
+    weight_hint: high
+    notes: meta-analysis, systematic review, methods guide; supports design, not a single effect size
+    # Declared, never read off the id: the method verdict rule asks which classes are methodological, and
+    # inferring that from the letters "MET" would put domain knowledge in the engine.
+    role: methodological
+    aliases: [method]
+    assign_when:
+      crossref_type: [book, book-chapter, monograph, reference-book]
+      openalex_source_type: [book-series]
+  - id: IND
+    name: industry / practitioner research
+    weight_hint: medium
+    notes: platform and consultancy research; disclose the commercial interest
+    aliases: [industry]
+  - id: THESIS
+    name: doctoral or master's thesis
+    weight_hint: medium
+    notes: examined but not refereed; often the fullest account of a study that was published in part
+    assign_when:
+      crossref_type: [dissertation]
+  - id: NEW
+    name: journalism / secondary reporting
+    weight_hint: low
+    notes: admissible as a pointer to a primary source, never as evidence for an effect
+
+# A round may not produce verdicts if fewer than this share of *found* sources were obtained.
+#
+# The same 0.80 as every other instance, deliberately. Setting a pilot's floor lower to make it pass would
+# be the one move that is off the table, and the pilot's whole purpose is to find out whether a corpus can
+# clear this number rather than to prove that a lower one can be cleared.

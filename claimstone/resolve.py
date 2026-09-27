@@ -8,6 +8,7 @@ module never proposes one.
 
 from __future__ import annotations
 
+import html as _html
 import re
 
 import urllib.parse
@@ -53,6 +54,42 @@ class Location:
     licence: str | None = None
     oa_status: str | None = None
     host_type: str | None = None
+
+
+# A file a repository record page links to. Pure and DSpace serve the deposited PDF one link away from
+# the page Unpaywall names as the free location, and measured on the pilot the cascade fetched that page,
+# refused it correctly as a summary, and stopped — 7 of 25 open-access misses had the file link sitting in
+# bytes already on disk. Following it is what "prefer the open-access copy by construction" requires.
+_DEPOSITED_FILE = re.compile(
+    r"""href=["']([^"']{4,300}?(?:\.pdf|/pdf(?:/|["'])|/download|/bitstreams?/[^"']*|"""
+    r"""/ws/files/[^"']*|/files/\d+/[^"']*)[^"']*)["']""",
+    re.I | re.X)
+
+# At most this many per page, and no following a followed link. The job is the deposited file, not a
+# crawl of the repository — and an unbounded version of this would walk a site map.
+MAX_FOLLOWED = 3
+
+
+def deposited_files(markup: str, page_url: str) -> list[Location]:
+    """Files a record page links to, absolute, in the order the page lists them.
+
+    `provenance` says `landing` so the ledger records that this location was not named by any metadata
+    API: it was read off a page, which is a weaker warrant and has to be visible as one.
+    """
+    seen: list[str] = []
+    for found in _DEPOSITED_FILE.finditer(markup):
+        target = _html.unescape(found.group(1)).strip()
+        if target.startswith(("mailto:", "javascript:", "#")):
+            continue
+        absolute = urllib.parse.urljoin(page_url, target)
+        if not absolute.lower().startswith(("http://", "https://")):
+            continue
+        if absolute == page_url or absolute in seen:
+            continue
+        seen.append(absolute)
+        if len(seen) >= MAX_FOLLOWED:
+            break
+    return [Location(url=u, provenance="landing") for u in seen]
 
 
 def unpaywall_locations(fetcher: net.FetcherLike, doi: str) -> tuple[list[Location], str | None]:
