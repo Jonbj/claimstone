@@ -196,6 +196,7 @@ def run(
     limit: int | None = None,
     round_name: str | None = None,
     manifest_only: bool = False,
+    only_oa: bool = False,
 ) -> Iterator[dict[str, Any]]:
     """Acquire what the retry policy allows. A candidate it declines writes no row.
 
@@ -204,6 +205,17 @@ def run(
     candidates and then curated 28, `--limit 28` attempted the first twenty-eight unattempted candidates of
     the 199 and exactly one was on the list. The figure that came out looked plausible and was about a
     different population.
+
+    `only_oa` is the third selector: candidates whose **discovery metadata** already records a free copy.
+    It exists for two jobs. It scopes a round to literature that is legally readable, which is the honest
+    alternative to lowering a floor a closed corpus cannot reach. And it isolates the population that
+    measures the cascade rather than the literature — on sources where a free copy exists by definition, a
+    miss is ours. Measured on the pilot: 10 of 69 such candidates attempted, 5 obtained, and four of the
+    five losses were a landing page fetched instead of the PDF or a 403 from a host that publishes open.
+
+    It reads the discovery row and makes no request of its own, so a candidate whose channel recorded
+    nothing is **not** assumed closed — it is simply outside this population, and `report` still counts it
+    in the denominator it belongs to.
     """
     previous = store.latest_by("acquisitions.jsonl", "candidate_key")
     attempted = 0
@@ -214,6 +226,10 @@ def run(
             continue
         # A manifest row declares itself with a `source_id`; a discovered one has none.
         if manifest_only and not candidate.get("source_id"):
+            continue
+        # Only what discovery already called open. Absent is not closed — it is unknown, and treating
+        # unknown as closed would silently shrink the population this selector claims to describe.
+        if only_oa and candidate.get("is_oa") is not True:
             continue
         prior = previous.get(str(candidate["candidate_key"]))
         if not should_attempt(prior, retry_classes=retry_classes, retry_after_s=retry_after_s):

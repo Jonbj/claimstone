@@ -42,6 +42,7 @@ EMPTY = "EMPTY_RESPONSE"
 # transfer succeeded.
 LANDING = "LANDING_PAGE_ONLY"
 ABSTRACT = "ABSTRACT_ONLY"
+CHALLENGE = "BOT_CHALLENGE"
 TOO_SHORT = "TOO_SHORT"
 CORRUPT_PDF = "CORRUPT_PDF"
 NOT_TEXT = "NOT_TEXT"
@@ -52,7 +53,13 @@ NO_LOCATIONS = "NO_LOCATIONS"
 # campaign. Transient: the next ordinary run should try again on its own.
 TERMINAL = frozenset(
     {PAYWALL, ROBOTS, EXCLUDED, NOT_FOUND, BAD_TYPE, LANDING, ABSTRACT, TOO_SHORT,
-     CORRUPT_PDF, NOT_TEXT, NO_LOCATIONS}
+     CORRUPT_PDF, NOT_TEXT, NO_LOCATIONS,
+     # Terminal on conduct grounds rather than because retrying could not work. The host asked us to
+     # prove we are not a robot; knocking again without answering that is ignoring the request, so a
+     # retry needs a named campaign like any other. The class exists to keep the *denominator* honest —
+     # a challenge is a fact about our crawler and must not sit in the ledger as `ABSTRACT_ONLY`,
+     # which is a fact about the source — and that job is done by the name, not by the retry policy.
+     CHALLENGE}
 )
 TRANSIENT = frozenset(
     {TIMEOUT, CONNECTION, SERVER_ERROR, RATE_LIMITED, BUDGET, EMPTY, WAYBACK_MISS}

@@ -28,17 +28,40 @@ PDF_FULLTEXT = "PDF_FULLTEXT"
 HTML_FULLTEXT = "HTML_FULLTEXT"
 LANDING_PAGE_ONLY = "LANDING_PAGE_ONLY"
 ABSTRACT_ONLY = "ABSTRACT_ONLY"
+# A 200 carrying an interstitial that asks the client to prove it is not a robot. It is **not**
+# ABSTRACT_ONLY, and the distinction is the whole reason this class exists: `ABSTRACT_ONLY` is a
+# statement about the source — only a summary of this paper is freely available — while this is a
+# statement about us. Measured on the pilot: 9 attempts across 6 unobtained candidates were recorded as
+# `ABSTRACT_ONLY` when the bytes said "Checking your browser before accessing pmc.ncbi.nlm.nih.gov",
+# including one on PMC, the route carrying 25 of 39 successes. Recording infrastructure as an
+# established negative is the same defect `ARTIFACT_UNREADABLE` was added for one stage over.
+BOT_CHALLENGE = "BOT_CHALLENGE"
 TOO_SHORT = "TOO_SHORT"
 CORRUPT_PDF = "CORRUPT_PDF"
 NOT_TEXT = "NOT_TEXT"
 
 ACCEPTED = (PDF_FULLTEXT, HTML_FULLTEXT)
 
+# Phrases a challenge page carries and an article does not. Matched against the visible text only, so
+# a paper *discussing* CAPTCHAs is not caught by its own prose: the phrases are the interstitial's own
+# words to the user, and they sit alone on a page of a few hundred characters.
+CHALLENGE_PHRASES: tuple[str, ...] = (
+    "checking your browser",
+    "just a moment",
+    "verify you are human",
+    "are you a robot",
+    "enable javascript and cookies to continue",
+    "unusual traffic from your computer",
+    "ddos protection by",
+)
+
 # Bumped whenever a rule below changes. Written onto every ledger row, because a rate computed
 # under different thresholds is not comparable to one computed under these.
 # Version 2: the HTML rule gained the structural signal after a length-only rule was measured
 # against 25 real artifacts and accepted three abstract pages out of six.
-GATE_VERSION = 2
+# Version 3: a bot challenge is its own kind rather than ABSTRACT_ONLY, which was recording a fact
+# about our crawler as a fact about the literature.
+GATE_VERSION = 3
 
 DEFAULT_THRESHOLDS: dict[str, int] = {
     # Low on purpose: a short conference note can be a legitimate 12 KB PDF, and a false
@@ -189,6 +212,18 @@ def _classify_markup(body: bytes, th: dict[str, int], policy: dict[str, Any]) ->
     count = len(text)
 
     folded = text.lower()
+
+    # Before everything else, because every later rule would describe the source and this page is not
+    # the source. A challenge is also *retryable* where a paywall is not, so which class it gets
+    # decides whether a named campaign may knock again.
+    challenge = next((phrase for phrase in CHALLENGE_PHRASES if phrase in folded), None)
+    if challenge is not None and count < th["paywall_doubt_chars"]:
+        # Bounded by length for the same reason the paywall phrases are: an article may quote any of
+        # these words, and above the doubt threshold the text is there whatever the page says.
+        return FullText(BOT_CHALLENGE, count,
+                        f"{count} chars and the challenge phrase {challenge!r}: "
+                        f"this is a fact about our crawler, not about the source")
+
     hit = next((phrase for phrase in policy["paywall_phrases"] if phrase in folded), None)
     if hit and count < th["paywall_doubt_chars"]:
         # A phrase alone is never sufficient: a legitimate open-access article also contains

@@ -6,7 +6,7 @@ import time
 
 import pytest
 
-from claimstone import acquire, net
+from claimstone import acquire, fulltext, net
 from claimstone.store import Store
 from tests.fakes import FakeFetcher, fail, ok
 from tests.test_fulltext import page, pdf
@@ -55,7 +55,7 @@ def test_a_real_pdf_is_stored_under_its_hash(tmp_path):
     row = acquire.acquire_one(fetcher, store, candidate(), use_apis=False)
     assert row["acquired"] is True
     assert row["gate"]["kind"] == "PDF_FULLTEXT"
-    assert row["gate"]["gate_version"] == 2
+    assert row["gate"]["gate_version"] == fulltext.GATE_VERSION
     assert (tmp_path / "t" / "raw" / f"{row['sha256']}.pdf").exists()
 
 
@@ -243,3 +243,26 @@ def test_acquire_can_be_limited_to_one_round(tmp_path):
         "https://x.example/b": ok("https://x.example/b", pdf())})
     rows = list(acquire.run([spring, autumn], store, fetcher, use_apis=False, round_name="autumn"))
     assert [r["candidate_key"] for r in rows] == ["doi:10.1/b"]
+
+
+def test_only_oa_attempts_what_discovery_already_called_free(tmp_path):
+    """The third population selector. On sources where a free copy exists by definition, a miss is ours,
+    which is what makes this the population that measures the cascade rather than the literature."""
+    store = Store("t", base=tmp_path)
+    fetcher = FakeFetcher()
+    candidates = [
+        {"candidate_key": "a", "source_class": "ACA", "url": "https://x.example/a", "is_oa": True},
+        {"candidate_key": "b", "source_class": "ACA", "url": "https://x.example/b", "is_oa": False},
+        {"candidate_key": "c", "source_class": "ACA", "url": "https://x.example/c"},
+    ]
+    rows = list(acquire.run(candidates, store, fetcher, use_apis=False, only_oa=True))
+    assert [r["candidate_key"] for r in rows] == ["a"]
+
+
+def test_a_candidate_with_no_oa_field_is_unknown_and_not_closed(tmp_path):
+    """Treating absent as closed would silently shrink the population this selector claims to describe.
+    Without the selector it is attempted like any other."""
+    store = Store("t", base=tmp_path)
+    fetcher = FakeFetcher()
+    candidates = [{"candidate_key": "c", "source_class": "ACA", "url": "https://x.example/c"}]
+    assert [r["candidate_key"] for r in acquire.run(candidates, store, fetcher, use_apis=False)] == ["c"]

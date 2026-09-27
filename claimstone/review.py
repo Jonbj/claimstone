@@ -103,11 +103,18 @@ def build(
     batch: str,
     reviewer: tuple[str, str] | None = None,
     limit: int | None = None,
+    question_id: str | None = None,
 ) -> dict[str, Any]:
     """One review unit per accepted claim that has no review yet.
 
     `reviewer` names the reader that will be asked, so the claims it may not judge are excluded here rather
     than discovered after the calls are paid for.
+
+    `question_id` narrows to one question, because **a verdict is per question** and a profile needs only
+    its own claims reviewed. Measured on `alembic-s4`: 7,021 claims over 22 questions, median 250 per
+    question and 43 for the smallest — so one adjudicable profile costs 43 calls rather than seven
+    thousand. Without this, `--limit` takes whichever claims the ledger happens to hold first, which on
+    this store is an entirely different reader's batch.
     """
     reviewed = set(store.latest_by("reviews.jsonl", "claim_id"))
     chunks = store.latest_by("chunks.jsonl", "chunk_id")
@@ -118,6 +125,8 @@ def build(
 
     for claim in store.latest_by("claims.jsonl", "claim_id").values():
         if str(claim.get("claim_id")) in reviewed:
+            continue
+        if question_id is not None and str(claim.get("question_id")) != question_id:
             continue
         if reviewer is not None and reader_of(claim) == reviewer:
             same_reader += 1

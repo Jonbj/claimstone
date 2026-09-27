@@ -155,6 +155,7 @@ def _acquire(args: argparse.Namespace) -> int:
         policy=project.gate_policy,
         round_name=args.round,
         manifest_only=args.manifest,
+        only_oa=args.only_oa,
         classes=project.classes,
         limit=args.limit,
     ):
@@ -725,7 +726,8 @@ def _review(args: argparse.Namespace) -> int:
         backend, _, model = args.reviewer.partition("/")
         reviewer = (backend, model)
 
-    result = review.build(project, store, batch=args.batch, reviewer=reviewer, limit=args.limit)
+    result = review.build(project, store, batch=args.batch, reviewer=reviewer, limit=args.limit,
+                          question_id=args.question)
     print(f"batch {result['batch']}: {result['units']} review units")
     if result["same_reader"]:
         print(f"  {result['same_reader']} claim(s) excluded: {args.reviewer} extracted them, and a second "
@@ -950,6 +952,9 @@ def build_parser() -> argparse.ArgumentParser:
             command.add_argument("--manifest", action="store_true",
                                  help="attempt only the sources the manifest declared, which is the "
                                       "population a curated corpus's floor is about")
+            command.add_argument("--only-oa", action="store_true",
+                                 help="attempt only candidates whose discovery metadata already "
+                                      "records a free copy; absent is unknown, not closed")
             command.add_argument("--retry-class", action="append",
                                  help="re-request a terminal failure class, e.g. PAYWALL_403")
             command.add_argument("--limit", type=int, default=None)
@@ -1011,6 +1016,9 @@ def build_parser() -> argparse.ArgumentParser:
             command.add_argument("--reviewer",
                                  help="backend/model that will be asked, so the claims it may not "
                                       "judge are excluded before the calls are paid for")
+            command.add_argument("--question", default=None,
+                                 help="one question's claims, which is what one adjudicable profile "
+                                      "needs; a verdict is per question")
             command.add_argument("--limit", type=int, default=None)
         if name == "synthesize":
             command.add_argument("--round", default=None,

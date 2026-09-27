@@ -1679,3 +1679,87 @@ which implied around 166 of 277. Measured: **18**. `NUMBER_NOT_IN_QUOTE` fell 27
 admitted. Third falsified prediction of the day, and the only one where the sample was mine and I treated
 five rows as representative of two hundred. The pattern is now well enough attested to state as a rule:
 **on this corpus, a defect's signature in a five-row sample predicts nothing about its mass.**
+
+---
+
+## D39 — 0.64 on literature that is declared free, and a bot check recorded as a fact about the corpus
+
+Date: 2026-09-27 · `gate_version 3` · Campaigns `oa-cascade-2026-09-27`, `bot-challenge-v3-2026-09-27`
+
+D38 left the floor as the binding constraint and the question open: is 0.46 on the pilot a fact about the
+literature or about our cascade? The discovery ledger already held the population that answers it —
+`is_oa`, recorded by OpenAlex **at discovery time**, so selecting on it is a scope restriction and not an
+outcome filter. 69 candidates carried it; 10 had been attempted; **59 had not**.
+
+### Measured, 2026-09-27
+
+```
+the 59 untried open-access candidates      39 obtained   0.66
+the whole is_oa population (69)            44 obtained   0.64
+the pilot overall                          62 of 199     0.31  (was 0.12)
+```
+
+**Where the 39 came from is the finding.** `unpaywall+pmc` 25, `unpaywall` 12, `candidate` 2. Thirty-seven
+of thirty-nine came from a location the resolver found rather than from the DOI the candidate carried, and
+the PMC route alone carried two thirds. The cascade is not the problem: it made up to **seven** attempts
+per candidate across Unpaywall, OpenAlex and PMC before giving up.
+
+So the 36% that remains is not "we did not try". Of the 25 misses:
+
+| | what it is |
+|---|---|
+| `ABSTRACT_ONLY` 14 | Unpaywall lists a repository record page as a free location. Measured: 777 KB of HTML yielding 2,746 characters — a DSpace or Pure page is megabytes of JavaScript around an abstract, and the gate is right to refuse it |
+| `PAYWALL_403` 7 | hosts refusing the crawler, **including BMC and MDPI**, which publish nothing but open access. A 403 on a gold article is a bot block, not a paywall |
+| `ROBOTS_DISALLOWED` 2 | honoured. Not recoverable, by our own rules, and that is the point of having them |
+| `UNCLASSIFIED` 1 | ours: a host `assign_when` does not place |
+| `BOT_CHALLENGE` 1 | see below |
+
+**The conclusion, stated carefully.** On literature where a free copy is *declared to exist*, legal routes
+obtain 0.64. The gap is hosts refusing automation and metadata that overstates what is reachable — neither
+of which more retries fix. That is evidence about the floor that did not exist this morning, and it is the
+only legitimate basis on which 0.80 could ever be revised: a dated, motivated, versioned event resting on
+a measurement across two corpora and a pre-specified open-access population, rather than on one corpus's
+rate having come out awkward. **It remains the project owner's decision and this entry does not make it.**
+
+### `gate_version 3` — a bot challenge is not an abstract
+
+The defect that found itself. A PMC fetch returned **HTTP 200, 21,312 bytes, 165 characters of text**, and
+the gate called it `ABSTRACT_ONLY`. The bytes read *"Checking your browser before accessing
+pmc.ncbi.nlm.nih.gov"*.
+
+`ABSTRACT_ONLY` asserts that only a summary of this paper is freely available. That is a claim about the
+literature, and a reCAPTCHA interstitial has not earned it — on the route carrying 25 of our 39 successes.
+It is the same defect shape as `NOT_A_DOCUMENT` on an unreadable artifact, which stage 3 already had to
+split out: **infrastructure failure recorded as an established negative.**
+
+`BOT_CHALLENGE` is now its own kind, checked before every rule that describes the source, and bounded by
+the same doubt threshold the paywall phrases use so a paper discussing CAPTCHAs is not caught by its own
+prose.
+
+**Terminal, on conduct grounds rather than because a retry could not work.** The host asked us to prove we
+are not a robot; knocking again without answering that is ignoring the request, so it needs a named
+campaign like any other terminal class. The class exists to keep the *denominator* honest, and that job is
+done by the name and not by the retry policy.
+
+**Fourth overestimate of the day, same shape.** Nine attempts across six unobtained candidates carried the
+challenge signature, and the expectation was six reclassifications. `regate` produced **one**: it judges
+the final artifact per candidate, and for five of the six the challenge sat in an intermediate attempt
+while the cascade ended on a genuine 403 or abstract. The eight other attempts are now correctly labelled
+inside their cascades, which is worth having for diagnosis and worth nothing for the rate.
+
+That is the fourth time today a signature count has overshot its effect — 45 predicted and 1 delivered,
+166 predicted and 18 delivered, the negative offsets predicted as a defect and genuine, and now 6 and 1.
+D37 recorded this as a rule after the second. Four is enough to stop predicting from signatures at all and
+quote only what `regate` or a re-harvest returns.
+
+### Two selectors added, both needed rather than convenient
+
+`acquire --only-oa`, because the population that measures a cascade rather than a literature is the one
+where a free copy exists by definition, and because scoping a round to legally readable literature is the
+honest alternative to lowering a floor a closed corpus cannot reach. Absent metadata is **unknown, not
+closed**: a candidate whose channel recorded nothing stays outside this population and inside `report`'s.
+
+`review --question`, because a verdict is per question and a profile needs only its own claims reviewed.
+Measured on `alembic-s4`: 7,021 claims over 22 questions, median 250, smallest 43. One adjudicable profile
+costs 43 review calls rather than seven thousand — which is what takes stage 5 from "needs batch
+infrastructure" to "runs now".

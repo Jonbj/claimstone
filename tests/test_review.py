@@ -180,3 +180,13 @@ def test_a_call_with_no_valid_answer_leaves_the_claim_awaiting_review(tmp_path):
     assert result["reviewed"] == 0
     assert result["calls_without_an_answer"] == 1
     assert list(store.read("reviews.jsonl")) == []
+
+
+def test_building_for_one_question_leaves_the_others_alone(tmp_path):
+    """A verdict is per question, and a profile needs only its own claims reviewed. On the real store that
+    is 43 calls for the smallest question against 7,021 for the ledger."""
+    claims = [_claim(), _claim(claim_id="c2", question_id="H06", lane="heterogeneity")]
+    store = _store(tmp_path, claims=claims)
+    assert review.build(FakeProject(), store, batch="r1", question_id="H06")["units"] == 1
+    requests = list(store.read("calls/review/r1/requests.jsonl"))
+    assert [r["question_id"] for r in requests] == ["H06"]

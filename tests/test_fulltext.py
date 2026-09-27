@@ -209,3 +209,37 @@ def test_the_row_records_a_hash_of_the_whole_policy_not_a_count():
                           policy={"paywall_phrases": ("rent it",)}).as_row(
         {}, policy={"paywall_phrases": ("rent it",)})
     assert a["policy"]["sha256"] != b["policy"]["sha256"]
+
+
+# --- a bot challenge is about us, not about the source --------------------------------------------
+
+CHALLENGE = (b"<html><body><h1>Checking your browser</h1><p>Checking your browser before "
+             b"accessing pmc.ncbi.nlm.nih.gov ... Click here if you are not automatically "
+             b"redirected after 5 seconds.</p></body></html>")
+
+
+def test_a_challenge_interstitial_is_its_own_kind_and_not_an_abstract():
+    """Measured on the pilot: 9 attempts across 6 unobtained candidates were recorded ABSTRACT_ONLY
+    while the bytes said "Checking your browser before accessing pmc.ncbi.nlm.nih.gov" — one of them on
+    PMC, the route carrying 25 of 39 successes. `ABSTRACT_ONLY` asserts that only a summary of the paper
+    is freely available, which is a claim about the literature a bot check has not earned."""
+    verdict = fulltext.classify(CHALLENGE, "text/html", "https://pmc.example/articles/PMC1/")
+    assert verdict.kind == fulltext.BOT_CHALLENGE
+    assert verdict.accepted is False
+    assert "crawler" in verdict.reason
+
+
+def test_a_paper_that_discusses_captchas_is_not_a_challenge_page():
+    """The phrases are an interstitial's own words to a user, and they sit alone on a short page. Above
+    the doubt threshold the text is there whatever the page says."""
+    body = page(6000, "<p>Participants were asked to verify you are human before each trial.</p>"
+                      "<h2>References</h2><p>Smith 2019.</p>")
+    assert fulltext.classify(body, "text/html", "https://x.example/a").kind != fulltext.BOT_CHALLENGE
+
+
+def test_a_challenge_is_terminal_on_conduct_grounds_and_needs_a_named_campaign():
+    """The host asked us to prove we are not a robot; knocking again without answering is ignoring it."""
+    from claimstone import net
+
+    assert net.CHALLENGE in net.TERMINAL
+    assert net.CHALLENGE not in net.TRANSIENT
