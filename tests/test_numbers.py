@@ -101,3 +101,90 @@ def test_convert_ignores_a_field_that_is_not_an_as_written_form():
     # A horizon is not a number and is not converted; it is also not a failure.
     assert problems == []
     assert "horizon" not in out
+
+
+# The forms below are all taken from the first full extraction round on `alembic-s4`, where they were
+# 183 refusals. Each one is a notation the literature uses, not a bad claim.
+
+def test_a_label_is_stripped_to_reach_the_figure_and_never_read_as_the_quantity():
+    value = numbers.parse("t-statistic of 2.7")
+    assert value.value == 2.7
+    # `as_reported`, not `t_statistic`: what the quantity is remains an estimand question, and the
+    # label stays in the as-written form for a reader.
+    assert value.scale == "as_reported"
+    assert value.as_written == "t-statistic of 2.7"
+
+
+def test_a_bracketed_standard_error_notation_is_read_and_still_only_flagged_as_bracketed():
+    value = numbers.parse("(se = 1.20)")
+    assert (value.value, value.bracketed, value.scale) == (1.20, True, "as_reported")
+
+
+def test_a_hedge_is_recorded_as_the_bound_it_states_rather_than_dropped():
+    assert numbers.parse("over 300%").bound == "lower"
+    assert numbers.parse("all below 65%").bound == "upper"
+    assert numbers.parse("nearly 6%").bound == "approximate"
+    assert numbers.parse("∼100%").bound == "approximate"
+    # The figure is still the figure.
+    assert numbers.parse("over 300%").value == 3.0
+
+
+def test_a_bare_figure_is_exact_and_the_bound_is_never_guessed_from_the_magnitude():
+    assert numbers.parse("2.4%").bound == "exact"
+
+
+def test_approaching_is_approximate_because_the_word_does_not_settle_a_direction():
+    assert numbers.parse("approaching 1 percent").bound == "approximate"
+
+
+def test_a_period_belongs_to_the_horizon_and_does_not_stop_the_figure_being_read():
+    assert numbers.parse("0.55% per month").value == pytest.approx(0.0055)
+    assert numbers.parse("3.75% per annum").value == pytest.approx(0.0375)
+
+
+def test_a_gloss_inside_a_period_is_still_reached():
+    # `5.2 basis points (bps) per day` puts the bracketed gloss inside the period, so one pass in
+    # either order leaves the other in place.
+    assert numbers.parse("5.2 basis points (bps) per day").value == pytest.approx(0.00052)
+
+
+def test_a_significance_level_is_still_refused_because_it_is_not_a_magnitude():
+    with pytest.raises(numbers.Unparseable):
+        numbers.parse("significant at the 1% level")
+
+
+def test_a_contrast_is_two_sides_in_the_order_written_and_no_difference_is_taken():
+    first, second = numbers.parse_contrast("2.00% versus 0.14%")
+    assert (first.value, second.value) == pytest.approx((0.02, 0.0014))
+
+
+def test_a_contrast_whose_sides_are_on_different_scales_is_refused():
+    with pytest.raises(numbers.Unparseable) as raised:
+        numbers.parse_contrast("2.00% versus 0.14")
+    assert "not on one scale" in str(raised.value)
+
+
+def test_a_contrast_is_not_put_through_the_one_value_path():
+    # It holds two numbers by construction, which is what stage 4 asks for.
+    assert "contrast_as_written" not in numbers.NUMERIC_FIELDS
+    assert "contrast_as_written" in numbers.COMPOSITE_FIELDS
+
+
+def test_convert_reads_a_contrast_into_two_sides_and_a_shared_scale():
+    out, problems = numbers.convert({"contrast_as_written": "22.42 versus 0.16"})
+    assert problems == []
+    assert out["contrast_sides"] == [22.42, 0.16]
+    assert out["contrast_scale"] == "as_reported"
+
+
+def test_convert_records_a_bound_only_when_there_is_one():
+    out, _ = numbers.convert({"estimate_as_written": "over 300%"})
+    assert out["estimate_bound"] == "lower"
+    plain, _ = numbers.convert({"estimate_as_written": "2.4%"})
+    assert "estimate_bound" not in plain
+
+
+def test_only_the_estimate_is_required_to_convert():
+    # The claim's own figure. Everything else is auxiliary, and losing the claim over a notation the
+    # engine does not read would also lose it from the coverage denominator.
+    assert numbers.FIELDS_REQUIRED_TO_CONVERT == ("estimate_as_written",)

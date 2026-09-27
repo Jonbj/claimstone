@@ -318,3 +318,65 @@ def test_a_window_the_quote_does_not_show_is_still_a_rejection():
     rec = record(claim="For events with the latest story in days [-15,-6] the portfolio earns 0.080.",
                  evidence_quote="Daily Alpha | 0.080 | 0.065 | 0.045 |")
     assert verdict(rec, chunk=chunk).failure == "NUMBER_NOT_IN_QUOTE"
+
+
+# --- prose and composite as-written fields --------------------------------------------------------
+# On the first full round 295 of 326 `VALUE_NOT_IN_QUOTE` rejections were these two fields, and every
+# one of them was a true claim: stage 4 asks for `weekly` and for `A versus B`, and a quote that says
+# `up to 13 weeks` bears neither verbatim.
+
+def test_a_prose_horizon_need_not_appear_verbatim():
+    rec = record(horizon_as_written="weekly")
+    assert verdict(rec).ok is True
+
+
+def test_a_prose_horizon_still_has_its_numbers_checked():
+    quote = "earn excess returns for up to 13 weeks"
+    rec = record(horizon_as_written="up to 13 weeks", evidence_quote=quote)
+    assert verdict(rec).ok is True
+    bad = {**rec, "horizon_as_written": "up to 26 weeks"}
+    result = verdict(bad)
+    assert result.failure == "VALUE_NOT_IN_QUOTE"
+    assert "'26'" in result.detail
+
+
+# The two sides are in one sentence, joined by a connective that is not `versus`.
+SIDES = "the treated group earned 4.2 basis points against 1.9 for the control"
+
+
+def test_a_contrast_need_not_match_the_quotes_own_connective():
+    # The quote joins the two sides with `against`, and stage 4 asks for `versus`.
+    rec = record(contrast_as_written="4.2 versus 1.9", evidence_quote=SIDES)
+    assert verdict(rec, chunk=SIDES).ok is True
+
+
+def test_a_contrast_asserting_a_figure_the_quote_lacks_is_still_refused():
+    rec = record(contrast_as_written="4.2 versus 3.3", evidence_quote=SIDES)
+    result = verdict(rec, chunk=SIDES)
+    assert result.failure == "VALUE_NOT_IN_QUOTE"
+    assert "'3.3'" in result.detail
+
+
+def test_a_single_figure_field_is_still_checked_verbatim():
+    # Nothing above loosens the fields the engine actually converts.
+    bad = record(estimate_as_written="4.20",
+                 evidence_quote="the estimate is greater than the no-news benchmark by 4.2 basis")
+    assert verdict(bad).failure == "VALUE_NOT_IN_QUOTE"
+
+
+def test_a_comma_is_a_thousands_separator_only_before_three_digits():
+    """`[2,5]` is an event window of two days, not the figure twenty-five.
+
+    45 rejections on the first full round, every one a true claim stating a window — the same error as
+    reading `1964-1997` as minus 1997, one separator over.
+    """
+    quote = "returns over days [2,5] after the story"
+    rec = record(claim="Returns accumulate over days [2,5].", evidence_quote=quote)
+    assert verdict(rec, chunk=quote).ok is True
+    # A real thousands separator is still one figure.
+    big = "a sample of 1,297 firms"
+    assert verdict(record(claim="The sample has 1,297 firms.", evidence_quote=big),
+                   chunk=big).ok is True
+    mismatched = "a sample of 1,297 firms"
+    assert verdict(record(claim="The sample has 2,400 firms.", evidence_quote=mismatched),
+                   chunk=mismatched).failure == "NUMBER_NOT_IN_QUOTE"

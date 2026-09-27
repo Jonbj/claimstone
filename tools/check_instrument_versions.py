@@ -26,6 +26,9 @@ RECORD = ROOT / "docs" / "DESIGN_DECISIONS.md"
 # use so the mention is deliberate rather than accidental.
 INSTRUMENTS = (
     ("claimstone/fulltext.py", "GATE_VERSION", "gate_version"),
+    # The claim gate is the executable form of invariant 1, and went unversioned through the first full
+    # round. Two claims admitted under different rule sets are not the same kind of row.
+    ("claimstone/claimgate.py", "CLAIM_GATE_VERSION", "claim_gate_version"),
     ("claimstone/chunk.py", "CHUNK_VERSION", "chunk_version"),
     ("claimstone/ids.py", "CANDIDATE_KEY_VERSION", "candidate_key_version"),
 )

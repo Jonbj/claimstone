@@ -14,6 +14,22 @@ a parser failure has not earned.
 nothing here knows which, so it is `as_reported` — the honest label. What this module cannot reach at all
 is whether a bracketed figure is a standard error or a t-statistic, and whether an uncertainty is on the
 estimate's scale. Those are estimand questions; stage 5 is a model reading them, not a verification.
+
+**A hedge is part of the notation, and the bound it states is recorded.** Measured on the first full
+round, 46 of 183 unreadable forms were a figure behind a word: `nearly 6%`, `over 300%`, `all below 65%`,
+`∼100%`. Reading any of them as an exact value would drop an inequality the paper wrote, which is the
+same error `COMPARATIVE_NOT_IN_QUOTE` exists to catch one field over. So the word is stripped to reach
+the figure and recorded as `lower`, `upper` or `approximate`.
+
+**A label is stripped, not interpreted.** `t = 5.73`, `(se = 1.20)` and `standard error of 1.90` were 32
+more of those 183. The label names the quantity, and *what the quantity is* remains the estimand question
+above — so the number is read, the label stays in the as-written form for a reader, and this module still
+declines to say whether it is a standard error.
+
+**A contrast holds two numbers by construction**, because that is what stage 4 asks for: "the two sides
+as written: `0.31% versus 0.04%`". Putting it through the one-value path made 60 of those 183 refusals a
+statement about this module and not about the paper. It has its own two-sided reading, and both sides
+must share a scale — `2.00% versus 0.14` is a mismatch worth naming.
 """
 
 from __future__ import annotations
@@ -35,7 +51,48 @@ _UNITS: tuple[tuple[tuple[str, ...], float, str], ...] = (
 # A range is found by counting numbers rather than by looking for a separator: `2.4% to 3.1%` has
 # a per-cent sign between the digit and the word, which a separator pattern misses, and `1.4e-3`
 # has a hyphen inside a single number, which one over-matches.
-_TOKEN = re.compile(r"\d[\d,]*(?:\.\d+)?(?:[eE][-\u2212+]?\d+)?")
+_TOKEN = re.compile(r"\d[\d,]*(?:\.\d+)?(?:[eE][-−+]?\d+)?")
+
+# What a hedge says about the figure behind it. `approaching` is deliberately `approximate` rather than
+# a direction: "approaching 1%" reads as just under 1% to most people and as just over to some, and
+# guessing between them would be this module answering a question the words do not settle.
+_BOUNDS: tuple[tuple[str, str], ...] = tuple(sorted(
+    [(word, kind) for words, kind in (
+        (("at least", "no less than", "more than", "greater than", "in excess of", "over", "above"),
+         "lower"),
+        (("at most", "no more than", "less than", "fewer than", "all below", "up to", "under",
+          "below"), "upper"),
+        (("approximately", "approx.", "approx", "nearly", "almost", "around", "about", "roughly",
+          "circa", "approaching", "~", "∼", "≈"), "approximate"),
+    ) for word in words],
+    key=lambda pair: -len(pair[0]),
+))
+
+# A label naming the quantity, and an optional connector. Stripped to reach the figure; never read as
+# saying what the quantity is.
+_LABEL = re.compile(
+    r"^(?:t-statistics?|t-statistic|t-values?|t-stats?|t|z-scores?|z|"
+    r"standard\s+errors?|standard\s+deviations?|std\.?\s*errs?\.?|std\.?\s*devs?\.?|"
+    r"s\.?e\.?|s\.?d\.?|p-values?|p|sharpe\s+ratios?|sharpe|"
+    r"means?|medians?|[nm])"
+    r"\s*(?:of|=|:|is|was)\s*", re.I)
+
+# A period belongs to the horizon, not to the figure: `0.55% per month` is 0.0055, and
+# `horizon_as_written` is where stage 4 records the month. Dropped here, and kept there.
+_PERIODS: tuple[str, ...] = tuple(sorted(
+    ("per day", "per week", "per month", "per quarter", "per year", "per annum", "per trading day",
+     "a day", "a week", "a month", "a quarter", "a year", "daily", "weekly", "monthly", "quarterly",
+     "yearly", "annually", "annualized", "annualised", "annual"),
+    key=lambda word: -len(word),
+))
+
+# A trailing gloss repeating the unit in brackets: `5.2 basis points (bps) per day`. Removed only when
+# it holds no digits of its own, so a bracketed figure is never silently dropped.
+_GLOSS = re.compile(r"\s*\(([^()\d]*)\)\s*$")
+
+# How the two sides of a contrast are joined. `versus` is what stage 4 asks for; the rest are what
+# papers write when the model quotes them instead.
+_SIDES = re.compile(r"\s+(?:versus|vs\.?|compared\s+(?:with|to)|relative\s+to|against)\s+", re.I)
 
 
 class Unparseable(ValueError):
@@ -48,6 +105,8 @@ class Value:
     scale: str
     as_written: str
     bracketed: bool = False
+    # `exact` unless a hedge said otherwise. Never inferred from the magnitude.
+    bound: str = "exact"
 
 
 def parse(as_written: str) -> Value:
@@ -69,6 +128,19 @@ def parse(as_written: str) -> Value:
     if len(_TOKEN.findall(text)) > 1:
         raise Unparseable(f"{raw!r} holds more than one number: a range is two values, not one")
 
+    # Both in a loop: `5.2 basis points (bps) per day` puts the gloss inside the period, so one pass
+    # in either order leaves the other in place and the figure unreachable.
+    while True:
+        shorter = _GLOSS.sub("", text).strip()
+        low = shorter.lower()
+        for period in _PERIODS:
+            if low.endswith(period):
+                shorter = shorter[: len(shorter) - len(period)].strip()
+                break
+        if shorter == text:
+            break
+        text = shorter
+
     scale = "as_reported"
     factor = 1.0
     low = text.lower()
@@ -79,20 +151,57 @@ def parse(as_written: str) -> Value:
             factor, scale = unit_factor, unit_scale
             break
 
+    bound = "exact"
+    low = text.lower()
+    for word, kind in _BOUNDS:
+        if low.startswith(word):
+            text = text[len(word):].strip()
+            bound = kind
+            break
+
+    text = _LABEL.sub("", text, count=1).strip()
+
     text = text.replace("−", "-").replace(",", "").strip()
     if not _NUMBER.match(text.replace(",", "")):
         raise Unparseable(f"{raw!r} is not a notation this module reads")
 
-    return Value(float(text) * factor, scale, raw, bracketed)
+    return Value(float(text) * factor, scale, raw, bracketed, bound)
 
 
-# Which as-written fields hold a number. `horizon_as_written` ("one week") and `sample` do not, and
-# converting prose would be the guessing this module refuses.
+def parse_contrast(as_written: str) -> tuple[Value, Value]:
+    """The two sides of a contrast, in the order they were written.
+
+    Both sides must share a scale. `2.00% versus 0.14` is a per-cent against a bare number, and a
+    difference taken across that pair would be off by a hundred without anything looking wrong.
+    """
+    raw = str(as_written or "").strip()
+    sides = _SIDES.split(raw)
+    if len(sides) != 2:
+        raise Unparseable(f"{raw!r} is not two sides joined by `versus`")
+    first, second = (parse(side) for side in sides)
+    if first.scale != second.scale:
+        raise Unparseable(
+            f"{raw!r} puts {first.scale} against {second.scale}: the two sides are not on one scale")
+    return first, second
+
+
+# Which as-written fields hold **one** number. `horizon_as_written` ("one week") and `sample` do not,
+# and converting prose would be the guessing this module refuses.
 # Aligned with the shapes stage 4 actually asks for. An earlier list named `high_side_as_written` and
 # `low_side_as_written`, which do not exist: `high_side` and `low_side` are subgroup *labels* — "small
-# firms" — and converting a label would be the guessing this module refuses.
-NUMERIC_FIELDS = ("estimate_as_written", "uncertainty_as_written", "contrast_as_written",
+# firms" — and converting a label would be the guessing this module refuses. It also named
+# `contrast_as_written`, which holds two numbers by construction and now has its own path below.
+NUMERIC_FIELDS = ("estimate_as_written", "uncertainty_as_written",
                   "contrast_uncertainty_as_written", "threshold_as_written")
+
+# Fields holding two numbers joined by `versus`.
+COMPOSITE_FIELDS = ("contrast_as_written",)
+
+# An unreadable form here means the claim's own figure could not be read, so there is nothing to weigh
+# and the claim is a rejection. Every other field is recorded as unconverted and the claim stands: a
+# t-statistic in a notation this module does not read is a limit of this module, and dropping the claim
+# would also drop it from the coverage that makes `UNANSWERED_IN_LITERATURE` sayable.
+FIELDS_REQUIRED_TO_CONVERT = ("estimate_as_written",)
 
 
 def convert(record: dict) -> tuple[dict, list[str]]:
@@ -117,4 +226,24 @@ def convert(record: dict) -> tuple[dict, list[str]]:
         out[f"{name}_scale"] = parsed.scale
         if parsed.bracketed:
             out[f"{name}_bracketed"] = True
+        if parsed.bound != "exact":
+            out[f"{name}_bound"] = parsed.bound
+
+    for field in COMPOSITE_FIELDS:
+        raw = record.get(field)
+        if not raw:
+            continue
+        name = field[: -len("_as_written")]
+        try:
+            first, second = parse_contrast(str(raw))
+        except Unparseable as exc:
+            problems.append(f"{field}: {exc}")
+            continue
+        # In written order, and no difference is taken: which side is the treatment is not something
+        # the string says, and subtracting the wrong way round flips a verdict.
+        out[f"{name}_sides"] = [first.value, second.value]
+        out[f"{name}_scale"] = first.scale
+        bounds = [first.bound, second.bound]
+        if bounds != ["exact", "exact"]:
+            out[f"{name}_bounds"] = bounds
     return out, problems

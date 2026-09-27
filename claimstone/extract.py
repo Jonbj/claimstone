@@ -342,15 +342,28 @@ def harvest(project: Any, store: Store, *, batch: str) -> dict[str, Any]:
                     # ran. It is not a pass and it is not a failure.
                     "kind_verified": kind_verified,
                     "registry_version": request.get("registry_version"),
+                    "claim_gate_version": claimgate.CLAIM_GATE_VERSION,
                     "harvested_at": _now(),
                 }
                 converted, unreadable = numbers.convert(record) if verdict.ok else (record, [])
                 if unreadable:
-                    # A conversion the engine cannot perform is a recorded rejection and never a null:
-                    # a null would read as "no estimate reported", which is a claim about the paper
-                    # that a parser failure has not earned.
-                    verdict = claimgate.Verdict(
-                        False, "UNPARSEABLE_VALUE", "; ".join(unreadable), record)
+                    # A conversion the engine cannot perform is never a null: a null would read as "no
+                    # estimate reported", which is a claim about the paper that a parser failure has not
+                    # earned. Which of the two honest answers it gets depends on the field.
+                    fields = [name for name in numbers.NUMERIC_FIELDS + numbers.COMPOSITE_FIELDS
+                              if any(problem.startswith(f"{name}:") for problem in unreadable)]
+                    blocking = [name for name in fields
+                                if name in numbers.FIELDS_REQUIRED_TO_CONVERT]
+                    if blocking:
+                        # The claim's own figure could not be read, so there is nothing to weigh.
+                        verdict = claimgate.Verdict(
+                            False, "UNPARSEABLE_VALUE", "; ".join(unreadable), record)
+                    else:
+                        # An auxiliary field in a notation the engine does not read. The claim keeps its
+                        # verified quote and its as-written form, the absent machine value is named
+                        # rather than nulled, and stage 6 may not pool what is named here.
+                        converted["unconverted"] = fields
+                        converted["unconverted_why"] = "; ".join(unreadable)
 
                 if verdict.ok:
                     if identifier in seen:

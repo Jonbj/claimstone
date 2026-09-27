@@ -28,6 +28,10 @@ counts the latest row per `claim_id` in each.
 | `*_as_written` | what the paper wrote: `2.4%`, `(0.008)`, `one week`. The model reports only these |
 | `estimate`, `estimate_scale` | the engine's conversion. The model never sees these fields |
 | `*_bracketed` | the figure was in parentheses. Whether that is a standard error or a t-statistic is **not** recorded, because nothing here knows |
+| `*_bound` | `lower`, `upper` or `approximate`, when the paper hedged: `over 300%`, `all below 65%`, `nearly 6%`. Absent means exact, and it is never inferred from the magnitude |
+| `contrast_sides`, `contrast_scale` | the two sides of a contrast in the order written, on one shared scale. No difference is taken: which side is the treatment is not something the string says |
+| `unconverted`, `unconverted_why` | auxiliary fields in a notation the engine does not read. The claim stands and the absent value is **named**. Stage 6 may not pool a field listed here |
+| `claim_gate_version` | which rule set admitted it. Absent means rule set 1, written before the constant existed |
 | `source_id`, `chunk_id`, `source_class` | where it came from, and which class weighs it |
 | `lane`, `kind_verified` | the question kind the call asked about, and whether that could be checked |
 | `call_id`, `backend`, `model`, `harness_version` | which call produced it, and what sat between the prompt and the model |
@@ -43,8 +47,22 @@ the model reports the as-written form **only**, the gate checks that string agai
 
 A scale is recorded and never assumed. `0.024` may be a fraction, a coefficient or a t-statistic and
 nothing here knows which, so its scale is `as_reported`. `2.4 pp` is a difference of percentages and says
-so. A notation the engine cannot read is a **rejection**, never a `null`: a null would read as "no
-estimate reported", which is a claim about the paper that a parser failure has not earned.
+so. A notation the engine cannot read is never a `null`: a null would read as "no estimate reported",
+which is a claim about the paper that a parser failure has not earned.
+
+Which of the two honest answers it gets depends on the field (D37). An unreadable `estimate_as_written` is
+a **rejection** — a claim whose own figure cannot be read has nothing to weigh. An unreadable *auxiliary*
+field leaves the claim standing and is **named in `unconverted`**: `t = 5.73` says nothing against the
+claim it qualifies, and dropping the claim would also drop it from the coverage denominator that makes
+`UNANSWERED_IN_LITERATURE` sayable. 132 claims in the first full round.
+
+A label is stripped, not interpreted. `t = 5.73` and `standard error of 1.90` both convert to a bare
+figure at scale `as_reported`, and the label stays in the as-written form for a reader — because whether a
+figure is a standard error or a t-statistic is the estimand question this engine has always declined.
+
+A hedge is part of the notation and its bound is recorded. `over 300%` is 3.0 with `bound: lower`, not an
+exact 3.0: flattening it would drop an inequality the paper wrote, which is what
+`COMPARATIVE_NOT_IN_QUOTE` exists to catch one field over.
 
 ### `kind_verified`, the honest third state
 

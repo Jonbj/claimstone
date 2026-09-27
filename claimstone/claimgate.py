@@ -24,6 +24,19 @@ import re
 from dataclasses import dataclass, field
 from typing import Any, Iterable, Sequence
 
+from . import numbers
+
+# The rule set these checks are. It is stamped on every claim and every rejection, because a claim
+# admitted under one rule set and a claim admitted under another are not the same kind of row, and a
+# figure that mixes them silently is the failure `tools/check_instrument_versions.py` exists to stop.
+# Rows written before this constant existed carry no `claim_gate_version` and are rule set 1.
+#
+#   1  the first full round: every `_as_written` field checked verbatim against the quote, and any
+#      unreadable value a rejection whatever field it was in.
+#   2  single-figure fields checked verbatim, prose and composite fields checked numeral by numeral,
+#      and an unreadable auxiliary field recorded as `unconverted` instead of dropping the claim.
+CLAIM_GATE_VERSION = 2
+
 FAILURES = (
     "UNKNOWN_QUESTION_ID", "WRONG_KIND", "QUOTE_NOT_FOUND", "VALUE_NOT_IN_QUOTE",
     "NUMBER_NOT_IN_QUOTE", "COMPARATIVE_NOT_IN_QUOTE", "WRONG_STANCE",
@@ -38,7 +51,12 @@ FAILURES = (
 # leading ASCII hyphen **or Unicode minus** — which typeset papers use, and which an earlier draft of
 # this rule did not match. A written-out number is not checked: the rule exists to stop a fabricated
 # figure, and a fabricated figure is written in digits.
-NUMERAL = re.compile(r"[-−]?\d[\d,.]*(?:[eE][-−+]?\d+)?%?")
+#
+# **A comma is a thousands separator only before exactly three digits.** An earlier `[\d,.]*` read the
+# interval `[2,5]` as the single figure `2,5` — twenty-five — and then asked the quote for a number
+# nobody wrote: 45 rejections on the first full round, all of them true claims stating an event window.
+# It is the same error as reading `1964-1997` as minus 1997, one separator over.
+NUMERAL = re.compile(r"[-−]?\d+(?:,\d{3})*(?:\.\d+)?(?:[eE][-−+]?\d+)?%?")
 
 # A digit inside a hyphenated word is a name, not a figure. `day-0` and `T+63` read as numerals
 # rejected two true claims on the first real harvest, whose quotes had no reason to contain a zero.
@@ -196,9 +214,24 @@ def check(
     if not quote or quote not in chunk:
         return no("QUOTE_NOT_FOUND", f"{quote[:80]!r} is not a substring of the chunk")
 
-    for name, value in record.items():
-        if name.endswith("_as_written") and value and str(value) not in quote:
+    # A field holding one figure is checked verbatim: the engine converts that string and nothing else,
+    # so the string is what the quote has to bear.
+    for name in numbers.NUMERIC_FIELDS:
+        value = record.get(name)
+        if value and str(value) not in quote:
             return no("VALUE_NOT_IN_QUOTE", f"{name}={value!r} is not in the quote")
+
+    # Every other as-written field is prose or a composite — `weekly`, `0.31% versus 0.04%` — and stage 4
+    # asks for exactly that. Demanding the whole string verbatim rejected 295 true claims on the first
+    # full round because the quote wrote `each week`, or joined the two sides with `compared with`. The
+    # invariant is about numbers and inequalities, so the numbers are what is checked.
+    for name, value in record.items():
+        if not name.endswith("_as_written") or name in numbers.NUMERIC_FIELDS or not value:
+            continue
+        for figure in _asserted_numerals(str(value)):
+            if not _figure_present(figure, quote):
+                return no("VALUE_NOT_IN_QUOTE",
+                          f"{name}={value!r} asserts {figure!r}, which is not in the quote")
 
     for figure in _asserted_numerals(claim):
         if not _figure_present(figure, quote):

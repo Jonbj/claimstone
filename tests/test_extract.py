@@ -276,6 +276,33 @@ def test_a_value_the_engine_cannot_read_is_a_recorded_rejection_not_a_null(tmp_p
     assert list(store.read("claims.jsonl")) == []
 
 
+def test_an_auxiliary_field_the_engine_cannot_read_marks_the_claim_and_does_not_drop_it(tmp_path):
+    """The claim keeps its verified quote; the absent machine value is named rather than nulled.
+
+    On the first full round this was 183 rejections, and the notations behind them — `t = 5.73`,
+    `significant at the 1% level` — say nothing against the claim. Dropping the claim would also drop
+    it from the coverage denominator that makes `UNANSWERED_IN_LITERATURE` sayable.
+    """
+    text = "net sentiment of 2.4%, significant at the 1% level, predicts returns"
+    store = _store(tmp_path, chunks=(("S01", "S01#c1", text),))
+    extract.build(FakeProject(), store, batch="b1")
+    _answer(store, records=[{"question_id": "H02", "stance": "SUPPORTS",
+                             "claim": "Net sentiment of 2.4% predicts returns.",
+                             "evidence_quote": "net sentiment of 2.4%, significant at the 1% level",
+                             "estimate_as_written": "2.4%",
+                             "uncertainty_as_written": "significant at the 1% level"}])
+    result = extract.harvest(FakeProject(), store, batch="b1")
+    assert (result["accepted"], result["rejected"]) == (1, 0)
+    claim = next(iter(store.read("claims.jsonl")))
+    assert claim["estimate"] == pytest.approx(0.024)
+    # Named, not nulled: no `uncertainty` key at all, and a record of why.
+    assert "uncertainty" not in claim
+    assert claim["unconverted"] == ["uncertainty_as_written"]
+    assert "significant at the 1% level" in claim["unconverted_why"]
+    # The as-written form the model reported is untouched.
+    assert claim["uncertainty_as_written"] == "significant at the 1% level"
+
+
 def test_a_re_harvest_says_what_it_already_held_rather_than_reporting_zero(tmp_path):
     """`0 accepted, 0 rejected` beside `SECONDHAND_CLAIM 2` reads as a contradiction. The counts are
     what was newly written; what was judged is a different number and both are printed."""

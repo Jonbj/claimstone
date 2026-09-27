@@ -1421,3 +1421,104 @@ it is.
 And `ACA` at 0.70 is below 0.80 regardless, so even the fitted declaration would not have passed this round.
 That is worth stating plainly: the corpus that motivated this project is short of its floor on its *best*
 class, and no accounting change reaches that.
+
+---
+
+## D37 — The claim gate was unversioned, and three of its rules were about my code rather than the papers
+
+Date: 2026-09-27 · `claim_gate_version 2` · Supersedes every claim and rejection figure quoted for the
+`full-shapes-2026-09-28` batch before this entry.
+
+The first batch that used all four call shapes returned 1,849 valid answers of 1,888 and proposed 3,749
+records. 882 were rejected — 0.235, against 0.12 on the earlier round with the narrow shapes. A rejection
+rate that doubles when the *question shape* changes is a claim about the gate, not about the literature, so
+the rejections were read before the rate was quoted.
+
+### What the 882 were
+
+| class | v1 | v2 | what changed |
+|---|---|---|---|
+| `VALUE_NOT_IN_QUOTE` | 326 | 167 | verbatim rule narrowed to single-figure fields |
+| `UNPARSEABLE_VALUE` | 183 | 48 | labels, hedges and periods read; auxiliary fields no longer fatal |
+| `NUMBER_NOT_IN_QUOTE` | 242 | 277 | unchanged rule; +35 records now reach it |
+| `QUOTE_NOT_FOUND` | 70 | 70 | unchanged |
+| `COMPARATIVE_NOT_IN_QUOTE` | 37 | 38 | unchanged |
+| `SECONDHAND_CLAIM` | 24 | 24 | unchanged |
+| **total** | **882** | **624** | acceptance 0.765 → **0.834** |
+
+258 records were admitted that v1 rejected. The +35 on `NUMBER_NOT_IN_QUOTE` are **not** a regression: they
+are records that previously died at an earlier check and now reach a later one. Reclassified, not recovered.
+
+### The three defects, and which of them was mine
+
+**1. The verbatim rule applied to prose.** 295 of the 326 `VALUE_NOT_IN_QUOTE` were `horizon_as_written`
+(182) and `contrast_as_written` (113) — and stage 4's own prompt asks for `weekly` and for
+`0.31% versus 0.04%`. Demanding that a quote contain the composite string verbatim rejects a true claim
+whenever the paper joined the two sides with `compared with`. The invariant is about *numbers and
+inequalities*, so the fields the engine converts are checked verbatim and every other `_as_written` field is
+checked numeral by numeral.
+
+**2. `contrast_as_written` was in `NUMERIC_FIELDS`**, where `parse` correctly refused it: it holds two
+numbers by construction. 60 of the 183 `UNPARSEABLE_VALUE` were this module rejecting the shape this project
+asked the model for. It now has a two-sided reading, and both sides must share a scale — `2.00% versus 0.14`
+is a per-cent against a bare number, and a difference taken across that pair is off by a hundred with nothing
+looking wrong.
+
+**3. An unreadable auxiliary field destroyed the whole claim.** `t = 5.73`, `(se = 1.20)`,
+`standard error of 1.90`, `nearly 6%`, `40 bps`, `0.55% per month` — 135 claims with verified quotes, lost to
+notations this engine did not read. The notation is now read, the hedge is recorded as the bound it states
+(`lower`, `upper`, `approximate`) rather than flattened to an exact value, and the label is stripped without
+being interpreted: **whether a bracketed figure is a standard error or a t-statistic remains the estimand
+question `numbers.py` has always declined**, so `t = 5.73` converts to 5.73 `as_reported` and the label stays
+in the as-written form for a reader.
+
+Where a field still cannot be read, the claim is kept and the field is named in `unconverted` — 132 claims.
+Nothing is nulled: a null would read as "no uncertainty reported", which a parser failure has not earned.
+Only `estimate_as_written` is fatal, because a claim whose own figure cannot be read has nothing to weigh.
+**Stage 6 may not pool a field named in `unconverted`.**
+
+### Two predictions, both falsified by the measurement
+
+Worth recording because the pattern is the point of D25.
+
+**`[2,5]` is an event window, not twenty-five.** `NUMERAL` allowed `[\d,.]*`, so the interval `[2,5]` read as
+one thousands-separated figure and the quote was asked for a number nobody wrote — the same error as reading
+`1964-1997` as minus 1997. 45 rejections carried that signature and the fix was predicted to recover them.
+**It recovered one.** The quotes contain neither `2` nor `5`: the model took the window from a table header,
+not from the span it quoted. The fix stays, because reading `2,5` as twenty-five is wrong whatever it
+recovers; the recovery was zero.
+
+**The negative window offsets were predicted to be the same defect.** `days [-15,-6]`, `days (-∞,-16]` — 26
+rejections. Measured: the bare figure is absent from the quote in 20 of them. Genuine rejections, and the
+gate was right. **No change made.**
+
+The finding behind both: `horizon` is the field where the model most often reaches past its own quote. That
+is a property of the call shape, not of the gate, and it belongs to whoever next edits the prompt.
+
+### The gate had no version, and that is the more serious half
+
+`claimgate.py` — the executable form of invariant 1, the most load-bearing instrument here — carried **no
+version constant**, and claims written under two different rule sets were indistinguishable in the ledger.
+`CLAIM_GATE_VERSION` now exists, is stamped on every claim and rejection, and is registered in
+`tools/check_instrument_versions.py`, which refused to pass until this entry existed. Rows written before it
+carry no `claim_gate_version` and are rule set 1.
+
+One limit stated plainly: `extract --harvest` recomputes the failure breakdown it prints, so no *published*
+figure is stale — but the stored rejection rows for records re-judged and still rejected keep their v1 label.
+Anyone reading `rejections.jsonl` with `grep` rather than through `extract-report` sees rule set 1 labels on
+624 rows. There is no re-judge path for the claim gate over stored rejections; `regate` is the acquisition
+gate.
+
+### What actually reaches stage 6, which is smaller than the claim count
+
+3,033 claims for this batch, 22 of 22 questions covered. But pooling needs an estimate, and:
+
+```
+effect-lane claims                   593
+  with a converted estimate          190
+  with an as-written estimate that failed to convert   0
+  with no estimate_as_written at all 403
+```
+
+**190 poolable estimates**, not 3,033 claims. The 403 are effect claims the model made without reporting a
+figure — which is a finding about the call shape and the honest denominator for anything stage 6 says.
