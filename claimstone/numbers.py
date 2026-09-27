@@ -88,8 +88,11 @@ def parse(as_written: str) -> Value:
 
 # Which as-written fields hold a number. `horizon_as_written` ("one week") and `sample` do not, and
 # converting prose would be the guessing this module refuses.
-NUMERIC_FIELDS = ("estimate_as_written", "uncertainty_as_written", "high_side_as_written",
-                  "low_side_as_written", "contrast_as_written", "threshold_as_written")
+# Aligned with the shapes stage 4 actually asks for. An earlier list named `high_side_as_written` and
+# `low_side_as_written`, which do not exist: `high_side` and `low_side` are subgroup *labels* — "small
+# firms" — and converting a label would be the guessing this module refuses.
+NUMERIC_FIELDS = ("estimate_as_written", "uncertainty_as_written", "contrast_as_written",
+                  "contrast_uncertainty_as_written", "threshold_as_written")
 
 
 def convert(record: dict) -> tuple[dict, list[str]]:

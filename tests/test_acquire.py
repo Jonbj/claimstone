@@ -211,3 +211,35 @@ def test_an_unclassified_refusal_is_not_retried_as_though_a_host_had_refused_us(
     list(acquire.run([candidate], store, FakeFetcher(), use_apis=False))
     again = list(acquire.run([candidate], store, FakeFetcher(), use_apis=False))
     assert again == []
+
+
+def test_acquire_can_be_limited_to_the_declared_manifest(tmp_path):
+    """Measured, and it produced a figure about the wrong population: the pilot corpus discovered 199
+    candidates and then curated 28, and `acquire --limit 28` attempted the first twenty-eight unattempted
+    candidates of the 199 — exactly one of which was on the list. `report` had grown --round and --manifest
+    two days earlier; acquire had neither, so a curated corpus could not be acquired as a corpus.
+    """
+    store = Store("t", base=tmp_path)
+    declared = {"candidate_key": "doi:10.1/declared", "source_class": "ACA", "source_id": "ACA001",
+                "url": "https://x.example/a", "title": "Declared", "round": "sweep"}
+    found = {"candidate_key": "doi:10.9/found", "source_class": "ACA",
+             "url": "https://x.example/b", "title": "Found", "round": "sweep"}
+    fetcher = FakeFetcher(pages={
+        "https://x.example/a": ok("https://x.example/a", pdf()),
+        "https://x.example/b": ok("https://x.example/b", pdf())})
+
+    rows = list(acquire.run([declared, found], store, fetcher, use_apis=False, manifest_only=True))
+    assert [r["candidate_key"] for r in rows] == ["doi:10.1/declared"]
+
+
+def test_acquire_can_be_limited_to_one_round(tmp_path):
+    store = Store("t", base=tmp_path)
+    spring = {"candidate_key": "doi:10.1/a", "source_class": "ACA", "url": "https://x.example/a",
+              "title": "A", "round": "spring"}
+    autumn = {"candidate_key": "doi:10.1/b", "source_class": "ACA", "url": "https://x.example/b",
+              "title": "B", "round": "autumn"}
+    fetcher = FakeFetcher(pages={
+        "https://x.example/a": ok("https://x.example/a", pdf()),
+        "https://x.example/b": ok("https://x.example/b", pdf())})
+    rows = list(acquire.run([spring, autumn], store, fetcher, use_apis=False, round_name="autumn"))
+    assert [r["candidate_key"] for r in rows] == ["doi:10.1/b"]

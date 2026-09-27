@@ -1277,3 +1277,54 @@ schema stage 4 builds asks only for `result_id`, `question_id`, `claim`, `eviden
 the `*_as_written` fields the stage 4 spec's four call shapes specify. So there is nothing to convert, and
 saying "numbers.py is built" would imply values exist. They do not. That is the next step and it means a new
 batch: the schema is inside `call_id`, so asking for more fields is honestly a different call.
+
+## D34 — The pilot obtained 0.32, and it is the cascade rather than the literature
+The pilot corpus was curated **for** open access: every one of its 28 sources carries a DOI that OpenAlex
+reports open. Acquired as a corpus — with the selector `acquire` had been missing — it obtained **9 of 28 =
+0.32**, against the same 0.80 floor, and worse than `alembic-s4`'s 0.56.
+
+That looks like evidence the floor is structurally unreachable, which is the one ground its own rationale
+names for lowering it. **It is not, and reading the attempt records is what showed it.**
+
+### Measured, 2026-09-28
+
+```
+attempted            27 of 28 · obtained 9 · 0.32       ACA 5/14 · WP 4/14
+failures             PAYWALL_403 10 · ABSTRACT_ONLY 9
+of the 18 failures   9 tried exactly one location
+                     3 declined an open copy because robots.txt disallows it
+by host and cause    doi.org ABSTRACT_ONLY 13 · doi.org PAYWALL_403 9
+                     link.springer.com UNEXPECTED_CONTENT_TYPE 4
+                     www.ncbi.nlm.nih.gov ROBOTS_DISALLOWED 3
+```
+
+One record tells the story. `ACA008`, reported `green` open access, tried three locations: Springer's
+`content/pdf/…` returned `UNEXPECTED_CONTENT_TYPE`, **PubMed Central was declined for `robots.txt`**, and
+`doi.org` served an abstract page. The open copy existed, the cascade found it, and we did not take it —
+correctly, because honouring `robots.txt` is not negotiable.
+
+**So 0.32 is a statement about this cascade.** Three fixable gaps, none of which is the literature being
+closed:
+
+**PubMed Central is not crawlable and has a sanctioned route.** `ROBOTS_DISALLOWED` on
+`ncbi.nlm.nih.gov/pmc/articles/…` is correct conduct and a dead end; PMC publishes an OA Web Service and an
+FTP service precisely so nobody crawls it. A biomedical corpus without that route loses its best source of
+full text, which for this field is most of it.
+
+**Springer's PDF endpoint is not returning a PDF to us.** Four `UNEXPECTED_CONTENT_TYPE` on
+`link.springer.com/content/pdf/…`, a URL that usually serves one. Worth one look at the bytes before
+concluding anything: it may be an interstitial, and it may be the gate's `expect` being too narrow.
+
+**Half the failures tried one location.** Nine of eighteen had a single attempt, so Unpaywall offered one
+address or none. Whether that is Unpaywall's coverage or how `resolve.plan` reads it is not yet measured.
+
+### What this means for the floor, stated carefully
+
+**Nothing here justifies moving it.** The floor is lowered only on evidence that a class of sources is
+structurally unobtainable, and what has been established is that three routes are missing from the
+downloader. That is the opposite finding: the number is low because of work not done, and lowering the bar to
+meet it would be exactly the move the invariant forbids.
+
+And the earlier reading in D32 — that `is_oa` is a weak predictor of obtainability — survives but shifts. It
+is not that the flag is wrong; the open copy really was open. It is that **`is_oa` predicts a copy exists and
+says nothing about whether the route to it is one we may take**.

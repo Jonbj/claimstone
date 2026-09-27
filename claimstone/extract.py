@@ -51,6 +51,15 @@ def system_prompt(kind: str, questions: Iterable[Any]) -> str:
     """
     listed = "\n".join(f"  {q.id}: {q.text}" for q in questions)
     stances = ", ".join(claimgate.STANCES_BY_KIND[kind])
+    # Named in the prompt as well as in the schema: a property the instructions do not mention is a field a
+    # model fills by guessing what the name means.
+    fields = EXTRA_FIELDS.get(kind, {})
+    extra = "\n".join(f"  {name:<32} {FIELD_NOTES.get(name, '')}" for name in fields)
+    if extra:
+        extra = (extra + "\n\nEvery field after `stance` is optional: give it when the passage gives it and "
+                 "leave it out otherwise.\nA field ending `_as_written` is copied from the passage exactly as "
+                 "written — `2.4%`, not 0.024 —\nbecause the engine converts and a figure you converted "
+                 "could be wrong in a way the quote cannot show.")
     return f"""You extract claims from one passage of one document. You judge nothing beyond what the
 passage says.
 
@@ -67,6 +76,7 @@ Return a JSON array. Each element is one claim the passage makes that bears on o
   evidence_quote   a span copied EXACTLY from the passage, character for character, containing the
                    assertion. Do not normalise spacing, fix typography, join lines, or trim inside it.
   stance           one of: {stances}
+{extra}
 
 Three hard rules, each checked in code, each discarding a whole record when broken.
 
@@ -85,8 +95,66 @@ stretch a passage about something else into a claim about one of these questions
 Output the JSON array and nothing else. No prose, no code fence, no explanation."""
 
 
+# What each kind is asked for beyond the core five. Every one is **optional**: a chunk reporting an estimate
+# and no standard error is ordinary, and requiring the field would reject a claim for something the passage
+# does not have.
+#
+# `*_as_written` means exactly what the paper wrote — `2.4%`, `(0.008)` — and never a converted value. The
+# gate checks the as-written string against the quote and `numbers.py` converts, so the value never came from
+# the model and cannot be wrong in a way the quote could not reveal.
+#
+# Measured need: the first complete round produced 3,971 claims and **zero** carried a converted value,
+# because this function asked only for the core five. A converter that works cannot improve a stage 6 input
+# that does not exist.
+EXTRA_FIELDS: dict[str, dict[str, Any]] = {
+    "effect": {
+        "estimate_as_written": {"type": "string"},
+        "uncertainty_as_written": {"type": "string"},
+        "horizon_as_written": {"type": "string"},
+        "sample": {"type": "string"},
+        "design": {"type": "string"},
+        "dependence": {"type": "string"},
+    },
+    "heterogeneity": {
+        "moderator": {"type": "string"},
+        "high_side": {"type": "string"},
+        "low_side": {"type": "string"},
+        "contrast_as_written": {"type": "string"},
+        "contrast_uncertainty_as_written": {"type": "string"},
+        "prespecified": {"type": "boolean"},
+    },
+    "method": {
+        # The two ways the literature answers a methodological requirement. The source's declared `role`
+        # comes from sources.yaml and is added by the engine, not asked of the model: which classes are
+        # methodological is project data, and reading it off the class id `MET` would be domain knowledge.
+        "support_type": {"type": "string", "enum": ["ENDORSEMENT", "DEMONSTRATED_FAILURE"]},
+    },
+    # `premise`: question_id, stance, claim, evidence_quote. Nothing else.
+    "premise": {},
+}
+
+# How each extra field is asked for, in the prompt. A schema property the instructions do not mention is a
+# field a model fills by guessing what the name means.
+FIELD_NOTES: dict[str, str] = {
+    "estimate_as_written": "the effect size EXACTLY as the passage writes it: `2.4%`, `0.31`, `13 bps`",
+    "uncertainty_as_written": "its standard error, t-statistic or interval, as written: `(0.008)`, `t = 3.4`",
+    "horizon_as_written": "over what period, as written: `one week`, `T+63`",
+    "sample": "what was studied: `US equities 1996-2008`",
+    "design": "how: `panel regression with firm and time fixed effects`",
+    "dependence": "how inference handled dependence: `standard errors clustered by firm and week`",
+    "moderator": "what the effect varies by: `firm size`",
+    "high_side": "the subgroup with the larger effect: `small firms`",
+    "low_side": "the subgroup with the smaller one: `large firms`",
+    "contrast_as_written": "the two sides as written: `0.31% versus 0.04%`",
+    "contrast_uncertainty_as_written": "the contrast's uncertainty, as written: `(t = 3.4)`",
+    "prespecified": "true only if the passage says the subgroup was chosen in advance",
+    "support_type": "ENDORSEMENT if the passage endorses the requirement, DEMONSTRATED_FAILURE if it shows "
+                    "what goes wrong without it",
+}
+
+
 def response_schema(kind: str, questions: Iterable[Any]) -> dict[str, Any]:
-    """Only this kind's question ids and only its stances. No cap on the claim count — see D22."""
+    """This kind's question ids, its stances, and the fields its shape asks for. No cap — see D22."""
     return {
         "type": "array",
         "items": {
@@ -103,6 +171,7 @@ def response_schema(kind: str, questions: Iterable[Any]) -> dict[str, Any]:
                 "evidence_quote": {"type": "string"},
                 "stance": {"type": "string",
                            "enum": list(claimgate.STANCES_BY_KIND[kind])},
+                **EXTRA_FIELDS.get(kind, {}),
             },
         },
     }

@@ -352,3 +352,75 @@ def test_the_built_schema_asks_for_a_result_id(tmp_path):
     extract.build(FakeProject(), store, batch="b1")
     unit = model_call.Queue(store, lane="extract", batch="b1").requests()[0]
     assert "result_id" in unit["response_schema"]["items"]["required"]
+
+
+# --- The four call shapes, and the fields stage 6 needs -------------------------------------------
+#
+# Measured: the first complete round produced 3,971 claims and **zero** carried a converted value, because
+# the schema asked only for the core four fields. numbers.py existed and harvest called it and there was
+# nothing to convert. A stage 6 input that does not exist is not improved by a converter that works.
+
+def test_the_effect_shape_asks_for_the_figures_as_the_paper_wrote_them(tmp_path):
+    store = _store(tmp_path)
+    extract.build(FakeProject(), store, batch="b1", kind="effect")
+    props = model_call.Queue(store, lane="extract", batch="b1").requests()[0][
+        "response_schema"]["items"]["properties"]
+    for field in ("estimate_as_written", "uncertainty_as_written", "horizon_as_written",
+                  "sample", "design", "dependence"):
+        assert field in props, field
+    # Optional, every one. A chunk that reports an estimate and no standard error is ordinary, and
+    # requiring the field would reject the claim for something the passage does not have.
+    required = model_call.Queue(store, lane="extract", batch="b1").requests()[0][
+        "response_schema"]["items"]["required"]
+    assert set(required) == {"result_id", "question_id", "claim", "evidence_quote", "stance"}
+
+
+def test_the_heterogeneity_shape_asks_for_the_contrast_and_its_sides(tmp_path):
+    store = _store(tmp_path)
+    extract.build(FakeProject(), store, batch="b1", kind="heterogeneity")
+    props = model_call.Queue(store, lane="extract", batch="b1").requests()[0][
+        "response_schema"]["items"]["properties"]
+    for field in ("moderator", "high_side", "low_side", "contrast_as_written",
+                  "contrast_uncertainty_as_written", "prespecified"):
+        assert field in props, field
+    assert props["prespecified"]["type"] == "boolean"
+
+
+def test_the_method_shape_asks_how_the_literature_answered(tmp_path):
+    store = _store(tmp_path)
+    extract.build(FakeProject(), store, batch="b1", kind="method")
+    props = model_call.Queue(store, lane="extract", batch="b1").requests()[0][
+        "response_schema"]["items"]["properties"]
+    assert props["support_type"]["enum"] == ["ENDORSEMENT", "DEMONSTRATED_FAILURE"]
+    # The source's declared role comes from sources.yaml and is added by the engine: which classes are
+    # methodological is project data, and reading it off the class id would be domain knowledge.
+    assert "role" not in props
+
+
+def test_the_premise_shape_asks_for_nothing_else(tmp_path):
+    store = _store(tmp_path)
+    extract.build(FakeProject(), store, batch="b1", kind="premise")
+    props = model_call.Queue(store, lane="extract", batch="b1").requests()[0][
+        "response_schema"]["items"]["properties"]
+    assert set(props) == {"result_id", "question_id", "claim", "evidence_quote", "stance"}
+
+
+def test_an_effect_claim_arrives_with_a_converted_estimate(tmp_path):
+    text = "net sentiment of 2.4% (0.008) over one week predicts returns in US equities 1996-2008"
+    store = _store(tmp_path, chunks=(("S01", "S01#c1", text),))
+    extract.build(FakeProject(), store, batch="b1", kind="effect")
+    _answer(store, records=[{"result_id": "r1", "question_id": "H02", "stance": "SUPPORTS",
+                             "claim": "Net sentiment of 2.4% predicts returns.",
+                             "evidence_quote": "net sentiment of 2.4% (0.008) over one week",
+                             "estimate_as_written": "2.4%",
+                             "uncertainty_as_written": "(0.008)",
+                             "horizon_as_written": "one week",
+                             "sample": "US equities 1996-2008"}])
+    assert extract.harvest(FakeProject(), store, batch="b1")["accepted"] == 1
+    claim = next(iter(store.read("claims.jsonl")))
+    assert claim["estimate"] == pytest.approx(0.024)
+    assert claim["estimate_scale"] == "fraction"
+    assert claim["uncertainty_bracketed"] is True
+    # Prose is carried and not converted: a horizon is not a number.
+    assert claim["horizon_as_written"] == "one week"
+    assert "horizon" not in claim

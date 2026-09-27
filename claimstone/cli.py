@@ -146,6 +146,8 @@ def _acquire(args: argparse.Namespace) -> int:
         use_apis=not args.no_apis,
         thresholds=project.gate_thresholds,
         policy=project.gate_policy,
+        round_name=args.round,
+        manifest_only=args.manifest,
         classes=project.classes,
         limit=args.limit,
     ):
@@ -803,6 +805,11 @@ def build_parser() -> argparse.ArgumentParser:
                                       "is judged per round")
         if name == "acquire":
             command.add_argument("--campaign", help="name this run; required with --retry-class")
+            command.add_argument("--round", default=None,
+                                 help="attempt only this round's candidates")
+            command.add_argument("--manifest", action="store_true",
+                                 help="attempt only the sources the manifest declared, which is the "
+                                      "population a curated corpus's floor is about")
             command.add_argument("--retry-class", action="append",
                                  help="re-request a terminal failure class, e.g. PAYWALL_403")
             command.add_argument("--limit", type=int, default=None)

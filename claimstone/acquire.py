@@ -194,13 +194,27 @@ def run(
     policy: dict[str, Any] | None = None,
     classes: Any = None,
     limit: int | None = None,
+    round_name: str | None = None,
+    manifest_only: bool = False,
 ) -> Iterator[dict[str, Any]]:
-    """Acquire what the retry policy allows. A candidate it declines writes no row."""
+    """Acquire what the retry policy allows. A candidate it declines writes no row.
+
+    `round_name` and `manifest_only` select the population, the same two selectors `report` has. Without
+    them a curated corpus could not be acquired as a corpus: measured on the pilot, which discovered 199
+    candidates and then curated 28, `--limit 28` attempted the first twenty-eight unattempted candidates of
+    the 199 and exactly one was on the list. The figure that came out looked plausible and was about a
+    different population.
+    """
     previous = store.latest_by("acquisitions.jsonl", "candidate_key")
     attempted = 0
     for candidate in candidates:
         if limit is not None and attempted >= limit:
             return
+        if round_name is not None and candidate.get("round") != round_name:
+            continue
+        # A manifest row declares itself with a `source_id`; a discovered one has none.
+        if manifest_only and not candidate.get("source_id"):
+            continue
         prior = previous.get(str(candidate["candidate_key"]))
         if not should_attempt(prior, retry_classes=retry_classes, retry_after_s=retry_after_s):
             continue
