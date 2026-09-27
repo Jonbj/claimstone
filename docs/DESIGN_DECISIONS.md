@@ -1584,7 +1584,11 @@ ollama-cloud/gpt-oss:20b              62/70          0.06             0.23      
 ollama-cloud/glm-5.3-flash             0/70             —                —               —
 ```
 
-**Not one of them carries information, and two are negative.** `mistral-large-3:675b` is the cleanest
+**RETRACTED the same day. The table above is invalid and the paragraph below it was wrong.** See
+"The ground truth was contaminated" at the end of this entry. The rows are kept because a superseded
+figure is recorded here rather than erased, and because the way it was wrong is the finding.
+
+~~**Not one of them carries information, and two are negative.**~~ `mistral-large-3:675b` is the cleanest
 demonstration: 0.77 on both sets, an identical rate on two sets that differ by ground truth. `gpt-oss:120b`
 is worse than a coin — it flags a good claim more often than a fabricated figure — and its reasons show
 the mechanism: it *asserts* the figure is in the quote when the figure is nowhere in the passage, which is
@@ -1609,3 +1613,63 @@ lane. Measuring a reviewer on 40 calls is not that, and buying one on 3,033 woul
 The second column is **not** a false-positive rate. Stage 5 exists because a gate-passed claim can still
 overstate its quote, and the spec's reference corpus had 25.7% of them doing so. So the ceiling on the gap
 is about 0.74, not 1.00, and the tool says so where the number is printed.
+
+### The ground truth was contaminated, and the table above measures nothing
+
+Written after the table, on the same day, from the same tool.
+
+`claude-opus-5` was then measured at 0.60 sensitivity and 0.83 flagged-anyway — and its *reasons* did not
+read like a lenient reviewer. They read like a careful one: "the quoted row sits under Panel A: Positive
+Signals with the header ordering Group, N, Initial Reaction…", naming the table structure the figure came
+from. A reviewer that specific, scoring badly, is a reason to doubt the scorer.
+
+The ground truth was rebuilt by putting every candidate row **back through `check` as the gate is now**,
+rather than trusting the `failure` and `detail` the ledger was written with:
+
+```
+rows labelled NUMBER_NOT_IN_QUOTE                                   713
+  still rejected that way under claim_gate_version 3                593
+  and asserting a figure absent from the whole chunk                  7
+```
+
+**Seven.** The set the table was drawn from held 125 rows under the stored labels and holds 7 under the
+current gate. Two things had leaked in: rows whose figures the gate no longer considers asserted at all
+(`89-91%` read as minus 91, fixed before the table was written — the ledger keeps the old label), and the
+per-cent defect below, fixed after it. A reviewer calling those `SUPPORTED` was **right**, and the tool
+counted it wrong. Every sensitivity figure above is therefore a measurement of my filter.
+
+Seven rows cannot measure a reviewer. **The reviewer question is open**, and the stage 5 spec had already
+said how it closes: §5 of that spec states that a reference "needs a blind, human-adjudicated sample of
+chunks", and that inventing a mechanical one is the honest difficulty rather than an oversight. This entry
+is what trying to invent one anyway looks like.
+
+### What the 586 are, which is the real finding
+
+The gap between 593 and 7 is not noise. In **586 of 593 cases the asserted figure is somewhere in the
+chunk and not in the quoted span** — the model quotes one sentence and cites a figure from the table two
+lines below it.
+
+That is the dominant rejection mode of this project, it is a property of the **call shape** rather than of
+the gate or the literature, and it is actionable: the quote span stage 4 asks for is too narrow for a
+claim whose figure lives in a table. It also explains why `horizon` and `contrast` overreach the way D37
+measured — same cause, different field.
+
+And it is exactly why the reviewer's standard and the gate's standard must differ. The gate is right to
+insist the figure be in the quote; the reviewer is right to judge in context. Two correct rules, and the
+distance between them is 586 rows.
+
+### `claim_gate_version 3` — a per-cent sign the quote leaves implicit
+
+A table cell reads `1.99` under a header declaring percent; the claim writes `1.99%`. `_figure_present`
+asked the quote for the sign and refused a figure that was plainly there.
+
+The sign may now be dropped — but only when the quote attaches no **different** unit to those digits, so
+`2.4%` against `2.4 basis points` stays a rejection, because that is a real disagreement about magnitude
+and two orders of it. The unit vocabulary is `numbers._UNITS` rather than a second copy: two lists of
+what a unit is would drift, and the drift would look like a rejection.
+
+**Predicted from a sample of five, and wrong again.** Three of five sampled rejections were this defect,
+which implied around 166 of 277. Measured: **18**. `NUMBER_NOT_IN_QUOTE` fell 277 → 259 and 17 claims were
+admitted. Third falsified prediction of the day, and the only one where the sample was mine and I treated
+five rows as representative of two hundred. The pattern is now well enough attested to state as a rule:
+**on this corpus, a defect's signature in a five-row sample predicts nothing about its mass.**

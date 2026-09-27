@@ -64,22 +64,32 @@ def main() -> int:
     questions = {q.id: q for q in project.questions}
     chunks = store.latest_by("chunks.jsonl", "chunk_id")
 
-    def figure_absent_from_chunk(row: dict) -> bool:
-        """The asserted figure is nowhere in the passage, so no reading of it can support the claim."""
-        detail = str(row.get("detail") or "")
-        opening = detail.find("'")
-        closing = detail.find("'", opening + 1)
-        if opening < 0 or closing < 0:
-            return False
-        figure = detail[opening + 1:closing]
+    def still_overstates(row: dict) -> bool:
+        """Re-judged under the gate as it is now, and the figure absent from the whole passage.
+
+        The stored `failure` and `detail` are **not** trusted. A rejection ledger keeps the label it was
+        written with, and the gate has three rule sets: an earlier run of this tool scored reviewers
+        against rows whose figures the current gate does not consider asserted at all — `89-91%` read as
+        minus 91, a per-cent sign the quote left implicit — and a reviewer calling those `SUPPORTED` was
+        right while this tool counted it wrong. So every candidate row is put back through `check`.
+        """
+        record = row.get("record") or {}
         chunk = chunks.get(str(row.get("chunk_id")))
-        if chunk is None or not figure:
+        if chunk is None:
             return False
-        return not claimgate._figure_present(figure, str(chunk["text"]))
+        text = str(chunk["text"])
+        verdict = claimgate.check(record, chunk=text, questions=project.questions,
+                                  lane=str(row.get("lane") or ""))
+        if verdict.failure != "NUMBER_NOT_IN_QUOTE":
+            return False
+        # Absent from the passage, not merely from the quote: the reviewer is asked to judge in context,
+        # so a figure two sentences away is one it may legitimately rely on.
+        figures = [f for f in claimgate._asserted_numerals(str(record.get("claim") or ""))
+                   if not claimgate._figure_present(f, text)]
+        return bool(figures)
 
     overstating = [r for r in store.read("rejections.jsonl")
-                   if r.get("failure") == "NUMBER_NOT_IN_QUOTE" and r.get("record")
-                   and figure_absent_from_chunk(r)]
+                   if r.get("record") and still_overstates(r)]
     honest = list(store.read("claims.jsonl"))
 
     rng = random.Random(args.seed)

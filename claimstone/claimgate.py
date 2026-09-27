@@ -35,7 +35,9 @@ from . import numbers
 #      unreadable value a rejection whatever field it was in.
 #   2  single-figure fields checked verbatim, prose and composite fields checked numeral by numeral,
 #      and an unreadable auxiliary field recorded as `unconverted` instead of dropping the claim.
-CLAIM_GATE_VERSION = 2
+#   3  a per-cent sign the quote leaves implicit no longer makes the figure absent, unless the quote
+#      attaches a different unit to those digits.
+CLAIM_GATE_VERSION = 3
 
 FAILURES = (
     "UNKNOWN_QUESTION_ID", "WRONG_KIND", "QUOTE_NOT_FOUND", "VALUE_NOT_IN_QUOTE",
@@ -162,6 +164,19 @@ def _asserted_numerals(claim: str) -> list[str]:
     return out
 
 
+# Every unit notation this project knows, longest first. Taken from `numbers._UNITS` rather than
+# restated, so the gate and the converter cannot drift apart about what a unit is.
+_UNIT_WORDS: tuple[str, ...] = tuple(sorted(
+    (suffix for suffixes, _factor, _scale in numbers._UNITS for suffix in suffixes),
+    key=len, reverse=True))
+
+
+def _unit_after(text: str, at: int) -> str:
+    """The unit the text attaches to a figure ending at `at`, or "" if it attaches none."""
+    tail = text[at:at + 20].lstrip().lower()
+    return next((word for word in _UNIT_WORDS if tail.startswith(word)), "")
+
+
 def _figure_present(figure: str, quote: str) -> bool:
     """Is this figure in the quote, as a figure?
 
@@ -169,9 +184,28 @@ def _figure_present(figure: str, quote: str) -> bool:
     paper's typesetting runs them into words — `return reversals-3.7 bps versus 16.7` holds both, and
     extracting from the quote found neither. Bounded by digits on each side so a claim of `1.5` does
     not pass on a quote of `11.5`, which is a different figure.
+
+    **A per-cent sign the quote leaves implicit does not make the figure absent.** A table cell reads
+    `1.99` under a header declaring percent, and the claim writes `1.99%`. Measured on the first full
+    round: three of five sampled `NUMBER_NOT_IN_QUOTE` rejections were this, and the figure was in the
+    quote in every one of them. The invariant is about the *number*; the unit is checked verbatim on
+    `estimate_as_written` and its siblings, which is why that rule stays strict.
+
+    So the sign may be dropped — but only when the quote attaches no **different** unit to those
+    digits. A claim of `2.4%` against a quote of `2.4 basis points` is a real disagreement about
+    magnitude, and dropping the sign blindly would pass it.
     """
-    pattern = r"(?<![\d])" + re.escape(figure) + r"(?![\d])"
-    return re.search(pattern, quote.replace("\u2212", "-")) is not None
+    body = quote.replace("\u2212", "-")
+    found = re.search(r"(?<![\d])" + re.escape(figure) + r"(?![\d])", body)
+    if found is not None:
+        return True
+    if not figure.endswith("%"):
+        return False
+    bare = figure[:-1]
+    for found in re.finditer(r"(?<![\d])" + re.escape(bare) + r"(?![\d%])", body):
+        if not _unit_after(body, found.end()):
+            return True
+    return False
 
 
 def _classes(text: str, comparatives: dict[str, Sequence[str]]) -> set[str]:

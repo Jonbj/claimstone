@@ -380,3 +380,40 @@ def test_a_comma_is_a_thousands_separator_only_before_three_digits():
     mismatched = "a sample of 1,297 firms"
     assert verdict(record(claim="The sample has 2,400 firms.", evidence_quote=mismatched),
                    chunk=mismatched).failure == "NUMBER_NOT_IN_QUOTE"
+
+
+# --- a per-cent sign the quote leaves implicit ----------------------------------------------------
+# A table cell reads `1.99` under a header declaring percent and the claim writes `1.99%`. Measured on
+# the first full round: three of five sampled NUMBER_NOT_IN_QUOTE rejections were this, and the figure
+# was in the quote in every one.
+
+PERCENT_CHUNK = "the initial reaction is 1.99 and the drift is 0.06 for small caps"
+
+
+def test_a_percent_sign_the_quote_leaves_implicit_does_not_make_the_figure_absent():
+    rec = record(claim="The initial reaction is 1.99%.", evidence_quote=PERCENT_CHUNK)
+    assert verdict(rec, chunk=PERCENT_CHUNK).ok is True
+
+
+def test_a_different_unit_on_those_digits_is_still_a_disagreement():
+    """`2.4%` against `2.4 basis points` is two magnitudes apart, and dropping the sign blindly would
+    pass it. The unit is what makes them differ, so the unit decides."""
+    for unit in ("basis points", "percentage points", "bps"):
+        quote = f"a drift of 2.4 {unit} over the week"
+        rec = record(claim="The drift is 2.4%.", evidence_quote=quote)
+        assert verdict(rec, chunk=quote).failure == "NUMBER_NOT_IN_QUOTE", unit
+
+
+def test_the_digit_boundary_still_holds_with_the_sign_dropped():
+    """A claim of 1.5% must not pass on a quote of 11.5, which is a different figure."""
+    quote = "a drift of 11.5 over the week"
+    rec = record(claim="The drift is 1.5%.", evidence_quote=quote)
+    assert verdict(rec, chunk=quote).failure == "NUMBER_NOT_IN_QUOTE"
+
+
+def test_the_unit_vocabulary_is_the_converters_and_not_a_second_copy():
+    """Two lists of what a unit is would drift, and the drift would look like a rejection."""
+    from claimstone import claimgate, numbers
+
+    declared = {s for suffixes, _f, _s in numbers._UNITS for s in suffixes}
+    assert set(claimgate._UNIT_WORDS) == declared

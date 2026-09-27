@@ -148,8 +148,10 @@ stage goes through. `numbers.py` converts, and 223 claims in the first full roun
 0.56 on its manifest round against a floor of 0.80, so `synthesize` writes no profiles and exits
 `INSUFFICIENT_ACQUISITION` (invariant 3). That is the first place in the project where the floor has had
 something to gate, and the deliverable being a refusal is a finding rather than a failure. What is
-missing for a verdict is a corpus that clears its floor — an acquisition problem — and **a reviewer that
-discriminates**, which four hosted candidates measurably do not (D38).
+missing for a verdict is a corpus that clears its floor — an acquisition problem — and a **reviewer whose
+judgement has been checked**, which is still open: an attempt to check one mechanically produced a ground
+truth of seven usable rows and a retracted table (D38), and the stage 5 spec had already said a blind
+human-adjudicated sample is what settles it.
 
 **The vertical slice reaches a stored claim.** 63 claims for H02 from 4 studies, every evidence quote
 verified in code against the chunk it came from (D26). 0.95 is a floor on the gate's pass rate, not an
