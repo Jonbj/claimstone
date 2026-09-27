@@ -1522,3 +1522,90 @@ effect-lane claims                   593
 
 **190 poolable estimates**, not 3,033 claims. The 403 are effect claims the model made without reporting a
 figure — which is a finding about the call shape and the honest denominator for anything stage 6 says.
+
+---
+
+## D38 — Stage 6 is built and refuses every corpus here, which is the invariant working
+
+Date: 2026-09-27 · `decision_contract_version 1`
+
+`evidence.py` and `synthesize.py`, 28 tests, no model and no network. The stage that was going to be the
+hardest turned out to be the smallest, because D16 defined a verdict and defining it removed most of the
+work: the rules are counting and coverage rules, so there is no pool, no R, no publication-bias
+correction and no multiplicity adjustment — a Benjamini-Hochberg over count-based rules would be
+rigour-shaped output with no object. The disclosure that no error rate is controlled is printed instead,
+and is never labelled a correction.
+
+**It produces no verdict.** Layer 1 writes a profile; `adjudicate` is the only command in the project
+that writes a judgement, and it refuses a provisional profile, refuses a rationale under 120 characters,
+and records the profile hash it was shown. A judgement against a hash that has since moved is displayed
+as **stale** with both hashes, because a verdict that outlives its reason is worse than no verdict.
+
+Two tests exist to make a regression here argue rather than ship: one walks both modules' syntax trees
+and asserts no name resembling a verdict threshold, and one asserts that the four states beyond
+`SUPPORTED` appear nowhere except the declared vocabulary. They walk the AST rather than grepping the
+text, because the docstrings discuss thresholds at length and a test that fails over a comment explaining
+why there is no threshold is a test that gets deleted rather than fixed.
+
+### What it says about the real corpora, which is nothing
+
+```
+synthesize projects/alembic-s4                 INSUFFICIENT_ACQUISITION: 0.21 against floor 0.80
+synthesize projects/alembic-s4 --manifest-only  INSUFFICIENT_ACQUISITION: 0.56 against floor 0.80
+```
+
+No profiles written, exit 3. This is **the first place in the project where invariant 3 has had something
+to gate**, and it gates. The happy path is covered by tests and has never run on a real corpus, because
+no corpus here clears its floor — and the one response that is off the table is lowering the floor to see
+it, which is what makes the refusal worth anything.
+
+### The reviewer is the binding constraint now, and it is measured
+
+Stage 5 is implemented and cannot be run on this corpus, because `SameReader` forbids the extractor —
+`deepseek-v4.1-flash` — from judging its own claims, and no other available reader discriminates.
+
+`tools/measure_reviewer_sensitivity.py` scores a candidate against a ground truth the store holds. A
+record rejected for `NUMBER_NOT_IN_QUOTE` asserted a figure its quote lacks — but that alone is not clean,
+because the gate checks the quote while stage 5's prompt asks the reviewer to judge **in the context of
+the whole passage**, so a reviewer finding the figure two sentences later and saying `SUPPORTED` answered
+the question it was asked. The first run of this tool made exactly that error and reported 0.15 for a
+reviewer that may only have been reading. The set is therefore narrowed to figures absent from the **whole
+chunk**: unambiguous under either standard.
+
+Beside it, the claims the gate accepted. Sensitivity alone is worthless — a reviewer answering
+`OVERSTATED` to everything scores 1.00 on the first set — so the quantity is the **gap**.
+
+```
+reader                              answered   sensitivity   flagged anyway   discrimination
+claude-cli/claude-opus-5               6/6           1.00             1.00           +0.00   (n=3)
+ollama-cloud/mistral-large-3:675b     70/70          0.77             0.77           +0.00
+ollama-cloud/gpt-oss:120b             69/70          0.09             0.17           -0.08
+ollama-cloud/gpt-oss:20b              62/70          0.06             0.23           -0.16
+ollama-cloud/glm-5.3-flash             0/70             —                —               —
+```
+
+**Not one of them carries information, and two are negative.** `mistral-large-3:675b` is the cleanest
+demonstration: 0.77 on both sets, an identical rate on two sets that differ by ground truth. `gpt-oss:120b`
+is worse than a coin — it flags a good claim more often than a fabricated figure — and its reasons show
+the mechanism: it *asserts* the figure is in the quote when the figure is nowhere in the passage, which is
+the fluency-without-fidelity failure D31 found in a different model on a different task.
+
+**Second cap error of the project, mine.** A first pass at gpt-oss:120b lost 34% of calls to `NO_BODY` and
+`TRUNCATED` at stage 5's shipped 400-token cap, and I read that as a property of the model. At 1,200 it
+answered 69 of 70. D31 had already recorded that a cap fitted to one model is not a fair test of another,
+and the tool now takes the cap as an argument.
+
+**`claude-opus-5` is not cleared by this table.** n=3 is nothing, and a perfect score on both sets is what
+a reviewer flagging everything also produces. What it does show is a different *kind* of answer: its
+reasons name the exact figures in the quote and it reaches `NOT_APPLICABLE` — the quote does not speak to
+the question cited — where the hosted readers reach for `SUPPORTED` or `OVERSTATED` wholesale. That is a
+lead, not a result.
+
+And the standing constraint still holds: 3,033 claims on an interactive subscription plan is not a batch
+lane. Measuring a reviewer on 40 calls is not that, and buying one on 3,033 would be.
+
+### The honest ceiling on the second rate
+
+The second column is **not** a false-positive rate. Stage 5 exists because a gate-passed claim can still
+overstate its quote, and the spec's reference corpus had 25.7% of them doing so. So the ceiling on the gap
+is about 0.74, not 1.00, and the tool says so where the number is printed.

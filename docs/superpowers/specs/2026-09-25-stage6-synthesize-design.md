@@ -1,6 +1,6 @@
 # Stage 6 — synthesize: design
 
-Date: 2026-09-25 · Scope: stage 6 only · Status: approved, not implemented
+Date: 2026-09-25 · Scope: stage 6 only · Status: **implemented 2026-09-27** — `evidence.py`, `synthesize.py`, 28 tests
 
 Claims become a verdict per question. **Deterministic Python. No model, no network, and — in this
 version — no statistics.**

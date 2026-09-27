@@ -17,11 +17,18 @@ if TYPE_CHECKING:  # import cost at startup matters for a CLI; these are annotat
     from claimstone.config import Project
     from claimstone.store import Store
 
-STAGES = ("synthesize",)
+# Every stage is implemented. The tuple stays because the placeholder mechanism is how an
+# unimplemented stage says so rather than pretending, and the next stage added will want it.
+STAGES: tuple[str, ...] = ()
 
 # Named here rather than imported, because building the parser must not pull in three runner
 # modules. `test_cli_model.py` pins this list against `runners.available()`.
 BACKENDS = ("claude-cli", "codex-cli", "llamacpp", "ollama-cloud", "opencode-cli")
+
+# Same reason: the parser must not import stage 6 to render its help. `test_synthesize.py` pins this
+# against `synthesize.VERDICTS`, so a state added there cannot go unofferable here.
+VERDICT_NAMES = ("SUPPORTED", "CONTRADICTED", "CONTESTED_IN_LITERATURE",
+                 "UNANSWERED_IN_LITERATURE", "NEVER_ASKED")
 
 # The boundaries the corpus actually separates at are 1 vs 2 references and 4,377 vs 4,378
 # characters, so both ranges reach below the default: an audit whose lowest value already confirms
@@ -774,6 +781,131 @@ def _not_implemented(args: argparse.Namespace) -> int:
     return 2
 
 
+def _synthesize(args: argparse.Namespace) -> int:
+    from claimstone import synthesize
+
+    project = load_project(args.project)
+    store = _checked_store(args, project)
+    try:
+        result = synthesize.build(project, store, round_name=args.round,
+                                  manifest_only=args.manifest_only)
+    except synthesize.NotAdmissible as exc:
+        # Invariant 3: no profiles at all, and no flag that overrides it. A corpus read below its floor
+        # that certifies itself complete is worse than no corpus.
+        print(str(exc), file=sys.stderr)
+        print("no profiles written; the losses are in `report` by failure class", file=sys.stderr)
+        return 3
+
+    kinds = "  ".join(f"{k} {v}" for k, v in result["by_kind"].items())
+    print(f"{result['profiles']} profile(s) over {result['questions']} question(s): {kinds}")
+    if result["not_applicable"]:
+        print(f"  {result['not_applicable']} operational question(s) recorded "
+              f"LITERATURE_VERDICT_NOT_APPLICABLE rather than omitted")
+    if result["no_verified_claim"]:
+        print(f"  {result['no_verified_claim']} with NO_VERIFIED_CLAIM — which is not NEVER_ASKED, "
+              f"and not a verdict")
+    if result["provisional"]:
+        print(f"  {result['provisional']} provisional and therefore not adjudicable")
+    # Mandatory disclosure, and never a correction: there is nothing to correct.
+    print(f"  no controlled family-wise error rate across the "
+          f"{result['no_controlled_error_rate_across']} questions profiled")
+    print("  no verdict was produced here; `adjudicate` is the only command that writes one")
+    return 0
+
+
+def _verdicts(args: argparse.Namespace) -> int:
+    import json
+
+    from claimstone import evidence, synthesize
+
+    project = load_project(args.project)
+    store = _checked_store(args, project)
+    result = synthesize.verdicts(store)
+    if not result["rows"]:
+        print("no profiles; run synthesize first")
+        return 0
+    if args.json:
+        print(json.dumps(result, indent=1, ensure_ascii=False, default=str))
+        return 0
+
+    for row in result["rows"]:
+        profile = row["profile"]
+        if args.question and str(profile.get("question_id")) != args.question:
+            continue
+        if profile.get("state") == evidence.NOT_APPLICABLE:
+            print(f"{profile['question_id']:5} {profile.get('kind', ''):15} "
+                  f"{evidence.NOT_APPLICABLE}")
+            print(f"  reason   {profile.get('reason')}")
+            continue
+        flag = ""
+        if profile.get("provisional"):
+            flag = f"provisional — {', '.join(profile.get('blocking') or [])}"
+        elif profile.get("state"):
+            flag = str(profile["state"])
+        print(f"{profile['question_id']:5} {profile.get('kind', ''):15} {flag}")
+        for result_row in profile.get("results", [])[: args.results]:
+            figure = result_row.get("estimate_as_written") or result_row.get("contrast_as_written") or ""
+            print(f"    {str(result_row.get('source_id')):8} {str(result_row.get('stance')):11} "
+                  f"{str(figure)[:22]:22} {str(result_row.get('sample') or '')[:34]}")
+        extra = len(profile.get("results", [])) - args.results
+        if extra > 0:
+            print(f"    … {extra} more")
+        counts = profile.get("direction_count") or {}
+        if counts:
+            print("    direction count  "
+                  + "  ".join(f"{k} {v}" for k, v in counts.items())
+                  + "   (a count, not a strength)")
+        print(f"    linkage          {profile.get('linkage')}"
+              + (f": {len(profile.get('sample_labels') or [])} sample label(s), verbatim"
+                 if profile.get("sample_labels") else ""))
+        coverage = profile.get("coverage") or {}
+        print(f"    coverage         {coverage.get('sources')} of {coverage.get('examined')} "
+              f"examined source(s)")
+        rejected = profile.get("gate_rejected") or {}
+        if rejected:
+            print("    gate rejected    "
+                  + "  ".join(f"{k} {v}" for k, v in rejected.items()))
+        if profile.get("awaiting_review"):
+            print(f"    awaiting review  {profile['awaiting_review']}")
+        if profile.get("reviewed_not_usable"):
+            print("    read, not used   "
+                  + "  ".join(f"{k} {v}" for k, v in profile["reviewed_not_usable"].items()))
+        recorded = row["verdict"]
+        if recorded and row["stale"]:
+            print(f"    VERDICT (STALE)  {recorded['verdict']} — recorded against profile "
+                  f"{str(recorded.get('profile_sha256'))[:12]}, current "
+                  f"{str(profile.get('profile_sha256'))[:12]}")
+        elif recorded:
+            print(f"    VERDICT          {recorded['verdict']} — {recorded.get('adjudicated_by')}, "
+                  f"{recorded.get('adjudicated_at')}")
+
+    print(f"\n{result['adjudicated']} adjudicated, {result['stale']} stale, "
+          f"{result['awaiting_adjudication']} awaiting a person")
+    print(f"no controlled family-wise error rate across the "
+          f"{result['no_controlled_error_rate_across']} questions")
+    return 0
+
+
+def _adjudicate(args: argparse.Namespace) -> int:
+    import pathlib
+
+    from claimstone import synthesize
+
+    project = load_project(args.project)
+    store = _checked_store(args, project)
+    rationale = pathlib.Path(args.rationale_file).read_text(encoding="utf-8")
+    try:
+        row = synthesize.adjudicate(store, args.question, verdict=args.verdict,
+                                    rationale=rationale, by=args.by,
+                                    profile_sha256=args.profile_sha256 or "")
+    except (synthesize.Provisional, synthesize.StaleProfile, ValueError, KeyError) as exc:
+        print(str(exc).strip("'"), file=sys.stderr)
+        return 2
+    print(f"{row['question_id']}: {row['verdict']} against profile "
+          f"{row['profile_sha256'][:12]}, by {row['adjudicated_by']}")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="claimstone", description="Topics in, verdicts out.")
     parser.add_argument("--version", action="version", version=f"claimstone {__version__}")
@@ -799,6 +931,9 @@ def build_parser() -> argparse.ArgumentParser:
         ("extract-report", _extract_report, "the gate's ratio and the corpus's, never fused"),
         ("review", _review, "stage 5: build the review units, or --harvest the verdicts"),
         ("review-report", _review_report, "verdicts per extraction reader; precision side only"),
+        ("synthesize", _synthesize, "stage 6: an evidence profile per question, or the refusal"),
+        ("verdicts", _verdicts, "the profiles, with any adjudication and whether it is stale"),
+        ("adjudicate", _adjudicate, "record one person's verdict; the only place one comes from"),
     ):
         command = sub.add_parser(name, help=help_text)
         command.add_argument("project", help="path to a project directory")
@@ -877,6 +1012,26 @@ def build_parser() -> argparse.ArgumentParser:
                                  help="backend/model that will be asked, so the claims it may not "
                                       "judge are excluded before the calls are paid for")
             command.add_argument("--limit", type=int, default=None)
+        if name == "synthesize":
+            command.add_argument("--round", default=None,
+                                 help="judge the floor over one round; a discovery sweep changes the "
+                                      "denominator by design (D24)")
+            command.add_argument("--manifest-only", action="store_true",
+                                 help="judge the floor over the operator's reading list alone")
+        if name == "verdicts":
+            command.add_argument("--question", default=None, help="one question alone")
+            command.add_argument("--json", action="store_true")
+            command.add_argument("--results", type=int, default=8,
+                                 help="how many results to print per profile")
+        if name == "adjudicate":
+            command.add_argument("question", help="which question this judges")
+            command.add_argument("--verdict", required=True,
+                                 help="one of " + ", ".join(VERDICT_NAMES))
+            command.add_argument("--rationale-file", required=True,
+                                 help="the reasoning, which is the verdict's only defence")
+            command.add_argument("--by", required=True, help="who is signing this")
+            command.add_argument("--profile-sha256", default=None,
+                                 help="the profile hash you were shown; refused if it has moved")
         if name == "review-report":
             command.add_argument("--json", action="store_true")
         if name == "extract-report":

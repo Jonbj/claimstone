@@ -140,10 +140,16 @@ on D4 before applying it to any other backend.
 
 ## Status
 
-The contract and its validator exist. **Stages 1 (discover), 2 (acquire), 3 (normalize) and 4 (extract)
-are implemented**, along with `model_call` — the file boundary every model-using stage goes through.
-Stages 5 and 6 are specified and not built; the CLI exits with a message for each. `numbers.py` is not
-built, so no as-written value has been converted and nothing yet feeds stage 6.
+The contract and its validator exist, and **all six stages are implemented** — discover, acquire,
+normalize, extract, review, synthesize — along with `model_call`, the file boundary every model-using
+stage goes through. `numbers.py` converts, and 223 claims in the first full round carry a value.
+
+**Stage 6 refuses every corpus in this repository, which is the design working.** `alembic-s4` stands at
+0.56 on its manifest round against a floor of 0.80, so `synthesize` writes no profiles and exits
+`INSUFFICIENT_ACQUISITION` (invariant 3). That is the first place in the project where the floor has had
+something to gate, and the deliverable being a refusal is a finding rather than a failure. What is
+missing for a verdict is a corpus that clears its floor — an acquisition problem — and **a reviewer that
+discriminates**, which four hosted candidates measurably do not (D38).
 
 **The vertical slice reaches a stored claim.** 63 claims for H02 from 4 studies, every evidence quote
 verified in code against the chunk it came from (D26). 0.95 is a floor on the gate's pass rate, not an
