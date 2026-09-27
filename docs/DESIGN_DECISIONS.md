@@ -1415,8 +1415,14 @@ in whether the declaration came before the measurement.
 So: the mechanism exists and `alembic-s4` does not use it. A round declared per-class **in advance** is clean
 and this one is not, and no amount of correct reasoning after the fact converts one into the other. What a
 future round may legitimately do is declare, before acquiring, that `IND` is admitted as a pointer to primary
-sources rather than as readable evidence — which is what that class's own note in `sources.yaml` already says
-it is.
+sources rather than as readable evidence — ~~which is what that class's own note in `sources.yaml` already says
+it is.~~
+
+**Corrected 2026-09-27.** That last clause was false, and it is the dangerous kind of false: it asserts a
+pre-authorisation that would make a later declaration look principled rather than fitted. `IND`'s note reads
+in full *"vendor and sell-side research; disclose the commercial interest"*. It says nothing about the class
+being a pointer instead of readable evidence. So a round declaring that has to argue it on its own grounds,
+and the argument cannot cite this entry as having already made it.
 
 And `ACA` at 0.70 is below 0.80 regardless, so even the fitted declaration would not have passed this round.
 That is worth stating plainly: the corpus that motivated this project is short of its floor on its *best*
