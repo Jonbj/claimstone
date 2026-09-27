@@ -6,6 +6,7 @@ import pathlib
 
 import pytest
 
+from claimstone import config
 from claimstone.config import ConfigError, discover_projects, load_project
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
@@ -119,3 +120,49 @@ questions:
     )
     with pytest.raises(ConfigError, match="registry_version"):
         load_project(root)
+
+
+# --- the extraction vocabulary --------------------------------------------------------------------
+
+def _sources(tmp_path, body):
+    root = tmp_path / "p"
+    root.mkdir()
+    (root / "sources.yaml").write_text(body, encoding="utf-8")
+    return root
+
+
+def test_a_project_declares_its_own_value_labels(tmp_path):
+    root = _sources(tmp_path, "extraction:\n  value_labels: [AOR, 'ß', Sharpe]\n")
+    assert config.load_extraction(root)["value_labels"] == ("AOR", "ß", "Sharpe")
+
+
+def test_the_declaration_is_what_the_project_wrote_and_not_the_engine_s_defaults(tmp_path):
+    """The engine merges its generic set in at use, so neither module holds the other's business."""
+    root = _sources(tmp_path, "extraction:\n  value_labels: [AOR]\n")
+    assert config.load_extraction(root)["value_labels"] == ("AOR",)
+
+
+def test_no_extraction_section_means_the_engine_s_defaults(tmp_path):
+    assert config.load_extraction(_sources(tmp_path, "classes: []\n")) == {}
+
+
+def test_a_misspelt_extraction_key_is_refused(tmp_path):
+    """A vocabulary the operator believed they had declared produces a rejection they would misread as a
+    fact about the literature."""
+    root = _sources(tmp_path, "extraction:\n  value_lables: [AOR]\n")
+    with pytest.raises(ConfigError) as raised:
+        config.load_extraction(root)
+    assert "value_lables" in str(raised.value)
+
+
+def test_value_labels_must_be_strings(tmp_path):
+    root = _sources(tmp_path, "extraction:\n  value_labels: [1.66]\n")
+    with pytest.raises(ConfigError):
+        config.load_extraction(root)
+
+
+def test_comparatives_replace_rather_than_extend(tmp_path):
+    """A project declaring these says which comparisons its field makes, and keeping the engine's would
+    put back the stems it chose to leave out."""
+    root = _sources(tmp_path, "extraction:\n  comparatives:\n    '>': [exceeds]\n")
+    assert config.load_extraction(root)["comparatives"] == {">": ("exceeds",)}

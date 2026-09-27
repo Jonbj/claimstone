@@ -36,10 +36,14 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from typing import Sequence
 
 # Digits with optional thousands separators, decimal point, scientific exponent, and a leading ASCII
 # hyphen or Unicode minus — typeset papers use the latter.
-_NUMBER = re.compile(r"^[-−+]?\d[\d,]*(?:\.\d+)?(?:[eE][-−+]?\d+)?$")
+# The leading zero is optional because a great deal of literature omits it: `ß = -.22` and `p < .01`
+# are how psychology and epidemiology write a coefficient and a significance level, and 63 estimates in
+# the PMC round were refused for that alone.
+_NUMBER = re.compile(r"^[-−+]?(?:\d[\d,]*(?:\.\d+)?|\.\d+)(?:[eE][-−+]?\d+)?$")
 
 # Ordered: the longest suffix first, so `basis points` is not read as `points`.
 _UNITS: tuple[tuple[tuple[str, ...], float, str], ...] = (
@@ -51,31 +55,59 @@ _UNITS: tuple[tuple[tuple[str, ...], float, str], ...] = (
 # A range is found by counting numbers rather than by looking for a separator: `2.4% to 3.1%` has
 # a per-cent sign between the digit and the word, which a separator pattern misses, and `1.4e-3`
 # has a hyphen inside a single number, which one over-matches.
-_TOKEN = re.compile(r"\d[\d,]*(?:\.\d+)?(?:[eE][-−+]?\d+)?")
+_TOKEN = re.compile(r"(?:\d[\d,]*(?:\.\d+)?|(?<![\d.])\.\d+)(?:[eE][-−+]?\d+)?")
 
 # What a hedge says about the figure behind it. `approaching` is deliberately `approximate` rather than
 # a direction: "approaching 1%" reads as just under 1% to most people and as just over to some, and
 # guessing between them would be this module answering a question the words do not settle.
 _BOUNDS: tuple[tuple[str, str], ...] = tuple(sorted(
     [(word, kind) for words, kind in (
-        (("at least", "no less than", "more than", "greater than", "in excess of", "over", "above"),
-         "lower"),
+        (("at least", "no less than", "more than", "greater than", "in excess of", "over", "above",
+          ">=", "≥", ">"), "lower"),
         (("at most", "no more than", "less than", "fewer than", "all below", "up to", "under",
-          "below"), "upper"),
+          "below", "<=", "≤", "<"), "upper"),
         (("approximately", "approx.", "approx", "nearly", "almost", "around", "about", "roughly",
           "circa", "approaching", "~", "∼", "≈"), "approximate"),
     ) for word in words],
     key=lambda pair: -len(pair[0]),
 ))
 
-# A label naming the quantity, and an optional connector. Stripped to reach the figure; never read as
-# saying what the quantity is.
-_LABEL = re.compile(
-    r"^(?:t-statistics?|t-statistic|t-values?|t-stats?|t|z-scores?|z|"
-    r"standard\s+errors?|standard\s+deviations?|std\.?\s*errs?\.?|std\.?\s*devs?\.?|"
-    r"s\.?e\.?|s\.?d\.?|p-values?|p|sharpe\s+ratios?|sharpe|"
-    r"means?|medians?|[nm])"
-    r"\s*(?:of|=|:|is|was)\s*", re.I)
+# A label naming the quantity. Stripped to reach the figure; never read as saying what the quantity is.
+#
+# **A default, not the vocabulary.** Written against one corpus it becomes domain knowledge in the engine,
+# which invariant 4 forbids, and which measurably happened: this list shipped with `sharpe` and without
+# `OR`, so the finance corpus parsed and the epidemiology corpus did not — 63 estimates refused over
+# `AOR=1.66` and `ß = -.22`. What stays here is what any quantitative field writes. Anything a discipline
+# owns is declared in that project's `extraction.value_labels`, which is the shape `comparatives` already
+# uses for the same reason.
+DEFAULT_VALUE_LABELS: tuple[str, ...] = (
+    "t-statistic", "t-statistics", "t-value", "t-values", "t-stat", "t-stats", "t",
+    "z-score", "z-scores", "z",
+    "standard error", "standard errors", "std err", "std errs", "std. err", "std. errs",
+    "standard deviation", "standard deviations", "std dev", "std devs", "std. dev",
+    "s.e.", "se", "s.d.", "sd",
+    "p-value", "p-values", "p",
+    "mean", "means", "median", "medians", "n", "m",
+)
+
+
+def label_pattern(labels: Sequence[str]) -> re.Pattern[str]:
+    """Longest first, so `standard error` is not read as `s` and then nonsense.
+
+    The connector is optional: `p < .01` puts an inequality where `=` would go, and requiring one refused
+    every significance level in the PMC round. A wrong strip cannot pass anything — what remains still has
+    to match a number.
+
+    A letter may not follow the label, or the one-character labels eat the start of a word: `n` took the
+    `n` of `nearly 6%` and left `early 6%`, which broke a hedge that had been parsing for hours.
+    """
+    alternatives = "|".join(
+        re.escape(label) for label in sorted(set(labels), key=len, reverse=True) if label
+    )
+    return re.compile(rf"^(?:{alternatives})(?![A-Za-z])\s*(?:of|=|:|is|was)?\s*", re.I)
+
+
+_DEFAULT_LABEL = label_pattern(DEFAULT_VALUE_LABELS)
 
 # A period belongs to the horizon, not to the figure: `0.55% per month` is 0.0055, and
 # `horizon_as_written` is where stage 4 records the month. Dropped here, and kept there.
@@ -109,7 +141,7 @@ class Value:
     bound: str = "exact"
 
 
-def parse(as_written: str) -> Value:
+def parse(as_written: str, *, labels: Sequence[str] | None = None) -> Value:
     """One as-written form into one value. Two values, or none, is a refusal."""
     raw = str(as_written or "").strip()
     if not raw:
@@ -151,15 +183,21 @@ def parse(as_written: str) -> Value:
             factor, scale = unit_factor, unit_scale
             break
 
+    label = _DEFAULT_LABEL if labels is None else label_pattern(labels)
     bound = "exact"
-    low = text.lower()
-    for word, kind in _BOUNDS:
-        if low.startswith(word):
-            text = text[len(word):].strip()
-            bound = kind
+    # Both, until neither bites. `p < .01` is a label then a bound and `< .05` is a bound alone, so a fixed
+    # order reads one of them and refuses the other.
+    while True:
+        shorter = label.sub("", text, count=1).strip()
+        low = shorter.lower()
+        for word, kind in _BOUNDS:
+            if low.startswith(word):
+                shorter = shorter[len(word):].strip()
+                bound = kind
+                break
+        if shorter == text:
             break
-
-    text = _LABEL.sub("", text, count=1).strip()
+        text = shorter
 
     text = text.replace("−", "-").replace(",", "").strip()
     if not _NUMBER.match(text.replace(",", "")):
@@ -168,7 +206,7 @@ def parse(as_written: str) -> Value:
     return Value(float(text) * factor, scale, raw, bracketed, bound)
 
 
-def parse_contrast(as_written: str) -> tuple[Value, Value]:
+def parse_contrast(as_written: str, *, labels: Sequence[str] | None = None) -> tuple[Value, Value]:
     """The two sides of a contrast, in the order they were written.
 
     Both sides must share a scale. `2.00% versus 0.14` is a per-cent against a bare number, and a
@@ -178,7 +216,7 @@ def parse_contrast(as_written: str) -> tuple[Value, Value]:
     sides = _SIDES.split(raw)
     if len(sides) != 2:
         raise Unparseable(f"{raw!r} is not two sides joined by `versus`")
-    first, second = (parse(side) for side in sides)
+    first, second = (parse(side, labels=labels) for side in sides)
     if first.scale != second.scale:
         raise Unparseable(
             f"{raw!r} puts {first.scale} against {second.scale}: the two sides are not on one scale")
@@ -204,7 +242,7 @@ COMPOSITE_FIELDS = ("contrast_as_written",)
 FIELDS_REQUIRED_TO_CONVERT = ("estimate_as_written",)
 
 
-def convert(record: dict) -> tuple[dict, list[str]]:
+def convert(record: dict, *, labels: Sequence[str] | None = None) -> tuple[dict, list[str]]:
     """The record with the engine's fields added, and what could not be read.
 
     The as-written forms are left untouched: the gate checks them against the quote, and rewriting them
@@ -218,7 +256,7 @@ def convert(record: dict) -> tuple[dict, list[str]]:
             continue
         name = field[: -len("_as_written")]
         try:
-            parsed = parse(str(raw))
+            parsed = parse(str(raw), labels=labels)
         except Unparseable as exc:
             problems.append(f"{field}: {exc}")
             continue
@@ -235,7 +273,7 @@ def convert(record: dict) -> tuple[dict, list[str]]:
             continue
         name = field[: -len("_as_written")]
         try:
-            first, second = parse_contrast(str(raw))
+            first, second = parse_contrast(str(raw), labels=labels)
         except Unparseable as exc:
             problems.append(f"{field}: {exc}")
             continue

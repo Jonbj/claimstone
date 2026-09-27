@@ -188,3 +188,51 @@ def test_only_the_estimate_is_required_to_convert():
     # The claim's own figure. Everything else is auxiliary, and losing the claim over a notation the
     # engine does not read would also lose it from the coverage denominator.
     assert numbers.FIELDS_REQUIRED_TO_CONVERT == ("estimate_as_written",)
+
+
+# --- the vocabulary is project data ---------------------------------------------------------------
+# This list shipped with `sharpe` and without `OR`, so the finance corpus parsed and the epidemiology
+# corpus refused 63 estimates over `AOR=1.66` and `ß = -.22`. A list of a discipline's notations inside
+# `claimstone/` is the domain knowledge invariant 4 forbids.
+
+EPIDEMIOLOGY = numbers.DEFAULT_VALUE_LABELS + ("AOR", "OR", "RR", "HR", "ß", "beta")
+
+
+def test_the_engine_knows_no_discipline_s_labels():
+    folded = {label.lower() for label in numbers.DEFAULT_VALUE_LABELS}
+    for owned in ("sharpe", "sharpe ratio", "aor", "or", "hazard ratio", "cohen's d"):
+        assert owned not in folded, owned
+    # What stays is what any quantitative field writes.
+    for generic in ("t", "se", "sd", "p", "mean", "median", "n"):
+        assert generic in folded, generic
+
+
+def test_a_declared_label_is_read_and_an_undeclared_one_is_not():
+    with pytest.raises(numbers.Unparseable):
+        numbers.parse("AOR=1.66")
+    assert numbers.parse("AOR=1.66", labels=EPIDEMIOLOGY).value == 1.66
+
+
+def test_a_bare_leading_decimal_is_a_number():
+    """`ß = -.22` and `p < .01` are how psychology and epidemiology write a coefficient and a level."""
+    assert numbers.parse(".22").value == 0.22
+    assert numbers.parse("-.18").value == -0.18
+    assert numbers.parse("−.22").value == -0.22
+
+
+def test_an_inequality_symbol_is_a_bound():
+    assert numbers.parse("< .05").bound == "upper"
+    assert numbers.parse("≥ 3").bound == "lower"
+
+
+def test_a_label_and_a_bound_are_read_in_either_order():
+    """`p < .01` is a label then a bound; `< .05` is a bound alone. A fixed order reads one and refuses
+    the other."""
+    value = numbers.parse("p < .01")
+    assert (value.value, value.bound) == (0.01, "upper")
+
+
+def test_a_one_letter_label_does_not_eat_the_start_of_a_word():
+    """`n` took the `n` of `nearly 6%` and left `early 6%`, which broke a hedge that had been parsing."""
+    assert numbers.parse("nearly 6%").value == pytest.approx(0.06)
+    assert numbers.parse("n = 1297").value == 1297

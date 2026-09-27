@@ -101,3 +101,54 @@ classes:
 # The same 0.80 as every other instance, deliberately. Setting a pilot's floor lower to make it pass would
 # be the one move that is off the table, and the pilot's whole purpose is to find out whether a corpus can
 # clear this number rather than to prove that a lower one can be cleared.
+
+# The notation this field writes a figure in. Declared here and not in the engine: a list of these in
+# `claimstone/` is domain knowledge, which invariant 4 forbids, and the engine's list shipped with `sharpe`
+# and without `OR` — so 63 estimates in the first PMC round were refused over `AOR=1.66` and `ß = -.22`.
+#
+# Added to the engine's generic statistics (t, se, sd, p, z, n, mean, median), never replacing them: an
+# epidemiology paper still reports standard errors.
+extraction:
+  value_labels:
+    # Ratio measures, as written with and without the adjustment marker.
+    - OR
+    - aOR
+    - AOR
+    - adjusted OR
+    - odds ratio
+    - adjusted odds ratio
+    - RR
+    - aRR
+    - risk ratio
+    - relative risk
+    - HR
+    - aHR
+    - hazard ratio
+    - IRR
+    - incidence rate ratio
+    - PR
+    - prevalence ratio
+    # Regression and effect-size coefficients. The Eszett is in the list because papers typeset it for
+    # beta and a reader cannot tell them apart; both forms appear in this corpus.
+    - beta
+    - ß
+    - β
+    - b
+    - B
+    - d
+    - Cohen's d
+    - g
+    - Hedges' g
+    - r
+    - rho
+    - ρ
+    - R2
+    - R²
+    - eta2
+    - η2
+    # Interval and dispersion labels, for the uncertainty field.
+    - CI
+    - 95% CI
+    - 99% CI
+    - IQR
+    - SEM

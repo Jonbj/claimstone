@@ -282,6 +282,13 @@ def harvest(project: Any, store: Store, *, batch: str) -> dict[str, Any]:
 
     thresholds = dict(getattr(project, "extraction", {}) or {})
     comparatives = thresholds.pop("comparatives", None)
+    # The project's notation vocabulary, or None for the engine's generic set. A discipline's labels —
+    # `AOR`, `ß`, `Sharpe` — are project data, because a list of them in the engine is domain knowledge
+    # and measurably broke a corpus in another field (invariant 4).
+    declared = thresholds.pop("value_labels", None)
+    # Merged here rather than in `config`: the engine owns its generic set and the project owns its
+    # additions, so neither module holds the other's business.
+    value_labels = (tuple(numbers.DEFAULT_VALUE_LABELS) + tuple(declared)) if declared else None
 
     proposed = accepted = rejected = unanswered = kind_unverified = already = 0
     failures: dict[str, int] = {}
@@ -345,7 +352,8 @@ def harvest(project: Any, store: Store, *, batch: str) -> dict[str, Any]:
                     "claim_gate_version": claimgate.CLAIM_GATE_VERSION,
                     "harvested_at": _now(),
                 }
-                converted, unreadable = numbers.convert(record) if verdict.ok else (record, [])
+                converted, unreadable = (
+                    numbers.convert(record, labels=value_labels) if verdict.ok else (record, []))
                 if unreadable:
                     # A conversion the engine cannot perform is never a null: a null would read as "no
                     # estimate reported", which is a claim about the paper that a parser failure has not

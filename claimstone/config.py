@@ -121,6 +121,9 @@ class Project:
     gate_thresholds: dict[str, int] = field(default_factory=dict)
     gate_policy: dict[str, Any] = field(default_factory=dict)
     normalize_thresholds: dict[str, int] = field(default_factory=dict)
+    # Vocabularies, not thresholds: which labels a figure may carry and which phrases compare. Empty means
+    # the engine's generic defaults, and a project in another field declares its own (invariant 4).
+    extraction: dict[str, Any] = field(default_factory=dict)
     citation_channel: dict[str, int] = field(default_factory=dict)
     floor_version: int = 1
     floor_set_at: str = ""
@@ -597,6 +600,53 @@ def load_normalize_thresholds(root: pathlib.Path) -> dict[str, int]:
     return {str(k): int(v) for k, v in raw.items()}
 
 
+# What a project may declare about extraction. Both are vocabularies rather than thresholds, and both were
+# engine constants until a corpus in another field proved they were domain knowledge: the value-label list
+# shipped with `sharpe` and without `OR`, so the finance corpus parsed and the epidemiology corpus refused
+# 63 estimates over `AOR=1.66` and `ß = -.22`. Invariant 4 says the engine holds none of that.
+EXTRACTION_KEYS = ("comparatives", "value_labels")
+
+
+def load_extraction(root: pathlib.Path) -> dict[str, Any]:
+    """A project's extraction vocabulary. Absent means the engine's generic defaults.
+
+    A misspelt key is an error rather than a silent no-op, on the same grounds as the thresholds': a
+    vocabulary the operator believed they had declared produces a rejection they would misread as a fact
+    about the literature.
+    """
+    raw = _read_yaml(pathlib.Path(root) / "sources.yaml").get("extraction") or {}
+    if not isinstance(raw, dict):
+        raise ConfigError("sources.yaml: 'extraction' must be a mapping")
+    unknown = sorted(set(raw) - set(EXTRACTION_KEYS))
+    if unknown:
+        raise ConfigError(
+            f"sources.yaml: unknown extraction key(s): {', '.join(unknown)} "
+            f"(known: {', '.join(EXTRACTION_KEYS)})"
+        )
+
+    out: dict[str, Any] = {}
+    labels = raw.get("value_labels")
+    if labels is not None:
+        if not isinstance(labels, list) or not all(isinstance(x, str) and x.strip() for x in labels):
+            raise ConfigError("sources.yaml: extraction.value_labels must be a list of non-empty strings")
+        # Exactly what the project declared. The engine merges its own generic set in at use — `t` and
+        # `se` are not finance, and a project declaring `OR` has not stopped writing standard errors — and
+        # keeping that merge out of here leaves this module validating data rather than holding defaults.
+        out["value_labels"] = tuple(x.strip() for x in labels)
+
+    comparatives = raw.get("comparatives")
+    if comparatives is not None:
+        if not isinstance(comparatives, dict) or not all(
+            isinstance(v, list) and all(isinstance(x, str) for x in v) for v in comparatives.values()
+        ):
+            raise ConfigError(
+                "sources.yaml: extraction.comparatives must map a class to a list of phrases")
+        # Replaced, not extended: a project declaring these is saying which comparisons its field makes,
+        # and quietly keeping the engine's would put back the stems it chose to leave out.
+        out["comparatives"] = {str(k): tuple(v) for k, v in comparatives.items()}
+    return out
+
+
 def load_floor_provenance(root: pathlib.Path) -> tuple[int, str, str]:
     """Where the floor came from. A bump without a reason is refused.
 
@@ -670,6 +720,7 @@ def load_project(root: str | pathlib.Path) -> Project:
         gate_thresholds=gate_thresholds,
         gate_policy=gate_policy,
         normalize_thresholds=normalize_thresholds,
+        extraction=load_extraction(root),
         citation_channel=citation_channel,
         floor_version=floor_version,
         floor_set_at=floor_set_at,

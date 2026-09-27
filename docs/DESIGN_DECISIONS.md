@@ -1946,3 +1946,61 @@ takes the last. That is the resumability property D9 is for, working without bei
 
 `claimstone.sh` now builds before it runs. The build is cached and costs a second when nothing changed,
 which is the right price for never reasoning about a stale image again.
+
+---
+
+## D43 — The notation vocabulary was domain knowledge in the engine, and a corpus in another field proved it
+
+Date: 2026-09-27 · `pmc-screen-time`, batch `pmc-round-2026-09-27`
+
+2,936 work units over 734 chunks of 37 sources; 2,902 answered, 1,927 records proposed. The first harvest
+accepted 1,605 and rejected 322, and `UNPARSEABLE_VALUE` was the largest class at **172**. Since D37 that
+class only fires on `estimate_as_written` — the claim's own figure — so 172 of them was a claim about this
+engine and not about the papers.
+
+It was. The refusals read `AOR=1.66`, `AOR = 2.74`, `ß = −.22`, `ß = .19`, `p < .01`, `95% CI=1.14–2.42`.
+
+**CLAUDE.md states the test this failed**: *"a project in an unrelated field must be expressible without
+touching the package."* `numbers.py`'s label list contained `sharpe|sharpe ratios?` and did not contain
+`OR`. The finance corpus parsed and the epidemiology corpus did not, and the reason was a discipline's
+vocabulary sitting in `claimstone/`.
+
+### Three gaps, and only one of them was vocabulary
+
+**Typography, which belongs in the engine unconditionally.** A bare leading decimal — `.22`, `-.18`,
+`−.22` — is how psychology and epidemiology write a coefficient, and `_NUMBER` required a digit before the
+point. And `<`, `>`, `≤`, `≥` are the symbols an inequality is written with, where `_BOUNDS` had only the
+words. Both are how figures are typeset, in any field.
+
+**Vocabulary, which is project data.** `DEFAULT_VALUE_LABELS` now holds what any quantitative field writes
+— `t`, `se`, `sd`, `p`, `z`, `n`, `mean`, `median` — and `sharpe` is gone from it. A discipline's labels are
+declared in `extraction.value_labels`: 38 of them in the two screen-time projects (`AOR`, `aHR`, `IRR`,
+`ß`, `β`, `Cohen's d`, `η2`, `95% CI`), 6 in `alembic-s4` (`Sharpe`, `alpha`, `IR`). The engine merges its
+generic set with the project's at use, so neither module holds the other's business — `config` validates a
+declaration and `numbers` owns its default.
+
+**And the plumbing did not exist.** `extract.harvest` read `getattr(project, "extraction", {})`, and
+`config.py` loaded no `extraction` section at all — so the `comparatives` override that the gate has
+supported since D22 had never once come from a project. The getattr's default made a missing feature look
+like an absent configuration. `load_extraction` exists now, refuses a misspelt key, and `Project` carries it.
+
+### Measured, 2026-09-27
+
+```
+                       first harvest   with the declared vocabulary
+UNPARSEABLE_VALUE                172                            109
+total rejections                 322                            259
+claims                         1,605                          1,668
+```
+
+The 109 that remain are overwhelmingly `holds more than one number` — a confidence interval or a range put
+in the estimate field, which is a badly shaped record and a correct refusal.
+
+**1,668 claims, 8 of 8 questions covered, 36 distinct sources, 120 carrying a converted estimate.**
+
+### One defect I introduced and caught in the same minute
+
+Making the label's connector optional — needed because `p < .01` puts an inequality where `=` goes — let
+the one-character labels eat the start of a word: `n` took the `n` of `nearly 6%` and left `early 6%`,
+breaking a hedge that had been parsing correctly since this morning. A label may not be followed by a
+letter. The test suite caught it on the run after the change, which is the argument for the suite.
