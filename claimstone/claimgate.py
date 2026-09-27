@@ -44,6 +44,11 @@ NUMERAL = re.compile(r"[-−]?\d[\d,.]*(?:[eE][-−+]?\d+)?%?")
 # rejected two true claims on the first real harvest, whose quotes had no reason to contain a zero.
 IDENTIFIER_TAIL = re.compile(r"[A-Za-z][-\u2212+]$")
 
+# The mirror image, found on the first full round: `3-factor` names a model the way `day-0`
+# names a day, and the earlier rule caught a digit hanging off a word while missing one in
+# front of it.
+IDENTIFIER_HEAD = re.compile(r"^[-\u2212][A-Za-z]")
+
 # Matched by class, not by phrase, and by **stem** rather than by whole word. Comparing phrases
 # literally rejects a correct record whose claim says `exceeds` where the quote says `is greater than`
 # — a false rejection for a synonym. Measured on the first real harvest, a list of exact forms held
@@ -122,11 +127,20 @@ def _asserted_numerals(claim: str) -> list[str]:
     out: list[str] = []
     for found in NUMERAL.finditer(text):
         before = text[: found.start()]
+        figure = found.group(0)
         if before[-1:].isalpha() or IDENTIFIER_TAIL.search(before):
             continue
-        if text[found.end() : found.end() + 1].isalpha():
+        after = text[found.end() : found.end() + 2]
+        if after[:1].isalpha() or IDENTIFIER_HEAD.match(after):
+            # `3-factor`, `2-day`: a digit naming a thing, not a quantity.
             continue
-        out.append(found.group(0).rstrip(".,").replace("\u2212", "-"))
+        if figure[:1] in "-\u2212" and before[-1:].isdigit():
+            # `1964-1997` is two years, not 1964 and minus 1997. The worst false rejection of the first
+            # full round: the claim and the quote said the same words, the sign was read off a range
+            # separator, and the presence test then refused to find `-1997` in a quote where the hyphen
+            # follows a digit — so the rule rejected the very text it had read.
+            figure = figure[1:]
+        out.append(figure.rstrip(".,").replace("\u2212", "-"))
     return out
 
 

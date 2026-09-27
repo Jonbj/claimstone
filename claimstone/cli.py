@@ -662,6 +662,9 @@ def _extract_report(args: argparse.Namespace) -> int:
               "UNANSWERED_IN_LITERATURE; one whose calls never ran is NEVER_ASKED")
     if summary["failures"]:
         print("  rejected     " + "  ".join(f"{k} {v}" for k, v in summary["failures"].items()))
+    if summary["superseded_rejections"]:
+        print(f"  superseded   {summary['superseded_rejections']:>5}   rejections a corrected reading "
+              f"turned into claims; the rows stay, and this is what the change was worth")
     print()
     print("  The two ratios are never fused: a clean gate on a silent corpus would read like a "
           "well-covered one.")

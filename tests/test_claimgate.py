@@ -274,3 +274,47 @@ def test_an_ambiguous_preposition_is_not_a_comparative():
     rec = record(claim="Weekly news predicts returns over a much longer horizon than daily news.",
                  evidence_quote="weekly news predicts returns much longer than daily news")
     assert verdict(rec, chunk=chunk).ok is True
+
+
+# --- What 4,358 real claims showed ---------------------------------------------------------------
+#
+# The first full round rejected 614 of 4,358, and 470 of those were NUMBER_NOT_IN_QUOTE — 76% of all
+# rejections, where 116 earlier claims had produced one. Reading them, two families of false rejection.
+
+def test_a_year_range_is_two_years_and_not_a_negative_number():
+    """The worst of them: the claim said "during 1964-1997" and the quote said *the same words*. `-1997` was
+    extracted as a signed figure, then searched for in a quote where the hyphen follows a digit — so the
+    digit boundary blocked the very text it came from. 1964-1997 is two years."""
+    chunk = ("Across NYSE stocks during 1964-1997, the proposed illiquidity measure has a positive "
+             "and highly significant effect on returns.")
+    rec = record(claim="Across NYSE stocks during 1964-1997 the measure has a positive effect.",
+                 evidence_quote="Across NYSE stocks during 1964-1997, the proposed illiquidity measure "
+                                "has a positive")
+    assert verdict(rec, chunk=chunk).ok is True
+
+
+def test_a_digit_that_names_a_model_is_not_a_figure():
+    """`3-factor` is a name, like `day-0`. The earlier fix caught a digit *after* a word and missed one
+    before it."""
+    chunk = "News losers exhibit the same pattern of persistent negative abnormal returns."
+    rec = record(claim="The 3-factor model shows news losers have persistent negative abnormal returns.",
+                 evidence_quote="news losers exhibit the same pattern of persistent negative abnormal "
+                                "returns".capitalize())
+    assert verdict(rec, chunk=chunk).ok is True
+
+
+def test_a_genuine_negative_figure_is_still_a_figure():
+    chunk = "the alpha is -0.08 per day in that window"
+    rec = record(claim="The alpha is -0.08 per day.", evidence_quote="the alpha is -0.08 per day")
+    assert verdict(rec, chunk=chunk).ok is True
+    missing = record(claim="The alpha is -0.09 per day.", evidence_quote="the alpha is -0.08 per day")
+    assert verdict(missing, chunk=chunk).failure == "NUMBER_NOT_IN_QUOTE"
+
+
+def test_a_window_the_quote_does_not_show_is_still_a_rejection():
+    """Not every flagged figure was a false positive. A claim citing days [-15,-6] against a quote that is a
+    table of alphas asserts a window the quote does not carry, and that stays refused."""
+    chunk = "Daily Alpha | 0.080 | 0.065 | 0.045 | for windows we tabulate elsewhere"
+    rec = record(claim="For events with the latest story in days [-15,-6] the portfolio earns 0.080.",
+                 evidence_quote="Daily Alpha | 0.080 | 0.065 | 0.045 |")
+    assert verdict(rec, chunk=chunk).failure == "NUMBER_NOT_IN_QUOTE"

@@ -1214,3 +1214,66 @@ curating for open access can clear an 0.80 floor.
 compared acquisition rows against the *filtered* set — so 27 perfectly ordinary rows were reported as
 "acquisition rows with no candidate — the ledger is inconsistent". An acquisition outside a filtered
 population belongs to a candidate the filter excluded. The check now runs only over the whole store.
+
+## D33 — The first complete round, and the gate rule that was wrong at scale
+1,888 calls over 472 chunks and 16 documents, four kinds each, on `deepseek-v4.1-flash` with reasoning off
+and the schema enforced. About fifty minutes.
+
+### Measured, 2026-09-28
+
+```
+calls            1,888      1,869 valid (0.99)   2,484 attempts/hour
+                            NOT_JSON 10 · SCHEMA_INVALID 8 · TRUNCATED 1
+claims           4,400 proposed · 3,859 accepted · 0.88 · 541 rejected
+ledger           3,971 claims   SUPPORTS 3,031 · QUALIFIES 547 · CONTRADICTS 393
+by kind          heterogeneity 1,332 · method 1,039 · effect 914 · premise 686
+coverage         22 of 22 verdict-bearing questions   1.00
+rejected         NUMBER_NOT_IN_QUOTE 393 · QUOTE_NOT_FOUND 80 · COMPARATIVE 44 · SECONDHAND 24
+```
+
+**Coverage is 1.00, which makes a state sayable that was not.** Every verdict-bearing question now has claims
+from twelve to sixteen sources, so `UNANSWERED_IN_LITERATURE` can be distinguished from "we did not look" —
+which is the whole of invariant 2 and had been unavailable in every previous round.
+
+**393 CONTRADICTS.** D26 recorded that H02 read as uncontested because the gate correctly removed its one
+secondhand contradiction. On the full round contrary evidence is everywhere: 163 against H01, 20 against H26,
+21 against H28. A verdict machinery now has something to be contested about.
+
+### A gate rule that looked fine on 116 claims and was wrong on 4,358
+
+The first harvest rejected 614 and **470 of them were `NUMBER_NOT_IN_QUOTE` — 76% of all rejections**, where
+116 earlier claims had produced one. Reading them, as the spec requires before a rate is quoted, found two
+families and the worse one is embarrassing:
+
+**`1964-1997` was read as 1964 and minus 1997.** The claim said "Across NYSE stocks during 1964-1997" and the
+quote said *the same words*. The sign was taken off a range separator, and the presence test then refused to
+find `-1997` in a quote where the hyphen follows a digit — so the rule rejected the very text it had read. A
+sign preceded by a digit is not a sign.
+
+**`3-factor` was read as the figure 3.** The `day-0` fix caught a digit hanging off a word and missed one in
+front of it. `3-factor` names a model the way `day-0` names a day.
+
+Corrected and re-harvested, which cost nothing because the answers are on disk: **77 rejections became
+claims**, 470 down to 393. Two of the recovered 79 failed a different check instead.
+
+Not every flagged figure was a false positive, and the entry says which: a claim citing `days [-15,-6]`
+against a quote that is a table of alphas asserts a window the quote does not carry, and that stays refused.
+The remaining 393 have not been read one by one and the 0.88 is therefore a floor.
+
+### Two defects the scale exposed
+
+**A re-harvest put 77 claims in both ledgers.** The rejection rows stay — append-only, and they record what
+the old rule did — but a claim in `claims.jsonl` is accepted *now*, and counting both rows inflated
+`proposed` and understated the gate rate. `extract-report` prefers the claims ledger and reports
+`superseded_rejections` separately, because that count is what a gate rule change was worth.
+
+**And the report was quadratic.** It re-read all 1,888 request rows once per claim, so a ledger it should read
+in a second took minutes. Computed once now.
+
+### Nothing feeds stage 6 yet, and `numbers.py` being built does not change that
+
+**Zero of the 3,971 claims carry a converted value.** `numbers.py` exists and harvest calls it, but the
+schema stage 4 builds asks only for `result_id`, `question_id`, `claim`, `evidence_quote` and `stance` — not
+the `*_as_written` fields the stage 4 spec's four call shapes specify. So there is nothing to convert, and
+saying "numbers.py is built" would imply values exist. They do not. That is the next step and it means a new
+batch: the schema is inside `call_id`, so asking for more fields is honestly a different call.

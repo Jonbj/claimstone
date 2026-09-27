@@ -97,3 +97,17 @@ def test_without_a_project_the_coverage_is_unknown_rather_than_zero(tmp_path):
     assert summary["questions_asked"] is None
     assert summary["coverage"] is None
     assert summary["questions_with_a_claim"] == 1
+
+
+def test_a_claim_accepted_after_a_re_harvest_is_not_also_counted_as_rejected(tmp_path):
+    """Correcting the numeral rule moved 77 claims from rejected to accepted, and the rejection rows stay —
+    append-only, and they are the record of what the old rule did. But the *current* state of a claim is
+    whether it is in claims.jsonl, so counting both rows inflated `proposed` and understated the gate rate.
+    """
+    store = _store(tmp_path, [claim(1)],
+                   [{"claim_id": "c1", "failure": "NUMBER_NOT_IN_QUOTE", "call_id": "k1"},
+                    {"claim_id": "r2", "failure": "QUOTE_NOT_FOUND", "call_id": "k1"}])
+    summary = extract_report.summarise(store)
+    assert (summary["accepted"], summary["rejected"], summary["proposed"]) == (1, 1, 2)
+    assert summary["failures"] == {"QUOTE_NOT_FOUND": 1}
+    assert summary["superseded_rejections"] == 1

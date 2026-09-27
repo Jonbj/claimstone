@@ -25,14 +25,27 @@ def summarise(
     compute coverage. Without it the coverage is `None` rather than a number: a ratio printed without its
     denominator would be one this module invented.
     """
+    # Computed once. Calling `_batch_calls` inside the comprehension re-read all 1,888 request rows for
+    # every one of 4,358 claims, and the report took minutes on a ledger it should read in a second.
+    wanted = _batch_calls(store, batch) if batch is not None else None
     claims = [
         row for row in store.latest_by("claims.jsonl", "claim_id").values()
-        if batch is None or str(row.get("call_id")) in _batch_calls(store, batch)
+        if wanted is None or str(row.get("call_id")) in wanted
     ]
+    accepted_ids = {str(row.get("claim_id")) for row in claims}
     rejections = [
         row for row in store.latest_by("rejections.jsonl", "claim_id").values()
-        if batch is None or str(row.get("call_id")) in _batch_calls(store, batch)
+        if (wanted is None or str(row.get("call_id")) in wanted)
+        # A claim in claims.jsonl is accepted now, whatever an older rejection row says. Correcting the
+        # numeral rule moved 77 from rejected to accepted, and the rejection rows stay — append-only, and
+        # they record what the old rule did — but counting both inflated `proposed`.
+        and str(row.get("claim_id")) not in accepted_ids
     ]
+    superseded = len([
+        row for row in store.latest_by("rejections.jsonl", "claim_id").values()
+        if (wanted is None or str(row.get("call_id")) in wanted)
+        and str(row.get("claim_id")) in accepted_ids
+    ])
 
     by_question: dict[str, dict[str, Any]] = {}
     for row in claims:
@@ -83,6 +96,9 @@ def summarise(
         "questions_without_a_claim": [q for q in asked if q not in by_question],
         "by_question": dict(sorted(by_question.items())),
         "failures": dict(sorted(failures.items(), key=lambda kv: -kv[1])),
+        # Rejections a later, corrected reading turned into claims. Kept visible: the count is how much a
+        # gate rule change was worth.
+        "superseded_rejections": superseded,
     }
 
 
