@@ -200,7 +200,30 @@ def admit(
     measured = rate(store, round_name=round_name, manifest_only=manifest_only)
     achieved = measured["rate"]
     status = OK if achieved is not None and achieved >= project.acquisition_floor else INSUFFICIENT
+
+    # A class may declare its own floor, and it is an **additional** constraint. Obtainability is a property
+    # of the genre — measured on alembic-s4, MET 0.83, ACA 0.70, IND 0.33, because IND is vendor research with
+    # no open copy in existence — so one floor over a mixed manifest measures the proportions of the manifest.
+    #
+    # It can only make admission harder. A round the project floor refused stays refused however generous a
+    # class's own bar is, which is the property that keeps this from being "lower the bar until it clears".
+    declared = {
+        c.id: c.acquisition_floor
+        for c in getattr(project, "classes", ())
+        if getattr(c, "acquisition_floor", None) is not None
+    }
+    below: list[str] = []
+    for klass, bucket in measured["by_class"].items():
+        bucket["floor"] = declared.get(klass, project.acquisition_floor)
+        bucket["meets_floor"] = bucket["rate"] >= bucket["floor"]
+        if not bucket["meets_floor"]:
+            below.append(klass)
+    if below:
+        status = INSUFFICIENT
+
     return {
+        "classes_below_floor": sorted(below),
+        "class_floors": dict(sorted(declared.items())),
         "status": status,
         "floor": project.acquisition_floor,
         "floor_version": project.floor_version,

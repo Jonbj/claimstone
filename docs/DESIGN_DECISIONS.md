@@ -1380,3 +1380,44 @@ for `IND`. What does *not* follow is lowering the number: a project whose corpus
 should either declare a **per-class** floor, or accept that its rounds are `INSUFFICIENT_ACQUISITION` and read
 the per-class rates instead. Both are honest. Dropping 0.80 to 0.56 so the round passes is neither, and it is
 the move the invariant names.
+
+## D36 — A per-class floor, and why declaring one now cannot certify this round
+D35 left two honest options and one dishonest one. This takes the first, in the form that cannot be used as
+the third.
+
+**A source class may declare its own `acquisition_floor`, and it is an additional constraint.** The project
+floor still judges the whole. So a declared class floor can make admission harder or leave it unchanged, and
+**can never let a round pass that the project floor refused** — there is a test for exactly that, where every
+class clears a generous bar of its own and the round stays `INSUFFICIENT_ACQUISITION`.
+
+A class floor requires a `floor_rationale`, refused without one, on the same terms as the project floor: a bar
+without a reason is a bar somebody moved.
+
+`report` now judges each class against its own bar and names the ones below it. On `alembic-s4`:
+
+```
+ACA   7/10  0.70   floor 0.80  <- below its floor
+IND   3/9   0.33   floor 0.80  <- below its floor
+MET   5/6   0.83   floor 0.80
+```
+
+Which is more useful than one number, because the remedies differ: `MET` clears it, `ACA`'s three misses are
+publisher walls worth a campaign, and `IND`'s six are vendor pages with no open copy in existence.
+
+### The part that matters: this cannot certify `alembic-s4`
+
+The floor's own rationale allows lowering it on evidence that a class of sources is structurally unobtainable,
+and D35 established that evidence for `IND`. So declaring `IND: 0.33` is *permitted* by the letter of the
+rule. It would also be **fitting a bar to a rate already seen**, and that is the thing the invariant exists to
+prevent — the distance between "this genre cannot be obtained" and "this number is inconvenient" is entirely
+in whether the declaration came before the measurement.
+
+So: the mechanism exists and `alembic-s4` does not use it. A round declared per-class **in advance** is clean
+and this one is not, and no amount of correct reasoning after the fact converts one into the other. What a
+future round may legitimately do is declare, before acquiring, that `IND` is admitted as a pointer to primary
+sources rather than as readable evidence — which is what that class's own note in `sources.yaml` already says
+it is.
+
+And `ACA` at 0.70 is below 0.80 regardless, so even the fitted declaration would not have passed this round.
+That is worth stating plainly: the corpus that motivated this project is short of its floor on its *best*
+class, and no accounting change reaches that.

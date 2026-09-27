@@ -66,6 +66,19 @@ class SourceClass:
     # engine: invariant 4 says the engine holds no domain knowledge, and "a journal is refereed"
     # is domain knowledge.
     assign_when: dict[str, tuple[str, ...]] = field(default_factory=dict)
+    # This class's own acquisition floor, which is an **additional** constraint and never a shortcut: the
+    # project floor still applies to the whole, so a declared class floor can make admission harder or leave
+    # it unchanged and can never let a round pass that the project floor refused.
+    #
+    # Measured, on alembic-s4: MET 0.83, ACA 0.70, IND 0.33 — because IND is commercial vendor research with
+    # no open copy in existence. Obtainability is a property of the genre, and one floor over a manifest that
+    # mixes refereed papers with vendor product research measures the proportions of the manifest.
+    #
+    # A rationale is required, on the same terms as the project floor: a bar without a reason is a bar
+    # somebody moved.
+    acquisition_floor: float | None = None
+    floor_set_at: str = ""
+    floor_rationale: str = ""
 
 
 @dataclass(frozen=True)
@@ -175,6 +188,20 @@ def load_sources(root: pathlib.Path) -> tuple[tuple[SourceClass, ...], float, tu
                 )
             rules[str(name)] = tuple(str(v).strip() for v in values)
 
+        class_floor = entry.get("acquisition_floor")
+        if class_floor is not None:
+            if (not isinstance(class_floor, (int, float)) or isinstance(class_floor, bool)
+                    or not 0 < float(class_floor) <= 1):
+                raise ConfigError(
+                    f"sources.yaml class {entry.get('id')!r}: acquisition_floor must be a number in (0, 1]"
+                )
+            if not str(entry.get("floor_rationale") or "").strip():
+                raise ConfigError(
+                    f"sources.yaml class {entry.get('id')!r} declares acquisition_floor "
+                    f"{class_floor} and no floor_rationale. A bar without a reason is a bar somebody "
+                    f"moved; say why this genre's obtainability differs."
+                )
+
         classes.append(
             SourceClass(
                 id=_require_str(entry.get("id"), field="id", where="sources.yaml"),
@@ -191,6 +218,9 @@ def load_sources(root: pathlib.Path) -> tuple[tuple[SourceClass, ...], float, tu
                     entry.get("gate_policy") or {}, where=f"sources.yaml class {entry.get('id')!r}"
                 ),
                 assign_when=rules,
+                acquisition_floor=None if class_floor is None else float(class_floor),
+                floor_set_at=str(entry.get("floor_set_at") or ""),
+                floor_rationale=str(entry.get("floor_rationale") or "").strip(),
             )
         )
     _require_unique([c.id for c in classes], what="source class", where="sources.yaml")

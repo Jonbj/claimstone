@@ -192,7 +192,12 @@ def _report(args: argparse.Namespace) -> int:
         # Per class before pooled: D3 says classes are not mixed, and an aggregate that hides
         # one class sitting at zero is a different fact from a uniform one.
         for klass, bucket in result["by_class"].items():
-            print(f"  {klass:<14} {bucket['obtained']}/{bucket['found']}  {bucket['rate']:.2f}")
+            # Each class against its own bar when it declares one, the project's otherwise. A declared class
+            # floor is an additional constraint and never a shortcut: the project floor still judges the whole.
+            own = " (declared)" if klass in result["class_floors"] else ""
+            mark = "" if bucket["meets_floor"] else "  <- below its floor"
+            print(f"  {klass:<14} {bucket['obtained']}/{bucket['found']}  {bucket['rate']:.2f}"
+                  f"   floor {bucket['floor']:.2f}{own}{mark}")
 
         # The chain of states, separately, because the remedies differ: a rule to declare, a
         # round to finish, a campaign to run, a stage 3 to run.
