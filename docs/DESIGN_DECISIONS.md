@@ -1186,3 +1186,31 @@ calls, about fifty minutes and two dollars — because the manifest round stands
 reader before the corpus clears its own floor would be spending the scarce resource first. The round's
 coverage is therefore one reader's coverage, and it is recorded as such: a second reading is a known,
 priced addition of roughly a quarter more evidence, not a discovery waiting to be made.
+
+## D32 — The pilot's acquisition measured the wrong twenty-eight
+Recorded because the run happened and the figure does not mean what it looks like.
+
+### Measured, 2026-09-28
+
+`acquire` on `pilot-screen-time` reported **28 attempted, 10 obtained**. That is not the pilot's acquisition
+rate, and `report --manifest` is what showed why: of the 28 manifest sources, **1 was attempted**.
+
+`acquire` has no selector. `report` takes `--round` and now `--manifest`; `acquire` takes neither, so
+`--limit 28` attempted the first twenty-eight unattempted candidates of the **199** the discovery sweep
+found, and only one of them happened to be on the curated list. The 10 obtained are a sample of the sweep.
+
+**So `acquire` needs the same selector as `report`,** and until it has one a curated corpus cannot be
+acquired as a corpus. That is the next step and it is small; what is recorded here is that a figure was
+produced, looked plausible, and was about a different population — which is exactly the failure `report
+--round` was added for two days ago, one command over.
+
+**And a second finding that does stand.** Of the 21 sources attempted before the run finished, 5 returned
+`PAYWALL_403` and 4 gave abstract-only pages — and every one of them was selected *because OpenAlex reports
+it open access*. `is_oa` is a claim about a version existing somewhere, not about this URL serving it. A
+selection rule built on that flag is weaker than it looks, which matters for the pilot's whole premise that
+curating for open access can clear an 0.80 floor.
+
+**A reporting bug of mine, fixed.** `manifest_only` filters the candidate population, and the orphan check
+compared acquisition rows against the *filtered* set — so 27 perfectly ordinary rows were reported as
+"acquisition rows with no candidate — the ledger is inconsistent". An acquisition outside a filtered
+population belongs to a candidate the filter excluded. The check now runs only over the whole store.

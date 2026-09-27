@@ -94,7 +94,14 @@ def rate(
 
     # An acquisition row whose candidate is absent means a broken ledger. Adding it to `found`
     # would reintroduce the inflation; dropping it silently would hide the breakage.
-    orphans = sorted(set(collapse(store)) - set(candidates)) if round_name is None else []
+    # Only over the whole store. An acquisition row outside a *filtered* population is not an orphan — it
+    # belongs to a candidate the filter excluded — and reporting it as one said "the ledger is inconsistent"
+    # about a ledger that was fine.
+    orphans = (
+        sorted(set(collapse(store)) - set(candidates))
+        if round_name is None and not manifest_only
+        else []
+    )
 
     confirmed_rows = confirmations(store)
     confirmed = 0

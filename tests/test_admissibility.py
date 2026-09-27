@@ -461,3 +461,17 @@ def test_the_manifest_is_a_population_the_floor_can_be_judged_over(tmp_path):
     assert (declared["found"], declared["confirmed"]) == (2, 2)
     assert declared["rate"] == 1.0
     assert declared["final"] is True
+
+
+def test_a_filtered_population_reports_no_orphans(tmp_path):
+    """An acquisition row outside a filtered population belongs to a candidate the filter excluded. Calling
+    it an orphan said "the ledger is inconsistent" about a ledger that was fine."""
+    store = Store("t", base=tmp_path)
+    store.append("candidates.jsonl", {"candidate_key": "doi:10.1/declared", "source_class": "ACA",
+                                      "source_id": "ACA001", "round": "sweep"})
+    store.append("candidates.jsonl", {"candidate_key": "doi:10.9/found", "source_class": "ACA",
+                                      "round": "sweep"})
+    store.append("acquisitions.jsonl", {"candidate_key": "doi:10.9/found", "acquired": False,
+                                        "failure_class": "PAYWALL_403", "source_class": "ACA"})
+    assert admissibility.rate(store, manifest_only=True)["orphan_acquisitions"] == []
+    assert admissibility.rate(store)["orphan_acquisitions"] == []
