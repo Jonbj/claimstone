@@ -148,3 +148,18 @@ def test_a_batch_that_is_only_rejudgements_has_no_throughput_rather_than_infinit
     assert bucket["attempts"] == 0
     assert bucket["calls"] == 1
     assert bucket["attempts_per_hour"] is None
+
+
+def test_two_models_on_one_backend_are_reported_apart(tmp_path):
+    """The bake-off would be unreadable otherwise: one bucket holding both models' counts, with the models
+    listed beside a pass rate that belongs to neither."""
+    store = _store(tmp_path, [
+        result("a", backend="ollama-cloud", model="deepseek", cost=0.001),
+        result("b", backend="ollama-cloud", model="deepseek", ok=False, failure="QUOTE_NOT_FOUND"),
+        result("a", backend="ollama-cloud", model="mistral", cost=0.002),
+    ])
+    summary = model_report.summarise(store, lane="extract", batch="b1")
+    assert set(summary["by_reader"]) == {"ollama-cloud/deepseek", "ollama-cloud/mistral"}
+    assert summary["by_reader"]["ollama-cloud/deepseek"]["attempts"] == 2
+    assert summary["by_reader"]["ollama-cloud/mistral"]["attempts"] == 1
+    assert summary["by_reader"]["ollama-cloud/deepseek"]["cost_usd"] == 0.001

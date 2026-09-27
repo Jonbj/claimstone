@@ -392,7 +392,8 @@ def test_a_rejudgement_can_turn_a_failure_into_a_success_and_the_reverse(tmp_pat
     rows = list(model_call.rejudge(queue, response_schema=strict))
     assert rows[0]["ok"] is False
     assert rows[0]["failure_class"] == "SCHEMA_INVALID"
-    assert queue.results(backend="fake")[f"{rows[0]['call_id']}|fake"]["ok"] is False
+    # Keyed by the reader, which is the backend **and** the model.
+    assert queue.results(backend="fake")[rows[0]["result_key"]]["ok"] is False
 
 
 def test_a_rejudgement_skips_a_row_whose_bytes_are_gone(tmp_path):
@@ -404,3 +405,57 @@ def test_a_rejudgement_skips_a_row_whose_bytes_are_gone(tmp_path):
     queue, first = _drain(tmp_path, runner)
     pathlib.Path(first[0]["raw_path"]).unlink()
     assert list(model_call.rejudge(queue)) == []
+
+
+# --- A reader is a (backend, model) pair ----------------------------------------------------------
+#
+# Found on trying to compare four models on one backend. `results()` keyed on `call_id|backend`, so
+# `ollama-cloud` with deepseek and `ollama-cloud` with mistral shared a key: the second model would find the
+# batch already answered and the first's rows would be overwritten in the collapse. D30's whole claim is
+# about comparing readers, and a reader is not a backend.
+
+def test_two_models_on_one_backend_are_two_readers(tmp_path):
+    store = Store("t", base=tmp_path)
+    queue = model_call.Queue(store, lane="extract", batch="b1")
+    queue.write([unit()])
+    call_id = queue.requests()[0]["call_id"]
+    for model in ("deepseek", "mistral"):
+        store.append(queue.results_name, {"call_id": call_id, "backend": "ollama-cloud",
+                                          "model": model, "ok": True})
+    assert len(queue.results(backend="ollama-cloud")) == 2
+    assert queue.results(backend="ollama-cloud", model="deepseek") != \
+        queue.results(backend="ollama-cloud", model="mistral")
+
+
+def test_a_second_model_still_has_the_whole_batch_to_do(tmp_path):
+    """The comparison primitive, one level down from the backend. Without this, draining the same units on
+    a second model of the same backend answers nothing and reports success."""
+    store = Store("t", base=tmp_path)
+    queue = model_call.Queue(store, lane="extract", batch="b1")
+    queue.write([unit(), unit(user="another chunk")])
+    for request in queue.requests():
+        store.append(queue.results_name, {"call_id": request["call_id"], "backend": "ollama-cloud",
+                                          "model": "deepseek", "ok": True})
+    assert queue.pending(backend="ollama-cloud", model="deepseek") == []
+    assert len(queue.pending(backend="ollama-cloud", model="mistral")) == 2
+
+
+def test_the_drain_uses_the_runners_own_model(tmp_path):
+    from tests.fakes import FakeRunner
+
+    runner = FakeRunner(default=answer([{"question_id": "Q07"}]))
+    runner.model = "deepseek"
+    queue, rows = _drain(tmp_path, runner)
+    assert rows[0]["result_key"].endswith("|fake|deepseek")
+    # And what the backend said it used is kept apart from what we asked for.
+    assert rows[0]["model_reported"] == "m1"
+    # A second model finds the unit undone.
+    other = FakeRunner(default=answer([{"question_id": "Q07"}]))
+    other.model = "mistral"
+    assert len(list(model_call.drain(queue, other))) == 1
+
+
+def test_a_backend_without_a_model_still_has_one_identity(tmp_path):
+    runner = FakeRunner(default=answer([{"question_id": "Q07"}]))
+    queue, rows = _drain(tmp_path, runner)
+    assert rows[0]["result_key"] == f"{rows[0]['call_id']}|fake|"

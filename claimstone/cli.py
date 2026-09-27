@@ -546,7 +546,9 @@ def _model_run(args: argparse.Namespace) -> int:
     if unknown:
         print(f"unknown failure class: {', '.join(unknown)}", file=sys.stderr)
         return 2
-    pending = len(queue.pending(backend=runner.name, retry_classes=retry))
+    pending = len(queue.pending(backend=runner.name,
+                               model=str(getattr(runner, "model", "") or ""),
+                               retry_classes=retry))
     done = ok = 0
     for row in model_call.drain(queue, runner, limit=args.limit, retry_classes=retry):
         done += 1
@@ -580,13 +582,12 @@ def _model_report(args: argparse.Namespace) -> int:
 
     print(f"{project.name} {args.lane}/{args.batch} — {summary['calls']} calls, "
           f"{summary['ok']} valid")
-    for backend, bucket in summary["by_backend"].items():
+    for backend, bucket in summary["by_reader"].items():
         cost = "unpriced" if bucket["cost_usd"] is None else f"${bucket['cost_usd']:.4f}"
         if bucket["unpriced"] and bucket["cost_usd"] is not None:
             cost += f" (+{bucket['unpriced']} unpriced)"
         rate = "—" if bucket["attempts_per_hour"] is None else f"{bucket['attempts_per_hour']:.0f}/h"
-        print(f"  {backend:<14} {bucket['ok']}/{bucket['calls']}  {cost:<24} {rate:>9}"
-              f"  {', '.join(bucket['models'])}")
+        print(f"  {backend:<34} {bucket['ok']}/{bucket['calls']}  {cost:<20} {rate:>9}")
         if bucket["attempt_failures_by_class"]:
             print("                 " + "  ".join(
                 f"{k} {v}" for k, v in bucket["attempt_failures_by_class"].items()))

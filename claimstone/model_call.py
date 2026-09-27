@@ -189,20 +189,34 @@ class Queue:
         """Every row ever written, for auditing how a call's asker list grew."""
         return list(self.store.read(self.requests_name))
 
-    def results(self, *, backend: str | None = None) -> dict[str, dict[str, Any]]:
-        """The latest result per call, **per backend**.
+    def results(
+        self, *, backend: str | None = None, model: str | None = None
+    ) -> dict[str, dict[str, Any]]:
+        """The latest result per call, **per reader** — and a reader is a (backend, model) pair.
 
         Collapsing on `call_id` alone was the first draft, and it destroyed the one property this
         whole boundary exists for: after backend A answered a batch, draining it with backend B
         produced nothing, because every call already looked done. Two backends over the same
         requests file is the comparison primitive — it cannot be defeated by the resumability
         logic.
+
+        The **model** joined that key on trying to compare four models on one backend: `ollama-cloud` with
+        deepseek and `ollama-cloud` with mistral shared a key, so the second found the batch answered and
+        the first's rows vanished from the collapse. D30's claim is about comparing readers, and a reader is
+        not a backend.
         """
         latest: dict[str, dict[str, Any]] = {}
         for row in self.store.read(self.results_name):
             if backend is not None and row.get("backend") != backend:
                 continue
-            key = f"{row.get('call_id')}|{row.get('backend')}"
+            if model is not None and str(row.get("model") or "") != model:
+                continue
+            # The row's own `result_key`, not a second derivation of it. Two places computing an identity
+            # is two places to disagree, and they did: a reader with no declared model wrote a key ending in
+            # an empty segment while this rebuilt one from the model the backend *reported*, so a drain
+            # never saw its own answer and repeated every call.
+            key = str(row.get("result_key") or
+                      f"{row.get('call_id')}|{row.get('backend')}|{row.get('model') or ''}")
             latest[key] = row
         return latest
 
@@ -211,7 +225,11 @@ class Queue:
         return list(self.store.read(self.results_name))
 
     def pending(
-        self, *, backend: str, retry_classes: frozenset[str] = frozenset()
+        self,
+        *,
+        backend: str,
+        model: str = "",
+        retry_classes: frozenset[str] = frozenset(),
     ) -> list[dict[str, Any]]:
         """Units this backend has not answered, plus those its last answer left transient.
 
@@ -224,7 +242,7 @@ class Queue:
         answered = self.results(backend=backend)
         out: list[dict[str, Any]] = []
         for unit in self.requests():
-            held = answered.get(f"{unit['call_id']}|{backend}")
+            held = answered.get(f"{unit['call_id']}|{backend}|{model}")
             if held is None:
                 out.append(unit)
                 continue
@@ -278,7 +296,8 @@ def build_result(
     attempt_no: int = 1,
     backend: str,
     harness_version: str,
-    raw_sha256: str | None,
+    model: str = "",
+    raw_sha256: str | None = None,
     raw_path: str | None,
     started_at: str,
     finished_at: str,
@@ -307,13 +326,18 @@ def build_result(
     return {
         "call_id": request["call_id"],
         "lane": request["lane"],
-        # Identity is the call **and** who answered it, on which attempt. A row keyed by call_id
-        # alone cannot say whether a cost was a first try or a third, or which backend paid it.
-        "result_key": f"{request['call_id']}|{backend}",
+        # Identity is the call **and the reader** — backend and model — on which attempt. A row keyed by
+        # call_id alone cannot say whether a cost was a first try or a third; one keyed by backend alone
+        # cannot tell two models of the same backend apart, which is what D30 compares.
+        "result_key": f"{request['call_id']}|{backend}|{model}",
         "attempt_no": attempt_no,
         "ok": failure_class is None,
         "backend": backend,
-        "model": answer.model,
+        # What we **asked for**, which is the reader's identity and is knowable before the call — `pending`
+        # has to compute this key in advance. What the backend says it used is a different fact and can
+        # differ, so it is recorded separately rather than conflated with the identity.
+        "model": model or answer.model,
+        "model_reported": answer.model,
         "harness_version": harness_version,
         "prompt_sha256": echoed,
         # False means this backend does not report what it sent, so no echo check ran. It is not
@@ -351,7 +375,10 @@ def drain(
 
     last = 0.0
     done = 0
-    for request in queue.pending(backend=runner.name, retry_classes=retry_classes):
+    reader_model = str(getattr(runner, "model", "") or "")
+    for request in queue.pending(
+        backend=runner.name, model=reader_model, retry_classes=retry_classes
+    ):
         if limit is not None and done >= limit:
             return
         wait = runner.min_interval_s - (time.time() - last)
@@ -373,12 +400,14 @@ def drain(
             1 for attempt in queue.attempts()
             if attempt.get("call_id") == request["call_id"]
             and attempt.get("backend") == runner.name
+            and str(attempt.get("model") or "") == reader_model
         )
         row = build_result(
             request, answer,
             attempt_no=prior + 1,
             backend=runner.name,
             harness_version=runner.harness_version(),
+            model=reader_model,
             raw_sha256=raw_sha256,
             raw_path=raw_path,
             started_at=started_at,
@@ -443,6 +472,7 @@ def rejudge(
             request, answer,
             attempt_no=int(held.get("attempt_no") or 1),
             backend=str(held.get("backend") or "unknown"),
+            model=str(held.get("model") or ""),
             harness_version=str(held.get("harness_version") or ""),
             raw_sha256=held.get("raw_sha256"),
             raw_path=stored,
