@@ -52,7 +52,9 @@ class OllamaCloudRunner:
     # request, and this runner does not guess which does.
     enforce_schema: bool = False
     timeout_s: int = 300
-    max_concurrency: int = 4
+    # Three, which is what the plan in use permits. Declared rather than discovered: a fourth call is a
+    # request the endpoint will refuse, and the drain reads this number to size its pool.
+    max_concurrency: int = 3
     min_interval_s: float = 0.2
     endpoint: str = ENDPOINT
     post: Callable[..., Any] = field(default_factory=_default_post)

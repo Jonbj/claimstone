@@ -459,3 +459,93 @@ def test_a_backend_without_a_model_still_has_one_identity(tmp_path):
     runner = FakeRunner(default=answer([{"question_id": "Q07"}]))
     queue, rows = _drain(tmp_path, runner)
     assert rows[0]["result_key"] == f"{rows[0]['call_id']}|fake|"
+
+
+# --- A bounded parallel drain ---------------------------------------------------------------------
+#
+# Task 4 deferred this: "the queue is resumable by call_id, so parallelism is a contained change later that
+# does not touch the file format — and until a lane has been measured on a real backend there is no evidence
+# about what concurrency a given endpoint tolerates." Both halves now hold. The 1,888-call round took fifty
+# minutes sequentially, and the operator's Ollama plan permits three calls at once.
+
+def test_the_drain_honours_the_runners_declared_concurrency(tmp_path):
+    import threading
+
+    live = {"now": 0, "most": 0}
+    lock = threading.Lock()
+
+    # `max_concurrency` is passed to the constructor, not annotated on the subclass: FakeRunner is a
+    # dataclass and its __init__ would set the parent default over a class attribute.
+    class Counting(FakeRunner):
+        def run(self, request):
+            with lock:
+                live["now"] += 1
+                live["most"] = max(live["most"], live["now"])
+            try:
+                import time
+
+                time.sleep(0.05)
+                return answer([{"question_id": "Q07"}])
+            finally:
+                with lock:
+                    live["now"] -= 1
+
+    store = Store("t", base=tmp_path)
+    queue = model_call.Queue(store, lane="extract", batch="b1")
+    queue.write([unit(user=f"chunk {n}") for n in range(9)])
+    rows = list(model_call.drain(queue, Counting(max_concurrency=3)))
+    assert len(rows) == 9
+    assert all(r["ok"] for r in rows)
+    assert 1 < live["most"] <= 3, f"ran {live['most']} at once"
+
+
+def test_a_serial_runner_stays_serial(tmp_path):
+    """llamacpp declares 1 because a second simultaneous call queues behind the first on one card, and a CLI
+    declares 1 because an interactive plan is not batch infrastructure."""
+    import threading
+
+    live = {"now": 0, "most": 0}
+    lock = threading.Lock()
+
+    class Serial(FakeRunner):
+        def run(self, request):
+            with lock:
+                live["now"] += 1
+                live["most"] = max(live["most"], live["now"])
+            try:
+                import time
+
+                time.sleep(0.02)
+                return answer([{"question_id": "Q07"}])
+            finally:
+                with lock:
+                    live["now"] -= 1
+
+    store = Store("t", base=tmp_path)
+    queue = model_call.Queue(store, lane="extract", batch="b1")
+    queue.write([unit(user=f"chunk {n}") for n in range(4)])
+    list(model_call.drain(queue, Serial(max_concurrency=1)))
+    assert live["most"] == 1
+
+
+def test_every_result_is_written_once_and_by_one_writer(tmp_path):
+    """Append-only JSONL is a single-writer format. Calls run in parallel; rows are appended by the thread
+    that consumes them, so the ledger keeps one writer and a torn line stays impossible."""
+    store = Store("t", base=tmp_path)
+    queue = model_call.Queue(store, lane="extract", batch="b1")
+    queue.write([unit(user=f"chunk {n}") for n in range(12)])
+    runner = FakeRunner(default=answer([{"question_id": "Q07"}]), max_concurrency=3)
+    rows = list(model_call.drain(queue, runner))
+    written = list(store.read(queue.results_name))
+    assert len(rows) == len(written) == 12
+    assert len({r["call_id"] for r in written}) == 12
+
+
+def test_the_limit_still_stops_the_drain(tmp_path):
+    store = Store("t", base=tmp_path)
+    queue = model_call.Queue(store, lane="extract", batch="b1")
+    queue.write([unit(user=f"chunk {n}") for n in range(10)])
+    runner = FakeRunner(default=answer([{"question_id": "Q07"}]), max_concurrency=3)
+    rows = list(model_call.drain(queue, runner, limit=4))
+    assert len(rows) == 4
+    assert len(list(store.read(queue.results_name))) == 4

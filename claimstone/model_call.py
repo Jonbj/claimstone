@@ -18,6 +18,7 @@ from __future__ import annotations
 import datetime as _dt
 import json
 import re
+import threading
 from typing import Any
 
 from claimstone.store import sha256_text
@@ -365,58 +366,81 @@ def drain(
     limit: int | None = None,
     retry_classes: frozenset[str] = frozenset(),
 ) -> Any:
-    """Answer what is pending, one call at a time, appending each result as it lands.
+    """Answer what is pending, appending each result as it lands.
 
-    Sequential on purpose. The queue is resumable by `call_id`, so parallelism is a contained
-    change that does not touch the file format — and until a lane has been measured on a real
-    backend there is no evidence about what concurrency a given endpoint tolerates.
+    Up to `runner.max_concurrency` calls run at once and **the rows are appended by this generator's own
+    thread**. Append-only JSONL is a single-writer format, so the calls parallelise and the writing does not:
+    a torn line stays impossible and the ledger keeps the one writer `Store.read` and `Store.repair` are
+    built on.
+
+    Task 4 left this sequential deliberately — "until a lane has been measured on a real backend there is no
+    evidence about what concurrency a given endpoint tolerates" — and both halves of that now hold. The
+    1,888-call round took fifty minutes one at a time, and the Ollama plan in use permits three at once,
+    which is what `OllamaCloudRunner.max_concurrency` declares.
     """
     import time
+    from concurrent.futures import ThreadPoolExecutor
 
-    last = 0.0
-    done = 0
     reader_model = str(getattr(runner, "model", "") or "")
-    for request in queue.pending(
+    pending = queue.pending(
         backend=runner.name, model=reader_model, retry_classes=retry_classes
-    ):
-        if limit is not None and done >= limit:
-            return
-        wait = runner.min_interval_s - (time.time() - last)
-        if wait > 0:
-            time.sleep(wait)
-        last = time.time()
+    )
+    if limit is not None:
+        pending = pending[:limit]
+    if not pending:
+        return
 
+    # Counted once, before anything runs. Reading the whole attempt log per request was quadratic, and under
+    # threads it would also be a race against rows this drain is appending.
+    prior: dict[str, int] = {}
+    for attempt in queue.attempts():
+        if (attempt.get("backend") == runner.name
+                and str(attempt.get("model") or "") == reader_model):
+            key = str(attempt.get("call_id"))
+            prior[key] = prior.get(key, 0) + 1
+
+    lanes = max(1, int(getattr(runner, "max_concurrency", 1) or 1))
+    pace = float(getattr(runner, "min_interval_s", 0.0) or 0.0)
+    gate = threading.Lock()
+    last = 0.0
+
+    def call(request: dict[str, Any]) -> tuple[dict[str, Any], Any, str, float]:
+        nonlocal last
+        if pace:
+            # The interval is between *starts*, held across threads: a per-thread sleep would let `lanes`
+            # calls leave at once and pace nothing.
+            with gate:
+                wait = pace - (time.time() - last)
+                if wait > 0:
+                    time.sleep(wait)
+                last = time.time()
         started_at = _now()
         began = time.time()
-        answer = runner.run(dict(request))
-        latency = time.time() - began
+        return request, runner.run(dict(request)), started_at, time.time() - began
 
-        raw_sha256 = raw_path = None
-        if answer.body:
-            digest, path = queue.store.store_bytes_at(f"{queue.root}/raw", answer.body, ".txt")
-            raw_sha256, raw_path = digest, str(path)
+    harness = runner.harness_version()
+    with ThreadPoolExecutor(max_workers=lanes) as pool:
+        for request, answer, started_at, latency in pool.map(call, pending):
+            raw_sha256 = raw_path = None
+            if answer.body:
+                digest, path = queue.store.store_bytes_at(
+                    f"{queue.root}/raw", answer.body, ".txt")
+                raw_sha256, raw_path = digest, str(path)
 
-        prior = sum(
-            1 for attempt in queue.attempts()
-            if attempt.get("call_id") == request["call_id"]
-            and attempt.get("backend") == runner.name
-            and str(attempt.get("model") or "") == reader_model
-        )
-        row = build_result(
-            request, answer,
-            attempt_no=prior + 1,
-            backend=runner.name,
-            harness_version=runner.harness_version(),
-            model=reader_model,
-            raw_sha256=raw_sha256,
-            raw_path=raw_path,
-            started_at=started_at,
-            finished_at=_now(),
-            latency_s=latency,
-        )
-        queue.store.append(queue.results_name, row)
-        done += 1
-        yield row
+            row = build_result(
+                request, answer,
+                attempt_no=prior.get(str(request["call_id"]), 0) + 1,
+                backend=runner.name,
+                harness_version=harness,
+                model=reader_model,
+                raw_sha256=raw_sha256,
+                raw_path=raw_path,
+                started_at=started_at,
+                finished_at=_now(),
+                latency_s=latency,
+            )
+            queue.store.append(queue.results_name, row)
+            yield row
 
 
 def rejudge(
