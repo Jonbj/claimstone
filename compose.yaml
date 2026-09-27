@@ -33,7 +33,19 @@ services:
     healthcheck:
       # The endpoint the client already uses. A healthcheck rather than a sleep, so `depends_on` can wait
       # on the condition instead of on a guess — GROBID takes tens of seconds to load its models.
-      test: ["CMD-SHELL", "curl -fsS http://localhost:8070/api/isalive | grep -q true"]
+      #
+      # **In perl, because this image has no HTTP client.** The obvious `curl -fsS` version failed on every
+      # probe with `/bin/sh: 1: curl: not found`, so the container was permanently unhealthy, and
+      # `depends_on: service_healthy` then refused to start the job — while GROBID itself was answering
+      # `true` the whole time. Checked inside the image: no curl, no wget, no nc, no python3, and perl at
+      # /usr/bin/perl. A healthcheck written against tools the image does not have reports a broken parser
+      # that works, which is worse than no healthcheck.
+      test:
+        - CMD-SHELL
+        - >-
+          perl -MIO::Socket::INET -e 'my $$s=IO::Socket::INET->new(PeerAddr=>"localhost:8070",Timeout=>4)
+          or exit 1; print $$s "GET /api/isalive HTTP/1.0\r\nHost: localhost\r\n\r\n";
+          my $$r=join("",<$$s>); exit($$r=~/true/?0:1)' 
       interval: 10s
       timeout: 5s
       retries: 30

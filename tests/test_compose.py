@@ -82,3 +82,55 @@ def test_the_store_is_never_copied_into_the_image():
     ignore = pathlib.Path(".dockerignore").read_text(encoding="utf-8")
     assert "store/" in ignore
     assert "projects/alembic-s4/" in ignore
+
+
+# What the parser image actually contains, checked inside it once:
+#   curl absent · wget absent · nc absent · python3 absent · perl at /usr/bin/perl
+# The healthcheck shipped with `curl -fsS` and failed every probe with `curl: not found`, so the container
+# was permanently unhealthy and `depends_on: service_healthy` refused to start the job — while GROBID was
+# answering `true` throughout. A healthcheck written against tools the image lacks reports a broken parser
+# that works, which is worse than having none.
+ABSENT_FROM_THE_IMAGE = ("curl", "wget", "nc ", "python3", "python ")
+
+
+def _healthcheck() -> str:
+    """The probe command alone, with the comments stripped.
+
+    The comments explain at length why `curl` is not used, so a test reading the whole block fails on the
+    sentence describing the fix — the same error as grepping a module's source for the word "threshold"
+    when its docstring is about not having one.
+    """
+    text = COMPOSE.read_text(encoding="utf-8")
+    start = text.index("healthcheck:")
+    end = text.index("deploy:", start)
+    lines = [
+        line for line in text[start:end].splitlines()
+        if line.strip() and not line.strip().startswith("#")
+    ]
+    return "\n".join(lines)
+
+
+def test_the_healthcheck_uses_no_tool_the_parser_image_lacks():
+    probe = _healthcheck()
+    for tool in ABSENT_FROM_THE_IMAGE:
+        assert tool not in probe, (
+            f"the healthcheck calls {tool.strip()!r}, which this image does not have — "
+            f"every probe would fail and the container would never become healthy"
+        )
+
+
+def test_the_healthcheck_asks_the_endpoint_the_client_asks():
+    """Not a port check: a JVM that has bound 8070 and not yet loaded its models accepts the connection
+    and answers nothing, which is exactly the state the wait exists to sit through."""
+    probe = _healthcheck()
+    assert "/api/isalive" in probe
+    assert "true" in probe
+
+
+def test_the_job_waits_on_the_condition_rather_than_on_a_guess():
+    text = COMPOSE.read_text(encoding="utf-8")
+    assert "condition: service_healthy" in text
+    # Same care: the comments discuss sleeping in order to rule it out.
+    code = "\n".join(line for line in text.splitlines()
+                     if line.strip() and not line.strip().startswith("#"))
+    assert "sleep" not in code

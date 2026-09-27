@@ -1826,3 +1826,65 @@ It does not change the floor. `alembic-s4` is `INSUFFICIENT_ACQUISITION` at 0.56
 `synthesize` still writes no profile for `H15` and there is still nothing to adjudicate. The reviews sit in
 the ledger waiting for a corpus that clears its bar, which is the correct order: invariant 3 gates
 verdicts, and a profile built from a corpus read at 0.56 would invite one.
+
+---
+
+## D41 — The first admissible round: 38 of 40, and what it cost to get one
+
+Date: 2026-09-27 · `pmc-screen-time`, round `pmc-oa-v1`, campaign `pmc-round-2026-09-27`
+
+```
+pmc-screen-time — round all
+  ACA            38/40  0.95   floor 0.80
+  obtained       38/40  0.95
+  floor          0.80 (v1, 2026-09-27)   OK
+  failures       BOT_CHALLENGE 2   by host: pmc.ncbi.nlm.nih.gov 2
+```
+
+**The first round in this project's history that clears its floor.** Invariant 3 has gated every corpus
+here since the floor was written, and this is the first one it lets through. Both misses are the class
+added the same day (D39), on live traffic, from PMC itself.
+
+### Why a new round rather than a floor change
+
+The arithmetic left nothing else. `alembic-s4` is 14 of 25 with a ceiling of 18, because six of its eleven
+misses are vendor product pages with no open copy in existence. `pilot-screen-time` reached 0.45 over 199
+candidates after three cascade fixes and 14 of 28 on its declared manifest. Its open-access subset —
+`is_oa` from OpenAlex, a property recorded at discovery — obtains **0.64**, and the gap there is hosts
+refusing a crawler and metadata naming repository record pages as free copies. None of that is closable by
+retrying, and lowering 0.80 to meet it would have been the bar-fitting the invariant exists to stop.
+
+What was left was to change the **population** rather than the bar. PMC is a public archive built for
+automated full-text access, and across every attempt this project had made to it, 29 of 34 succeeded.
+
+### The two properties that make the restriction legitimate
+
+**The selector is deposits, not outcomes.** Membership is whether a PMC copy exists, which Unpaywall and
+OpenAlex report; the same 40 sources were identifiable before any document was fetched. Selecting instead
+the 90 candidates the pilot had *obtained* would have been outcome selection and would have produced a
+meaningless 1.00. The distinction is the whole of it, and it is why the round is declared by a metadata
+predicate and not by a success list.
+
+**The restriction is declared with its size.** It excludes **159 of the 199** candidates discovered on
+these topics, and that sentence is in the round's own `sources.yaml` rather than in a footnote here. A
+verdict from this corpus is a verdict about PMC-deposited literature on screen time and adolescent mental
+health — **not about the literature** — and an adjudication has to say so in its rationale.
+
+The floor stays 0.80, declared before acquiring and deliberately not tuned to this round. Had it come out
+at 0.7 the finding would have been `INSUFFICIENT_ACQUISITION`, as for the other two.
+
+Questions and topics are `pilot-screen-time`'s, unchanged at registry v1. A scope restriction is not a
+registry change, and bumping the registry would have made two rounds incomparable for no reason.
+
+### What was obtained
+
+32 HTML and 6 PDF, 25 KB to 1,388 KB, median 236. Seven carry a declared licence — `cc-by-nc` 4, `cc-by`
+2, `public-domain` 1 — and thirty do not, which is recorded as unknown rather than as permission.
+
+### The honest limitation, stated before any verdict exists
+
+A corpus restricted to what a public archive holds is restricted by deposit policy, and deposit policy is
+not random: funder mandates put publicly-funded work in PMC and leave privately-funded work out. If the
+closed literature on this topic differs systematically from the deposited literature, this corpus is
+biased in a direction nothing in it can measure. That is a limitation of the round and not a defect of the
+engine, it cannot be fixed by reading harder, and it belongs in every sentence this round produces.
