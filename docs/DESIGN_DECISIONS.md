@@ -1328,3 +1328,55 @@ meet it would be exactly the move the invariant forbids.
 And the earlier reading in D32 — that `is_oa` is a weak predictor of obtainability — survives but shifts. It
 is not that the flag is wrong; the open copy really was open. It is that **`is_oa` predicts a copy exists and
 says nothing about whether the route to it is one we may take**.
+
+## D35 — Two cascade fixes, and the two corpora fail for different reasons
+D34 named three gaps in the downloader and refused the conclusion that the floor is unreachable until they
+were closed. Two are now closed and the third turned out not to be a gap.
+
+### Measured, 2026-09-28
+
+**PubMed Central had a sanctioned route we were not using.** `www.ncbi.nlm.nih.gov/robots.txt` disallows
+`/pmc/articles/` for `*`, so every open copy Unpaywall offered there was correctly refused.
+`pmc.ncbi.nlm.nih.gov` is a **different host** whose robots says `Allow: /articles/` in as many words, and it
+serves the article as 211 KB of HTML — which the content gate judges and `html_doc` normalises, the same path
+`IND001` took. `resolve.pmc_route` rewrites the address and drops the forbidden one rather than demoting it,
+because asking a host that says no spends a request on a certain refusal. Honouring robots.txt is not
+negotiable; reading which host it belongs to is our job.
+
+Worth **one** source of 28, not the several I implied in D34: only one of the retried set had a PMC copy at
+all. The field I chose has less PMC presence than I assumed.
+
+**One useless location was suppressing a second source.** Nine of eighteen failures had tried exactly one
+address, and for every one of them Unpaywall's single offered location was `doi.org` — the resolver, not a
+file. Five were `green`, so a repository copy existed. `openalex_locations` was reachable only `if not upw`,
+so one useless answer hid the source that might have had a real address. Both APIs are now consulted, the
+results deduped by normalised URL, and a location that is only the DOI resolver is dropped: it adds nothing
+over the candidate URL, which is already the DOI, and counting it as an attempt is how nine failures looked as
+though something had been tried.
+
+**Springer was not a gap.** Its `content/pdf/…` endpoint returned HTTP 200 with **3,038 bytes of
+`text/html`** — an interstitial, not an article. `UNEXPECTED_CONTENT_TYPE` was the correct verdict. A wall, not
+a defect.
+
+```
+pilot-screen-time    0.32 → 0.36 (PMC) → 0.46 (both)    ACA 0.43 → 0.64 · WP stuck at 0.29
+alembic-s4           0.56 → 0.56                        0 of 10 retried walls gained anything
+```
+
+### The finding: one floor over a mixed manifest measures the mixture
+
+The same two fixes moved the pilot by fourteen points and `alembic-s4` by nothing, and the reason is in the
+failure hosts. The pilot's misses were repository copies we could not reach. `alembic-s4`'s ten are four
+RavenPack research pages, ScienceDirect, Wiley, LSEG and MarketPsych — **commercial vendor research with no
+open copy in existence**. There is no second address to find, and no cascade will find one.
+
+Per class, on `alembic-s4`: **MET 0.83, ACA 0.70, IND 0.33**. Obtainability is a property of the genre, and a
+single floor across a manifest that mixes refereed papers with vendor product research is measuring the
+proportions of the manifest as much as the diligence of the downloader.
+
+**This still does not justify moving the floor**, and the reason is worth stating precisely. The floor is
+lowered only on evidence that a class of sources is structurally unobtainable — and that evidence now exists
+for `IND`. What does *not* follow is lowering the number: a project whose corpus is one third vendor research
+should either declare a **per-class** floor, or accept that its rounds are `INSUFFICIENT_ACQUISITION` and read
+the per-class rates instead. Both are honest. Dropping 0.80 to 0.56 so the round passes is neither, and it is
+the move the invariant names.

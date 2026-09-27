@@ -8,8 +8,10 @@ module never proposes one.
 
 from __future__ import annotations
 
+import re
+
 import urllib.parse
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 
 from claimstone import ids, net
@@ -21,6 +23,24 @@ KNOWN_WALLS = (
 )
 
 WAYBACK_API = "https://archive.org/wayback/available?url="
+
+# PubMed Central, and the one host that will serve it to us.
+#
+# `www.ncbi.nlm.nih.gov/robots.txt` disallows `/pmc/articles/` for `*`, so every open copy Unpaywall offered
+# there was correctly refused — measured, three of eighteen pilot failures, on a field where PMC is most of
+# the full text there is. `pmc.ncbi.nlm.nih.gov` is a different host whose robots says `Allow: /articles/` in
+# as many words, and it serves the article as 211 KB of HTML, which the content gate judges and `html_doc`
+# normalises. Honouring robots.txt is not negotiable; reading which host it belongs to is our job.
+_PMC_ARTICLE = re.compile(
+    r"^https?://(?:www\.)?ncbi\.nlm\.nih\.gov/pmc/articles/(PMC)?(\d+)/?$", re.I
+)
+PMC_HOST = "https://pmc.ncbi.nlm.nih.gov/articles"
+
+
+def pmc_route(url: str) -> str | None:
+    """The allowed address for a PMC article location, or None when the URL is not one."""
+    found = _PMC_ARTICLE.match(str(url or "").strip())
+    return f"{PMC_HOST}/PMC{found.group(2)}/" if found else None
 
 
 @dataclass(frozen=True)
@@ -174,10 +194,42 @@ def plan(
         doi = resolve_doi_by_title(fetcher, str(candidate["title"]))
 
     if doi and use_apis:
+        # Both, always, deduped below. `openalex_locations` used to be reachable only `if not upw`, and
+        # measured on the pilot that cost nine of eighteen failures: Unpaywall answered with exactly one
+        # location whose URL was `doi.org` — the resolver, not a file — and one useless answer suppressed the
+        # source that might have had a real address. Five of those nine were `green`, so a repository copy
+        # existed. Two polite metadata APIs with a contact address is the right price for not missing it.
         upw, oa_status = unpaywall_locations(fetcher, doi)
         locations.extend(upw)
-        if not upw:
-            locations.extend(openalex_locations(fetcher, doi))
+        locations.extend(openalex_locations(fetcher, doi))
+
+    # Rewritten before ordering, and the forbidden address is dropped rather than demoted: asking a host
+    # that says no spends a request on a certain refusal.
+    rewritten: list[Location] = []
+    for location in locations:
+        allowed = pmc_route(location.url)
+        rewritten.append(
+            replace(location, url=allowed, provenance=f"{location.provenance}+pmc")
+            if allowed else location
+        )
+
+    # Deduped, and an address that is only the DOI resolver is dropped: it adds nothing over the candidate
+    # URL, which is already the DOI, and counting it as an attempt is how nine pilot failures looked as
+    # though something had been tried.
+    seen: set[str] = set()
+    locations = []
+    for location in rewritten:
+        key = ids.normalize_url(location.url)
+        if not key or key in seen:
+            continue
+        if net.host_of(location.url) == "doi.org" and key != ids.normalize_url(original):
+            # A second doi.org address that is not the candidate's own is still just the resolver.
+            if not original:
+                locations.append(location)
+                seen.add(key)
+            continue
+        seen.add(key)
+        locations.append(location)
 
     ordered = sorted(locations, key=_preference)
 
