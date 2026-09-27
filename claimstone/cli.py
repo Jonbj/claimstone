@@ -17,7 +17,7 @@ if TYPE_CHECKING:  # import cost at startup matters for a CLI; these are annotat
     from claimstone.config import Project
     from claimstone.store import Store
 
-STAGES = ("review", "synthesize")
+STAGES = ("synthesize",)
 
 # Named here rather than imported, because building the parser must not pull in three runner
 # modules. `test_cli_model.py` pins this list against `runners.available()`.
@@ -677,6 +677,84 @@ def _extract_report(args: argparse.Namespace) -> int:
     return 0
 
 
+def _review(args: argparse.Namespace) -> int:
+    from claimstone import review
+
+    project = load_project(args.project)
+    store = _checked_store(args, project)
+
+    if args.harvest:
+        # No socket, and no other ledger touched: claims.jsonl is append-only and belongs to stage 4.
+        try:
+            result = review.harvest(project, store, batch=args.batch)
+        except review.SameReader as exc:
+            print(str(exc), file=sys.stderr)
+            return 2
+        held = f", {result['already_held']} already held" if result["already_held"] else ""
+        print(f"{result['reviewed']} reviewed{held}")
+        if result["verdicts"]:
+            print("  " + "  ".join(f"{k} {v}" for k, v in result["verdicts"].items()))
+        if result["calls_without_an_answer"]:
+            print(f"  {result['calls_without_an_answer']} call(s) returned no verdict; those claims are "
+                  f"awaiting review, which is neither supported nor unsupported")
+        return 0
+
+    reviewer = None
+    if args.reviewer:
+        if "/" not in args.reviewer:
+            print("--reviewer takes backend/model, e.g. claude-cli/claude-opus-5", file=sys.stderr)
+            return 2
+        backend, _, model = args.reviewer.partition("/")
+        reviewer = (backend, model)
+
+    result = review.build(project, store, batch=args.batch, reviewer=reviewer, limit=args.limit)
+    print(f"batch {result['batch']}: {result['units']} review units")
+    if result["same_reader"]:
+        print(f"  {result['same_reader']} claim(s) excluded: {args.reviewer} extracted them, and a second "
+              f"opinion from the same opinion is not a control")
+    for name in ("missing_chunk", "unknown_question"):
+        if result[name]:
+            print(f"  {result[name]} skipped: {name.replace('_', ' ')}")
+    print(f"  {result['prompt_chars']:,} prompt characters "
+          f"\u2248 {result['prompt_chars'] // 4:,} tokens in")
+    print(f"  drain with: claimstone model-run {args.project} review "
+          f"--batch {result['batch']} --backend <name>")
+    return 0
+
+
+def _review_report(args: argparse.Namespace) -> int:
+    from claimstone import review_report
+
+    project = load_project(args.project)
+    summary = review_report.summarise(_checked_store(args, project))
+
+    if args.json:
+        import json
+
+        print(json.dumps(summary, indent=2, sort_keys=True))
+        return 0
+
+    print(f"{project.name} — {summary['claims']} claims, {summary['reviewed']} reviewed, "
+          f"{summary['awaiting_review']} awaiting")
+    for reader, bucket in summary["by_extractor"].items():
+        share = ("\u2014" if bucket["supported_share"] is None
+                 else f"{bucket['supported_share']:.2f}")
+        print(f"  extracted by {reader}")
+        print(f"    {bucket['verified_useful']:>4} verified useful of {bucket['reviewed']} reviewed  "
+              f"{share}   {bucket['verdicts'] or '-'}")
+        if bucket["awaiting_review"]:
+            print(f"    {bucket['awaiting_review']:>4} awaiting review — neither supported nor "
+                  f"unsupported, and stage 6 may not use them")
+        if bucket["gate_rejections"]:
+            print(f"    {bucket['gate_rejections']:>4} rejected by the gate  "
+                  f"{bucket['gate_rejections_by_reason']}")
+    if summary["reviewed_by"]:
+        print(f"  reviewed by  {', '.join(summary['reviewed_by'])}")
+    print()
+    print(f"  {summary['caveat']}")
+    return 0
+
+
 def _not_implemented(args: argparse.Namespace) -> int:
     print(
         f"stage '{args.stage_name}' is not implemented yet — see README.md, 'The six stages'",
@@ -708,6 +786,8 @@ def build_parser() -> argparse.ArgumentParser:
         ("normalize", _normalize, "stage 3: TEI, chunks and references"),
         ("extract", _extract, "stage 4: build the work units, or --harvest the answers"),
         ("extract-report", _extract_report, "the gate's ratio and the corpus's, never fused"),
+        ("review", _review, "stage 5: build the review units, or --harvest the verdicts"),
+        ("review-report", _review_report, "verdicts per extraction reader; precision side only"),
     ):
         command = sub.add_parser(name, help=help_text)
         command.add_argument("project", help="path to a project directory")
@@ -770,6 +850,16 @@ def build_parser() -> argparse.ArgumentParser:
                                  help="chunks per kind, not units in total")
             command.add_argument("--kind", default=None,
                                  help="build one kind alone: " + ", ".join(extract_kinds()))
+        if name == "review":
+            command.add_argument("--batch", required=True, help="which batch to build or harvest")
+            command.add_argument("--harvest", action="store_true",
+                                 help="write reviews.jsonl from the drained verdicts; no request")
+            command.add_argument("--reviewer",
+                                 help="backend/model that will be asked, so the claims it may not "
+                                      "judge are excluded before the calls are paid for")
+            command.add_argument("--limit", type=int, default=None)
+        if name == "review-report":
+            command.add_argument("--json", action="store_true")
         if name == "extract-report":
             command.add_argument("--batch", default=None, help="one batch; default every claim held")
             command.add_argument("--show-rejected", action="store_true",
