@@ -1,0 +1,11 @@
+# The store is bind-mounted, never copied: it holds the fetched bytes of copyrighted papers, it is
+# gitignored for that reason, and baking it into an image would carry them into any registry.
+store/
+.venv/
+.git/
+__pycache__/
+*.pyc
+.pytest_cache/
+# Real project instances encode a consuming system's internal design and are gitignored. They are
+# bind-mounted so the image stays publishable.
+projects/alembic-s4/

@@ -35,6 +35,10 @@ INSTRUMENTS = (
 # every body-character, section and reference count without touching a version number.
 PARSERS = (("claimstone/grobid.py", "IMAGE"),)
 
+# And the digest, where a compose file pins one. A tag can be re-pushed under the same name, so the tag
+# being recorded is not the same as the build being recorded — see D29.
+DIGEST = re.compile(r"^\s+image:\s*\S+@(sha256:[0-9a-f]{64})\s*$", re.M)
+
 
 def declared(path: pathlib.Path, constant: str) -> int | None:
     if not path.exists():
@@ -86,6 +90,22 @@ def main() -> int:
                 f"docs/DESIGN_DECISIONS.md never names it. Figures measured with a different "
                 f"parser build are not comparable to figures measured with this one."
             )
+
+    compose = ROOT / "compose.yaml"
+    if compose.exists():
+        found = DIGEST.search(compose.read_text(encoding="utf-8"))
+        if found is None:
+            problems.append(
+                "compose.yaml pins no image digest. A tag can be re-pushed under the same name, so a "
+                "figure measured with one build is not comparable to one measured with another."
+            )
+        else:
+            checked += 1
+            if found.group(1) not in record:
+                problems.append(
+                    f"compose.yaml pins {found.group(1)} and docs/DESIGN_DECISIONS.md never names it. "
+                    f"An instrument the record does not name is one nobody can tell you changed."
+                )
 
     for problem in problems:
         print(f"error: {problem}")

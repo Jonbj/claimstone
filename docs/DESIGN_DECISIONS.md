@@ -981,3 +981,75 @@ mistake as counting a one-character paragraph's occurrences.
 **What the coverage says.** 6 of 22 verdict-bearing questions have a claim, from 26 chunks of 472 — so
 `no claim yet` on sixteen questions means nothing yet about the literature. That distinction is the whole
 of invariant 2: `UNANSWERED_IN_LITERATURE` requires a complete round, and this is not one.
+
+## D29 — The production host is a container set, and two compose idioms are refused
+Claimstone moves to a node that is not the development machine. The correct shape for that is
+`docker compose`, and it is not a concession: D7 says a dependency must sit behind a process or file
+boundary, and a container is the strongest such boundary available. GROBID was already one.
+
+**What runs.** `grobid`, long-running and stateless, and `claimstone`, which is a **batch job** — it runs,
+appends to a ledger, exits. The job sits behind a `profiles: [cli]` so `compose up` does not start it, and
+carries no restart policy: giving a job one is how a finished run becomes an infinite one.
+
+**The image is pinned by digest, and that is correctness rather than hygiene.**
+
+```
+lfoppiano/grobid:0.8.1@sha256:820a623a0234cda235d5eb83e924934162c5f0554a843cf665c339da8b51f900
+```
+
+Measured: `latest-crf` produced **508 KB** of TEI against 0.8.1's **91 KB** on the same PDF. Every corpus
+figure in D19, D21 and D27 — 905,189 body characters, 472 chunks, 789 references — was measured with this
+build. A tag can be re-pushed under the same name; a digest cannot. `tests/test_compose.py` holds the
+compose file, `grobid.IMAGE` and this record together, the same way `cli.BACKENDS` is held against
+`runners.available()`.
+
+### Two compose idioms refused, with the reason
+
+**No named volume for the store.** A named volume is the portable choice and the wrong one here. The entire
+argument for append-only JSONL is that it is hashable, diffable and **auditable with `grep`**; a volume
+makes that require entering a container. `./store` and `./projects` are bind mounts, and the job runs as
+the host's UID so a ledger does not come back root-owned.
+
+**No service per stage, and no broker.** The six stages communicate through append-only files (D7, D9). An
+HTTP boundary where a file boundary is the recorded decision would invent a distributed system for a
+single-writer workload of a few dozen megabytes — the same argument CLAUDE.md uses to refuse Postgres and a
+vector database. And the work queue is already `calls/<lane>/<batch>/requests.jsonl`, resumable by
+`call_id`: a broker would hold a second copy and be the authority on neither.
+
+### And R is not in it
+
+An earlier answer of mine said R needed installing on the production node. That was wrong. **D17 removed
+the statistics**: stage 6 is a deterministic aggregator with no model, no network and no R, and D6 is
+deferred rather than implemented. There is nothing to containerise.
+
+### The production node, measured
+
+Both nodes of `llm-cluster-admin` are i7-1355U laptops with 12 threads and 14 GB of RAM, running 24/7.
+**node2** (`192.168.178.164`) is the host: node1 is the cluster coordinator and its `llama-server` holds a
+16.8 GB dense model, leaving no room beside GROBID's measured 3.6 GB, while node2's RPC service has been
+stopped and disabled since 24/08 because the llama.cpp RPC backend is serial by construction. The memory
+limit in compose is 6 GB for that reason — on this pipeline GROBID, not a model, is the ceiling.
+
+The workload suits a laptop: the 1,888 extraction calls are HTTP against a cloud endpoint, and acquisition
+is deliberately slow — per-domain budgets, throttling, explicit timeouts. The store is 28 MB for 16
+documents against 278 GB of ext4.
+
+### What the container found that the host had hidden
+
+**The suite did not pass on the minimum supported Python.** `pyproject.toml` says `>=3.11` and the image
+pins 3.13, where two test files failed to import: `NameError: name 'Any' is not defined`. `tests/test_
+searchers.py` held a dead copy of `_row`'s implementation — a plan snippet appended by mistake — and Python
+3.14 on the development machine evaluates annotations lazily, so it never looked. 39 lines of dead code,
+invisible for as long as one interpreter was the only one that ran it.
+
+**A project instance was not self-contained, and said `OK` about it.** `projects/alembic-s4/manifest.tsv` is
+a symlink into another repository. A bind mount carries the link and not its target, so inside the container
+it dangled — and `Path.exists()` follows a link, so a broken one is indistinguishable from no link at all.
+`validate` printed `OK ... 6 source classes` with the manifest's 25 rows simply absent. **A project that
+declares no manifest and a project whose manifest points nowhere are different facts**, and the second
+silently removes 25 sources from a round's denominator. `load_manifest` now refuses it with the path, the
+target and what to do.
+
+Neither defect was reachable on the development machine. That is the argument for the container set that no
+paradigm supplies: a second interpreter and a second filesystem view are two instruments, and this project's
+whole method is that a figure measured by one instrument is not a figure measured by another.

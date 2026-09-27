@@ -1,0 +1,88 @@
+# Two services and one of them is not a service.
+#
+# `grobid` is long-running and stateless: it answers HTTP, holds nothing between calls, and is replaceable.
+# `claimstone` is a **batch job** — it runs, writes to an append-only ledger, and exits — so it sits behind
+# a profile and is invoked with `run --rm`. Giving a job a restart policy is how a finished run becomes an
+# infinite one.
+#
+# What this deliberately does **not** do, because the microservice shape would be wrong here:
+#
+# No service per stage. The six stages talk through append-only files, which is D7 and D9, and putting an
+# HTTP boundary where a file boundary is the recorded decision would invent a distributed system for a
+# single-writer workload of a few dozen megabytes — the same argument CLAUDE.md uses to refuse Postgres.
+#
+# No message broker. The work queue is `calls/<lane>/<batch>/requests.jsonl`, resumable by `call_id` and
+# readable with `grep`. A broker would hold a second copy of it and be the authority on neither.
+#
+# No named volume for the store. A named volume is the portable choice and it is the wrong one: the whole
+# argument for append-only JSONL is that it is diffable and auditable with `grep`, and a volume makes that
+# require entering a container. Bind mounts, deliberately.
+
+name: claimstone
+
+services:
+  grobid:
+    # Pinned by **digest**, not by tag. Measured: `latest-crf` produced 508 KB of TEI against 0.8.1's 91 KB
+    # on the same PDF, so the image is an instrument and every corpus figure — 905,189 body characters, 472
+    # chunks — was measured with this one. A tag can be re-pushed under the same name; a digest cannot.
+    image: lfoppiano/grobid:0.8.1@sha256:820a623a0234cda235d5eb83e924934162c5f0554a843cf665c339da8b51f900
+    environment:
+      # Required, not optional: the image's JVM cannot read cgroup v2 under Docker 29 and the container
+      # dies at startup without it. This cost twenty minutes to diagnose once.
+      JAVA_TOOL_OPTIONS: -XX:-UseContainerSupport
+    healthcheck:
+      # The endpoint the client already uses. A healthcheck rather than a sleep, so `depends_on` can wait
+      # on the condition instead of on a guess — GROBID takes tens of seconds to load its models.
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8070/api/isalive | grep -q true"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 90s
+    # Measured on the target machine: 2.4 GB idle, 3.6 GB with models loaded. The limit is here because the
+    # production node has 14 GB and is a laptop — GROBID, not the model, is this pipeline's memory ceiling.
+    deploy:
+      resources:
+        limits:
+          memory: 6g
+    restart: unless-stopped
+    networks: [claimstone]
+    # No published port. The engine reaches it by service name on the private network; publishing 8070 would
+    # put an unauthenticated PDF parser on the LAN for no reason.
+
+  claimstone:
+    build:
+      context: .
+      args:
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
+    # A job, not a service: `up` must not start it. `docker compose run --rm claimstone <command>`.
+    profiles: [cli]
+    depends_on:
+      grobid:
+        condition: service_healthy
+    environment:
+      # Configuration from the environment, never from the image: this repository is public and the image
+      # may reach a registry. `.env` holds these and is gitignored; `.env.example` is committed.
+      CLAIMSTONE_CONTACT_EMAIL: ${CLAIMSTONE_CONTACT_EMAIL:?set it in .env — the APIs require an address and the code refuses to guess one}
+      CLAIMSTONE_GROBID_URL: http://grobid:8070
+      OLLAMA_API_KEY: ${OLLAMA_API_KEY:-}
+    volumes:
+      # The two directories that must not live in an image. `store/` holds the fetched bytes of copyrighted
+      # papers; `projects/` holds instances that encode a consuming system's internal design, which is why
+      # both are gitignored.
+      - ./store:/app/store
+      - ./projects:/app/projects
+      # A project instance must be **self-contained** to move. `projects/alembic-s4/manifest.tsv` is a
+      # symlink into another repository, and a bind mount carries the link and not its target — so on any
+      # host but the one that owns that path it dangles. `load_manifest` now refuses a link that points
+      # nowhere rather than reading it as "no manifest", which used to drop 25 sources out of a round in
+      # silence. The fix is to copy the file into the instance; `projects/*/manifest.tsv` is gitignored
+      # either way. The escape hatch, on the development machine only:
+      #   - /home/stefano/Documents/Projects/Alembic/docs/research:/home/stefano/Documents/Projects/Alembic/docs/research:ro
+    # Writing to a bind mount as root would leave root-owned rows in a ledger the operator then cannot read.
+    user: "${UID:-1000}:${GID:-1000}"
+    networks: [claimstone]
+
+networks:
+  claimstone:
+    driver: bridge

@@ -474,6 +474,17 @@ def load_manifest(
     import csv
 
     path = pathlib.Path(root) / "manifest.tsv"
+    if not path.exists() and path.is_symlink():
+        # `Path.exists()` follows a link, so a broken one looks exactly like no link at all. Found by
+        # moving to a container: this project's manifest is a symlink into another repository, the bind
+        # mount carried the link and not its target, and `validate` printed OK with no manifest rows —
+        # silently dropping 25 sources out of a round. A project that declares no manifest and a project
+        # whose manifest points nowhere are different facts.
+        raise ConfigError(
+            f"manifest.tsv is a symlink that points nowhere: {path} -> "
+            f"{pathlib.Path(path).readlink()}. A manifest that cannot be read is not the same as a "
+            f"project without one; copy the file in, or mount its target."
+        )
     if not path.exists():
         return ()
 

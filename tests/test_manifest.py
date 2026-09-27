@@ -142,3 +142,21 @@ def test_an_unknown_gate_policy_key_is_an_error(tmp_path):
         "classes: []\nacquisition_floor: 0.8\ngate_policy:\n  tone: formal\n", encoding="utf-8")
     with pytest.raises(ConfigError, match="tone"):
         load_gate_policy(tmp_path)
+
+
+def test_a_manifest_that_points_nowhere_is_an_error_and_not_an_absent_manifest(tmp_path):
+    """Found by moving to a container. `projects/alembic-s4/manifest.tsv` is a symlink to a path in another
+    repository, so inside the container it dangles — and `validate` printed `OK` with no manifest rows,
+    because `Path.exists()` follows a link and a broken one looks exactly like no link at all.
+
+    A project that declares no manifest and a project whose manifest points nowhere are different facts, and
+    the second is the one that silently drops 25 sources out of a round.
+    """
+    broken = tmp_path / "manifest.tsv"
+    broken.symlink_to(tmp_path / "somewhere-else.tsv")
+    with pytest.raises(ConfigError, match="points nowhere"):
+        load_manifest(tmp_path, frozenset({"ACA"}), {})
+
+
+def test_a_project_with_no_manifest_at_all_is_still_fine(tmp_path):
+    assert load_manifest(tmp_path, frozenset({"ACA"}), {}) == ()
