@@ -1888,3 +1888,61 @@ not random: funder mandates put publicly-funded work in PMC and leave privately-
 closed literature on this topic differs systematically from the deposited literature, this corpus is
 biased in a direction nothing in it can measure. That is a limitation of the round and not a defect of the
 engine, it cannot be fixed by reading harder, and it belongs in every sentence this round produces.
+
+---
+
+## D42 — `html_parser_version 2`: the HTML parser had no bibliography and no version
+
+Date: 2026-09-27 · `pmc-screen-time`
+
+`normalize` reported `0 refs` for 32 of 38 documents in the PMC round while all 6 of its PDFs, parsed by
+GROBID, reported theirs. `html_doc.py`'s docstring said why, and said it as a decision: *"It extracts no
+references and no footnotes: a filing has no bibliography, and the confirmation rule's second clause — long
+enough to stand without a reference list — is what admits these documents honestly."*
+
+That reasoning was measured against **one** HTML document, an SEC prospectus supplement. A PMC article in
+HTML has a bibliography, and the consequence was not cosmetic: `PMC040` carries a `ref-list`, a
+`References` heading and 38 entries, and was refused as `NOT_A_DOCUMENT` for *"0 references and body_chars
+12334: below both min_references"*. **A limitation of this parser was recorded as a property of the
+source** — the same defect shape as `ARTIFACT_UNREADABLE` (stage 3) and `BOT_CHALLENGE` (D39), now found a
+third time in a third place.
+
+### Measured, 2026-09-27
+
+```
+                          before   after
+documents with references    6/38   37/38
+distinct reference keys       354   2,594
+confirmed                   36/40   37/40      0.90 -> 0.93
+```
+
+Read loosely and on purpose: a container the markup itself declares (`ref-list`, `references`,
+`bibliography` in a class or id — never a heading's text, which would catch a prose section discussing
+references), each `li` over 30 characters, a DOI where the entry carries one, and a year **only when the
+entry names exactly one candidate** — two is a page range or a volume that looks like a year, and choosing
+between them would be a coin toss recorded as a fact. Where nothing better exists the entry's text is the
+title, because a reference that can be *counted* is what the confirmation rule needs and one that can be
+*resolved* needs a title or a DOI; this says which it got rather than inventing the rest.
+
+### The parser is an instrument and was unversioned
+
+Same gap as the claim gate had this morning (D37). What a parser extracts decides `body_chars` and
+`references`, and those decide `fulltext_confirmed` — so two documents confirmed under different versions
+of it are not the same kind of row. The PDF parser has been pinned by digest in `compose.yaml` since D29
+precisely because it is an instrument; the HTML parser is code in this repository and had no version at
+all. `HTML_PARSER_VERSION` is now stamped on every `documents.jsonl` row and registered with
+`tools/check_instrument_versions.py`, which refused to pass until this entry existed. Rows written before
+it carry none and are version 1.
+
+### And the operational defect underneath, which wasted a measurement
+
+The first re-normalize changed nothing, and the reason was not in the code. `claimstone.sh` runs
+`docker compose run`, `compose.yaml` bind-mounts `store/` and `projects/` **and nothing else**, so the code
+comes from the image — and the image predated the fix. The run re-appended its previous output and the
+figure it printed was the old one, which I read as "the fix does not work".
+
+No data was lost: 1,460 chunk rows held 730 distinct ids, because the ledger is append-only and `latest_by`
+takes the last. That is the resumability property D9 is for, working without being asked.
+
+`claimstone.sh` now builds before it runs. The build is cached and costs a second when nothing changed,
+which is the right price for never reasoning about a stale image again.

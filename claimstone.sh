@@ -19,6 +19,13 @@ if [[ ! -f .env ]]; then
   exit 2
 fi
 
+# The image carries the code — `compose.yaml` bind-mounts `store/` and `projects/` and nothing else — so a
+# working tree that has moved since the last build is not what runs. Measured the hard way: a fix to
+# `html_doc.py` was invisible through this script, the run re-appended its previous output, and the figure
+# it produced was the old one. The build is cached and costs a second when nothing changed, which is the
+# right price for never reasoning about a stale image again.
+docker compose build --quiet claimstone
+
 # Only `normalize` reaches GROBID, and only for a PDF whose TEI is not already on disk. Bringing the parser
 # up for `report` or `extract --harvest` would spend 3.6 GB and ninety seconds on nothing.
 needs_grobid=0

@@ -5,9 +5,21 @@ agency page. Recording them as `NOT_PDF` drops a real document out of the corpus
 what the first draft of stage 3 did to a 247,993-character SEC filing.
 
 This produces the same dataclasses as `tei.py`, so `chunk.py` and the confirmation rule do not
-know or care which parser they came from. It extracts **no references and no footnotes**: a filing
-has no bibliography, and the confirmation rule's second clause — long enough to stand without a
-reference list — is what admits these documents honestly.
+know or care which parser they came from. It extracts no footnotes.
+
+**It did extract no references, and that was wrong once the corpus changed.** The original reason —
+"a filing has no bibliography, and the confirmation rule's second clause admits these documents
+honestly" — was measured against one HTML document, an SEC prospectus. A PMC article in HTML has a
+bibliography, and not reading it recorded `0 references` for 32 of 38 documents in the PMC round
+while all 6 of its PDFs, parsed by GROBID, reported theirs. It also cost a document: `PMC040`
+carries a `ref-list` and a `References` heading and was refused as `NOT_A_DOCUMENT` for "0
+references and body_chars 12334". A limitation of this parser had been recorded as a property of
+the source, which is the defect shape `ARTIFACT_UNREADABLE` and `BOT_CHALLENGE` were both added for.
+
+So a reference list is read where the markup declares one. Loosely and on purpose: a DOI where the
+entry carries one, a year where it is unambiguous, and the entry's text as the title when nothing
+better is available. A reference that can be **counted** fixes the confirmation rule; one that can
+be **resolved** needs a title or a DOI, and this says which it got rather than inventing the rest.
 
 It does extract tables, against the plan's original decision. That decision was made before anyone
 opened the corpus's one HTML document: a Credit Suisse 424B2 prospectus supplement with **140
@@ -31,9 +43,23 @@ unmatchable against any chunk, and the quote gate would reject a true claim.
 
 from __future__ import annotations
 
+import re
+from dataclasses import replace as _replace
 from html.parser import HTMLParser
 
-from claimstone.tei import Document, Section, Table, TeiError
+from claimstone.ids import normalize_doi, normalize_title
+from claimstone.tei import Document, Reference, Section, Table, TeiError
+
+# This parser is an instrument, on the same footing as the GROBID image pinned by digest in
+# `compose.yaml`: what it extracts decides `body_chars` and `references`, and those decide
+# `fulltext_confirmed`. Two documents confirmed under different versions of it are not the same kind of
+# row, and a corpus figure that mixes them silently is what `tools/check_instrument_versions.py` exists
+# to stop. Rows written before this constant existed carry no `html_parser_version` and are version 1.
+#
+#   1  sections, paragraphs and tables. No references — "a filing has no bibliography".
+#   2  a reference list where the markup declares one, after that reasoning was measured against a
+#      corpus of PMC articles and cost `PMC040` its admission.
+HTML_PARSER_VERSION = 2
 
 _SKIP = frozenset({"script", "style", "nav", "header", "footer", "aside", "noscript"})
 _HEADINGS = frozenset({"h1", "h2", "h3"})
@@ -42,6 +68,62 @@ _HEADINGS = frozenset({"h1", "h2", "h3"})
 # paragraph would put every chunk over budget at once.
 _BLOCKS = frozenset({"p", "li", "dd", "dt", "blockquote", "div", "pre"})
 _CELLS = frozenset({"td", "th"})
+
+
+# A container the markup itself declares to be the bibliography. Matched on the attribute rather than
+# on a heading's text, because a heading match would also catch a prose section discussing references.
+_REF_CONTAINER = re.compile(
+    r"""<(ol|ul|section|div)\b[^>]*(?:class|id)\s*=\s*["'][^"']*\b(?:ref-list|reflist|"""
+    r"""references|bibliography)\b[^"']*["'][^>]*>(.*?)</\1>""",
+    re.I | re.S)
+
+# One entry. A reference list is a list, and the entries that are not `li` are not entries.
+_REF_ENTRY = re.compile(r"<li\b[^>]*>(.*?)</li>", re.I | re.S)
+
+_TAGS = re.compile(r"<[^>]+>")
+_DOI_IN_TEXT = re.compile(r"\b10\.\d{4,9}/[^\s\"'<>,;)\]]+", re.I)
+_YEAR_IN_TEXT = re.compile(r"\b(19[5-9]\d|20[0-4]\d)\b")
+
+# Enough to be a citation and not a stray list item. Measured on PMC HTML: the shortest real entry in
+# the round's reference lists is 41 characters; a navigation `li` is typically under 20.
+MIN_REFERENCE_CHARS = 30
+
+
+def _visible(markup: str) -> str:
+    return re.sub(r"\s+", " ", _TAGS.sub(" ", markup)).strip()
+
+
+def references_from(markup: str) -> tuple[Reference, ...]:
+    """The bibliography a page declares, read loosely and honestly.
+
+    A reference that can be **counted** is what the confirmation rule needs; one that can be
+    **resolved** needs a title or a DOI. Where only the entry's text is available it becomes the title,
+    because inventing a structured citation out of free text is the guessing this project refuses —
+    and a reference whose title is its whole entry still counts, and still says so.
+    """
+    found: list[Reference] = []
+    seen: set[str] = set()
+    for container in _REF_CONTAINER.finditer(markup):
+        for entry in _REF_ENTRY.finditer(container.group(2)):
+            text = _visible(entry.group(1))
+            if len(text) < MIN_REFERENCE_CHARS or text in seen:
+                continue
+            seen.add(text)
+            doi_match = _DOI_IN_TEXT.search(text)
+            doi = normalize_doi(doi_match.group(0).rstrip(".")) if doi_match else None
+            years = _YEAR_IN_TEXT.findall(text)
+            # Only when the entry names exactly one candidate year. Two is a page range or a volume
+            # that looks like a year, and picking one of them would be a coin toss recorded as a fact.
+            year = int(years[0]) if len(set(years)) == 1 else None
+            folded = normalize_title(text)
+            found.append(Reference(
+                key=f"doi:{doi}" if doi else (f"title:{folded}" if folded else ""),
+                title=text,
+                year=year,
+                authors=(),
+                doi=doi,
+            ))
+    return tuple(found)
 
 
 class _Reader(HTMLParser):
@@ -193,13 +275,16 @@ class _Reader(HTMLParser):
 
 def parse(payload: bytes) -> Document:
     """Markup in, the same Document a TEI parse produces. Raises when there is no text."""
+    markup = payload.decode("utf-8", "replace")
     reader = _Reader()
     try:
-        reader.feed(payload.decode("utf-8", "replace"))
+        reader.feed(markup)
     except Exception:
         # Malformed markup is ordinary on the web and is not itself a verdict; take what parsed.
         pass
     doc = reader.document()
     if not any(section.paragraphs for section in doc.sections):
         raise TeiError("no text found in the markup: nothing to chunk")
-    return doc
+    # From the markup rather than from the reader's stream: a bibliography is a structure, and the
+    # streaming pass flattens it into paragraphs like any other list.
+    return _replace(doc, references=references_from(markup))

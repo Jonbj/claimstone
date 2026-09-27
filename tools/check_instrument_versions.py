@@ -30,6 +30,9 @@ INSTRUMENTS = (
     # round. Two claims admitted under different rule sets are not the same kind of row.
     ("claimstone/claimgate.py", "CLAIM_GATE_VERSION", "claim_gate_version"),
     ("claimstone/chunk.py", "CHUNK_VERSION", "chunk_version"),
+    # The HTML parser is an instrument too: what it extracts decides body_chars and references, and those
+    # decide fulltext_confirmed. The PDF parser is pinned by digest in compose.yaml; this one is code.
+    ("claimstone/html_doc.py", "HTML_PARSER_VERSION", "html_parser_version"),
     ("claimstone/ids.py", "CANDIDATE_KEY_VERSION", "candidate_key_version"),
 )
 

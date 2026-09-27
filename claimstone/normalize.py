@@ -170,6 +170,10 @@ def run(
         row = common | {
             "tei_path": parsed_from,
             "format": "pdf" if is_pdf else "html",
+            # Which parser read it. The PDF side is the GROBID image, pinned by digest in compose.yaml and
+            # checked against `grobid.IMAGE`; the HTML side is code in this repository and carries a
+            # version of its own, because what it extracts decides `references` and so `fulltext_confirmed`.
+            "html_parser_version": None if is_pdf else html_doc.HTML_PARSER_VERSION,
             "fulltext_confirmed": confirmed,
             "failure_class": None if confirmed else NOT_A_DOCUMENT,
             "reason": reason,

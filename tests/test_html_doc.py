@@ -228,3 +228,65 @@ def test_no_cell_of_the_real_document_leaves_without_being_carried():
         for row in table.rows:
             for cell in row:
                 assert not cell or cell in carried
+
+
+# --- a bibliography the markup declares -----------------------------------------------------------
+# This parser extracted no references, on the reasoning that "a filing has no bibliography". That was
+# measured against one HTML document, an SEC prospectus. A PMC article in HTML has one, and not reading it
+# recorded `0 references` for 32 of 38 documents in the PMC round while all 6 of its PDFs reported theirs —
+# and refused PMC040 as NOT_A_DOCUMENT for "0 references and body_chars 12334" when it carries 38.
+
+REF_PAGE = b"""<html><body>
+<h2>Results</h2><p>We find an association between screen time and mood over the follow-up period.</p>
+<h2>References</h2>
+<ul class="ref-list">
+  <li>Adler L, Cohen J. Diagnosis and evaluation of adults with attention deficit. 2004;27:187-201.</li>
+  <li>Barkley RA. ADHD behavior checklist for adults. doi:10.1016/j.jad.2020.05.106</li>
+  <li>skip</li>
+</ul>
+<ul class="site-nav"><li>Home page of the journal and its editorial board</li></ul>
+</body></html>"""
+
+
+def test_a_declared_reference_list_is_read():
+    doc = html_doc.parse(REF_PAGE)
+    assert len(doc.references) == 2
+
+
+def test_a_doi_in_an_entry_becomes_the_key_and_a_title_does_otherwise():
+    doc = html_doc.parse(REF_PAGE)
+    by_doi = [r for r in doc.references if r.doi]
+    assert by_doi[0].doi == "10.1016/j.jad.2020.05.106"
+    assert by_doi[0].key.startswith("doi:")
+    other = [r for r in doc.references if not r.doi][0]
+    assert other.key.startswith("title:")
+
+
+def test_a_year_is_taken_only_when_the_entry_names_one():
+    """Two candidates is a page range or a volume that looks like a year, and picking one of them would
+    be a coin toss recorded as a fact."""
+    one = html_doc.references_from(
+        '<ol class="ref-list"><li>Smith J. A long enough title to count as an entry. 2004.</li></ol>')
+    assert one[0].year == 2004
+    two = html_doc.references_from(
+        '<ol class="ref-list"><li>Smith J. A long enough title to count. 2004;1999:12-20.</li></ol>')
+    assert two[0].year is None
+
+
+def test_a_list_that_is_not_declared_a_bibliography_is_not_one():
+    """Matched on the attribute, not on a heading's text: a prose section discussing references would
+    otherwise become one."""
+    nav = ('<h2>References</h2><ul class="site-nav">'
+           '<li>Home page of the journal and its editorial board</li></ul>')
+    assert html_doc.references_from(nav) == ()
+
+
+def test_a_short_list_item_is_not_a_citation():
+    short = '<ul class="ref-list"><li>PDF</li><li>Cite</li></ul>'
+    assert html_doc.references_from(short) == ()
+
+
+def test_a_filing_with_no_bibliography_still_reports_none():
+    """The original reasoning holds for the document it was measured on; it is no longer the only one."""
+    filing = b"<html><body><h2>Item 1</h2><p>" + b"The registrant hereby offers. " * 40 + b"</p></body></html>"
+    assert html_doc.parse(filing).references == ()
