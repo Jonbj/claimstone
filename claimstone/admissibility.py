@@ -55,7 +55,9 @@ def collapse(store: Store) -> dict[str, dict[str, Any]]:
     return best
 
 
-def rate(store: Store, *, round_name: str | None = None) -> dict[str, Any]:
+def rate(
+    store: Store, *, round_name: str | None = None, manifest_only: bool = False
+) -> dict[str, Any]:
     """Acquisition accounting. The denominator is what was **found**, not what was attempted.
 
     This is the figure that decides whether a round may produce verdicts, so the denominator is
@@ -76,7 +78,12 @@ def rate(store: Store, *, round_name: str | None = None) -> dict[str, Any]:
     candidates = {
         key: row
         for key, row in store.latest_by("candidates.jsonl", "candidate_key").items()
-        if round_name is None or row.get("round") == round_name
+        if (round_name is None or row.get("round") == round_name)
+        # A curated reading list is the population `sources.yaml`'s floor was written about, and a round is
+        # not always the right selector for it: the pilot corpus discovered 199 candidates and then curated
+        # 28, so every one of the 28 carries the round that first *found* it — correctly — and judging the
+        # floor over that round would divide by 199. A manifest row declares itself with a `source_id`.
+        and (not manifest_only or row.get("source_id"))
     }
     rows = {key: row for key, row in collapse(store).items() if key in candidates}
 
@@ -176,10 +183,14 @@ def rate(store: Store, *, round_name: str | None = None) -> dict[str, Any]:
 
 
 def admit(
-    project: Project, store: Store, *, round_name: str | None = None
+    project: Project,
+    store: Store,
+    *,
+    round_name: str | None = None,
+    manifest_only: bool = False,
 ) -> dict[str, Any]:
     """Whether this round may produce verdicts. Invariant 3: nothing waives the floor."""
-    measured = rate(store, round_name=round_name)
+    measured = rate(store, round_name=round_name, manifest_only=manifest_only)
     achieved = measured["rate"]
     status = OK if achieved is not None and achieved >= project.acquisition_floor else INSUFFICIENT
     return {

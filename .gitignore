@@ -11,7 +11,15 @@ __pycache__/
 # example ships; real instances are kept out of a public repository deliberately.
 projects/*
 !projects/example-news-and-returns/
+# The pilot corpus ships too, manifest and all. It exists because alembic-s4 stands below its floor and
+# produces no verdicts, so the vertical slice needs a corpus built from public literature — which is what
+# the privacy rule prescribes when a fresh instance is needed for a test. Its reading list is derived from
+# its own discovery ledger by `tools/build_pilot_manifest.py`, so publishing it discloses nothing but
+# public literature and the rule that selected it.
+!projects/pilot-screen-time/
 claimstone.egg-info/
 
-# A project's curated source list is its reading list: same reason as projects/*.
+# A project's curated source list is its reading list: same reason as projects/*. The pilot's is exempt
+# above, because being readable is the point of it.
 projects/*/manifest.tsv
+!projects/pilot-screen-time/manifest.tsv

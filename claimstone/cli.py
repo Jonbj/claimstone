@@ -178,7 +178,8 @@ def _report(args: argparse.Namespace) -> int:
     # settled manifest round in one denominator and the figure compares two populations: measured on
     # the real store, one citation sweep took 14/25 = 0.56 to 14/75 = 0.19, which is true of the store
     # and means nothing as a comparison.
-    result = admissibility.admit(project, _checked_store(args, project), round_name=args.round)
+    result = admissibility.admit(project, _checked_store(args, project), round_name=args.round,
+                                 manifest_only=args.manifest)
 
     if args.json:
         import json
@@ -810,6 +811,9 @@ def build_parser() -> argparse.ArgumentParser:
             command.add_argument("--json", action="store_true")
             command.add_argument("--round", default=None,
                                  help="judge one round's candidates; default every candidate held")
+            command.add_argument("--manifest", action="store_true",
+                                 help="judge only the sources the manifest declared, which is the "
+                                      "population a curated corpus's floor is about")
             command.add_argument("--gate", action="store_true",
                                  help="exit 3 when the round is INSUFFICIENT_ACQUISITION")
         if name == "regate":

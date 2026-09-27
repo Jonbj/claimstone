@@ -431,3 +431,33 @@ def test_a_round_can_be_isolated_so_two_populations_are_not_one_figure(tmp_path)
     citations = admissibility.rate(store, round_name="citations")
     assert citations["found"] == 8
     assert citations["classified"] == 0
+
+
+def test_the_manifest_is_a_population_the_floor_can_be_judged_over(tmp_path):
+    """A curated reading list is what `sources.yaml`'s floor was written about, and a round is not always
+    the right selector for it. The pilot corpus discovered 199 candidates and *then* curated 28 of them, so
+    every one of the 28 carries the round that first found it — correctly, since discovery found them — and
+    judging the floor over that round would divide by 199.
+
+    A manifest row declares itself with a `source_id`; a discovered one has none. That is the population.
+    """
+    store = Store("t", base=tmp_path)
+    for n in range(2):
+        key = f"doi:10.1/declared{n}"
+        store.append("candidates.jsonl", {"candidate_key": key, "source_class": "ACA",
+                                          "source_id": f"ACA{n:03d}", "round": "sweep"})
+        store.append("acquisitions.jsonl", {"candidate_key": key, "source_id": f"ACA{n:03d}",
+                                            "acquired": True, "sha256": f"h{n}", "source_class": "ACA"})
+        store.append("documents.jsonl", {"source_id": f"ACA{n:03d}", "sha256": f"h{n}",
+                                         "fulltext_confirmed": True})
+    for n in range(8):
+        store.append("candidates.jsonl", {"candidate_key": f"doi:10.9/found{n}", "source_class": "ACA",
+                                         "round": "sweep"})
+
+    whole = admissibility.rate(store)
+    assert (whole["found"], whole["confirmed"]) == (10, 2)
+
+    declared = admissibility.rate(store, manifest_only=True)
+    assert (declared["found"], declared["confirmed"]) == (2, 2)
+    assert declared["rate"] == 1.0
+    assert declared["final"] is True
