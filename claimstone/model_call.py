@@ -210,15 +210,28 @@ class Queue:
         """Every result row ever written, in order. What cost money, not what is current."""
         return list(self.store.read(self.results_name))
 
-    def pending(self, *, backend: str) -> list[dict[str, Any]]:
-        """Units this backend has not answered, plus those its last answer left transient."""
+    def pending(
+        self, *, backend: str, retry_classes: frozenset[str] = frozenset()
+    ) -> list[dict[str, Any]]:
+        """Units this backend has not answered, plus those its last answer left transient.
+
+        `retry_classes` re-opens a **terminal** class by name, which is the named-campaign rule acquire
+        already uses: a class a retry cannot change is left alone on a routine run, and re-running it is a
+        deliberate act with a reason. Measured need: `deepseek-v4.1-flash` left 9 of 13 units `TRUNCATED` by
+        spending its whole output budget on reasoning, and turning reasoning off makes the retry worth
+        paying for — but nothing here could ask for it.
+        """
         answered = self.results(backend=backend)
         out: list[dict[str, Any]] = []
         for unit in self.requests():
             held = answered.get(f"{unit['call_id']}|{backend}")
             if held is None:
                 out.append(unit)
-            elif not held.get("ok") and not is_terminal(held.get("failure_class")):
+                continue
+            if held.get("ok"):
+                continue
+            failure = held.get("failure_class")
+            if failure in retry_classes or not is_terminal(failure):
                 out.append(unit)
         return out
 
@@ -321,7 +334,13 @@ def build_result(
     }
 
 
-def drain(queue: Queue, runner: Any, *, limit: int | None = None) -> Any:
+def drain(
+    queue: Queue,
+    runner: Any,
+    *,
+    limit: int | None = None,
+    retry_classes: frozenset[str] = frozenset(),
+) -> Any:
     """Answer what is pending, one call at a time, appending each result as it lands.
 
     Sequential on purpose. The queue is resumable by `call_id`, so parallelism is a contained
@@ -332,7 +351,7 @@ def drain(queue: Queue, runner: Any, *, limit: int | None = None) -> Any:
 
     last = 0.0
     done = 0
-    for request in queue.pending(backend=runner.name):
+    for request in queue.pending(backend=runner.name, retry_classes=retry_classes):
         if limit is not None and done >= limit:
             return
         wait = runner.min_interval_s - (time.time() - last)

@@ -88,3 +88,47 @@ def test_model_run_actually_drains_a_queue(tmp_path, capsys, monkeypatch):
     out = capsys.readouterr()
     assert "1 answered, 1 valid" in out.out
     assert [row["ok"] for row in queue.results(backend="fake").values()] == [True]
+
+
+def test_a_terminal_class_can_be_reopened_by_name(tmp_path, capsys, monkeypatch):
+    """The named-campaign rule, which acquire already had and this did not. Measured need:
+    deepseek-v4.1-flash left 9 of 13 units TRUNCATED by spending its output budget on reasoning, and
+    turning reasoning off makes the retry worth paying for."""
+    import json as _json
+
+    from claimstone import model_call, runners
+    from claimstone.runners.base import RawAnswer
+    from claimstone.store import Store
+    from tests.fakes import FakeRunner
+
+    schema = {"type": "array", "items": {"type": "object",
+                                         "properties": {"question_id": {"type": "string"}},
+                                         "required": ["question_id"]}}
+    store = Store("example-news-and-returns", base=tmp_path)
+    queue = model_call.Queue(store, lane="extract", batch="b1")
+    queue.write([model_call.work_unit(
+        lane="extract", system="s", user="u", response_schema=schema,
+        max_output_tokens=800, registry_version=2, chunk_id="S01#c1")])
+    call_id = queue.requests()[0]["call_id"]
+    store.append(queue.results_name, {"call_id": call_id, "backend": "fake", "ok": False,
+                                      "failure_class": "TRUNCATED"})
+
+    good = RawAnswer(body=_json.dumps([{"question_id": "H02"}]).encode(), model="m")
+    monkeypatch.setattr(runners, "build", lambda name, **kw: FakeRunner(default=good))
+
+    # Without the flag it is left alone, which is the point of terminal.
+    assert main(["model-run", "projects/example-news-and-returns", "extract", "--batch", "b1",
+                 "--backend", "llamacpp", "--store", str(tmp_path)]) == 0
+    assert "0 answered" in capsys.readouterr().out
+
+    assert main(["model-run", "projects/example-news-and-returns", "extract", "--batch", "b1",
+                 "--backend", "llamacpp", "--retry-class", "TRUNCATED",
+                 "--store", str(tmp_path)]) == 0
+    assert "1 answered, 1 valid" in capsys.readouterr().out
+
+
+def test_an_unknown_failure_class_is_refused_by_name(capsys):
+    code = main(["model-run", "projects/example-news-and-returns", "extract", "--batch", "b1",
+                 "--backend", "llamacpp", "--retry-class", "NONESUCH"])
+    assert code == 2
+    assert "NONESUCH" in capsys.readouterr().err

@@ -123,3 +123,70 @@ def test_without_a_cached_price_cached_tokens_cost_the_full_rate():
                      "eval_count": 100, "prompt_cache_hit_count": 3800})
     answer = runner(post, price_in=0.30, price_out=1.20).run(request())
     assert answer.cost_usd == round(4000 / 1e6 * 0.30 + 100 / 1e6 * 1.20, 8)
+
+
+# --- Thinking, which for this lane is a cost and not a feature ------------------------------------
+#
+# Measured: deepseek-v4.1-flash on 13 real extract units returned 4 valid and 9 TRUNCATED, and the
+# truncated ones show 2,500 output tokens against **zero characters of body** — the whole budget spent
+# reasoning before the JSON array began. D4's operating point for this lane is short structured outputs,
+# so reasoning tokens are budget taken from the answer.
+
+def test_thinking_is_not_mentioned_unless_a_caller_decides():
+    """Unset means "whatever the model does", which is not the same as off. Sending `think: false` to a
+    model that has no thinking mode would be this runner inventing a request."""
+    post = FakePost({"message": {"content": "[]"}})
+    runner(post).run(request())
+    assert "think" not in post.sent
+
+
+def test_thinking_can_be_turned_off():
+    post = FakePost({"message": {"content": "[]"}})
+    runner(post, think=False).run(request())
+    assert post.sent["think"] is False
+
+
+def test_the_harness_version_records_whether_thinking_was_on():
+    """`harness_version` exists to record what sat between the prompt and the model, and a reasoning pass
+    that consumes the output budget is exactly that. Two results that differ only in this are not
+    comparable, and the row has to say so."""
+    assert "think=off" in runner(FakePost({}), think=False).harness_version()
+    assert "think=on" in runner(FakePost({}), think=True).harness_version()
+    assert "think=" not in runner(FakePost({})).harness_version()
+
+
+def test_a_reasoning_model_that_spends_the_whole_budget_is_truncated_and_not_empty():
+    """The order of the classifier's checks, on real data. TRUNCATED is terminal and EMPTY is transient,
+    so reading this as EMPTY would retry it on every drain and pay 2,500 output tokens each time."""
+    post = FakePost({"message": {"content": ""}, "done_reason": "length",
+                     "prompt_eval_count": 1821, "eval_count": 2500})
+    answer = runner(post).run(request())
+    assert answer.truncated is True
+    assert answer.body == b""
+    assert answer.usage == {"input_tokens": 1821, "output_tokens": 2500}
+
+
+# --- Structured outputs: the request already carries the schema ------------------------------------
+#
+# Ollama's `format` takes a JSON schema and enforces it, and the work unit has carried `response_schema`
+# since Task 1 — it was travelling to a backend that could honour it and being asked for in prose instead.
+# Measured on real answers: claude-cli wrapped 2 of 13 in a ```json fence the prompt forbade in as many
+# words, which is a whole failure class that stops existing when the shape is imposed rather than requested.
+
+def test_the_schema_is_not_sent_unless_a_caller_asks():
+    """A backend that does not support it would refuse the request, and this runner does not guess."""
+    post = FakePost({"message": {"content": "[]"}})
+    runner(post).run(request())
+    assert "format" not in post.sent
+
+
+def test_the_requests_own_schema_is_sent_when_asked():
+    post = FakePost({"message": {"content": "[]"}})
+    runner(post, enforce_schema=True).run(request())
+    assert post.sent["format"] == request()["response_schema"]
+
+
+def test_the_harness_version_records_that_the_shape_was_imposed():
+    """Two results that differ in whether the shape was enforced are not comparable."""
+    assert "format=schema" in runner(FakePost({}), enforce_schema=True).harness_version()
+    assert "format=" not in runner(FakePost({})).harness_version()

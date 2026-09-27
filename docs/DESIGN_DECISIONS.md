@@ -1053,3 +1053,73 @@ target and what to do.
 Neither defect was reachable on the development machine. That is the argument for the container set that no
 paradigm supplies: a second interpreter and a second filesystem view are two instruments, and this project's
 whole method is that a figure measured by one instrument is not a figure measured by another.
+
+## D30 — Two backends read the same corpus and find mostly different evidence
+The first use of the thing `model_call` was built for: the same thirteen work units drained on two backends
+and compared per `call_id`. D13 called backend choice a measurement. It turns out to be a **coverage**
+variable and not only a quality one, which is a larger claim than D13 made.
+
+### Measured, 2026-09-27
+
+Thirteen `heterogeneity` units, `claude-opus-5` through `claude-cli` against `deepseek-v4.1-flash` on Ollama
+Cloud. Same prompts, same schema, same chunks.
+
+```
+                  claims   pass the gate   []   rejected by            attempts/hour
+claude-cli            50        49  98%     5   COMPARATIVE 1                    125
+ollama-cloud          40        38  95%     4   QUOTE_NOT_FOUND 2                530
+```
+
+**Both cover all five questions.** H06, H20, H21, H22, H27 — neither backend misses one.
+
+**And two thirds of each one's evidence is invisible to the other.** Counting a quote as shared when either
+span contains the other, 16 of claude's 49 accepted claims overlap something ollama found (33%) and 17 of
+ollama's 38 overlap something claude found (45%). Per question the depth differs sharply: 18 claims against
+10 for H21, 4 against 9 for H27.
+
+So the interesting question is not which backend is better. It is **whether one is enough**, and the answer
+looks like no. That bears directly on invariant 2: if the evidence a round finds depends on which model read
+the corpus, then `UNANSWERED_IN_LITERATURE` is in part a statement about the reader, and a round that used
+one backend cannot claim otherwise. Nothing here settles what to do about it — two backends double the cost
+and the union is not obviously the right pool — but the figure has to be in the record before a verdict
+rests on a single reading.
+
+**Where the cheap model is measurably worse, it is worse at the thing that matters.** Its two rejections are
+`QUOTE_NOT_FOUND`: plausible sentences that are not in the passage. `claude-opus-5` produced none in 116
+claims. That is 5% of ollama's output paraphrasing, caught by the gate every time — which is invariant 1
+earning its place rather than a reason to reject the backend.
+
+### Reasoning is budget taken from the answer
+
+The first drain returned **4 of 13 valid and 9 `TRUNCATED`**, and the truncated rows show 2,500 output tokens
+against **zero characters of body**: `deepseek-v4.1-flash` reasons, Ollama returns the reasoning separately,
+and the whole cap went to it before the JSON array began. With `--no-think`, **9 of 9**.
+
+Two things this vindicated. Judging `TRUNCATED` before `EMPTY` — `EMPTY` is transient, so reading an
+exhausted budget as empty would retry it on every drain and pay 2,500 output tokens each time. And
+`harness_version` existing at all: it records what sat between the prompt and the model, and a reasoning pass
+that consumes the output budget is exactly that, so two results differing only in it are not comparable.
+
+`model-run --retry-class TRUNCATED` was needed and missing. Acquire has had the named-campaign rule since
+stage 2 — a class a retry cannot change is left alone on a routine run, and re-opening it is deliberate and
+for a stated reason. The boundary now has it for the same reason.
+
+### The schema was already in the request
+
+Ollama's `format` takes a JSON schema and **enforces** it, and the work unit has carried `response_schema`
+since the boundary was built — travelling to a backend able to honour it while being asked for in prose
+instead. Measured: `claude-opus-5` wrapped 2 of 13 answers in a ```json fence the prompt forbids in as many
+words, so `NOT_JSON` is a failure class that stops being reachable when the shape is imposed. Off by default,
+because a backend that does not accept `format` would refuse the request and this runner does not guess which
+does.
+
+**And it cannot touch the failure that is actually occurring.** A third probe — 13 `method` units on
+`deepseek-v4.1-flash` with reasoning off and the schema enforced — returned 13 of 13 valid answers at 0.7
+seconds a call, 42 claims, and **3 more `QUOTE_NOT_FOUND`**. The schema constrains shape; fidelity is not a
+shape. Across both probes the cheap model stands at **38 accepted of 42 (0.90)** against `claude-opus-5`'s
+**112 of 116 (0.97)**, and every one of its four rejections is a paraphrase or a figure the quote does not
+carry, where all four of claude's are attribution or a comparison implied by numbers.
+
+Coverage is now **16 of 22** verdict-bearing questions, from 39 chunks of 472 and one document for two of the
+three kinds. Nine of the eleven `method` questions produced claims from thirteen chunks, which says more about
+how much a single paper addresses than about the corpus.

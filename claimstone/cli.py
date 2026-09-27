@@ -511,8 +511,11 @@ def _model_run(args: argparse.Namespace) -> int:
     if args.lane not in model_call.LANES:
         print(f"unknown lane {args.lane!r}: {', '.join(model_call.LANES)}", file=sys.stderr)
         return 2
+    extra: dict[str, object] = {} if args.think is None else {"think": args.think}
+    if args.enforce_schema:
+        extra["enforce_schema"] = True
     try:
-        runner = runners.build(args.backend, model=args.model)
+        runner = runners.build(args.backend, model=args.model, **extra)
     except ValueError as exc:
         # Includes "this backend needs --model": a missing model is a usage error with a sentence,
         # not a TypeError from a constructor.
@@ -538,9 +541,14 @@ def _model_run(args: argparse.Namespace) -> int:
 
     # Per backend, like everything else about the queue: how much is left to do depends on who is
     # doing it, which is the whole point of two backends draining one requests file.
-    pending = len(queue.pending(backend=runner.name))
+    retry = frozenset(args.retry_class or ())
+    unknown = sorted(retry - set(model_call.TERMINAL) - set(model_call.TRANSIENT))
+    if unknown:
+        print(f"unknown failure class: {', '.join(unknown)}", file=sys.stderr)
+        return 2
+    pending = len(queue.pending(backend=runner.name, retry_classes=retry))
     done = ok = 0
-    for row in model_call.drain(queue, runner, limit=args.limit):
+    for row in model_call.drain(queue, runner, limit=args.limit, retry_classes=retry):
         done += 1
         if row["ok"]:
             ok += 1
@@ -792,6 +800,17 @@ def build_parser() -> argparse.ArgumentParser:
                                  help="one of " + ", ".join(BACKENDS))
             command.add_argument("--model", help="model id for backends that need one")
             command.add_argument("--limit", type=int, default=None)
+            command.add_argument("--retry-class", action="append",
+                                 help="re-open a terminal class by name, e.g. TRUNCATED. The "
+                                      "named-campaign rule: deliberate, and for a stated reason")
+            group = command.add_mutually_exclusive_group()
+            group.add_argument("--think", dest="think", action="store_true", default=None,
+                               help="ask the backend to reason before answering")
+            group.add_argument("--no-think", dest="think", action="store_false",
+                               help="forbid it: on this lane reasoning spends the answer's budget")
+            command.add_argument("--enforce-schema", action="store_true",
+                                 help="send the request's schema to the backend so the shape is imposed "
+                                      "rather than asked for; not every backend accepts it")
             command.add_argument("--rejudge", action="store_true",
                                  help="re-read stored answers under the current rules; no call")
         if name == "model-report":

@@ -37,6 +37,20 @@ class OllamaCloudRunner:
     # fiftieth of fresh input. Unset charges cached tokens at the fresh rate — the conservative
     # reading, which can overstate a bill but never understate one.
     price_cached_in: float | None = None   # USD per million cached input tokens
+    # Whether the model reasons before answering. `None` means "whatever the model does", which is not the
+    # same as off: sending `think: false` to a model with no thinking mode would be this runner inventing a
+    # request. Measured on 13 real extract units, `deepseek-v4.1-flash` returned 4 valid and 9 TRUNCATED,
+    # the truncated ones showing 2,500 output tokens against **zero characters of body** — the whole budget
+    # spent reasoning before the JSON array began. For a lane whose operating point is short structured
+    # outputs (D4), reasoning tokens are budget taken from the answer.
+    think: bool | None = None
+    # Send the request's own `response_schema` in Ollama's `format`, which enforces it rather than asking
+    # for it. The work unit has carried that schema since the boundary was built; it was travelling to a
+    # backend able to honour it and being requested in prose instead. Measured: claude-cli wrapped 2 of 13
+    # answers in a ```json fence the prompt forbade in as many words, and NOT_JSON stops being reachable
+    # when the shape is imposed. Off by default: a backend that does not support `format` would refuse the
+    # request, and this runner does not guess which does.
+    enforce_schema: bool = False
     timeout_s: int = 300
     max_concurrency: int = 4
     min_interval_s: float = 0.2
@@ -50,7 +64,11 @@ class OllamaCloudRunner:
             self.api_key = os.environ.get("OLLAMA_API_KEY") or None
 
     def harness_version(self) -> str:
-        return f"ollama-cloud/{self.endpoint}"
+        """What sat between the prompt and the model. A reasoning pass that consumes the output budget is
+        exactly that, so two results differing only in it are not comparable and the row must say which."""
+        thinking = "" if self.think is None else f" think={'on' if self.think else 'off'}"
+        shape = " format=schema" if self.enforce_schema else ""
+        return f"ollama-cloud/{self.endpoint}{thinking}{shape}"
 
     def _price(self, usage: dict[str, int]) -> float | None:
         if self.price_in is None or self.price_out is None:
@@ -82,6 +100,10 @@ class OllamaCloudRunner:
             ],
             "options": {"num_predict": request["max_output_tokens"]},
         }
+        if self.think is not None:
+            body["think"] = self.think
+        if self.enforce_schema and request.get("response_schema"):
+            body["format"] = request["response_schema"]
 
         try:
             response = self.post(
