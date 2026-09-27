@@ -1123,3 +1123,66 @@ carry, where all four of claude's are attribution or a comparison implied by num
 Coverage is now **16 of 22** verdict-bearing questions, from 39 chunks of 472 and one document for two of the
 three kinds. Nine of the eleven `method` questions produced claims from thirteen chunks, which says more about
 how much a single paper addresses than about the corpus.
+
+## D31 — Six readers on thirteen units, and my own prediction was wrong
+The bake-off D30 asked for. Same thirteen `heterogeneity` work units, same prompts, same schema, six
+readers, scored by the gate rather than by a benchmark. `--no-think --enforce-schema` throughout.
+
+### Measured, 2026-09-28
+
+```
+reader                          answered  ok  claims  pass  rate   []  s/call  out tokens
+claude-cli/claude-opus-5              13  13      50    49  0.98    5    18.5           —
+ollama-cloud/deepseek-v4.1-flash      13  13      40    38  0.95    4     1.7       9,029
+ollama-cloud/mistral-large-3:675b     13  13      35    16  0.46    2     4.8       5,274
+ollama-cloud/gpt-oss:120b             13  10      11     8  0.73    5     4.1      19,322
+ollama-cloud/gpt-oss:20b              13   6       2     1  0.50    4    23.9      23,734
+ollama-cloud/glm-5.3-flash            13   0       0     0     —    0    10.3      29,158
+```
+
+**The decision: `deepseek-v4.1-flash`, reasoning off, schema enforced.** It is the only hosted model within
+reach of `claude-opus-5`'s fidelity — 38 accepted claims against 49 — at 1.7 seconds a call and the smallest
+output of any of them. `gpt-oss:120b` produces a quarter of the claims at twice the latency; `gpt-oss:20b`
+and `glm-5.3-flash` spend the budget before answering.
+
+**My prediction was wrong, and the way it was wrong is the finding.** I expected `mistral-large-3` to do well
+because it is the one model the catalogue does not mark as *thinking*, and a lane whose operating point is
+short structured output should favour a non-reasoning model. It answered 13 of 13, produced 35 claims, and
+**17 of them quote sentences that are not in the passage** — 0.46 through the gate. Not reasoning made it
+fast and fluent and not faithful. Fluency is not fidelity, and no capability tag on a catalogue page
+distinguishes them; the gate does.
+
+**A cap fitted to one model is not a fair test of another.** `max_output_tokens: 2500` was set against
+`claude-opus-5` and `deepseek`. Three readers truncated at it — `glm-5.3-flash` eleven times out of thirteen
+— so this table ranks these models **at this cap** and not in general. Raising it is honestly a different
+call, which is why the cap is inside `call_id`, and chasing it was not worth the spend when one reader
+already clears the bar.
+
+**And a catalogue name is not an endpoint name.** `mistral-large-3` returned `404 model not found` thirteen
+times; `/api/tags` calls it `mistral-large-3:675b`. The display name on the search page is not the tag, and
+13 calls were spent learning that.
+
+### One reader finds about half the evidence
+
+Counting a quote as shared when either span contains the other:
+
+```
+                claude-opus-5  deepseek  gpt-oss:120b  gpt-oss:20b  mistral
+claude-opus-5              49       33%            6%           0%      14%
+deepseek                  45%        38           11%           0%      13%
+gpt-oss:120b              38%       38%             8           0%      25%
+mistral-large-3           44%       31%           12%           0%       16
+union: 93 distinct pieces of evidence; the best single reader finds 49
+```
+
+Six readers on the same thirteen chunks found **93 distinct pieces of evidence and the best one found 49**.
+Between the two strongest, the overlap is 33% and 45%, so their union is about 61 — a quarter more than
+either alone. D30 asked whether one reader is enough and the answer is no, in the sense that matters:
+`UNANSWERED_IN_LITERATURE` after one reading is partly a statement about the reader.
+
+**What follows, and what does not.** The full extraction runs on one reader — `deepseek-v4.1-flash`, 1,888
+calls, about fifty minutes and two dollars — because the manifest round stands at 0.56 against a floor of
+0.80 and **will produce no verdicts regardless** (invariant 3). Spending sixteen hours of the expensive
+reader before the corpus clears its own floor would be spending the scarce resource first. The round's
+coverage is therefore one reader's coverage, and it is recorded as such: a second reading is a known,
+priced addition of roughly a quarter more evidence, not a discovery waiting to be made.
