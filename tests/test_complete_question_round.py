@@ -126,3 +126,84 @@ def test_env_reads_only_required_keys_without_executing_shell(tmp_path, monkeypa
     assert os.environ['UID'] == 'unchanged'
     assert os.environ['OLLAMA_API_KEY'] == 'literal-$(no-shell)'
     assert os.environ['CLAIMSTONE_CONTACT_EMAIL'] == 'test@example.org'
+
+
+def test_failed_extraction_still_harvests_prior_success(tmp_path, monkeypatch):
+    from claimstone import claim_records, profile_inputs
+    project = _project(tmp_path)
+    store = _store(tmp_path)
+    for source in ('ACA001', 'MET001'):
+        store.append('chunks.jsonl', {'chunk_id': source + '#c1', 'source_id': source,
+            'text': source + ': news tone has an effect', 'kind': 'prose'})
+    extract.build(project, store, batch='extract', kind='effect')
+    calls = []
+    class Fake:
+        name, max_concurrency, min_interval_s = 'ollama-cloud', 1, 0
+        def __init__(self, **kwargs): self.model = kwargs['model']
+        def harness_version(self): return 'test/1'
+        def run(self, unit):
+            calls.append(unit)
+            body = (json.dumps([{'result_id': 'one', 'question_id': 'H02',
+                'claim': 'News tone has an effect.', 'evidence_quote': 'news tone has an effect',
+                'stance': 'SUPPORTS'}]) if len(calls) == 1 else '[]\nExtra prose')
+            return RawAnswer(model=self.model, body=body.encode(),
+                usage={'input_tokens': 10, 'output_tokens': 10}, cost_usd=.00002)
+    monkeypatch.setenv('CLAIMSTONE_CONTACT_EMAIL', 'test@example.org')
+    monkeypatch.setattr(run, 'OllamaCloudRunner', Fake)
+    with pytest.raises(run.Stopped, match='NOT_JSON'):
+        run.execute(project, store, plan(), project.questions[0])
+    assert len(claim_records.current(store)[0]) == 1
+    inputs = profile_inputs.collect(project, store, round_name=None, manifest_only=False)
+    assert inputs['completion']['effect']['unharvested'] == 0
+    assert inputs['completion']['effect']['unanswered'] == 1
+
+
+def test_fallback_reads_only_invalid_primary_calls_and_keeps_same_budget(tmp_path, monkeypatch):
+    project = _project(tmp_path)
+    store = _store(tmp_path)
+    store.append('chunks.jsonl', {'chunk_id': 'MET001#c1', 'source_id': 'MET001',
+        'text': 'A distinct new passage', 'kind': 'prose'})
+    extract.build(project, store, batch='extract', kind='effect')
+    queue = model_call.Queue(store, lane='extract', batch='extract')
+    good, bad = queue.requests()
+    for unit, ok in ((good, True), (bad, False)):
+        store.append(queue.results_name, {'call_id': unit['call_id'], 'backend': 'ollama-cloud',
+            'model': 'e', 'ok': ok, 'output': [] if ok else None,
+            'failure_class': None if ok else 'NOT_JSON',
+            'usage': {'input_tokens': 10, 'output_tokens': 10}, 'cost_usd': .00002})
+    configured = plan()
+    configured['extract']['fallback'] = {'model': 'f', 'context_tokens': 1000,
+        'price_in': 1., 'price_out': 1.}
+    calls = []
+    class Fake:
+        name, max_concurrency, min_interval_s = 'ollama-cloud', 1, 0
+        def __init__(self, **kwargs): self.model = kwargs['model']
+        def harness_version(self): return 'test/fallback'
+        def run(self, unit):
+            calls.append((self.model, unit['call_id']))
+            return RawAnswer(model=self.model, body=b'[]',
+                usage={'input_tokens': 10, 'output_tokens': 10}, cost_usd=.00002)
+    monkeypatch.setenv('CLAIMSTONE_CONTACT_EMAIL', 'test@example.org')
+    monkeypatch.setattr(run, 'OllamaCloudRunner', Fake)
+    assert not run.execute(project, store, configured, project.questions[0])['provisional']
+    assert calls == [('f', bad['call_id'])]
+    held = {lane: model_call.Queue(store, lane=lane, batch=configured[lane]['batch']) for lane in model_call.LANES}
+    assert run.expenditure(held, configured)['priced_usd_at_plan_rates'] == pytest.approx(.00006)
+    assert not run.execute(project, store, configured, project.questions[0])['provisional']
+    assert calls == [('f', bad['call_id'])]
+
+
+def test_unknown_fallback_attempt_reserves_its_own_rate(tmp_path):
+    held, unit = queues(tmp_path)
+    configured = plan()
+    configured['extract']['fallback'] = {'model': 'f', 'context_tokens': 1000,
+        'price_in': .2, 'price_out': .3}
+    held['extract'].store.append(held['extract'].results_name,
+        {'call_id': unit['call_id'], 'backend': 'ollama-cloud', 'model': 'e',
+         'usage': {'input_tokens': 10, 'output_tokens': 10}, 'cost_usd': .0001})
+    held['extract'].store.append(held['extract'].results_name,
+        {'call_id': unit['call_id'], 'backend': 'ollama-cloud', 'model': 'f',
+         'usage': {}, 'cost_usd': None})
+    cost = run.expenditure(held, configured)
+    assert cost['budget_accounted_usd'] == pytest.approx(.00033)
+    assert cost['unknown_attempt_reservation_usd'] == pytest.approx(.00023)

@@ -50,7 +50,7 @@ crash is resumable, and every figure is greppable.
 ## Running it
 
 ```bash
-.venv/bin/pytest -q                                    # 886 passing
+.venv/bin/pytest -q                                    # 889 passing
 .venv/bin/claimstone validate --all-projects           # the contract check
 .venv/bin/claimstone report projects/<name>            # the acquisition rate and its losses
 .venv/bin/claimstone verdicts projects/<name>          # the profiles, and any signature
@@ -65,7 +65,7 @@ so `.env` must hold `CLAIMSTONE_CONTACT_EMAIL`.
 - **[docs/README.md](docs/README.md)** — the documentation map: which file answers which question.
 - **[docs/GUIDE.md](docs/GUIDE.md)** — a walkthrough of a whole round, stage by stage, with what each
   number means. Start here if you want to run one.
-- **[docs/DESIGN_DECISIONS.md](docs/DESIGN_DECISIONS.md)** — 50 decisions, each with the measurement that
+- **[docs/DESIGN_DECISIONS.md](docs/DESIGN_DECISIONS.md)** — 51 decisions, each with the measurement that
   decided it. Read the entry before arguing with the choice.
 - **[docs/HANDOFF.md](docs/HANDOFF.md)** — what is running now, what is pending, and which decisions belong
   to a person rather than to the engine.
@@ -74,14 +74,15 @@ so `.env` must hold `CLAIMSTONE_CONTACT_EMAIL`.
 ## Status
 
 All six stages are implemented and one round has run end to end, on a corpus of literature deposited in
-PubMed Central: 37 of 40 sources confirmed against a floor of 0.80, 1,668 claims, 8 evidence profiles.
+PubMed Central: 37 of 40 sources confirmed against a floor of 0.80, 1,688 claims, 8 evidence profiles.
 
 **No verdict exists, and no profile is ready for a signature.** The completeness audit (D45) found 34
 unanswered extraction readings, including 10 in Q04's kind. The eight saved profiles are historical;
 `verdicts` recomputes the current evidence in memory and shows every profile as provisional.
 D48 closes all fifteen software review findings. D49 applies offline replay to the real archives. Historical reviews attest an older task; complete annotations require new independent reviews before signing.
-D50 prepares a bounded Q04 continuation with independent cloud review; the first attempt was blocked
-by DNS in the agent environment. The host continuation command is in `docs/HANDOFF.md`.
+D51 harvests five recovered readings (20 new annotations), leaving 29 unanswered readings and five in
+Q04’s kind. A bounded alternate extractor is prepared for invalid JSON; the host continuation command
+is in `docs/HANDOFF.md`.
 
 Two other corpora stand below their floor and correctly produce nothing. Read `docs/HANDOFF.md` for what
 that means and what would change it — and note that what closed the first round was changing the

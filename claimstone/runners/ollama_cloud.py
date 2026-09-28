@@ -44,12 +44,10 @@ class OllamaCloudRunner:
     # spent reasoning before the JSON array began. For a lane whose operating point is short structured
     # outputs (D4), reasoning tokens are budget taken from the answer.
     think: bool | None = None
-    # Send the request's own `response_schema` in Ollama's `format`, which enforces it rather than asking
-    # for it. The work unit has carried that schema since the boundary was built; it was travelling to a
-    # backend able to honour it and being requested in prose instead. Measured: claude-cli wrapped 2 of 13
-    # answers in a ```json fence the prompt forbade in as many words, and NOT_JSON stops being reachable
-    # when the shape is imposed. Off by default: a backend that does not support `format` would refuse the
-    # request, and this runner does not guess which does.
+    # Send the request's schema in Ollama's `format`. This records a requested shape, not a guarantee:
+    # Ollama's Cloud documentation currently says structured outputs are unsupported. D51 measured
+    # `[]` followed by prose despite format=schema. The local result validator still judges the whole
+    # answer strictly; it never strips prose to manufacture a valid reading. Off by default.
     enforce_schema: bool = False
     timeout_s: int = 300
     # Three, which is what the plan in use permits. Declared rather than discovered: a fourth call is a

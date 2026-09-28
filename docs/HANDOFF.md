@@ -9,13 +9,15 @@ what order.
 
 ## Where the work stands
 
-One round has run all six stages: `pmc-screen-time`, 37 of 40 confirmed against a floor of 0.80, 1,668
+One round has run all six stages: `pmc-screen-time`, 37 of 40 confirmed against a floor of 0.80, 1,688
 claims, 8 historical profiles, **0 verdicts**. **None is adjudicable under the completeness check in D45.**
 D49 applies the complete offline replay to the real PMC and Alembic stores. Every original byte is
 preserved; derived ledgers only receive additional rows and each whole repeat appends zero rows.
 PMC retains all 1,668 claim ids and has 259 current rejections. Alembic retains 6,991 original claim
 ids, gains 203 distinct ids and has 7,194 accepted annotations / 1,166 rejections across the whole
-store. These are annotations, not independent studies. No model or publisher was called.
+store. These are annotations, not independent studies. No model or publisher was called in D49.
+D51 harvests 20 additional PMC annotations from five newly successful host readings; none adds a Q04
+annotation. A repeated harvest appends zero annotations and zero rejections.
 
 **All current scoped annotations now satisfy gate v4; `unregated` and `unharvested` are zero.**
 The original 83 review ids remain historical, plus 33 additional Alembic reviews harvested from stored
@@ -23,9 +25,9 @@ responses: 116 historical ids and zero usable complete-annotation v2 reviews. A 
 the new independent reading. Profile instrument 5 requires rebuilding and reading; no historical hash
 is signable, and profiles were not rebuilt in this operation.
 
-PMC still has 34 unanswered readings: effect 10, heterogeneity 4, method 15, premise 5. Its measured
-full-review workload is 1,668 unique calls. Q04 needs 42 current annotations reviewed and shares the
-10 missing effect readings. Completing extraction can add review work. All PMC annotations were
+PMC still has 29 unanswered readings: effect 5, heterogeneity 4, method 15, premise 5. Its measured
+full-review workload is 1,688 unique calls. Q04 needs 42 current annotations reviewed and shares the
+5 missing effect readings. Completing extraction can add review work. All PMC annotations were
 extracted by `ollama-cloud/deepseek-v4.1-flash`, which cannot review them.
 
 Alembic's curated manifest has 28 unanswered readings and 6,183 prospective review calls covering
@@ -36,13 +38,16 @@ On 2026-09-28 the operator delegated reader selection and authorised continuing 
 extractor is `ollama-cloud/deepseek-v4.1-flash`; the independent reviewer is
 `ollama-cloud/mistral-large-3:675b`. The bounded run plan has a USD 1 ceiling. Ten current effect
 requests are prepared with an output cap of 7,500, and 42 full v2 reviews are queued. The first
-extraction attempt failed resolving `ollama.com` in the agent environment; no response arrived,
-no new annotation was harvested and no profile was rebuilt. Reviewer quality remains unmeasured.
+extraction attempt failed resolving `ollama.com` in the agent environment. The subsequent host run
+completed five readings, then stopped on `NOT_JSON`: `[]` followed by explanatory prose. The whole
+response remains invalid. Twenty new annotations have been harvested; no profile was rebuilt.
+Reviewer quality remains unmeasured. D51 adds `gemma4:31b` only for primary JSON/schema failures;
+Mistral remains independent of both extractors. Ollama Cloud does not guarantee structured outputs.
 
 Continue on the host with network access:
 
 ```bash
-.venv/bin/python tools/complete_question_round.py --plan store/pmc-screen-time/audits/q04-run-plan.json --execute
+.venv/bin/python tools/complete_question_round.py --plan store/pmc-screen-time/audits/q04-run-plan-v2.json --execute
 ```
 
 Without `--execute` the command only inspects. It reads the two required values from `.env`,
@@ -50,8 +55,11 @@ resumes prepared calls, harvests extraction, adds reviews for new annotations, r
 independent reader and rebuilds profiles only after Q04 is complete. It never adjudicates.
 Every physical attempt counts against the cumulative budget; an unpriced failure reserves the
 full declared context and output cap rather than being treated as free. The current unknown-cost
-DNS attempt reserves USD 0.339. Execution stops at the first failed response or budget boundary.
-See D50 and [the bounded continuation report](replays/2026-09-28-q04-continuation.md).
+DNS attempt reserves USD 0.339; the six host attempts are priced at USD 0.0054975 under plan rates.
+Execution stops at transport, truncation, alternate-reader failure or budget boundaries. With the
+v2 plan, primary JSON/schema failures are read once by the configured alternate reader, without
+repaying successful calls. Partial valid extraction and review are harvested even on interruption.
+See D50/D51 and [the bounded continuation report](replays/2026-09-28-q04-continuation.md).
 
 The earlier queue measurement was offline and used only temporary copies. See
 [the production replay report](replays/2026-09-28-production-replay.md) and local content-addressed
@@ -81,6 +89,7 @@ measured ceiling of 0.72, and `pilot-screen-time` at 0.45. That is the correct b
 | **D41** | why the closed round is legitimate: the selector is deposits, not outcomes, and it excludes 159 of 199 candidates. |
 | **D49** | production replay completed, with preserved bytes; actual scoped remaining readings and full-review workload. |
 | **D50** | delegated Q04 readers, bounded continuation and the first recorded DNS failure; no reading or review was completed. |
+| **D51** | five host readings harvested, strict prose rejection, targeted alternate extractor and shared budget. |
 | **D48** | all review repairs; full-result reviews are a new task, legacy revisions are retained but cannot certify it. |
 | **D47** | authoritative replay and immutable reader annotations; measured across all stored batches without changing real ledgers. |
 | **D46** | whole numeric tokens, revision-aware gate outcomes and `awaiting_regate`; measurements used temporary ledgers. |
@@ -89,7 +98,7 @@ measured ceiling of 0.72, and `pilot-screen-time` at 0.45. That is the correct b
 
 ## What is a person's decision and not an engine's
 
-**The adjudication.** Q04 must first complete its 10 missing effect readings, harvest and review any new
+**The adjudication.** Q04 must first complete its 5 remaining effect readings, harvest and review any new
 claims, and be rebuilt and read again. Its historical hash
 `8e93cbde7a5a11a2e6d84933dd48539194d22ace3b149f7f2b10003e440c0bf0` is not signable under
 `profile_version 5`. The current read-only preview marks it provisional. Nothing in the historical profile supports the

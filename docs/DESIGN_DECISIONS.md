@@ -2470,3 +2470,35 @@ Five tests cover budget enforcement, unknown-cost attempts and resume, pre-payme
 independence, newly harvested extraction extending review without repeated calls or adjudication,
 and reading `.env` without executing it. All 16 existing instruments remain unchanged. Adjudication,
 floor revision and extending expenditure beyond Q04 still belong to the operator.
+
+## D51 — Cloud format is a request, not enforcement; harvest partial success and retry narrowly
+
+Date: 2026-09-28 · Gate 4 / review 2 / profile 5 and all other instruments unchanged
+
+The operator ran D50's host command. Six physical extraction attempts produced five valid answers
+and one `NOT_JSON`. The failed body is `[]` followed by prose. Strict whole-response parsing rejects
+it correctly; taking only the prefix would invent a reading. The official Ollama documentation now
+explicitly says Cloud structured outputs are unsupported. The earlier assertion that sending
+`format=schema` guarantees the shape was incorrect; the runner comment is corrected, while actual
+transport, harness provenance and strict validation are unchanged.
+
+Harvesting the five valid answers produced **20 accepted annotations and zero rejections**. Repeating
+the harvest appends zero of either. The partial failure had left `awaiting_harvest`; the operational
+driver now harvests successful extraction and review in `finally` even when another call stops a lane.
+The measured PMC population is now 1,688 annotations / 259 rejections, with 1,688 unique prospective
+review calls and 29 unanswered readings. Q04 remains 42 annotations; five effect readings are missing.
+All harvest/regate obligations are current. No v2 review, new profile or adjudication exists yet.
+
+The delegated cloud-reader choice extends to `gemma4:31b` only for primary JSON/schema failures that
+have no valid response. Four untouched primary requests remain; successful calls are never sent to
+the alternate reader. Prompts, schemas and caps are unchanged. Mistral stays independent of both
+extractors. The v2 local plan retains all older attempts and the USD 1 ceiling; per-reader dated rates
+account for both paid and unknown-cost attempts. The six host attempts are priced at USD 0.0054975
+under the conservative plan rates, plus USD 0.339 reserved for the earlier unknown-cost failure.
+Alternate-reader recovery and scientific accuracy remain unmeasured.
+
+Three additional operational tests verify harvesting before failure propagates, targeting only failed
+calls without repayment on resume, and cumulative mixed-reader/unknown-cost accounting. Full checks:
+889 passed, 7 skipped; six valid project configurations; all 16 instrument versions acknowledged.
+Commands, plan hashes, source documentation and current audits are in
+[the continuation report](replays/2026-09-28-q04-continuation.md).
