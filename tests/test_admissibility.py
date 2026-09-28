@@ -48,7 +48,7 @@ def test_classes_are_reported_separately(tmp_path):
                     row("b", acquired=False, klass="DOC", failure="NOT_FOUND_404"),
                     row("c", acquired=False, klass="DOC", failure="PAYWALL_403")])
     by_class = admissibility.rate(store)["by_class"]
-    assert by_class["ACA"] == {"found": 1, "obtained": 1, "rate": 1.0}
+    assert {key: by_class["ACA"][key] for key in ("found", "obtained", "rate")} == {"found": 1, "obtained": 1, "rate": 1.0}
     assert by_class["DOC"]["rate"] == 0.0
 
 

@@ -196,8 +196,10 @@ D46 aggiunge `extraction.unregated` e `awaiting_regate`: le annotazioni giudicat
 non si possono firmare sotto quello attuale prima della ri-raccolta. Le revisioni del gate possono
 superare sia un’accettazione sia un rifiuto, conservando entrambi i ledger. I ledger reali sono intatti;
 D47 corregge il replay di risposte e annotazioni (R05/R09). La misura completa è riproducibile con
-`tools/measure_answer_replay.py <progetto>`. Restano R06 (generazioni dei chunk) e R10
-(revisione dei metadati del risultato) prima di applicare la ri-raccolta ai ledger reali.
+`tools/measure_answer_replay.py <progetto>`. D48 corregge anche le generazioni dei chunk e la revisione completa. I ledger reali restano intatti;
+le vecchie revisioni attestano il compito v1 e non possono certificare le annotazioni complete v2.
+Seguono replay offline in produzione, completamento delle letture e nuove revisioni indipendenti,
+prima di ricostruire e leggere un profilo v5 firmabile.
 
 ## adjudicate — l'unico posto da cui nasce un verdetto
 

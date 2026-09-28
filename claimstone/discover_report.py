@@ -72,7 +72,13 @@ def summarise(store: Store, *, round_name: str | None = None) -> dict[str, Any]:
     }
     overlap = len(keyword_keys & set(references))
 
+    queries = [row for row in store.latest_by('queries.jsonl', 'query_id').values()
+               if round_name is None or row.get('round') == round_name]
+    failed = [row for row in queries if not row.get('ok')]
     return {
+        'search': {'recorded_queries': len(queries), 'completed': len(queries) - len(failed),
+                   'failed': len(failed), 'final': not failed if queries else None,
+                   'basis': 'recorded queries; legacy unlogged requests remain unknown'},
         "round": round_name,
         "candidates": len(candidates),
         "keyword": channels["keyword"],

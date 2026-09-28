@@ -60,6 +60,7 @@ def test_qualifies_counts_on_neither_side_of_by_class():
                              source_class="WP")]
     built = evidence.profile(H02, claims=claims, reviews=reviewed("c1", "c2"))
     assert built["by_class"]["against"] == {}
+    assert "WP" not in built["by_class"]["for"]
     # It is still a result, and still in the count.
     assert built["direction_count"]["QUALIFIES"] == 1
     assert len(built["results"]) == 2

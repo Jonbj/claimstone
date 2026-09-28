@@ -2,6 +2,8 @@
 
 Date: 2026-09-24 · Scope: stage 1 only · Status: approved, not implemented
 
+**Corrected 2026-09-28 (D48):** D48 records every request and distinguishes empty successful searches from failed or malformed queries; recorded failures block round finality.
+
 The only stage with code and no spec. `discover.py` already searches OpenAlex, Crossref and arXiv
 and imports a manifest; this document says what it should do, which turns out to differ from what
 it does in one blocking respect.

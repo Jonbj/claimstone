@@ -19,6 +19,28 @@ from claimstone import ids, net
 from claimstone.store import sha256_text
 
 
+DISCOVERY_VERSION = 2
+
+
+class SearchError(ValueError):
+    def __init__(self, failure, detail=''):
+        super().__init__(detail or failure)
+        self.failure = failure
+
+
+def records(payload, outcome, path):
+    if not outcome.ok:
+        raise SearchError(outcome.failure_class or 'LOOKUP_FAILED', outcome.detail)
+    current = payload
+    for key in path:
+        if not isinstance(current, dict) or key not in current:
+            raise SearchError('INVALID_SEARCH_RESPONSE', f'missing {key}')
+        current = current[key]
+    if not isinstance(current, list) or any(not isinstance(row, dict) for row in current):
+        raise SearchError('INVALID_SEARCH_RESPONSE', 'expected a list of records')
+    return current
+
+
 CHANNEL_KEYWORD = "keyword"
 CHANNEL_CITATION = "citation"
 
@@ -85,8 +107,8 @@ def search_openalex(
             }
         )
     )
-    payload, _ = fetcher.get_json(url)
-    for work in (payload or {}).get("results") or []:
+    payload, outcome = fetcher.get_json(url)
+    for work in records(payload, outcome, ("results",)):
         location = work.get("primary_location") or {}
         source = (location.get("source") or {}) if isinstance(location, dict) else {}
         landing = location.get("pdf_url") or location.get("landing_page_url") or work.get("id")
@@ -114,8 +136,8 @@ def search_crossref(
         {"query.bibliographic": term, "rows": rows, "mailto": net.contact_email(),
          "select": "DOI,title,issued,container-title,URL,type,is-referenced-by-count"}
     )
-    payload, _ = fetcher.get_json(url)
-    for item in ((payload or {}).get("message") or {}).get("items") or []:
+    payload, outcome = fetcher.get_json(url)
+    for item in records(payload, outcome, ("message", "items")):
         titles = item.get("title") or []
         issued = ((item.get("issued") or {}).get("date-parts") or [[None]])[0]
         containers = item.get("container-title") or []
@@ -145,12 +167,14 @@ def search_arxiv(
     )
     outcome = fetcher.get(url)
     if not outcome.ok or not outcome.body:
-        return
+        raise SearchError(outcome.failure_class or net.EMPTY, outcome.detail)
     ns = {"a": "http://www.w3.org/2005/Atom"}
     try:
         root = ET.fromstring(outcome.body)
-    except ET.ParseError:
-        return
+    except ET.ParseError as exc:
+        raise SearchError('INVALID_SEARCH_RESPONSE', str(exc)) from exc
+    if root.tag != '{http://www.w3.org/2005/Atom}feed':
+        raise SearchError('INVALID_SEARCH_RESPONSE', 'expected an Atom feed')
     for entry in root.findall("a:entry", ns):
         title = (entry.findtext("a:title", default="", namespaces=ns) or "").strip()
         link = entry.findtext("a:id", default="", namespaces=ns) or ""

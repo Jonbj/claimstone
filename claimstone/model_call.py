@@ -427,8 +427,8 @@ def drain(
     # threads it would also be a race against rows this drain is appending.
     prior: dict[str, int] = {}
     for attempt in queue.attempts():
-        if (attempt.get("backend") == runner.name
-                and str(attempt.get("model") or "") == reader_model):
+        if ("rejudged_from" not in attempt
+                and result_key(attempt) == f"{attempt.get('call_id')}|{runner.name}|{reader_model}"):
             key = str(attempt.get("call_id"))
             prior[key] = prior.get(key, 0) + 1
 
@@ -581,7 +581,7 @@ def result_key(row: dict[str, Any]) -> str:
 
 
 def review_target(unit: dict[str, Any]) -> dict[str, Any]:
-    return {key: unit.get(key) for key in ('claim_id', 'question_id', 'extracted_by')}
+    return {key: unit.get(key) for key in ('claim_id', 'question_id', 'extracted_by', 'annotation_sha256')}
 
 
 def current_answers(store: Any, lane: str) -> dict[tuple[str, str], dict[str, Any]]:

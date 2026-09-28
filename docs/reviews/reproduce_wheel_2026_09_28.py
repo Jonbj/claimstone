@@ -11,6 +11,7 @@ import pathlib
 import shutil
 import subprocess
 import sys
+import sysconfig
 import tempfile
 import zipfile
 
@@ -33,13 +34,21 @@ def main():
             wheel = root / "dist" / filename
             with zipfile.ZipFile(wheel) as archive:
                 runners = [name for name in archive.namelist() if "/runners/" in name]
+                assert not any(name.startswith(('projects/', 'store/')) for name in archive.namelist())
             print("wheel:", filename, "backend files:", len(runners))
             # -I -S excludes cwd, PYTHONPATH, site-packages and editable-install import hooks.
             # Importing claimstone.runners first requires no third-party dependency.
-            code = f"import sys; sys.path.insert(0, {str(wheel)!r}); import claimstone.runners"
+            dependencies = list(dict.fromkeys([str(p) for p in (repo / '.venv' / 'lib').glob('python*/site-packages')]
+                                               + [sysconfig.get_path('purelib'), sysconfig.get_path('platlib')]))
+            # Explicit dependency paths do not execute .pth editable hooks under -I -S.
+            code = (f"import sys; sys.path[:0] = {[str(wheel), *dependencies]!r}; "
+                    "import claimstone.cli, claimstone.runners; "
+                    "assert set(claimstone.cli.BACKENDS) == set(claimstone.runners.available()); "
+                    "assert 'claimstone.runners' in sys.modules; "
+                    "print('installed CLI discovers all backends')")
             result = subprocess.run([sys.executable, "-I", "-S", "-c", code],
                                     cwd=root, capture_output=True, text=True, timeout=30)
-            print(result.stderr.strip() or "isolated backend import passed")
+            print(result.stderr.strip() or result.stdout.strip())
             return result.returncode
     finally:
         os.chdir(original)

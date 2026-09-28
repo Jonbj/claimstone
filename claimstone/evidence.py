@@ -147,7 +147,10 @@ def profile(
     for_classes: dict[str, int] = {}
     against_classes: dict[str, int] = {}
     for claim in verified:
-        bucket = against_classes if str(claim.get("stance")) == AGAINST else for_classes
+        stance = str(claim.get("stance"))
+        if stance == "QUALIFIES":
+            continue
+        bucket = against_classes if stance == AGAINST else for_classes
         klass = str(claim.get("source_class") or "")
         bucket[klass] = bucket.get(klass, 0) + 1
 

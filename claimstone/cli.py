@@ -202,13 +202,15 @@ def _report(args: argparse.Namespace) -> int:
             # floor is an additional constraint and never a shortcut: the project floor still judges the whole.
             own = " (declared)" if klass in result["class_floors"] else ""
             mark = "" if bucket["meets_floor"] else "  <- below its floor"
-            print(f"  {klass:<14} {bucket['obtained']}/{bucket['found']}  {bucket['rate']:.2f}"
+            print(f"  {klass:<14} {bucket[bucket['basis']]}/{bucket['found']} {bucket['basis']}  {bucket['rate']:.2f}"
                   f"   floor {bucket['floor']:.2f}{own}{mark}")
 
         # The chain of states, separately, because the remedies differ: a rule to declare, a
         # round to finish, a campaign to run, a stage 3 to run.
         found = result["found"]
         print(f"  {'found':<14} {found}")
+        if result.get('discovery_failures'):
+            print(f"  incomplete search: {result['discovery_failures']}/{result['discovery_queries']} failed")
         if result["unclassified"]:
             print(f"  {'classified':<14} {result['classified']}/{found}"
                   f"   {result['unclassified']} unclassified, which acquire will refuse")
@@ -255,8 +257,12 @@ def _gate_audit(args: argparse.Namespace) -> int:
     store = _checked_store(args, project)
 
     name = args.sweep or "min_text_chars"
-    points = gate_audit.sweep(store, name, SWEEP_VALUES[name])
-    listing = gate_audit.rejections(store, project.gate_thresholds, project.gate_policy)
+    points = gate_audit.sweep(store, name, SWEEP_VALUES[name], thresholds=project.gate_thresholds,
+                              policy=project.gate_policy, classes=project.classes,
+                              round_name=args.round, manifest_only=args.manifest)
+    listing = gate_audit.rejections(store, project.gate_thresholds, project.gate_policy,
+                                   classes=project.classes, round_name=args.round,
+                                   manifest_only=args.manifest)
 
     if args.json:
         import json
@@ -295,7 +301,7 @@ def _regate(args: argparse.Namespace) -> int:
     total = 0
     for row in gate_audit.regate(store, campaign=args.campaign,
                                  thresholds=project.gate_thresholds,
-                                 policy=project.gate_policy):
+                                 policy=project.gate_policy, classes=project.classes):
         total += 1
         verdict = row["gate"]["kind"]
         mark = "ok  " if row["acquired"] else "fail"
@@ -425,6 +431,7 @@ def _discover(args: argparse.Namespace) -> int:
         return 0
 
     topics = tuple(t.strip() for t in args.topics.split(",")) if args.topics else None
+    incomplete = False
 
     # Keyword first, then citations, and the order matters for more than tidiness. Both channels
     # skip a candidate_key already present, so whichever runs first owns a work both found. A
@@ -440,6 +447,9 @@ def _discover(args: argparse.Namespace) -> int:
                               topics=topics, per_query=args.per_query, round_name=args.round)
         print(f"keyword channel: {result['new']} new of {result['returned']} returned, "
               f"{result['queries']} queries")
+        if result.get("failures"):
+            incomplete = True
+            print(f"  incomplete search: {result['completed_queries']}/{result['queries']} completed; {result['failures']}")
         if result["unclassified"]:
             print(f"  {result['unclassified']} unclassified: {result['uncovered']}")
             print("  declare an assign_when rule in sources.yaml rather than loosening one")
@@ -477,7 +487,7 @@ def _discover(args: argparse.Namespace) -> int:
             if result["possible_duplicates"]:
                 print(f"  {result['possible_duplicates']} noted as possible duplicates, "
                       f"none merged")
-    return 0
+    return 3 if incomplete else 0
 
 
 def _discover_report(args: argparse.Namespace) -> int:
@@ -493,6 +503,9 @@ def _discover_report(args: argparse.Namespace) -> int:
         print(json.dumps(summary, indent=2, sort_keys=True))
         return 0
 
+    if summary['search']['recorded_queries']:
+        search = summary['search']
+        print(f"  search completion {search['completed']}/{search['recorded_queries']}; {search['failed']} failed")
     if not summary["candidates"]:
         print(f"{project.name}: no candidates recorded")
         return 0
@@ -947,6 +960,9 @@ def build_parser() -> argparse.ArgumentParser:
         command.add_argument("project", help="path to a project directory")
         command.add_argument("--store", default="store", help="where generated data lives")
         command.set_defaults(func=handler)
+        if name == 'gate-audit':
+            command.add_argument('--round', default=None, help='audit one declared population')
+            command.add_argument('--manifest', action='store_true', help='audit the curated manifest')
         if name == "import-manifest":
             command.add_argument("--round", default="manifest",
                                  help="name this import; it lands on every candidate, and the floor "

@@ -11,6 +11,7 @@ supports is the claim that was made.
 | field | meaning |
 |---|---|
 | `claim_id`, `question_id` | the claim this judges |
+| `review_version`, `annotation_sha256` | v2 whole-annotation task and digest of its original/converted scientific fields |
 | `verdict` | `SUPPORTED`, `OVERSTATED`, `AMBIGUOUS`, `NOT_APPLICABLE` |
 | `reason` | one sentence naming what the quote actually says where it differs from the claim |
 | `reviewed_by` | `{backend, model, harness_version}` — who judged |
@@ -44,7 +45,9 @@ judged it can be argued with on its own.
 
 ## The review unit is the whole chunk
 
-Question, claim, quote, and **the passage entire**. The chunk is the expensive part and it is the point: a
+Question, claim, quote, **the complete original and verified annotation**, and **the passage entire**.
+D48 includes all asserted result metadata and converted values; SUPPORTED applies to the entire
+annotation, not just the claim sentence. Missing optional fields are not assertions. The chunk is the expensive part and it is the point: a
 sentence reading "we find no effect", preceded by "unlike prior work, we do not assume", means the opposite of
 how it reads alone — and the mechanical gate cannot catch context-stripping, because the substring is exact.
 
@@ -79,10 +82,9 @@ the comparison internally consistent, not correct.
 Use `review.current(store)`, not a raw latest-row lookup. The claim must still be accepted and the
 current review answer must still contain the same verdict and reason. Invalidating an answer makes
 its cached review unusable immediately. Harvest uses current results, including rejudgements, and
-appends a changed review once. The historical review remains auditable. Legacy imports with no
-model-call provenance retain their earlier interpretation.
+appends a changed review once. The historical review remains auditable. Rows without `review_version` mean 1 and remain historical. They cannot attest the complete v2 task,
+including imports without model-call provenance. A changed annotation digest makes a review unusable.
 
 Identical review prompts merge explicit targets; a valid answer fans out to all eligible annotations.
 The reviewer is checked separately against each extractor. A changed annotation id never inherits
-another annotation's review. This corrects identity and replay; the review prompt still needs R10's
-full-result metadata repair before it can attest that metadata.
+another annotation's review. D48 adds the complete result and its digest to the prompt; it can attest that metadata.

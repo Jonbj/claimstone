@@ -236,7 +236,7 @@ def test_a_retry_normalizes_it_once_the_bytes_are_back(tmp_path):
 
 
 def test_force_appends_rather_than_edits_and_a_consumer_must_read_the_latest(tmp_path):
-    """Append-only: re-chunking doubles the rows in the ledger and leaves the chunk ids alone.
+    """Append-only: identical generations reuse immutable chunks; historical rows are retained.
 
     Stated as a test because the difference is invisible until someone counts raw rows and reports
     twice the corpus.
@@ -249,7 +249,7 @@ def test_force_appends_rather_than_edits_and_a_consumer_must_read_the_latest(tmp
     ids_before = set(store.latest_by("chunks.jsonl", "chunk_id"))
 
     list(normalize.run(store, grobid, force=True))
-    assert len(list(store.read("chunks.jsonl"))) == rows_before * 2
+    assert len(list(store.read("chunks.jsonl"))) == rows_before
     assert set(store.latest_by("chunks.jsonl", "chunk_id")) == ids_before
 
 

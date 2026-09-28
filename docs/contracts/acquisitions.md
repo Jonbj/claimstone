@@ -70,3 +70,20 @@ A reader that wants one row per candidate takes **the latest successful row**, f
 the latest row only when none succeeded. Plain latest-wins would let a failed retry campaign
 erase a success whose bytes are still on disk, lowering the rate while the corpus was unchanged.
 `admissibility.collapse` is the reference implementation.
+
+
+## Redirects, request history and admission accounting (D48)
+
+`attempts` carries `fetch_version`, original `request_url`, resolved `url` and visited
+`redirect_chain`; each destination is checked before requesting it. Resolver and robots outcomes
+are also retained in [the request log](requests.md), including candidates with no obtainable location.
+`REDIRECT_ERROR` (loop, excess hops, missing Location or non-HTTP destination) is terminal.
+
+Admission instrument 2 reports `obtained_rate` and `confirmed_rate` per class and selects the
+same basis as global admission; pending normalization raises only `rate_upper`. A class floor
+is still an additional constraint. CLI class fractions name their basis explicitly.
+
+Audit instrument 2 sweeps one threshold over project-configured thresholds and class policy,
+using the declared found population with optional round/manifest scope. Unattempted candidates
+remain in the denominator. Sweep rates explicitly use an obtained-byte hypothetical basis;
+stage-3 confirmation is not inferred. Regate passes the declared class policy and remains offline.

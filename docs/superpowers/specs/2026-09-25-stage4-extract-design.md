@@ -5,7 +5,8 @@ Date: 2026-09-25 · Scope: stage 4 only · Status: implemented; gate/replay corr
 
 **Corrected 2026-09-28 (D47):** authoritative current answers and immutable reader annotations
 follow [the model-call contract](../../contracts/model_calls.md), [claims](../../contracts/claims.md)
-and [reviews](../../contracts/reviews.md). Chunk generations and full-result review remain open (R06/R10).
+and [reviews](../../contracts/reviews.md). D48 adds immutable active chunk generations and complete-annotation review v2; legacy reviews remain
+historical and cannot attest the new task.
 Where invariant 1 lives. Chunks become records bound to verbatim quotes, verified in code, and
 everything that fails verification is kept rather than softened.
 

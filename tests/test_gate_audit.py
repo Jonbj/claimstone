@@ -22,6 +22,8 @@ def _corpus(tmp_path):
                           "content_type": ctype, "stored_path": str(path),
                           "gate_kind": None, "gate_reason": None}],
         })
+    for key, row in store.latest_by('acquisitions.jsonl', 'candidate_key').items():
+        store.append('candidates.jsonl', {'candidate_key': key, 'source_class': row['source_class']})
     return store
 
 
@@ -104,6 +106,7 @@ def test_a_row_from_the_older_schema_is_still_audited(tmp_path):
     })
     listing = gate_audit.rejections(store)
     assert [item["kind"] for item in listing] == [fulltext.ABSTRACT_ONLY]
+    store.append("candidates.jsonl", {"candidate_key": "a", "source_class": "IND"})
     assert gate_audit.sweep(store, "fulltext_chars", [1000])[0]["rate"] == 1.0
 
 
@@ -115,6 +118,7 @@ def test_the_sweep_denominator_is_every_candidate_not_only_those_with_bytes(tmp_
         "candidate_key": "d", "source_id": "D", "source_class": "ACA", "acquired": False,
         "failure_class": "PAYWALL_403", "url": "https://wall.example/d", "attempts": [],
     })
+    store.append("candidates.jsonl", {"candidate_key": "d", "source_class": "ACA"})
     point = gate_audit.sweep(store, "min_text_chars", [3000])[0]
     assert point["attempted"] == 4
     assert point["accepted"] == 2

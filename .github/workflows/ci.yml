@@ -14,9 +14,11 @@ jobs:
       - name: Install
         run: |
           python -m pip install --upgrade pip
-          pip install -e . pytest
+          pip install -e . pytest setuptools wheel
       - name: Validate project configs
         run: python -m claimstone.cli validate --all-projects
+      - name: Installed wheel discovers every backend
+        run: python docs/reviews/reproduce_wheel_2026_09_28.py
       - name: Tests
         run: pytest -q
 

@@ -12,11 +12,13 @@ and stage 2's gate cannot see it — which is exactly what that spec said stage 
 from __future__ import annotations
 
 import datetime as _dt
+import hashlib
 import pathlib
 from typing import Any, Iterator
 
 from claimstone import chunk as chunking
-from claimstone import html_doc, tei
+from claimstone import html_doc, tei, model_call
+from claimstone.store import sha256_text
 from claimstone.store import Store
 
 CONFIRM_DEFAULTS: dict[str, int] = {
@@ -75,10 +77,7 @@ def run(
 ) -> Iterator[dict[str, Any]]:
     """Normalize every acquired source not already done. Idempotent by content hash."""
     th = {**chunking.DEFAULT_THRESHOLDS, **CONFIRM_DEFAULTS, **(thresholds or {})}
-    done = {
-        str(row.get("sha256"))
-        for row in store.latest_by("documents.jsonl", "source_id").values()
-    }
+    done = store.latest_by("documents.jsonl", "source_id")
     references = _reference_rows(store)
     attempted = 0
 
@@ -87,7 +86,7 @@ def run(
             return
         digest = str(source.get("sha256") or "")
         source_id = str(source.get("source_id") or source.get("candidate_key"))
-        if digest in done and not force:
+        if done.get(source_id, {}).get("sha256") == digest and not force:
             continue
 
         common = {
@@ -136,7 +135,7 @@ def run(
             doc = parse(payload)
         except tei.TeiError as exc:
             row = common | {"fulltext_confirmed": False, "failure_class": TEI_UNREADABLE,
-                            "reason": str(exc)[:200], "chunks": 0, "tei_path": parsed_from}
+                            "reason": str(exc)[:200], "chunks": 0, "chunk_ids": [], "tei_path": parsed_from}
             store.append("documents.jsonl", row)
             attempted += 1
             yield row
@@ -146,8 +145,20 @@ def run(
         result = chunking.chunk_document(doc, source_id=source_id, thresholds=th) if confirmed \
             else chunking.ChunkResult(chunks=[])
 
+        generation = sha256_text(model_call.canonical({
+            'payload_sha256': hashlib.sha256(payload).hexdigest(),
+            'source_sha256': digest, 'chunk_version': chunking.CHUNK_VERSION, 'thresholds': th,
+            'html_parser_version': None if is_pdf else html_doc.HTML_PARSER_VERSION,
+        }))
+        chunk_ids = []
+        existing = store.latest_by('chunks.jsonl', 'chunk_id')
         for one in result.chunks:
-            store.append("chunks.jsonl", one.as_row())
+            identifier = f"{source_id}#{generation}#{one.chunk_id.split('#')[-1]}"
+            chunk_ids.append(identifier)
+            if identifier not in existing:
+                store.append('chunks.jsonl', one.as_row() | {
+                    'chunk_id': identifier, 'generation_sha256': generation,
+                    'document_sha256': digest})
 
         if confirmed:
             for reference in doc.references:
@@ -183,6 +194,7 @@ def run(
             "tables": len(doc.tables),
             "notes": len(doc.notes),
             "chunks": len(result.chunks),
+            "chunk_ids": chunk_ids, "generation_sha256": generation,
             "dropped_sections": result.dropped_sections,
             "merged_sections": result.merged_sections,
             "oversized_chunks": result.oversized_chunks,
@@ -190,7 +202,7 @@ def run(
             "thresholds": {k: th[k] for k in sorted(th)},
         }
         store.append("documents.jsonl", row)
-        done.add(digest)
+        done[source_id] = row
         attempted += 1
         yield row
 

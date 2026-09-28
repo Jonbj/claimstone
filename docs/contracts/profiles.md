@@ -1,7 +1,7 @@
 # `profiles.jsonl` and `adjudications.jsonl` — the contract
 
 Stage 6 appends profiles; a person alone authorizes an adjudication. Historical rows are never rewritten.
-D45 introduced `profile_version 2`; D46 adds `profile_version 3`; D47 adds `profile_version 4`, independently of `decision_contract_version 1`.
+D45 introduced `profile_version 2`; D46 adds `profile_version 3`; D47 adds `profile_version 4`; D48 adds `profile_version 5`, independently of `decision_contract_version 1`.
 
 ## Profile identity and completeness
 
@@ -35,7 +35,7 @@ A profile does not silently certify old annotations under a newly changed gate.
 
 Latest profile selection collapses by `(question_id, round, manifest_only)`, after filtering the selector.
 A missing `manifest_only` on a legacy row means false. Version 1's hash omitted scope and extraction
-completeness; versions 1–3 require rebuilding and reading again under version 4.
+completeness; versions 1–4 require rebuilding and reading again under version 5.
 
 ## Adjudication
 
@@ -56,4 +56,5 @@ read it before signing. The awaiting-person count excludes provisional and inadm
 Version 4 selects annotations and reviews against authoritative current model answers and verifies
 harvest completion by the whole original record, call, reader and chunk. It cannot carry an old
 successful claim/review through an invalidating replay, or collapse two readers into one annotation.
-The remaining chunk-generation and full-result review repairs (R06/R10) are separate requirements.
+Version 5 uses the committed chunk generation and accepts only full-annotation v2 reviews (D48).
+QUALIFIES remains a displayed direction count and belongs to neither directional class bucket.

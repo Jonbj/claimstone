@@ -20,7 +20,7 @@ from unittest.mock import patch
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2]))
 
 from claimstone import (
-    admissibility, claimgate, cli, config, discover, evidence, extract,
+    admissibility, chunk_sets, claimgate, cli, config, discover, evidence, extract,
     gate_audit, model_call, model_report, net, normalize, review, synthesize,
 )
 from claimstone.runners.base import RawAnswer
@@ -71,7 +71,7 @@ def claim(store, identifier="c", source_id="s", **extra):
     }
     store.append("claims.jsonl", row)
     store.append("reviews.jsonl", {
-        "claim_id": identifier, "question_id": "Q", "verdict": "SUPPORTED",
+        "claim_id": identifier, "question_id": "Q", "verdict": "SUPPORTED", "review_version": review.REVIEW_VERSION,
         "reviewed_by": {"backend": "reader-b", "model": "model-b"},
     })
     return row
@@ -243,7 +243,7 @@ def rechunk_ghosts(root, store, p):
     list(normalize.run(store, None, thresholds=th))
     list(normalize.run(store, None, thresholds={**th, "max_chunk_chars": 9000}, force=True))
     reported = store.latest_by("documents.jsonl", "source_id")["s"]["chunks"]
-    active = len(store.latest_by("chunks.jsonl", "chunk_id"))
+    active = len(chunk_sets.current(store))
     assert active == reported, f"document says {reported} chunk, downstream reads {active}"
 
 
@@ -272,7 +272,8 @@ def regate_class_policy(root, store, p):
     # This source class's acquisition policy requires length only. regate has no classes input.
     from claimstone.fulltext import classify
     assert classify(payload, "text/html", "", policy={"structural_signal": "none"}).accepted
-    changed = list(gate_audit.regate(store, campaign="offline-review", policy={}))[0]
+    changed = list(gate_audit.regate(store, campaign="offline-review", policy={},
+                                      classes=(dataclasses.replace(p.classes[0], gate_policy={"structural_signal": "none"}),)))[0]
     assert changed["acquired"], "regate drops class policy and refutes previously valid guidance"
 
 
@@ -372,9 +373,10 @@ def snapshot():
         s = Store(name, base=repo / "store")
         measured = admissibility.admit(p, s)
         manifest = admissibility.admit(p, s, manifest_only=True)
-        claims = s.latest_by("claims.jsonl", "claim_id")
-        chunks = s.latest_by("chunks.jsonl", "chunk_id")
-        reviews = s.latest_by("reviews.jsonl", "claim_id")
+        from claimstone import claim_records
+        claims = claim_records.current(s)[0]
+        chunks = chunk_sets.current(s)
+        reviews = review.current(s)
         profiles = synthesize.latest_profiles(s)
         print(name, json.dumps({
             "found": measured["found"], "obtained": measured["obtained"],
@@ -382,7 +384,8 @@ def snapshot():
             "basis": measured["basis"], "final": measured["final"], "status": measured["status"],
             "manifest_rate": manifest["rate"], "claims": len(claims), "chunks": len(chunks),
             "sources_chunked": len({c["source_id"] for c in chunks.values()}),
-            "reviews": len(reviews), "profiles": len(profiles),
+            "reviews": len(reviews), "historical_reviews": len(s.latest_by("reviews.jsonl", "claim_id")),
+            "profiles": len(profiles),
             "adjudications": len(synthesize.adjudications(s)),
         }, sort_keys=True))
         for path in sorted(s.root.glob("calls/*/*/requests.jsonl")):
@@ -407,7 +410,7 @@ def snapshot():
                 }, sort_keys=True))
         if name == "pmc-screen-time":
             q4 = profiles["Q04"]
-            print("Q04", json.dumps({k: q4.get(k) for k in (
+            print("Q04_historical", json.dumps({k: q4.get(k) for k in (
                 "profile_sha256", "provisional", "coverage", "awaiting_review", "direction_count",
             )}, sort_keys=True))
             rejections = s.latest_by("rejections.jsonl", "claim_id")

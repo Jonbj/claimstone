@@ -13,8 +13,9 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 # `projects/` holds per-project input data, not code: autodiscovery would package it.
-[tool.setuptools]
-packages = ["claimstone"]
+[tool.setuptools.packages.find]
+include = ["claimstone", "claimstone.*"]
+namespaces = false
 
 [tool.pytest.ini_options]
 markers = ["network: hits the real internet; skipped unless CLAIMSTONE_LIVE=1"]

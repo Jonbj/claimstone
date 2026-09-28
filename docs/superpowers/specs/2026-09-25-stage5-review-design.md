@@ -1,11 +1,12 @@
 # Stage 5 — review: design
 
-Date: 2026-09-25 · Scope: stage 5 only · Status: approved, not implemented
+Date: 2026-09-25 · Scope: stage 5 only · Status: implemented; complete annotation review in D48 (2026-09-28)
 
 
 **Corrected 2026-09-28 (D47):** authoritative current answers and immutable reader annotations
 follow [the model-call contract](../../contracts/model_calls.md), [claims](../../contracts/claims.md)
-and [reviews](../../contracts/reviews.md). Chunk generations and full-result review remain open (R06/R10).
+and [reviews](../../contracts/reviews.md). D48 adds immutable active chunk generations and complete-annotation review v2; legacy reviews remain
+historical and cannot attest the new task.
 An adversarial second read of every claim that passed the mechanical gate. On the corpus that
 motivated this project it marked **54 of 292 claims OVERSTATED and 21 AMBIGUOUS — 25.7%** after they
 had already passed the quote check (D5). It is the control that pays best, and the reason is

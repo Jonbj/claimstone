@@ -38,6 +38,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 
+from claimstone import chunk_sets
 from claimstone import claimgate, config, model_call, review  # noqa: E402
 from claimstone import runners  # noqa: E402
 from claimstone.store import Store  # noqa: E402
@@ -62,7 +63,7 @@ def main() -> int:
     project = config.load_project(args.project)
     store = Store(pathlib.Path(args.project).name)
     questions = {q.id: q for q in project.questions}
-    chunks = store.latest_by("chunks.jsonl", "chunk_id")
+    chunks = chunk_sets.current(store)
 
     def still_overstates(row: dict) -> bool:
         """Re-judged under the gate as it is now, and the figure absent from the whole passage.

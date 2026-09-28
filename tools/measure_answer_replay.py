@@ -17,7 +17,7 @@ import tempfile
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from claimstone import claim_records, extract, model_call, review
+from claimstone import chunk, claim_records, extract, model_call, review, synthesize
 from claimstone.config import load_project
 from claimstone.store import Store
 from measure_claim_gate_reharvest import snapshot
@@ -66,8 +66,11 @@ def measure(project_path: str, store_base: str) -> dict:
         result = {
             'project': project.name, 'batches': {lane: len(names) for lane, names in batches.items()},
             'instruments': {'result_judge_version': model_call.RESULT_JUDGE_VERSION,
-                            'annotation_version': claim_records.ANNOTATION_VERSION},
+                            'annotation_version': claim_records.ANNOTATION_VERSION,
+                            'chunk_version': chunk.CHUNK_VERSION, 'review_version': review.REVIEW_VERSION,
+                            'profile_version': synthesize.PROFILE_VERSION},
             'original_claim_ids': len(original_claims), 'original_reviews': len(original_reviews),
+            'historical_review_ids_retained': len(original_reviews.keys() & scratch.latest_by('reviews.jsonl', 'claim_id').keys()),
             'active_before': {'accepted': len(active_before[0]), 'rejected': len(active_before[1])},
             'active_after': {'accepted': len(active_after[0]), 'rejected': len(active_after[1])},
             'retained_original_claim_ids': len(retained),

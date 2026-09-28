@@ -1,10 +1,9 @@
 # Functional and code review — 2026-09-28
 
-Implementation update, 2026-09-28: the first correction covers R01, R03, R04 and R13; see D45 and
-`tests/test_profile_integrity.py`. The findings and reproducer below record the reviewed baseline.
-D46 also repairs R02 and gate-decision supersession, with regression cases in `tests/test_claimgate.py`
-and `tests/test_claim_records.py`. R14's current gate denominators now agree across profile, extraction
-and review reports; its other reporting findings remain open. R05/R09 are the next replay repair.
+Implementation update, 2026-09-28: all R01–R15 now have repairs in D45–D48 and regression coverage.
+The original findings below record the reviewed baseline; dated repair measurements follow them.
+All 22 synthetic probes pass and the isolated installed-wheel CLI discovers every backend.
+No real ledger, publisher request, model call, floor change or adjudication was performed.
 
 Reviewed revision: `04d7eff` (the checkout has advanced beyond the handoff commit `590af27`). The working
 tree was clean when the review began. This review adds only this report and two offline reproduction
@@ -432,3 +431,19 @@ is fully repaired.
 83 review associations, and verifies zero writes on repetition and unchanged real JSONL hashes. D47
 records the whole-corpus counts and their limits. The real production replay remains unapplied until
 R06 and R10 are repaired. No acquisition, model call, floor change or adjudication was made.
+
+
+## Repair progress through D48 (2026-09-28)
+
+D48 repairs R06–R08, R10–R12, the remaining R14 reporting errors and R15 distribution.
+Active passage manifests prevent stale chunks and old-context answers; complete annotation reviews
+are versioned and digest-bound; every redirect is checked and request/query outcomes are recorded;
+class rates and policy-aware audits use declared populations. QUALIFIES contributes to neither
+class direction and reader totals reconcile without counting rejudgements as paid attempts.
+
+The complete verification now passes: **878 tests, 7 skipped**, six project configurations,
+16 recorded instruments, all 22 counterexamples and an isolated installed-wheel CLI import.
+The two complete temporary-store replays retain D47's extraction counts, preserve all 83 historical
+review ids, append zero rows on repetition and leave the real ledgers unchanged. **Zero legacy reviews
+attest the new complete-annotation task.** These repairs finish the software review; production replay,
+unanswered extraction, paid independent v2 review and human adjudication remain separate work.

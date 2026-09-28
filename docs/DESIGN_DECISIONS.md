@@ -2314,3 +2314,96 @@ that dated table. The full D47 replay is the current migration measurement.
 
 The real stores have not been reharvested. R06 chunk-generation identity and R10 full-result review
 remain to be repaired before applying a production replay; this measurement does not certify them.
+
+
+## D48 — Complete review repairs: active passages, full annotations and honest accounting
+
+Date: 2026-09-28 · `chunk_version 2` · `review_version 2` · `profile_version 5`
+· `fetch_version 2` · `discovery_version 2` · `admission_version 2`
+· `audit_version 2` · `model_report_version 2`
+
+The remaining counterexamples in the functional review (R06–R08, R10–R12, R14–R15)
+are executable failures of the existing contract, not a new acquisition strategy or a change
+of floor. D19's passage boundaries, D8's robots policy, D36's additional class floor and
+D14's authoritative answer policy remain the measured choices.
+
+### Immutable active passages and complete second reading
+
+Normalization publishes generation-specific immutable chunk ids and commits their complete manifest
+in the final document row. Consumers select exactly that manifest; an interrupted generation is
+invisible and a shorter re-normalization cannot leave old trailing chunks active. Generation identity
+includes source bytes, parsed payload, chunk version, thresholds and HTML parser version. The pure
+chunker's boundaries/text are unchanged. Repeating the same generation writes no additional chunks.
+Identical bytes belonging to different sources are normalized separately. Legacy positional ids remain
+readable where their declared count is consistent; ambiguous legacy sets refuse instead of guessing.
+A changed complete passage invalidates its old reading even if the quoted sentence still occurs.
+
+Review v2 presents both the original model record and the engine's scientific annotation, including
+converted numbers, uncertainty, sample, horizon, design, dependence and kind-specific metadata.
+SUPPORTED attests the complete annotation in passage context. Review requests and rows carry the
+annotation digest and review instrument. Missing optional metadata is not an assertion. Legacy reviews
+attested a narrower task: they remain auditable but cannot certify v2. This is a new task requiring a
+new independent reading; replaying its old bytes cannot supply that reading. Profile v5 reflects this
+selection and the active passage set. Historical profiles require rebuilding and reading again.
+
+### Request conduct and acquisition accounting
+
+Fetcher v2 disables automatic redirects and checks exclusion (including subdomains), budget and
+robots before each destination. Relative locations are resolved; loops, missing Location, non-HTTP
+addresses and excess hops fail explicitly. Redirected robots requests also respect exclusions and
+budgets. Robots caches are per scheme/host/port and the budget is rechecked after fetching rules.
+D8's permissive handling of a genuinely unserved robots file remains unchanged.
+
+Discovery, citation resolution and acquisition wrap the transport with an append-only request log.
+Redirects, robots, transport failures, blocked destinations and parsed-response summaries are recorded
+with context. Bodies available to the logger are content-addressed. Summary events are not additional
+HTTP attempts. Query completion has a separate ledger: a valid empty search is successful, a malformed
+API envelope or transport failure is not. Failed recorded queries block finality for their round;
+a manifest-only population does not pretend that an unrelated search defines it. Older unlogged
+requests remain unknown. The discovery CLI reports incomplete searches and returns exit 3.
+
+Class rates use the same confirmed/obtained basis as the global rate, retaining both counts and the
+unknown ceiling. Audits vary one project-configured threshold over the declared found population,
+with class policy and explicit round/manifest scope; unattempted candidates stay in the denominator.
+The hypothetical audit explicitly reports an obtained-byte basis, not stage-3 confirmation.
+Regate applies the project's class policy too. QUALIFIES remains a displayed direction count and
+contributes to neither directional class count. Model report totals use the same reader identity as
+queue selection and equal the sum of their parts; replay rows, even with an empty origin timestamp,
+are never physical paid attempts or retry increments. Wheels now include backend subpackages.
+
+### Complete offline measurements
+
+Reproduce the counterexamples and the distributed artifact:
+
+```bash
+.venv/bin/python docs/reviews/reproduce_review_2026_09_28.py
+python3 docs/reviews/reproduce_wheel_2026_09_28.py
+.venv/bin/pytest -q
+.venv/bin/claimstone validate --all-projects
+.venv/bin/python tools/check_instrument_versions.py
+```
+
+All **22 counterexamples pass**; the wheel contains five backend files and its CLI discovers every
+backend in an isolated interpreter without editable-install hooks. The regression suite has
+**878 passing tests, 7 skipped**; six project configurations validate and **16 instruments** are
+acknowledged. Thirty-two new regression cases cover the remaining behaviors, using offline
+transports and temporary stores. No production normalization or external sweep was performed.
+
+Run `tools/measure_answer_replay.py` for each corpus, as in D47. It rejudges and harvests every stored
+batch on a temporary copy, repeats both operations, and compares original ledger hashes:
+
+| corpus | extraction/review batches | active claims/rejections before | after | original claim ids retained | new ids | original historical reviews retained | usable v2 reviews |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| PMC | 1 / 1 | 1,668 / 259 | 1,668 / 259 | 1,668 | 0 | 42 | 0 |
+| alembic-s4 | 7 / 2 | 7,021 / 1,143 | 7,194 / 1,166 | 6,991 | 203 | 41 | 0 |
+
+The extraction counts match D47; the change is review eligibility. All original 83 review ids remain
+on disk, as do replayed legacy responses, but none can attest the full annotation. Every repeat appends
+zero rows and the real ledgers remain unchanged. PMC has zero missing raw answers; alembic has 27,
+which remain skipped and counted. These are annotations and historical answer accounting, not
+independent studies, a measurement of reviewer quality, or completed scientific evidence.
+
+All fifteen software findings now have a repair and a reproducer. Applying offline replay to production,
+finishing unanswered extraction, commissioning independent v2 reviews and rebuilding profiles remain
+operational follow-up. Paid work, floor changes and adjudication remain the operator's decisions.
+No publisher or model was called, no floor changed, and no verdict was signed.

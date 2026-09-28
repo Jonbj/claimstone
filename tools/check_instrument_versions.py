@@ -25,6 +25,12 @@ RECORD = ROOT / "docs" / "DESIGN_DECISIONS.md"
 # Each instrument: the module holding its version, the constant, and the phrase the record must
 # use so the mention is deliberate rather than accidental.
 INSTRUMENTS = (
+    ("claimstone/review.py", "REVIEW_VERSION", "review_version"),
+    ("claimstone/net.py", "FETCH_VERSION", "fetch_version"),
+    ("claimstone/admissibility.py", "ADMISSION_VERSION", "admission_version"),
+    ("claimstone/gate_audit.py", "AUDIT_VERSION", "audit_version"),
+    ("claimstone/model_report.py", "MODEL_REPORT_VERSION", "model_report_version"),
+    ("claimstone/searchers.py", "DISCOVERY_VERSION", "discovery_version"),
     ("claimstone/model_call.py", "RESULT_JUDGE_VERSION", "result_judge_version"),
     ("claimstone/claim_records.py", "ANNOTATION_VERSION", "annotation_version"),
     ("claimstone/synthesize.py", "PROFILE_VERSION", "profile_version"),

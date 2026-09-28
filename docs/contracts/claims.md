@@ -57,6 +57,7 @@ percent retain the measured policies in D25, D38 and D46.
 | `unconverted`, `unconverted_why` | auxiliary fields in a notation the engine does not read. The claim stands and the absent value is **named**. Stage 6 may not pool a field listed here |
 | `gate_revision` | increasing revision for this annotation across both gate ledgers; absent means zero |
 | `claim_gate_version` | which rule set admitted it. Absent means rule set 1, written before the constant existed |
+| `chunk_text_sha256` | complete passage identity; obsolete generations and changed legacy context are unusable |
 | `source_id`, `chunk_id`, `source_class` | where it came from, and which class weighs it |
 | `lane`, `kind_verified` | the question kind the call asked about, and whether that could be checked |
 | `call_id`, `backend`, `model`, `harness_version` | which call produced it, and what sat between the prompt and the model |

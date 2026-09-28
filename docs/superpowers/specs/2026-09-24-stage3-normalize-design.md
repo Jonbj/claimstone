@@ -2,6 +2,8 @@
 
 Date: 2026-09-24 · Scope: stage 3 only · Status: approved, not implemented
 
+**Corrected 2026-09-28 (D48):** D48 publishes complete chunk-generation manifests atomically; active consumers use chunk_sets.current, preserving immutable history.
+
 Between the bytes stage 2 obtained and the chunks stage 4 will read. Every number below was
 measured on the 14 acquired PDFs of `alembic-s4`, not estimated.
 

@@ -186,8 +186,9 @@ appending; if the saved profile differs, run `synthesize` and read the new hash 
 D46 adds `extraction.unregated` and `awaiting_regate`: annotations admitted by an older claim gate
 cannot be signed under the current one until re-harvested. Gate revisions now supersede either outcome
 across both ledgers. D47 repairs answer/annotation replay (R05/R09). A full offline replay can be measured with
-`tools/measure_answer_replay.py <project>`. The real ledgers remain unchanged pending chunk-generation
-identity and full-result review (R06/R10).
+`tools/measure_answer_replay.py <project>`. D48 repairs chunk generations and full-result review too. The real ledgers remain unchanged; all old
+reviews attest task v1 and cannot certify v2 complete annotations. Production offline replay, unanswered
+readings and independent complete review precede rebuilding and reading a signable v5 profile.
 
 ## adjudicate — the only place a verdict comes from
 

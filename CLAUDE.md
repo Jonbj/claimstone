@@ -10,7 +10,7 @@ every claim bound to a verbatim quote — weighs the claims per question, and re
 **verdict per question** with its coverage.
 
 Read `README.md` for the contract and the six stages. Read `docs/DESIGN_DECISIONS.md`
-before proposing any architectural change: it records twelve decisions **with the
+before proposing any architectural change: it records dated decisions **with the
 measurement that decided each**, so they are not relitigated from first principles.
 
 ## Non-negotiable invariants

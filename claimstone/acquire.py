@@ -17,6 +17,7 @@ from typing import Any, Iterable, Iterator
 
 from claimstone import fulltext, net, resolve
 from claimstone.store import Store
+from claimstone.request_log import RecordingFetcher
 
 PDF_TYPES = ("application/pdf", "application/octet-stream")
 HTML_TYPES = ("text/html", "application/xhtml+xml", "application/xml", "text/xml", "text/plain")
@@ -66,6 +67,8 @@ def acquire_one(
         from claimstone.config import resolve_gate_policy
 
         policy = resolve_gate_policy(policy or {}, classes, candidate.get("source_class"))
+    fetcher = RecordingFetcher(fetcher, store, purpose='acquisition', campaign=campaign,
+                               candidate_key=candidate['candidate_key'], source_class=candidate['source_class'])
     locations, oa_status = resolve.plan(fetcher, candidate, use_apis=use_apis)
     attempts: list[dict[str, Any]] = []
     common = {
@@ -97,10 +100,10 @@ def acquire_one(
             attempts.append(attempt)
             continue
 
-        verdict = fulltext.classify(outcome.body, outcome.content_type, location.url, th,
+        verdict = fulltext.classify(outcome.body, outcome.content_type, outcome.url, th,
                                     policy=policy)
         digest, path = store.store_bytes(
-            outcome.body, _suffix_for(outcome.content_type, location.url)
+            outcome.body, _suffix_for(outcome.content_type, outcome.url)
         )
         attempt |= {
             "gate_kind": verdict.kind,
@@ -126,7 +129,7 @@ def acquire_one(
                 and "html" in (outcome.content_type or "").lower()
             ):
                 found = resolve.deposited_files(
-                    outcome.body.decode("utf-8", "replace"), location.url)
+                    outcome.body.decode("utf-8", "replace"), outcome.url)
                 if found:
                     followed = True
                     # Ahead of the rest: a file this page points at is a better warrant than the next

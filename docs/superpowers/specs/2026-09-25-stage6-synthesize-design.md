@@ -2,8 +2,8 @@
 
 Date: 2026-09-25 · Scope: stage 6 only · Status: **implemented 2026-09-27** — `evidence.py`, `synthesize.py`, 28 tests
 
-**Corrected 2026-09-28 (D45/D46/D47):** extraction completeness, evidence scope, hashes and live signature
-validation now follow [the profile contract](../../contracts/profiles.md). `profile_version 4` supersedes
+**Corrected 2026-09-28 (D45/D46/D47/D48):** extraction completeness, evidence scope, hashes and live signature
+validation now follow [the profile contract](../../contracts/profiles.md). `profile_version 5` supersedes
 the partial finality checks below. Every current chunk needs a valid, harvested reading for the question
 kind; the same population selector governs admission, evidence, profiles and signatures. The shown hash
 is mandatory, and both signing and reporting recompute against current ledgers without appending.

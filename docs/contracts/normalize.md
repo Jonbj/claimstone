@@ -7,9 +7,11 @@ writes them.
 model will be shown and exactly the string a quote is checked against.** Rendering it a second time
 anywhere would turn a difference between the two renderings into the rejection of a true claim.
 
-Append-only means a re-run adds rows rather than editing them. A consumer reads
-`store.latest_by("chunks.jsonl", "chunk_id")`, never the raw line count: `normalize --force` doubles
-the rows and leaves the chunk ids alone, so counting lines reports twice the corpus.
+Under D48 (`chunk_version 2`), read `chunk_sets.current(store)`. A document publishes its complete
+`chunk_ids` manifest after all rows of a generation have been appended. Only this generation is active;
+old and uncommitted chunks stay historical. `normalize --force` with identical inputs reuses chunk rows.
+Legacy rows without a manifest use positional ids only when their recorded count is consistent;
+an ambiguous set raises an error requesting explicit normalization rather than guessing.
 
 ## `documents.jsonl`
 
@@ -26,6 +28,7 @@ One row per normalized document, keyed by `source_id`.
 | `title`, `body_chars`, `references`, `tables`, `notes` | what the parser found |
 | `chunks`, `dropped_sections`, `merged_sections`, `oversized_chunks` | what chunking did |
 | `chunk_version`, `thresholds` | under which rules |
+| `generation_sha256`, `chunk_ids` | generation digest and complete active manifest, committed last |
 
 A document that does not confirm produces **no chunks** and stays in this file. "We obtained it and
 it was not a document" is a different failure from "we never obtained it", with a different remedy,
@@ -49,7 +52,8 @@ row, the source stays *awaiting* — which raises the ceiling, never moves the f
 
 | field | meaning |
 |---|---|
-| `chunk_id` | `<source_id>#c3`, `#t1`, `#n1` — prose, table, note |
+| `chunk_id` | `<source_id>#<generation_sha256>#c3`, `#t1`, `#n1`; legacy ids omit generation |
+| `generation_sha256`, `document_sha256` | generation and original acquired-byte identity |
 | `kind` | `prose`, `table`, `note` |
 | `section` | the section heading, so a claim's provenance is a place and not an offset |
 | `text` | **the canonical text.** What the model sees; what the gate checks |

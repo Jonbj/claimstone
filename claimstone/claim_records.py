@@ -8,7 +8,7 @@ from __future__ import annotations
 from typing import Any
 
 from .store import Store
-from . import model_call
+from . import model_call, chunk_sets
 
 ANNOTATION_VERSION = 2
 
@@ -51,8 +51,27 @@ def current(store: Store) -> tuple[dict[str, dict[str, Any]], dict[str, dict[str
         else:
             del rejected[identifier]
     answers = model_call.current_answers(store, 'extract')
-    return ({key: row for key, row in accepted.items() if authoritative(row, answers)},
-            {key: row for key, row in rejected.items() if authoritative(row, answers)})
+    chunks = chunk_sets.current(store)
+    documents = store.latest_by('documents.jsonl', 'source_id')
+    requests = {}
+    for path in sorted(store.path('calls/extract').glob('*/requests.jsonl')):
+        requests.update(store.latest_by(str(path.relative_to(store.root)), 'call_id'))
+
+    def active_chunk(row):
+        source = row.get('source_id')
+        identifier = row.get('chunk_id') or (row.get('record') or {}).get('chunk_id')
+        if source in documents:
+            chunk = chunks.get(identifier)
+            if chunk is None:
+                return False
+            if row.get('chunk_text_sha256') and row['chunk_text_sha256'] != chunk_sets.text_hash(chunk):
+                return False
+            request = requests.get(row.get('call_id'))
+            if request and request.get('user') != chunk.get('text'):
+                return False
+        return True
+    return ({key: row for key, row in accepted.items() if active_chunk(row) and authoritative(row, answers)},
+            {key: row for key, row in rejected.items() if active_chunk(row) and authoritative(row, answers)})
 
 
 def decisions(store: Store) -> dict[str, dict[str, Any]]:

@@ -36,6 +36,7 @@ import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 
+from claimstone import chunk_sets
 from claimstone import model_call  # noqa: E402
 from claimstone.config import load_project  # noqa: E402
 from claimstone.store import Store  # noqa: E402
@@ -118,7 +119,7 @@ def main(project_name: str = "alembic-s4", how_many: int = 12) -> int:
         return 1
 
     store = Store(project.name)
-    chunks = list(store.latest_by("chunks.jsonl", "chunk_id").values())
+    chunks = list(chunk_sets.current(store).values())
     if not chunks:
         print(f"no chunks in store/{project.name}/ — run `claimstone normalize` first.")
         return 1

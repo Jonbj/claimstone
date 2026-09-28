@@ -20,10 +20,13 @@ say who answered.
 from __future__ import annotations
 
 import datetime as _dt
+import hashlib
 from typing import Any
 
-from claimstone import claim_records, model_call
+from claimstone import chunk_sets, claim_records, model_call
 from claimstone.store import Store
+
+REVIEW_VERSION = 2
 
 VERDICTS = ("SUPPORTED", "OVERSTATED", "AMBIGUOUS", "NOT_APPLICABLE")
 
@@ -45,7 +48,13 @@ of the passage as evidence. The quote has already been checked, in code, to be a
 passage. Your job is the part no code can do: decide whether the claim is what that quote supports, **in the
 context of the whole passage**.
 
-You are given the question, the claim, the quote, and the passage entire.
+You are given the question, the complete result annotation, and the passage entire.
+Judge every field: stance, estimate, uncertainty, sample, horizon, design, dependence,
+heterogeneity and method metadata, as well as the claim and quote. Missing optional fields
+are not assertions. Engine conversions are supplied alongside their verbatim written forms;
+check that the passage establishes the attached estimand and metadata. SUPPORTED means the
+whole annotation is supported. An unsupported field makes the result OVERSTATED, AMBIGUOUS
+or NOT_APPLICABLE as appropriate; a supported sentence alone is insufficient.
 
   SUPPORTED        the claim is what the quote supports, in the context it came from
   OVERSTATED       the quote is real and says less than the claim
@@ -92,8 +101,23 @@ def review_unit(question: Any, claim: dict[str, Any], chunk_text: str) -> str:
         f"QUESTION {question.id}: {question.text}\n\n"
         f"CLAIM: {claim.get('claim')}\n\n"
         f"QUOTE: {claim.get('evidence_quote')}\n\n"
+        f"COMPLETE RESULT ANNOTATION (JSON):\n{model_call.canonical(annotation(claim))}\n\n"
         f"THE PASSAGE ENTIRE:\n{chunk_text}"
     )
+
+
+def annotation(claim: dict[str, Any]) -> dict[str, Any]:
+    from . import extract
+    fields = {'result_id', 'question_id', 'claim', 'evidence_quote', 'stance'}
+    for extra in extract.EXTRA_FIELDS.values():
+        fields.update(extra)
+    original = claim.get('raw_record') or {key: claim[key] for key in fields if key in claim}
+    # Include converted result fields, excluding only engine provenance and gate bookkeeping.
+    omitted = {'claim_id', 'call_id', 'result_key', 'answer_batches', 'batch', 'backend', 'model',
+               'harness_version', 'source_id', 'chunk_id', 'source_class', 'lane', 'kind_verified',
+               'registry_version', 'registry_sha256', 'claim_gate_version', 'gate_revision',
+               'annotation_version', 'raw_record', 'harvested_at', 'chunk_text_sha256'}
+    return {'model_record': original, 'verified_record': {k: v for k, v in claim.items() if k not in omitted}}
 
 
 def build(
@@ -117,7 +141,7 @@ def build(
     this store is an entirely different reader's batch.
     """
     reviewed = set(current(store))
-    chunks = store.latest_by("chunks.jsonl", "chunk_id")
+    chunks = chunk_sets.current(store)
     questions = {q.id: q for q in project.questions}
 
     units: list[dict[str, Any]] = []
@@ -154,6 +178,8 @@ def build(
         )
         # Which claim this judges, and who made it. Carried on the request so harvest needs no join and the
         # different-reader refusal can be made against the row that arrives.
+        unit["review_version"] = REVIEW_VERSION
+        unit["annotation_sha256"] = hashlib.sha256(model_call.canonical(annotation(claim)).encode()).hexdigest()
         unit["claim_id"] = str(claim.get("claim_id"))
         unit["question_id"] = str(claim.get("question_id"))
         unit["extracted_by"] = _identity(claim)
@@ -214,6 +240,8 @@ def harvest(project: Any, store: Store, *, batch: str) -> dict[str, Any]:
                 'reviewed_by': _identity(row), 'extracted_by': target.get('extracted_by') or {},
                 'call_id': row.get('call_id'), 'batch': batch,
                 'result_key': model_call.result_key(row),
+                'review_version': request.get('review_version', 1),
+                'annotation_sha256': target.get('annotation_sha256') or request.get('annotation_sha256'),
             }
             previous = held.get(claim_id)
             if previous and {k: v for k, v in previous.items() if k != 'reviewed_at'} == decision:
@@ -242,6 +270,12 @@ def current(store: Store) -> dict[str, dict[str, Any]]:
     for identifier, row in store.latest_by('reviews.jsonl', 'claim_id').items():
         if identifier not in claims:
             continue
+        if row.get('review_version', 1) != REVIEW_VERSION:
+            continue
+        if row.get('annotation_sha256'):
+            digest = hashlib.sha256(model_call.canonical(annotation(claims[identifier])).encode()).hexdigest()
+            if row['annotation_sha256'] != digest:
+                continue
         readings = model_call.answers_for(row, answers, reader=row.get('reviewed_by') or {})
         expected = {key: row.get(key) for key in ('verdict', 'reason')}
         if readings is None or any(answer.get('ok') and answer.get('output') == expected

@@ -2,6 +2,7 @@
 
 from claimstone import review_report
 from claimstone.store import Store
+from claimstone.review import REVIEW_VERSION
 
 
 def claim(n, *, backend="ollama-cloud", model="deepseek-v4.1-flash"):
@@ -10,7 +11,7 @@ def claim(n, *, backend="ollama-cloud", model="deepseek-v4.1-flash"):
 
 def rev(n, verdict, *, backend="claude-cli", model="claude-opus-5",
         extracted=("ollama-cloud", "deepseek-v4.1-flash")):
-    return {"claim_id": f"c{n}", "question_id": "H02", "verdict": verdict,
+    return {"claim_id": f"c{n}", "question_id": "H02", "verdict": verdict, "review_version": REVIEW_VERSION,
             "reviewed_by": {"backend": backend, "model": model, "harness_version": "x"},
             "extracted_by": {"backend": extracted[0], "model": extracted[1]}}
 

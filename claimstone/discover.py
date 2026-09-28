@@ -20,7 +20,8 @@ from typing import Any, Iterable
 from claimstone import claim_records, classify, ids, net, searchers
 from claimstone.config import Project
 from claimstone.searchers import CHANNEL_CITATION, CHANNEL_KEYWORD, SEARCHERS, _limit_kw, _row
-from claimstone.store import Store
+from claimstone.store import Store, sha256_text
+from claimstone.request_log import RecordingFetcher
 
 ROUTINE = "routine"
 
@@ -76,6 +77,8 @@ def run(
     seen_this_run = 0
     unclassified: list[dict[str, Any]] = []
     queries = 0
+    completed = 0
+    failures = {}
 
     for topic in project.topics:
         if wanted and topic.id not in wanted:
@@ -84,7 +87,26 @@ def run(
             for api in apis:
                 queries += 1
                 searcher = SEARCHERS[api]
-                for row in searcher(fetcher, term, topic.id, **{_limit_kw(api): per_query}):
+                context = {'purpose': 'discovery', 'round': round_name, 'source_api': api,
+                           'query': term, 'topic_id': topic.id}
+                logged = RecordingFetcher(fetcher, store, **context)
+                returned = 0
+                failure = None
+                detail = ''
+                rows = []
+                try:
+                    rows = list(searcher(logged, term, topic.id, **{_limit_kw(api): per_query}))
+                except (searchers.SearchError, AttributeError, IndexError, KeyError, TypeError, ValueError) as exc:
+                    from .store import LedgerCorrupt
+                    if isinstance(exc, LedgerCorrupt):
+                        raise
+                    failure = getattr(exc, 'failure', 'INVALID_SEARCH_RESPONSE')
+                    detail = str(exc)[:400]
+                    failures[failure] = failures.get(failure, 0) + 1
+                else:
+                    completed += 1
+                returned = len(rows)
+                for row in rows:
                     if not row["title"] and not row["url"]:
                         continue
                     seen_this_run += 1
@@ -101,12 +123,18 @@ def run(
                     known.add(row["candidate_key"])
                     store.append("candidates.jsonl", row)
                     new += 1
+                store.append('queries.jsonl', context | {
+                    'query_id': sha256_text(f'{round_name}|{api}|{topic.id}|{term}'),
+                    'discovery_version': searchers.DISCOVERY_VERSION, 'per_query': per_query,
+                    'ok': failure is None, 'failure_class': failure, 'detail': detail,
+                    'returned': returned, 'completed_at': searchers._now()})
 
     return {
         "returned": seen_this_run,
         "new": new,
         "total": len(known),
-        "queries": queries,
+        "queries": queries, "completed_queries": completed,
+        "final": completed == queries, "failures": failures,
         "unclassified": len(unclassified),
         # Which attribute values went unmatched, so the remedy is a declared rule.
         "uncovered": classify.uncovered(unclassified, project.classes),
@@ -142,6 +170,8 @@ def run_citations(
     it does introduce is a bias toward canonical works, recorded in the spec as a limit of any
     completeness estimate rather than hidden.
     """
+    if fetcher is not None:
+        fetcher = RecordingFetcher(fetcher, store, purpose='citation-resolution', round=round_name)
     references = store.latest_by("references.jsonl", "key")
     if not references:
         # Distinct from "zero admitted": nothing was there to read, and reporting 0 candidates

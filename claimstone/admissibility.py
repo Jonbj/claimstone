@@ -14,6 +14,8 @@ from claimstone import net
 from claimstone.config import Project
 from claimstone.store import Store
 
+ADMISSION_VERSION = 2
+
 OK = "OK"
 INSUFFICIENT = "INSUFFICIENT_ACQUISITION"
 
@@ -126,11 +128,16 @@ def rate(
     hosts: dict[str, int] = {}
     for key, candidate in candidates.items():
         klass = str(candidate.get("source_class") or "UNCLASSIFIED")
-        bucket = by_class.setdefault(klass, {"found": 0, "obtained": 0, "rate": 0.0})
+        bucket = by_class.setdefault(klass, {"found": 0, "obtained": 0, "confirmed": 0, "awaiting_normalize": 0, "rate": 0.0})
         bucket["found"] += 1
         row = rows.get(key)
         if row is not None and row.get("acquired"):
             bucket["obtained"] += 1
+            confirmation = confirmed_rows.get(str(row.get('source_id') or key))
+            if confirmation is None:
+                bucket['awaiting_normalize'] += 1
+            elif confirmation.get('fulltext_confirmed'):
+                bucket['confirmed'] += 1
             continue
         name = str((row or {}).get("failure_class") or "NOT_ATTEMPTED")
         failures[name] = failures.get(name, 0) + 1
@@ -138,7 +145,12 @@ def rate(
         if host:
             hosts[host] = hosts.get(host, 0) + 1
     for bucket in by_class.values():
-        bucket["rate"] = bucket["obtained"] / bucket["found"]
+        bucket['obtained_rate'] = bucket['obtained'] / bucket['found']
+        bucket['confirmed_rate'] = bucket['confirmed'] / bucket['found']
+        bucket['basis'] = 'confirmed' if confirmed_rows else 'obtained'
+        bucket['rate'] = bucket['confirmed_rate'] if confirmed_rows else bucket['obtained_rate']
+        bucket['rate_upper'] = ((bucket['confirmed'] + bucket['awaiting_normalize']) / bucket['found']
+                                if confirmed_rows else bucket['obtained_rate'])
 
     # The rate is a **lower bound**: what is established divided by what was found. Awaiting
     # normalization raises the ceiling and never the figure, so admission can only be granted on
@@ -157,6 +169,11 @@ def rate(
     started = bool(confirmed_rows)
 
     blocking: list[str] = []
+    search_queries = [row for row in store.latest_by('queries.jsonl', 'query_id').values()
+                      if not manifest_only and (round_name is None or row.get('round') == round_name)]
+    search_failures = sum(not row.get('ok') for row in search_queries)
+    if search_failures:
+        blocking.append('awaiting_discovery')
     if classified < found:
         blocking.append("awaiting_classification")
     if attempted < found:
@@ -170,6 +187,8 @@ def rate(
     if any(store.read("ledger_repairs.jsonl")):
         blocking.append("ledger_repairs")
     return {
+        "discovery_queries": len(search_queries), "discovery_failures": search_failures,
+        "admission_version": ADMISSION_VERSION,
         "round": round_name,
         "found": found,
         "classified": classified,

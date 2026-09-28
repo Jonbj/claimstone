@@ -21,7 +21,7 @@ from __future__ import annotations
 import datetime as _dt
 from typing import Any, Iterable
 
-from claimstone import claim_records, claimgate, model_call, numbers
+from claimstone import chunk_sets, claim_records, claimgate, model_call, numbers
 from claimstone.store import Store, sha256_text
 
 # The registry's word, not "lane". `model_call.LANES` is ("extract", "review") — the boundary's two
@@ -212,7 +212,7 @@ def build(
         raise ValueError(f"unknown kind {kind!r}: {', '.join(KINDS)}")
     confirmed = _confirmed_sources(store)
     chunks = [
-        row for row in store.latest_by("chunks.jsonl", "chunk_id").values()
+        row for row in chunk_sets.current(store).values()
         if str(row.get("source_id")) in confirmed
     ]
     by_kind: dict[str, int] = {}
@@ -274,7 +274,7 @@ def harvest(project: Any, store: Store, *, batch: str) -> dict[str, Any]:
     """
     queue = model_call.Queue(store, lane="extract", batch=batch)
     requests = {str(u["call_id"]): u for u in queue.requests()}
-    chunks = store.latest_by("chunks.jsonl", "chunk_id")
+    chunks = chunk_sets.current(store)
     classes = _source_classes(store)
     # Include historical rows when locating an unchanged legacy annotation: an invalidated answer
     # may later become valid again, and that must retain its identity and its audit history.
@@ -314,7 +314,7 @@ def harvest(project: Any, store: Store, *, batch: str) -> dict[str, Any]:
             for asker in askers:
                 chunk_id = str(asker.get("chunk_id") or "")
                 chunk = chunks.get(chunk_id)
-                if chunk is None:
+                if chunk is None or request.get("user") != chunk.get("text"):
                     continue
                 proposed += 1
                 identifier = claim_records.annotation_id(chunk_id, row, record)
@@ -358,6 +358,7 @@ def harvest(project: Any, store: Store, *, batch: str) -> dict[str, Any]:
                     "harness_version": row.get("harness_version"),
                     "source_id": str(asker.get("source_id") or ""),
                     "chunk_id": chunk_id,
+                    "chunk_text_sha256": chunk_sets.text_hash(chunk),
                     "source_class": classes.get(str(asker.get("source_id") or ""), ""),
                     "lane": asked_kind,
                     # False means the request did not record which kind was asked, so no kind check

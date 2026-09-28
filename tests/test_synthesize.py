@@ -9,6 +9,7 @@ import pytest
 from claimstone import admissibility, claimgate, evidence, extract, model_call, synthesize
 from claimstone.config import Project, Question, SourceClass
 from claimstone.store import Store
+from claimstone.review import REVIEW_VERSION
 from tests.test_admissibility import _ledger, row
 
 QUESTIONS = (
@@ -74,7 +75,7 @@ def _store(tmp_path, *, obtained=2, found=2, claims=(), reviews=(), final=True):
 
 
 def review(claim_id="c1", verdict="SUPPORTED"):
-    return {"claim_id": claim_id, "question_id": "H02", "verdict": verdict,
+    return {"claim_id": claim_id, "question_id": "H02", "verdict": verdict, "review_version": REVIEW_VERSION,
             "reviewed_by": {"backend": "b", "model": "m"}}
 
 
@@ -169,7 +170,7 @@ def test_all_three_identities_are_on_every_profile(tmp_path):
 def test_the_declared_role_reaches_a_result_from_the_project_and_not_from_the_class_id(tmp_path):
     method = claim(claim_id="c9", question_id="H06", source_class="MET", source_id="MET001")
     store = _store(tmp_path, claims=[method],
-                   reviews=[{"claim_id": "c9", "question_id": "H06", "verdict": "SUPPORTED"}])
+                   reviews=[review(claim_id="c9") | {"question_id": "H06"}])
     synthesize.build(_project(tmp_path), store)
     rows = {r["question_id"]: r for r in store.read(synthesize.PROFILES)}
     assert rows["H06"]["results"][0]["role"] == "methodological"

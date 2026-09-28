@@ -165,3 +165,14 @@ The original requested-reader `result_key` is preserved even when the backend re
 Review requests additionally carry `review_targets`: each `{claim_id, question_id, extracted_by}`
 judged by an identical prompt. Queue merging retains every target. Harvest checks reader independence
 for each target, reports excluded own-reader targets and refuses a call with no eligible target.
+
+
+## Reader report accounting (D48)
+
+`model_report_version 2` uses the queue's authoritative call/backend/requested-model identity for
+both whole-report and per-reader totals. Their sums agree even when several models answer a call.
+Physical attempts alone contribute cost, latency and retry increments: the presence of
+`rejudged_from`, including an empty timestamp, excludes a replay row. Actual responses retain
+reported-model provenance without treating a returned alias as a newly requested reader.
+Review work units additionally carry `review_version 2` and `annotation_sha256`; merged targets
+retain that digest. See [the review contract](reviews.md).

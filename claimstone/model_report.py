@@ -12,6 +12,9 @@ from __future__ import annotations
 from typing import Any
 
 from claimstone.store import Store
+from claimstone import model_call
+
+MODEL_REPORT_VERSION = 2
 
 
 def summarise(store: Store, *, lane: str, batch: str) -> dict[str, Any]:
@@ -20,14 +23,12 @@ def summarise(store: Store, *, lane: str, batch: str) -> dict[str, Any]:
     # was paid for and waited on, which a retry makes a different number — a timeout that cost money
     # and was retried is two payments, and collapsing them reports one.
     rows = list(store.read(f"calls/{lane}/{batch}/results.jsonl"))
-    current: dict[str, dict[str, Any]] = {}
-    for row in rows:
-        current[f"{row.get('call_id')}|{row.get('backend')}"] = row
+    current = model_call.Queue(store, lane=lane, batch=batch).results()
 
     # A re-judgement is not an attempt (D14). It re-reads bytes already paid for, so counting it
     # would inflate what the queue cost and deflate how fast it went — while its verdict is the one
     # that now stands, which is why the collapse above keeps it and this does not.
-    attempts = [row for row in rows if not row.get("rejudged_from")]
+    attempts = [row for row in rows if "rejudged_from" not in row]
 
     # Two mappings, each meaning its own name. `by_backend` is per backend, as it always was; `by_reader`
     # is per **(backend, model)** pair, because a bake-off of four models on one backend would otherwise be
@@ -43,11 +44,26 @@ def summarise(store: Store, *, lane: str, batch: str) -> dict[str, Any]:
         reader = f"{backend}/{model}" if model else backend
         for where, key in ((by_backend, backend), (by_reader, reader)):
             _account(where, key, row)
+    # Cost uses physical rows. Validity uses the queue's authoritative reader identities.
+    for where in (by_backend, by_reader):
+        for bucket in where.values():
+            bucket['answered'].clear()
+            bucket['valid'].clear()
+    for identity, row in current.items():
+        backend = str(row.get('backend') or 'unknown')
+        model = str(row.get('model') or row.get('model_reported') or '')
+        reader = f'{backend}/{model}' if model else backend
+        for where, key in ((by_backend, backend), (by_reader, reader)):
+            bucket = where[key]
+            bucket['answered'].add(identity)
+            if row.get('ok'):
+                bucket['valid'].add(identity)
 
     for where in (by_backend, by_reader):
         _finish(where)
 
     return {
+        "report_version": MODEL_REPORT_VERSION,
         "lane": lane,
         "batch": batch,
         "calls": len(current),
@@ -85,7 +101,7 @@ def _account(where: dict[str, dict[str, Any]], key: str, row: dict[str, Any]) ->
     bucket["valid"].discard(call_id)
     if row.get("ok"):
         bucket["valid"].add(call_id)
-    if row.get("rejudged_from"):
+    if "rejudged_from" in row:
         return
 
     bucket["attempts"] += 1

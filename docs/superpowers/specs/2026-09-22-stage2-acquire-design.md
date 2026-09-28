@@ -2,6 +2,8 @@
 
 Date: 2026-09-22 · Scope: stage 2 only · Status: approved, not implemented
 
+**Corrected 2026-09-28 (D48):** D48 checks every redirect destination and records resolver/robots outcomes; audits honor configured thresholds, class policy and the found population.
+
 Stage 2 turns candidates into frozen texts and accounts for every attempt. It is the first
 milestone because acquisition, not extraction quality, is the binding constraint on the
 science (D8) — and since D13 it is the only remaining one. The deliverable is a sentence with

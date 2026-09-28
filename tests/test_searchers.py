@@ -1,5 +1,6 @@
 """The three API searchers, against saved payloads. No request leaves the process."""
 
+import pytest
 from claimstone import searchers
 from tests.fakes import FakeFetcher, ok
 
@@ -71,20 +72,21 @@ def test_arxiv_parses_atom_and_is_always_a_preprint_venue():
 
 
 def test_an_empty_payload_yields_nothing():
-    fetcher = FakeFetcher(json_pages={OPENALEX: {}})
+    fetcher = FakeFetcher(json_pages={OPENALEX: {"results": []}})
     assert list(searchers.search_openalex(fetcher, "x", "T01")) == []
 
 
-def test_a_failed_request_yields_nothing_rather_than_raising():
-    assert list(searchers.search_openalex(FakeFetcher(), "x", "T01")) == []
-    assert list(searchers.search_crossref(FakeFetcher(), "x", "T01")) == []
-    assert list(searchers.search_arxiv(FakeFetcher(), "x", "T01")) == []
+def test_a_failed_request_is_distinct_from_an_empty_search():
+    for searcher in (searchers.search_openalex, searchers.search_crossref, searchers.search_arxiv):
+        with pytest.raises(searchers.SearchError):
+            list(searcher(FakeFetcher(), 'x', 'T01'))
 
 
 def test_malformed_atom_yields_nothing():
     url = ARXIV + "search_query=all%3A%22x%22&max_results=25"
     fetcher = FakeFetcher(pages={url: ok(url, b"<feed><entry", "application/atom+xml")})
-    assert list(searchers.search_arxiv(fetcher, "x", max_results=25, topic_id="T01")) == []
+    with pytest.raises(searchers.SearchError, match="unclosed"):
+        list(searchers.search_arxiv(fetcher, "x", max_results=25, topic_id="T01"))
 
 
 def test_a_row_records_the_query_that_found_it():

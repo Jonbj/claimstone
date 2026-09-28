@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from . import admissibility, claim_records, claimgate, evidence, extract, model_call, review
+from . import chunk_sets, admissibility, claim_records, claimgate, evidence, extract, model_call, review
 from .config import Project
 from .store import Store
 
@@ -30,7 +30,7 @@ def collect(project: Project, store: Store, *, round_name: str | None,
                 for key, row in admissibility.collapse(store).items() if row.get('acquired')}
     confirmed = {key for key, row in documents.items()
                  if row.get('fulltext_confirmed') and key in acquired}
-    chunks = {str(key): row for key, row in store.latest_by('chunks.jsonl', 'chunk_id').items()
+    chunks = {str(key): row for key, row in chunk_sets.current(store).items()
               if str(row.get('source_id')) in confirmed}
 
     def current(row: dict[str, Any]) -> bool:

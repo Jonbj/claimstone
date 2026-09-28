@@ -22,7 +22,7 @@ from typing import Any
 from claimstone import tei
 from claimstone.store import sha256_text
 
-CHUNK_VERSION = 1
+CHUNK_VERSION = 2
 
 PROSE = "prose"
 TABLE = "table"

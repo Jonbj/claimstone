@@ -44,7 +44,7 @@ VERDICTS = ("SUPPORTED", "CONTRADICTED", "CONTESTED_IN_LITERATURE",
 # being written down is not one. Short enough to be honest about, long enough to have an argument in it.
 MIN_RATIONALE_CHARS = 120
 
-PROFILE_VERSION = 4
+PROFILE_VERSION = 5
 
 PROFILES = "profiles.jsonl"
 ADJUDICATIONS = "adjudications.jsonl"

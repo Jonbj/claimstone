@@ -19,6 +19,10 @@ from typing import Any
 import requests
 from typing import Protocol
 
+FETCH_VERSION = 2
+
+REDIRECT = "REDIRECT_ERROR"
+
 USER_AGENT = (
     "Claimstone/0.1 (evidence-synthesis research tool; "
     "+https://github.com/Jonbj/claimstone; contact: {contact})"
@@ -53,7 +57,7 @@ NO_LOCATIONS = "NO_LOCATIONS"
 # campaign. Transient: the next ordinary run should try again on its own.
 TERMINAL = frozenset(
     {PAYWALL, ROBOTS, EXCLUDED, NOT_FOUND, BAD_TYPE, LANDING, ABSTRACT, TOO_SHORT,
-     CORRUPT_PDF, NOT_TEXT, NO_LOCATIONS,
+     CORRUPT_PDF, NOT_TEXT, NO_LOCATIONS, REDIRECT,
      # Terminal on conduct grounds rather than because retrying could not work. The host asked us to
      # prove we are not a robot; knocking again without answering that is ignoring the request, so a
      # retry needs a named campaign like any other. The class exists to keep the *denominator* honest —
@@ -101,10 +105,15 @@ class Outcome:
     content_type: str = ""
     body: bytes | None = None
     elapsed_s: float = 0.0
+    request_url: str = ""
+    redirect_chain: list[str] = field(default_factory=list)
 
     def as_row(self) -> dict[str, Any]:
         return {
             "url": self.url,
+            "request_url": self.request_url or self.url,
+            "redirect_chain": list(self.redirect_chain),
+            "fetch_version": FETCH_VERSION,
             "ok": self.ok,
             "http_status": self.status,
             "failure_class": self.failure_class,
@@ -133,6 +142,8 @@ class Fetcher:
     failure_ttl_s: int = 48 * 3600
     timeout_s: int = 30
     obey_robots: bool = True
+    max_redirects: int = 10
+    on_outcome: Any = None
     pause_s: float = 0.34
 
     _host_failures: dict[str, list[float]] = field(default_factory=dict)
@@ -175,9 +186,11 @@ class Fetcher:
         if not self.obey_robots:
             return True
         host = host_of(url)
-        if host not in self._robots:
-            self._robots[host] = self._load_robots(url, host)
-        parser = self._robots[host]
+        parsed = urllib.parse.urlsplit(url)
+        origin = f"{parsed.scheme}://{parsed.netloc}"
+        if origin not in self._robots:
+            self._robots[origin] = self._load_robots(url, host)
+        parser = self._robots[origin]
         if parser is None:
             return True
         try:
@@ -187,23 +200,19 @@ class Fetcher:
 
     def _load_robots(self, url: str, host: str) -> urllib.robotparser.RobotFileParser | None:
         """Return a parser only if a real robots.txt was served; otherwise None (permissive)."""
-        scheme = urllib.parse.urlparse(url).scheme or "https"
-        assert self._session is not None
-        try:
-            self._throttle()
-            response = self._session.get(f"{scheme}://{host}/robots.txt", timeout=self.timeout_s)
-        except requests.RequestException as exc:
-            self.robots_notes[host] = f"unreachable: {type(exc).__name__}"
+        parsed = urllib.parse.urlsplit(url)
+        outcome = self._get(f"{parsed.scheme}://{parsed.netloc}/robots.txt", check_robots=False)
+        if not outcome.ok:
+            self.robots_notes[host] = f"not served: {outcome.failure_class}"
             return None
-
-        if response.status_code != 200:
+        if outcome.status != 200:
             # 404 means no rules. 401/403 means we cannot read the rules, which is not the
             # same as being forbidden from the site — record it and proceed.
-            self.robots_notes[host] = f"not served: HTTP {response.status_code}"
+            self.robots_notes[host] = f"not served: HTTP {outcome.status}"
             return None
 
-        ctype = (response.headers.get("Content-Type") or "").split(";")[0].strip().lower()
-        body = response.text or ""
+        ctype = outcome.content_type.split(";")[0].strip().lower()
+        body = (outcome.body or b"" ).decode("utf-8", "replace")
         looks_like_html = body.lstrip()[:1] == "<" or "html" in ctype
         mentions_rules = "user-agent" in body.lower()
         if looks_like_html or not mentions_rules:
@@ -224,34 +233,59 @@ class Fetcher:
         self._last_request = time.time()
 
     def get(self, url: str, *, expect: tuple[str, ...] = (), as_json: bool = False) -> Outcome:
-        host = host_of(url)
-        if host in self.excluded_hosts:
-            return Outcome(url, False, failure_class=EXCLUDED, detail=f"{host} is excluded")
-        if self.budget_exhausted(host):
-            return Outcome(
-                url, False, failure_class=BUDGET,
-                detail=f"{self._recent_failures(host)} recent failures on {host}",
-            )
-        if not self._robots_allows(url):
-            return Outcome(url, False, failure_class=ROBOTS, detail="robots.txt disallows")
+        return self._get(url, expect=expect, as_json=as_json)
 
-        assert self._session is not None
-        self._throttle()
+    def _get(self, url: str, *, expect=(), as_json=False, check_robots=True) -> Outcome:
+        initial = url
+        chain = []
         started = time.time()
-        try:
-            response = self._session.get(
-                url, timeout=self.timeout_s, allow_redirects=True,
-                headers={"Accept": "application/json"} if as_json else None,
-            )
-        except requests.Timeout as exc:
-            # No response, so no final URL: the host we asked is all we know.
-            self._record_failure(host)
-            return Outcome(url, False, failure_class=TIMEOUT, detail=str(exc),
-                           elapsed_s=time.time() - started)
-        except requests.RequestException as exc:
-            self._record_failure(host)
-            return Outcome(url, False, failure_class=CONNECTION, detail=str(exc),
-                           elapsed_s=time.time() - started)
+
+        def finish(outcome):
+            outcome.request_url = initial
+            outcome.redirect_chain = list(chain)
+            outcome.elapsed_s = time.time() - started
+            if self.on_outcome:
+                blocked = outcome.status is None and outcome.failure_class in (EXCLUDED, BUDGET, ROBOTS, REDIRECT)
+                self.on_outcome(outcome, 'blocked' if blocked else ('transport' if check_robots else 'robots'))
+            return outcome
+
+        while True:
+            host = host_of(url)
+            if urllib.parse.urlparse(url).scheme not in ('http', 'https') or not host:
+                return finish(Outcome(url, False, failure_class=REDIRECT, detail='non-HTTP destination'))
+            if host in self.excluded_hosts or any(host.endswith('.' + h) for h in self.excluded_hosts):
+                return finish(Outcome(url, False, failure_class=EXCLUDED, detail=f'{host} is excluded'))
+            if self.budget_exhausted(host):
+                return finish(Outcome(url, False, failure_class=BUDGET, detail=f'recent failures on {host}'))
+            if check_robots and not self._robots_allows(url):
+                return finish(Outcome(url, False, failure_class=ROBOTS, detail='robots.txt disallows'))
+            # Fetching robots can itself spend the remaining host budget.
+            if self.budget_exhausted(host):
+                return finish(Outcome(url, False, failure_class=BUDGET, detail=f'recent failures on {host}'))
+            if url in chain or len(chain) > self.max_redirects:
+                return finish(Outcome(url, False, failure_class=REDIRECT, detail='redirect loop or limit'))
+            chain.append(url)
+            assert self._session is not None
+            self._throttle()
+            try:
+                response = self._session.get(url, timeout=self.timeout_s, allow_redirects=False,
+                    headers={'Accept': 'application/json'} if as_json else None)
+            except requests.Timeout as exc:
+                self._record_failure(host)
+                return finish(Outcome(url, False, failure_class=TIMEOUT, detail=str(exc)))
+            except requests.RequestException as exc:
+                self._record_failure(host)
+                return finish(Outcome(url, False, failure_class=CONNECTION, detail=str(exc)))
+            if response.status_code in (301, 302, 303, 307, 308):
+                location = response.headers.get('Location')
+                if not location:
+                    return finish(Outcome(url, False, response.status_code, REDIRECT, 'missing Location'))
+                if self.on_outcome:
+                    self.on_outcome(Outcome(url, True, response.status_code, request_url=initial,
+                                            redirect_chain=list(chain)), 'redirect')
+                url = urllib.parse.urljoin(url, location)
+                continue
+            break
 
         elapsed = time.time() - started
         ctype = (response.headers.get("Content-Type") or "").split(";")[0].strip().lower()
@@ -267,28 +301,28 @@ class Fetcher:
 
         if status == 403:
             self._record_failure(refused_by)
-            return Outcome(url, False, status, PAYWALL, "forbidden", ctype, elapsed_s=elapsed)
+            return finish(Outcome(url, False, status, PAYWALL, "forbidden", ctype, elapsed_s=elapsed))
         if status == 429:
             self._record_failure(refused_by)
-            return Outcome(url, False, status, RATE_LIMITED, "rate limited", ctype,
-                           elapsed_s=elapsed)
+            return finish(Outcome(url, False, status, RATE_LIMITED, "rate limited", ctype,
+                           elapsed_s=elapsed))
         if status == 404:
-            return Outcome(url, False, status, NOT_FOUND, "not found", ctype, elapsed_s=elapsed)
+            return finish(Outcome(url, False, status, NOT_FOUND, "not found", ctype, elapsed_s=elapsed))
         if status >= 500:
             self._record_failure(refused_by)
-            return Outcome(url, False, status, SERVER_ERROR, f"status {status}", ctype,
-                           elapsed_s=elapsed)
+            return finish(Outcome(url, False, status, SERVER_ERROR, f"status {status}", ctype,
+                           elapsed_s=elapsed))
         if status >= 400:
-            return Outcome(url, False, status, f"HTTP_{status}", f"status {status}", ctype,
-                           elapsed_s=elapsed)
+            return finish(Outcome(url, False, status, f"HTTP_{status}", f"status {status}", ctype,
+                           elapsed_s=elapsed))
 
         body = response.content or b""
         if not body:
-            return Outcome(url, False, status, EMPTY, "empty body", ctype, elapsed_s=elapsed)
+            return finish(Outcome(url, False, status, EMPTY, "empty body", ctype, elapsed_s=elapsed))
         if expect and ctype and not any(e in ctype for e in expect):
-            return Outcome(url, False, status, BAD_TYPE, f"got {ctype}", ctype, body=body,
-                           elapsed_s=elapsed)
-        return Outcome(url, True, status, None, "", ctype, body, elapsed)
+            return finish(Outcome(url, False, status, BAD_TYPE, f"got {ctype}", ctype, body=body,
+                           elapsed_s=elapsed))
+        return finish(Outcome(url, True, status, None, "", ctype, body, elapsed))
 
     def get_json(self, url: str) -> tuple[dict[str, Any] | None, Outcome]:
         outcome = self.get(url, as_json=True)
@@ -297,7 +331,10 @@ class Fetcher:
         try:
             import json
 
-            return json.loads(outcome.body.decode("utf-8", "replace")), outcome
+            payload = json.loads(outcome.body.decode("utf-8", "replace"))
+            if not isinstance(payload, dict):
+                raise ValueError('expected a JSON object')
+            return payload, outcome
         except ValueError as exc:
             outcome.ok = False
             outcome.failure_class = BAD_TYPE

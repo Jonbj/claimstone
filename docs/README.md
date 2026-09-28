@@ -16,7 +16,7 @@ Which file answers which question. *In italiano: [README.it.md](README.it.md).*
 
 ## The design record
 
-[`DESIGN_DECISIONS.md`](DESIGN_DECISIONS.md) is 47 numbered decisions in ~2,000 lines, each carrying **the
+[`DESIGN_DECISIONS.md`](DESIGN_DECISIONS.md) is 48 numbered decisions in ~2,000 lines, each carrying **the
 measurement that decided it**. It is not meant to be read front to back.
 
 Its purpose is narrow and worth stating: **so that a choice is not relitigated from first principles.** Most
@@ -36,6 +36,7 @@ write to — several fields exist to prevent a specific defect and look optional
 | file | ledger |
 |---|---|
 | [`contracts/candidates.md`](contracts/candidates.md) | what discovery found, and through which channel |
+| [`contracts/requests.md`](contracts/requests.md) | scholarly request events and completed/failed queries |
 | [`contracts/acquisitions.md`](contracts/acquisitions.md) | every fetch attempt, its licence, and why it failed |
 | [`contracts/normalize.md`](contracts/normalize.md) | documents and chunks |
 | [`contracts/claims.md`](contracts/claims.md) | a claim, its quote, and the engine's converted values |

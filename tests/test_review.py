@@ -72,7 +72,7 @@ def test_the_four_verdicts_are_the_only_ones_offered(tmp_path):
 def test_a_claim_already_reviewed_is_not_rebuilt(tmp_path):
     store = _store(tmp_path)
     review.build(FakeProject(), store, batch="r1")
-    store.append("reviews.jsonl", {"claim_id": "c1", "verdict": "SUPPORTED"})
+    store.append("reviews.jsonl", {"claim_id": "c1", "verdict": "SUPPORTED", "review_version": review.REVIEW_VERSION})
     assert review.build(FakeProject(), store, batch="r2")["units"] == 0
 
 
