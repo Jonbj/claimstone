@@ -11,16 +11,21 @@ What is here is what `CLAUDE.md` does not cover: where to start reading, and wha
 
 ## Read in this order
 
+`docs/README.md` is the map — which file answers which question — if you would rather navigate than follow
+a list.
+
 1. **`CLAUDE.md`** — the seven invariants and the working conventions. Non-negotiable, and violating any
    of them silently destroys the value of everything downstream.
-2. **`README.md`** — the contract, the six stages, and the Status section, which is current.
-3. **`docs/HANDOFF.md`** — what is running, what is pending, and the decisions that are a person's.
-4. **`docs/DESIGN_DECISIONS.md`** — 44 decisions, each with the measurement that decided it. It is 2,000
+2. **`README.md`** — what this is, the six stages, and the current status. Two minutes.
+3. **`docs/GUIDE.md`** — a whole round stage by stage, with what each number means and which commands
+   re-judge what is already on disk without touching the network. Read this before running anything.
+4. **`docs/HANDOFF.md`** — what is running, what is pending, and the decisions that are a person's.
+5. **`docs/DESIGN_DECISIONS.md`** — 44 decisions, each with the measurement that decided it. It is 2,000
    lines and not meant to be read cold: `HANDOFF.md` names the six that matter for what happens next.
    **Do not relitigate a decision from first principles** — find its entry, and argue with the measurement.
-5. **`docs/contracts/`** — one file per ledger, describing every field. Read the one for the ledger you
+6. **`docs/contracts/`** — one file per ledger, describing every field. Read the one for the ledger you
    are about to write.
-6. **`docs/superpowers/specs/`** — one design per stage, each marked implemented or not.
+7. **`docs/superpowers/specs/`** — one design per stage, each marked implemented or not.
 
 ## What this machine needs
 

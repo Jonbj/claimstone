@@ -44,8 +44,15 @@ style preferences.
    version. `kind` is in the digest because it decides which rule judges the question.
 6. **Source class travels with every item.** A blog post and a refereed paper never share a
    pool without it being recorded which is which.
-7. **Vote counting is not synthesis.** Pooling is precision-weighted with publication-bias
-   correction, delegated to R. "Four papers say yes, one says no" is not a result.
+7. **Vote counting is not synthesis.** "Four papers say yes, one says no" is not a result, and
+   neither is counting sources — D16 records arriving at that mistake twice. Stage 6 therefore
+   emits an **evidence profile** and no verdict: every result with its estimand, the direction
+   count *labelled a count*, coverage, what the gate rejected, and what a second reader would not
+   pass. A person reads it and signs. There is **no pooling and no R**: D17 measured that the
+   verdict contract's rules are counting and coverage rules, so an aggregated estimate would be
+   additional information and the basis of no verdict the contract defines. D6's reasoning for
+   `metafor` over hand-written pooling still holds for whenever a magnitude is wanted; it is
+   deferred, not built.
 
 ## Acquisition conduct
 
@@ -140,46 +147,10 @@ on D4 before applying it to any other backend.
 
 ## Status
 
-The contract and its validator exist, and **all six stages are implemented** — discover, acquire,
-normalize, extract, review, synthesize — along with `model_call`, the file boundary every model-using
-stage goes through. `numbers.py` converts, and 223 claims in the first full round carry a value.
+**Not restated here.** `README.md` holds it and `docs/HANDOFF.md` holds what is running and what is
+pending. This section used to carry its own copy, which drifted: it claimed stage 6 refuses every corpus
+after `pmc-screen-time` had cleared its floor at 0.93 and produced the project's first evidence profile.
 
-**Stage 6 refuses every corpus in this repository, which is the design working.** `alembic-s4` stands at
-0.56 on its manifest round against a floor of 0.80, so `synthesize` writes no profiles and exits
-`INSUFFICIENT_ACQUISITION` (invariant 3). That is the first place in the project where the floor has had
-something to gate, and the deliverable being a refusal is a finding rather than a failure. What is
-missing for a verdict is a corpus that clears its floor — an acquisition problem — and a **reviewer whose
-judgement has been checked**, which is still open: an attempt to check one mechanically produced a ground
-truth of seven usable rows and a retracted table (D38), and the stage 5 spec had already said a blind
-human-adjudicated sample is what settles it.
-
-**The vertical slice reaches a stored claim.** 63 claims for H02 from 4 studies, every evidence quote
-verified in code against the chunk it came from (D26). 0.95 is a floor on the gate's pass rate, not an
-estimate: one question, one prompt, and rules corrected against those same claims (D25).
-
-**The floor is judged per round** (D24). A discovery sweep changes the denominator by design, so
-`report --round <name>` is how a settled population is read: one citation sweep took `alembic-s4` from
-14/25 = 0.56 to 14/75 = 0.19, and only the first compares like with like.
-
-One thing stage 1 does not do: no request has ever left this repository. The searchers and the
-reference resolver are tested against saved payloads only, and running either needs
-`CLAIMSTONE_CONTACT_EMAIL` set to an address the operator chooses — identifying the crawler is a
-condition of using these APIs politely, and the code refuses to guess one.
-
-Order of work, decided 2026-09-22: **stage 2, then a thin vertical slice** (stages 3-6 on the
-25-source manifest, through to real verdicts), **then the dashboard** — it is the one
-component whose value needs data in every stage and whose spec depends on every other stage's
-schema, so it goes last and gets built against real rows.
-
-Acquisition is the first milestone, not extraction, because it is the binding constraint on
-the science (D8) — and since D13 it is the *only* remaining one. The first deliverable is a
-sentence with a number in it, and it exists: **14 of 25 = 0.56, `final`**, with OA status, licence
-and failure reason recorded per source, **plus the sensitivity of that rate to the thresholds that
-produced it**. A rate quoted without its thresholds invites comparing two incomparable numbers.
-Measured, none of the six thresholds decides it — the gate's four swept flat (D8) and both
-confirmation constants swept flat (D21). The rate is set by structure, not by a constant.
-
-That deliverable may legitimately be `INSUFFICIENT_ACQUISITION` with the losses broken down
-by failure class. That is a finding, not a failure. Lowering `acquisition_floor` because the
-number came out awkward is the one response that is off the table: a floor change is a dated,
-versioned, motivated event, on the same terms as a question-registry bump.
+One sentence that belongs here rather than there: **all six stages are implemented**, one round has run end
+to end, and **no verdict exists** — `adjudicate` is the only command that writes one and it takes a person's
+signature. An agent does not sign.
