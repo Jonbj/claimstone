@@ -175,6 +175,20 @@ Its one categorical output is `NO_VERIFIED_CLAIM`, which says nothing survived. 
 `NEVER_ASKED`: an extraction miss, an all-rejected question and a genuinely unasked one look identical from
 here, and only screening tells them apart.
 
+D45 corrected the saved round's completeness: 34 extraction readings have no valid answer, including
+10 effect readings that keep Q04 provisional. A terminal model failure is not a reading with zero claims.
+The profile reports `extraction.expected`, `unanswered`, `unharvested` and `unchunked_sources`.
+
+Use the same `--round` and `--manifest-only` on `synthesize`, `verdicts` and `adjudicate`; the scope is
+hashed and its profiles and signatures are kept separate. `verdicts` recomputes in memory without
+appending; if the saved profile differs, run `synthesize` and read the new hash before signing.
+
+D46 adds `extraction.unregated` and `awaiting_regate`: annotations admitted by an older claim gate
+cannot be signed under the current one until re-harvested. Gate revisions now supersede either outcome
+across both ledgers. D47 repairs answer/annotation replay (R05/R09). A full offline replay can be measured with
+`tools/measure_answer_replay.py <project>`. The real ledgers remain unchanged pending chunk-generation
+identity and full-result review (R06/R10).
+
 ## adjudicate — the only place a verdict comes from
 
 ```bash

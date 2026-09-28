@@ -335,7 +335,7 @@ def registry_digest(questions: tuple[Question, ...]) -> str:
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
-def check_registry_drift(project: Project, store: Any) -> None:
+def check_registry_drift(project: Project, store: Any, *, record: bool = True) -> None:
     """Refuse a registry whose text changed while its version did not (invariant 5).
 
     Every round-over-round figure and every multiplicity correction is stated against a registry.
@@ -344,7 +344,8 @@ def check_registry_drift(project: Project, store: Any) -> None:
     wrong answer because nobody knows to distrust it.
 
     The first sighting of a version is recorded, not refused. A bump is recorded too. Only a
-    changed hash under an unchanged version raises.
+    changed hash under an unchanged version raises. Previously recorded older versions are refused
+    too. `record=False` checks without appending, for read-only evidence previews.
     """
     seen: dict[int, dict[str, str]] = {}
     for row in store.read("registry.jsonl"):
@@ -354,6 +355,11 @@ def check_registry_drift(project: Project, store: Any) -> None:
             "sha256": str(row.get("registry_sha256") or ""),
             "frozen_at": str(row.get("frozen_at") or ""),
         }
+
+    if seen and project.registry_version < max(seen):
+        raise RegistryDrift(
+            f"{project.name}: registry_version {project.registry_version} is below "
+            f"{max(seen)}, which this store has already recorded (invariant 5).")
 
     held_row = seen.get(project.registry_version)
     held = held_row["sha256"] if held_row else None
@@ -365,12 +371,6 @@ def check_registry_drift(project: Project, store: Any) -> None:
         # recorded is a rollback presented as a bump; an unchanged date on a higher version makes
         # the bump cosmetic, and "dated" is half of what invariant 5 asks for.
         highest = max(seen)
-        if project.registry_version < highest:
-            raise RegistryDrift(
-                f"{project.name}: registry_version {project.registry_version} is below "
-                f"{highest}, which this store has already recorded. A registry does not go "
-                "backwards (invariant 5)."
-            )
         latest_date = seen[highest]["frozen_at"]
         if latest_date and project.frozen_at <= latest_date:
             raise RegistryDrift(
@@ -387,6 +387,8 @@ def check_registry_drift(project: Project, store: Any) -> None:
             "otherwise every round-over-round figure compares two different registries "
             "(invariant 5)."
         )
+    if not record:
+        return
     store.append("registry.jsonl", {
         "registry_version": project.registry_version,
         "registry_sha256": project.registry_sha256,

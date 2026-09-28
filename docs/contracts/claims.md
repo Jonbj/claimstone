@@ -4,23 +4,47 @@ Written by stage 4 (`claimstone extract --harvest`). Append-only. Stage 4 owns b
 writes them. Stage 6 reads `claims.jsonl`; **`rejections.jsonl` is the denominator** and reading it is
 not optional before a rate is quoted.
 
-Both are keyed by `claim_id` = `sha256(chunk_id | question_id | result_id | evidence_quote)[:16]`, so
-re-harvesting the same answer after a gate change does not double a claim.
+Both are keyed by an immutable annotation id. Under D47 (`annotation_version 2`), new ids are
+`sha256(canonical([2, chunk_id, result_key, harness_version, raw_record]))[:32]`. The complete
+model record participates, including optional metadata. Two readers quoting the same passage keep
+separate annotations; changing metadata creates a new annotation and does not inherit its review.
+These are annotations, not independent studies: source coverage still counts sources.
 
-**One record per result, not per question.** A chunk reporting three estimates that bear on one question
-produces three records with distinct `result_id`s, because a table row quoted once can support several and
-an id keyed on the quote alone would collapse them. `result_id` joins the hash only when the record
-supplies one: a batch built before the field cannot, and re-deriving every stored claim's id would rewrite
-the already-harvested ones for nothing. Two records sharing a quote with no `result_id` still collapse,
-which is a known limit of those batches. A record that moves from rejected to
-accepted appears in both files; the ledgers are separate logs, not a partition, and `extract-report`
-counts the latest row per `claim_id` in each.
+An existing legacy id is retained only when call, reader and the complete original record match.
+A changed record or another reader receives a new id even for an old answer without `result_id`.
+Re-gating the identical annotation preserves identity. Separate gate ledgers are logs, not a partition.
+
+## Current decisions and replay (D46)
+
+Use `claim_records.current(store)` for the current accepted and rejected maps. A new gate decision
+appends a higher `gate_revision` to whichever ledger its outcome belongs to: a rejection can retire an
+old acceptance, and an acceptance can recover an old rejection. An identical decision at the same
+instrument version appends nothing. A changed instrument version is recorded once even if its outcome
+stays the same. `latest_by` on just one file is a historical view, not the current accepted set.
+
+Legacy rows have revision zero; where both logs contain such a row, the accepted-wins interpretation is
+preserved because those logs do not establish cross-file chronology. Higher revisions supersede them.
+Every consumer uses the current decision, including profiles, review queues, reports and discovery.
+
+D47 also checks the authoritative extraction answer when reading either ledger. A latest failure,
+valid empty answer or changed record makes the old annotation unusable immediately, before harvest.
+Its row remains in the historical ledger. `answer_batches` records the batches attesting the identical
+annotation; any current matching success in those batches suffices. Imported legacy rows without
+model-call history retain their legacy interpretation. Harvest selects current results per reader,
+including rejudgements, rather than the first successful physical attempt.
+
+Version 4 verifies whole numeric tokens. `2` cannot come from `-2`, `.2`, `2.7`, `2,000` or `2e3`.
+Single-figure fields require both their verbatim form and complete tokens; composite and prose fields
+check their asserted figures. Range separators, `reversals-3.7`, spaced leading decimals and implicit
+percent retain the measured policies in D25, D38 and D46.
 
 ## `claims.jsonl`
 
 | field | meaning |
 |---|---|
 | `claim_id` | identity, stable across a re-harvest |
+| `annotation_version`, `raw_record` | identity instrument and the complete original model record |
+| `result_key`, `answer_batches` | reader identity and batches attesting this annotation |
 | `result_id` | the model's own id for this result within its answer |
 | `question_id`, `stance` | which question, and which way. The stance is admissible for the question's kind |
 | `claim` | one sentence, the model's words, about what **this** source establishes |
@@ -31,6 +55,7 @@ counts the latest row per `claim_id` in each.
 | `*_bound` | `lower`, `upper` or `approximate`, when the paper hedged: `over 300%`, `all below 65%`, `nearly 6%`. Absent means exact, and it is never inferred from the magnitude |
 | `contrast_sides`, `contrast_scale` | the two sides of a contrast in the order written, on one shared scale. No difference is taken: which side is the treatment is not something the string says |
 | `unconverted`, `unconverted_why` | auxiliary fields in a notation the engine does not read. The claim stands and the absent value is **named**. Stage 6 may not pool a field listed here |
+| `gate_revision` | increasing revision for this annotation across both gate ledgers; absent means zero |
 | `claim_gate_version` | which rule set admitted it. Absent means rule set 1, written before the constant existed |
 | `source_id`, `chunk_id`, `source_class` | where it came from, and which class weighs it |
 | `lane`, `kind_verified` | the question kind the call asked about, and whether that could be checked |

@@ -30,10 +30,10 @@ only command in this project that writes a judgement, and the only place a verdi
 from __future__ import annotations
 
 import datetime as _dt
-from typing import Any, Iterable, Mapping
+from typing import Any, Mapping
 
-from . import admissibility, evidence
-from .config import Project
+from . import admissibility, claimgate, evidence, profile_inputs
+from .config import Project, check_registry_drift
 from .store import Store
 
 # All five are outcomes an adjudicator records. None is produced by a threshold here or anywhere.
@@ -43,6 +43,8 @@ VERDICTS = ("SUPPORTED", "CONTRADICTED", "CONTESTED_IN_LITERATURE",
 # A rationale is the whole justification for a verdict, and a verdict whose reasoning does not survive
 # being written down is not one. Short enough to be honest about, long enough to have an argument in it.
 MIN_RATIONALE_CHARS = 120
+
+PROFILE_VERSION = 4
 
 PROFILES = "profiles.jsonl"
 ADJUDICATIONS = "adjudications.jsonl"
@@ -64,8 +66,58 @@ def _now() -> str:
     return _dt.datetime.now(_dt.timezone.utc).isoformat(timespec="seconds")
 
 
-def _reviews(store: Store) -> dict[str, dict[str, Any]]:
-    return {str(k): dict(v) for k, v in store.latest_by("reviews.jsonl", "claim_id").items()}
+def preview(
+    project: Project,
+    store: Store,
+    *,
+    round_name: str | None = None,
+    manifest_only: bool = False,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Recompute the current profiles without appending or making a request."""
+    check_registry_drift(project, store, record=False)
+    verdict = admissibility.admit(project, store, round_name=round_name,
+                                  manifest_only=manifest_only)
+    if verdict["status"] == admissibility.INSUFFICIENT:
+        raise NotAdmissible(
+            f"{verdict['status']}: {verdict['rate']} against floor {verdict['floor']}"
+            + (f", classes below their own floor: {', '.join(verdict['classes_below_floor'])}"
+               if verdict["classes_below_floor"] else ""))
+    inputs = profile_inputs.collect(project, store, round_name=round_name,
+                                    manifest_only=manifest_only)
+    roles = {c.id: c.role for c in project.classes if c.role}
+    written: list[dict[str, Any]] = []
+    for question in project.questions:
+        if question.kind not in evidence.FIELDS_BY_KIND:
+            row = evidence.not_applicable(question)
+        else:
+            completion = inputs["completion"][question.kind]
+            blocking = list(verdict["blocking"])
+            for count, reason in (("unanswered", "awaiting_extract"),
+                                  ("unharvested", "awaiting_harvest"),
+                                  ("unregated", "awaiting_regate"),
+                                  ("unchunked_sources", "awaiting_chunks")):
+                if completion[count]:
+                    blocking.append(reason)
+            if store.torn_tail:
+                blocking.append("torn_ledger_tail")
+            row = evidence.profile(
+                question, claims=inputs["claims"], reviews=inputs["reviews"],
+                rejections=inputs["rejections"], examined=inputs["examined"], roles=roles,
+                registry_version=project.registry_version, registry_sha256=project.registry_sha256,
+                provisional=bool(blocking), blocking=blocking)
+            row["extraction"] = completion
+        row.update({"profile_version": PROFILE_VERSION, "claim_gate_version": claimgate.CLAIM_GATE_VERSION,
+                    "round": round_name,
+                    "manifest_only": manifest_only, "registry_version": project.registry_version,
+                    "registry_sha256": project.registry_sha256,
+                    "population": inputs["sources"],
+                    "evidence_sha256": inputs["evidence_sha256"][str(question.id)],
+                    "acquisition": {key: verdict[key] for key in
+                                    ("found", "obtained", "confirmed", "rate", "basis", "floor",
+                                     "floor_version", "floor_set_at", "final", "blocking")}})
+        row["profile_sha256"] = evidence._digest(row)
+        written.append(row)
+    return written, verdict
 
 
 def build(
@@ -76,51 +128,11 @@ def build(
     manifest_only: bool = False,
 ) -> dict[str, Any]:
     """Write one profile per question, or refuse the round. Never both."""
-    verdict = admissibility.admit(project, store, round_name=round_name,
-                                  manifest_only=manifest_only)
-    if verdict["status"] == admissibility.INSUFFICIENT:
-        # No profiles at all. Not a warning, and not a partial run: a round that did not obtain what it
-        # found produces no verdicts, and producing profiles from it would invite one anyway.
-        raise NotAdmissible(
-            f"{verdict['status']}: {verdict['rate']} against floor {verdict['floor']}"
-            + (f", classes below their own floor: {', '.join(verdict['classes_below_floor'])}"
-               if verdict["classes_below_floor"] else "")
-        )
-
-    claims = [dict(row) for row in store.latest_by("claims.jsonl", "claim_id").values()]
-    rejections = list(store.read("rejections.jsonl"))
-    reviews = _reviews(store)
-    roles = {c.id: c.role for c in project.classes if c.role}
-
-    # Sources actually read, which is the honest denominator for "sources speaking to this question":
-    # a source that was never chunked cannot speak to anything, and counting the manifest instead would
-    # make coverage a statement about the reading list rather than about the corpus.
-    examined = len({str(row.get("source_id")) for row in store.read("chunks.jsonl")
-                    if row.get("source_id")})
-
-    blocking = list(verdict["blocking"])
-    written: list[dict[str, Any]] = []
-    for question in project.questions:
-        if question.kind not in evidence.FIELDS_BY_KIND:
-            # An operational question. A row, not a silence.
-            row = evidence.not_applicable(question)
-        else:
-            row = evidence.profile(
-                question,
-                claims=claims,
-                reviews=reviews,
-                rejections=rejections,
-                examined=examined,
-                roles=roles,
-                registry_version=project.registry_version,
-                registry_sha256=project.registry_sha256,
-                provisional=not verdict["final"],
-                blocking=blocking,
-            )
+    written, verdict = preview(project, store, round_name=round_name, manifest_only=manifest_only)
+    check_registry_drift(project, store)
+    for row in written:
         row["built_at"] = _now()
-        row["round"] = round_name
         store.append(PROFILES, row)
-        written.append(row)
 
     profiles = [r for r in written if r.get("kind") in evidence.FIELDS_BY_KIND]
     return {
@@ -132,7 +144,8 @@ def build(
         "no_verified_claim": sum(1 for r in profiles
                                  if r.get("state") == evidence.NO_VERIFIED_CLAIM),
         "provisional": sum(1 for r in profiles if r.get("provisional")),
-        "final": verdict["final"],
+        "final": all(not row.get("provisional") for row in profiles),
+        "acquisition_final": verdict["final"],
         "admissibility": verdict["status"],
         "rate": verdict["rate"],
         "floor": verdict["floor"],
@@ -141,18 +154,29 @@ def build(
     }
 
 
-def latest_profiles(store: Store) -> dict[str, dict[str, Any]]:
-    return {str(k): dict(v) for k, v in store.latest_by(PROFILES, "question_id").items()}
+def _scope(row: Mapping[str, Any], round_name: str | None, manifest_only: bool) -> bool:
+    return row.get("round") == round_name and bool(row.get("manifest_only")) == manifest_only
 
 
-def adjudications(store: Store) -> dict[str, dict[str, Any]]:
-    return {str(k): dict(v) for k, v in store.latest_by(ADJUDICATIONS, "question_id").items()}
+def latest_profiles(store: Store, *, round_name: str | None = None,
+                    manifest_only: bool = False) -> dict[str, dict[str, Any]]:
+    return {str(row["question_id"]): dict(row) for row in store.read(PROFILES)
+            if _scope(row, round_name, manifest_only)}
+
+
+def adjudications(store: Store, *, round_name: str | None = None,
+                  manifest_only: bool = False) -> dict[str, dict[str, Any]]:
+    return {str(row["question_id"]): dict(row) for row in store.read(ADJUDICATIONS)
+            if _scope(row, round_name, manifest_only)}
 
 
 def adjudicate(
     store: Store,
     question_id: str,
     *,
+    project: Project,
+    round_name: str | None = None,
+    manifest_only: bool = False,
     verdict: str,
     rationale: str,
     by: str,
@@ -161,7 +185,7 @@ def adjudicate(
     """Record one person's judgement about one profile. The only verdict-producing call in the project."""
     if verdict not in VERDICTS:
         raise ValueError(f"{verdict!r} is not one of {list(VERDICTS)}")
-    profiles = latest_profiles(store)
+    profiles = latest_profiles(store, round_name=round_name, manifest_only=manifest_only)
     profile = profiles.get(str(question_id))
     if profile is None:
         raise KeyError(f"no profile for {question_id}: run synthesize first")
@@ -173,6 +197,12 @@ def adjudicate(
         raise Provisional(
             f"{question_id}'s profile is provisional ({', '.join(profile.get('blocking') or [])}): "
             "a verdict recorded against evidence still arriving is a verdict about something else")
+    fresh, _ = preview(project, store, round_name=round_name, manifest_only=manifest_only)
+    current_profile = next((r for r in fresh if str(r["question_id"]) == str(question_id)), None)
+    if current_profile is None or current_profile["profile_sha256"] != profile.get("profile_sha256"):
+        raise StaleProfile("stored profile differs from current evidence; run synthesize and read it again")
+    if not profile_sha256:
+        raise ValueError("the profile hash shown to the adjudicator is required")
     text = (rationale or "").strip()
     if len(text) < MIN_RATIONALE_CHARS:
         raise ValueError(
@@ -184,6 +214,8 @@ def adjudicate(
 
     row = {
         "question_id": str(question_id),
+        "round": round_name,
+        "manifest_only": manifest_only,
         "verdict": verdict,
         "rationale": text,
         # What makes this auditable: if the evidence changes, the judgement is stale and the report says
@@ -199,18 +231,30 @@ def adjudicate(
     return row
 
 
-def verdicts(store: Store) -> dict[str, Any]:
+def verdicts(store: Store, *, project: Project, round_name: str | None = None,
+             manifest_only: bool = False) -> dict[str, Any]:
     """Every profile with whatever judgement has been recorded against it, stale ones named as stale."""
-    profiles = latest_profiles(store)
-    recorded = adjudications(store)
+    profiles = latest_profiles(store, round_name=round_name, manifest_only=manifest_only)
+    recorded = adjudications(store, round_name=round_name, manifest_only=manifest_only)
+    try:
+        fresh, _ = preview(project, store, round_name=round_name, manifest_only=manifest_only)
+        current = {str(row["question_id"]): row for row in fresh}
+        unavailable = ""
+    except NotAdmissible as exc:
+        current = {}
+        unavailable = str(exc)
     rows: list[dict[str, Any]] = []
     for question_id, profile in sorted(profiles.items()):
-        row: dict[str, Any] = {"profile": profile, "verdict": None, "stale": False}
+        live = current.get(question_id)
+        outdated = live is None or live.get("profile_sha256") != profile.get("profile_sha256")
+        row: dict[str, Any] = {"profile": live or profile, "verdict": None, "stale": False,
+                               "stored_profile_stale": outdated, "unavailable": unavailable}
         found = recorded.get(question_id)
         if found is not None:
             # A judgement made against different evidence is a judgement about a different question,
             # and quietly keeping it on screen is how a verdict outlives its reason.
-            row["stale"] = str(found.get("profile_sha256")) != str(profile.get("profile_sha256"))
+            row["stale"] = (live is None or live.get("provisional", False)
+                            or str(found.get("profile_sha256")) != str(live.get("profile_sha256")))
             row["verdict"] = found
         rows.append(row)
     return {
@@ -219,7 +263,8 @@ def verdicts(store: Store) -> dict[str, Any]:
         "stale": sum(1 for r in rows if r["stale"]),
         "awaiting_adjudication": sum(
             1 for r in rows
-            if not r["verdict"] and r["profile"].get("state") != evidence.NOT_APPLICABLE),
+            if not r["verdict"] and not r["unavailable"] and not r["profile"].get("provisional")
+            and r["profile"].get("state") != evidence.NOT_APPLICABLE),
         "no_controlled_error_rate_across": sum(
             1 for r in rows if r["profile"].get("state") != evidence.NOT_APPLICABLE),
     }

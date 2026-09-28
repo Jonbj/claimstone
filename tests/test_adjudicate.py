@@ -29,7 +29,7 @@ def _hash(store, question_id="H02"):
 
 def test_a_verdict_is_recorded_with_the_hash_of_the_profile_it_judged(tmp_path):
     store = _built(tmp_path)
-    row = synthesize.adjudicate(store, "H02", verdict="SUPPORTED", rationale=RATIONALE,
+    row = synthesize.adjudicate(store, "H02", project=_project(tmp_path), verdict="SUPPORTED", rationale=RATIONALE,
                                 by="an operator", profile_sha256=_hash(store))
     assert row["verdict"] == "SUPPORTED"
     assert row["profile_sha256"] == _hash(store)
@@ -45,7 +45,7 @@ def test_a_provisional_profile_is_refused(tmp_path):
     longer exists."""
     store = _built(tmp_path, claims=[claim(), claim(claim_id="c2")], reviews=[review()])
     with pytest.raises(synthesize.Provisional) as raised:
-        synthesize.adjudicate(store, "H02", verdict="SUPPORTED", rationale=RATIONALE, by="x")
+        synthesize.adjudicate(store, "H02", project=_project(tmp_path), verdict="SUPPORTED", rationale=RATIONALE, by="x", profile_sha256=_hash(store, "H02"))
     assert "awaiting_review" in str(raised.value)
     assert list(store.read(synthesize.ADJUDICATIONS)) == []
 
@@ -55,7 +55,7 @@ def test_a_rationale_below_the_declared_minimum_is_refused(tmp_path):
     not a verdict."""
     store = _built(tmp_path)
     with pytest.raises(ValueError) as raised:
-        synthesize.adjudicate(store, "H02", verdict="SUPPORTED", rationale="Looks right.", by="x")
+        synthesize.adjudicate(store, "H02", project=_project(tmp_path), verdict="SUPPORTED", rationale="Looks right.", by="x", profile_sha256=_hash(store, "H02"))
     assert str(synthesize.MIN_RATIONALE_CHARS) in str(raised.value)
     assert list(store.read(synthesize.ADJUDICATIONS)) == []
 
@@ -63,27 +63,27 @@ def test_a_rationale_below_the_declared_minimum_is_refused(tmp_path):
 def test_a_verdict_outside_the_five_states_is_refused(tmp_path):
     store = _built(tmp_path)
     with pytest.raises(ValueError):
-        synthesize.adjudicate(store, "H02", verdict="PROBABLY", rationale=RATIONALE, by="x")
+        synthesize.adjudicate(store, "H02", project=_project(tmp_path), verdict="PROBABLY", rationale=RATIONALE, by="x", profile_sha256=_hash(store, "H02"))
 
 
 def test_an_operational_question_cannot_be_adjudicated_at_all(tmp_path):
     """No sixth state, and no verdict either."""
     store = _built(tmp_path)
     with pytest.raises(ValueError) as raised:
-        synthesize.adjudicate(store, "H11", verdict="SUPPORTED", rationale=RATIONALE, by="x")
+        synthesize.adjudicate(store, "H11", project=_project(tmp_path), verdict="SUPPORTED", rationale=RATIONALE, by="x", profile_sha256=_hash(store, "H11"))
     assert "sixth state" in str(raised.value)
 
 
 def test_a_question_with_no_profile_is_refused_rather_than_invented(tmp_path):
     store = _store(tmp_path, claims=[claim()], reviews=[review()])
     with pytest.raises(KeyError):
-        synthesize.adjudicate(store, "H02", verdict="SUPPORTED", rationale=RATIONALE, by="x")
+        synthesize.adjudicate(store, "H02", project=_project(tmp_path), verdict="SUPPORTED", rationale=RATIONALE, by="x", profile_sha256="0" * 64)
 
 
 def test_a_hash_that_has_moved_since_the_reader_saw_it_is_refused(tmp_path):
     store = _built(tmp_path)
     with pytest.raises(synthesize.StaleProfile) as raised:
-        synthesize.adjudicate(store, "H02", verdict="SUPPORTED", rationale=RATIONALE, by="x",
+        synthesize.adjudicate(store, "H02", project=_project(tmp_path), verdict="SUPPORTED", rationale=RATIONALE, by="x",
                               profile_sha256="0" * 64)
     assert "000000000000" in str(raised.value)
 
@@ -93,8 +93,8 @@ def test_no_verified_claim_can_still_be_adjudicated_as_unanswered(tmp_path):
     is the profile's description; only a person may turn it into a verdict, and never into NEVER_ASKED
     without having screened for the question."""
     store = _built(tmp_path)
-    row = synthesize.adjudicate(store, "H06", verdict="UNANSWERED_IN_LITERATURE",
-                                rationale=RATIONALE, by="an operator")
+    row = synthesize.adjudicate(store, "H06", project=_project(tmp_path), verdict="UNANSWERED_IN_LITERATURE",
+                                rationale=RATIONALE, by="an operator", profile_sha256=_hash(store, "H06"))
     assert row["verdict"] == "UNANSWERED_IN_LITERATURE"
 
 
@@ -102,8 +102,8 @@ def test_no_verified_claim_can_still_be_adjudicated_as_unanswered(tmp_path):
 
 def test_a_matching_adjudication_is_displayed_and_not_marked_stale(tmp_path):
     store = _built(tmp_path)
-    synthesize.adjudicate(store, "H02", verdict="SUPPORTED", rationale=RATIONALE, by="x")
-    result = synthesize.verdicts(store)
+    synthesize.adjudicate(store, "H02", project=_project(tmp_path), verdict="SUPPORTED", rationale=RATIONALE, by="x", profile_sha256=_hash(store, "H02"))
+    result = synthesize.verdicts(store, project=_project(tmp_path))
     row = next(r for r in result["rows"] if r["profile"]["question_id"] == "H02")
     assert row["stale"] is False
     assert row["verdict"]["verdict"] == "SUPPORTED"
@@ -114,15 +114,15 @@ def test_an_adjudication_whose_evidence_changed_is_shown_as_stale_with_both_hash
     """A judgement made against different evidence is a judgement about a different question, and
     quietly keeping it on screen is how a verdict outlives its reason."""
     store = _built(tmp_path)
-    synthesize.adjudicate(store, "H02", verdict="SUPPORTED", rationale=RATIONALE, by="x")
+    synthesize.adjudicate(store, "H02", project=_project(tmp_path), verdict="SUPPORTED", rationale=RATIONALE, by="x", profile_sha256=_hash(store, "H02"))
     judged = _hash(store)
 
     # A second source arrives and is reviewed. Same question, different evidence.
-    store.append("claims.jsonl", claim(claim_id="c2", source_id="ACA002"))
+    store.append("claims.jsonl", claim(claim_id="c2", source_id="MET001"))
     store.append("reviews.jsonl", review(claim_id="c2"))
     synthesize.build(_project(tmp_path), store)
 
-    result = synthesize.verdicts(store)
+    result = synthesize.verdicts(store, project=_project(tmp_path))
     row = next(r for r in result["rows"] if r["profile"]["question_id"] == "H02")
     assert row["stale"] is True
     assert row["verdict"]["profile_sha256"] == judged
@@ -134,7 +134,7 @@ def test_an_adjudication_whose_evidence_changed_is_shown_as_stale_with_both_hash
 
 def test_a_question_awaiting_a_person_is_counted_and_an_operational_one_is_not(tmp_path):
     store = _built(tmp_path)
-    result = synthesize.verdicts(store)
+    result = synthesize.verdicts(store, project=_project(tmp_path))
     # H02 and H06 await a person; H11 receives no verdict and is not waiting for one.
     assert result["awaiting_adjudication"] == 2
     assert result["no_controlled_error_rate_across"] == 2
@@ -142,13 +142,13 @@ def test_a_question_awaiting_a_person_is_counted_and_an_operational_one_is_not(t
 
 def test_the_disclosure_travels_with_the_display_too(tmp_path):
     store = _built(tmp_path)
-    assert synthesize.verdicts(store)["no_controlled_error_rate_across"] == 2
+    assert synthesize.verdicts(store, project=_project(tmp_path))["no_controlled_error_rate_across"] == 2
 
 
 def test_rebuilding_the_same_evidence_does_not_make_a_verdict_stale(tmp_path):
     """A rebuild at a later minute is not different evidence, and treating it as such would make every
     recorded verdict stale overnight."""
     store = _built(tmp_path)
-    synthesize.adjudicate(store, "H02", verdict="SUPPORTED", rationale=RATIONALE, by="x")
+    synthesize.adjudicate(store, "H02", project=_project(tmp_path), verdict="SUPPORTED", rationale=RATIONALE, by="x", profile_sha256=_hash(store, "H02"))
     synthesize.build(_project(tmp_path), store)
-    assert synthesize.verdicts(store)["stale"] == 0
+    assert synthesize.verdicts(store, project=_project(tmp_path))["stale"] == 0

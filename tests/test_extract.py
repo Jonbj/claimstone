@@ -369,6 +369,12 @@ def test_a_record_without_a_result_id_keeps_the_identity_it_already_had(tmp_path
     _answer(store, records=[{"question_id": "H02", "stance": "SUPPORTS",
                              "claim": "News tone affects returns.",
                              "evidence_quote": "news tone does indeed have an effect"}])
+    unit = model_call.Queue(store, lane='extract', batch='b1').requests()[0]
+    store.append('claims.jsonl', {
+        'claim_id': extract.claim_id('S01#c1', 'H02', 'news tone does indeed have an effect'),
+        'call_id': unit['call_id'], 'backend': 'fake', 'model': 'm',
+        'question_id': 'H02', 'stance': 'SUPPORTS', 'claim': 'News tone affects returns.',
+        'evidence_quote': 'news tone does indeed have an effect'})
     extract.harvest(FakeProject(), store, batch="b1")
     stored = next(iter(store.read("claims.jsonl")))["claim_id"]
     assert stored == extract.claim_id("S01#c1", "H02", "news tone does indeed have an effect")

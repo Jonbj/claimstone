@@ -2086,3 +2086,231 @@ It is not a finding about screen time. The round reads **40 of 199** candidates 
 restricted to what PubMed Central holds, and one of eight questions has been reviewed. A verdict recorded
 against this profile is a verdict about PMC-deposited literature, on one question, at a coverage of 3
 sources — and the rationale has to say all three.
+
+## D45 — A drained queue is not a complete reading, and a saved profile is not current evidence
+
+Date: 2026-09-28 · `profile_version 2` · corrects the completeness claim in D44
+
+The functional review reproduced three ways to certify different evidence from what was read:
+profiles ignored failed extraction readings, round filtering applied to admission but not the evidence,
+and adjudication trusted a saved profile even after its corpus fell below the acquisition floor.
+A registry rollback also passed when that older version had previously been recorded.
+
+The baseline checks passed: 743 tests, 7 skipped; four projects validated; seven recorded instrument
+versions acknowledged. Those checks did not establish completeness. Eight new regression cases all
+failed before the correction, including a terminal failed call with no claims, an unharvested valid
+answer, an unattempted fifth source above an 0.80 floor, evidence leaking across rounds, old-registry
+claims relabelled current, signing after floor failure, stale evidence without rebuilding, and reopening
+a previously recorded registry. Eleven further cases check empty successful answers, obsolete prompts,
+manifest scope, scope-specific signatures, read-only reporting, CLI registry enforcement, re-gated
+source exclusion, review rationale identity and old-registry reviews of reused annotation ids.
+
+### The population and the reading obligation
+
+A profile uses the same candidate selector as admission: `round` and `manifest_only`. Only confirmed
+sources in that population enter the chunks, annotations and coverage. Claims from another registry
+version are not relabelled with the current question. The question registry check runs at every CLI store
+entry, including discovery and model commands, and checks rollback before its same-hash fast path.
+
+For each non-operational question kind, every current chunk needs a valid answer to the current kind
+prompt and schema. Matching valid readings from any batch or reader may fulfil that obligation; obsolete
+prompts and incomplete historical experiments do not create extra obligations. A valid empty array is a
+completed reading. A terminal failure is an unanswered reading. A nonempty answer must have reached the
+gate for that chunk and reader. A confirmed source without chunks remains outstanding too.
+
+This preserves D13's comparison primitive and D14's distinction between terminal work and successful
+work. It does not change the extractor prompt, claim gate, review instrument or acquisition floor.
+
+### Measured on the whole stored PMC corpus, without writing or calling anything
+
+Derived by `synthesize.preview(load_project('projects/pmc-screen-time'), Store('pmc-screen-time'))`:
+
+```
+confirmed sources                  37/40 = 0.925; acquisition final, floor 0.80 met
+current chunks                     734
+expected extraction readings       734 per kind = 2,936
+unanswered                         effect 10, heterogeneity 4, method 15, premise 5 = 34
+valid but unharvested               0 in every kind
+confirmed sources without chunks   0
+Q04                                provisional; blocking: awaiting_extract
+Q04 coverage                       3/37; no adjudication
+```
+
+The corrected read-only result agrees with the review's full queue audit. Q04 has no outstanding review
+of the 42 harvested claims; that never established that every passage had been read. This **supersedes
+D44's `provisional false` and "1 adjudicable"**, not its observations about the five displayed results or
+the reviewer's bad fourth row. No prediction is made about what the ten missing readings will yield.
+The eight historical profiles and all request and response ledgers remain untouched.
+
+### What version 2 hashes and what a signature checks
+
+`PROFILE_VERSION = 2` identifies the changed profile instrument, independently of decision contract v1.
+The hash is calculated after adding the selector, population, acquisition accounting and per-kind
+completion. A semantic digest binds each question's full claims, reviews, rejections and current chunks;
+wall-clock build, harvest and review times are excluded. Recovered rejections are superseded by accepted
+claims in the displayed denominator. Rebuilding identical evidence leaves the hash unchanged.
+
+Profiles and signatures are selected separately by `(question_id, round, manifest_only)`. Signing requires
+the hash the person was shown, a current project and a read-only fresh profile matching the saved one.
+It refuses a current floor failure and any changed input. Reporting also recomputes in memory, so a
+signature becomes stale without requiring the operator to first run `synthesize`. If the corpus is now
+inadmissible, only an explicitly historical profile and stale signature may be displayed. Legacy profiles
+need a rebuild and a new reading; no historical hash is silently upgraded.
+
+The remaining review defects, including numeric token boundaries, answer re-judgement/harvest authority,
+reader annotation identity, chunk generations, full-result review and acquisition auditing, are separate
+work. This correction does not certify those instruments or authorize model calls, floor revisions or a
+person's verdict.
+
+## D46 — Whole numeric tokens, reversible gate decisions, and a profile that names its current gate
+
+Date: 2026-09-28 · `claim_gate_version 4` · `profile_version 3`
+
+R02 of the functional review demonstrated that the gate accepted a claim of positive `2` against a quote
+of `-2`, `.2` or `2.7`. Digit-only boundaries also accepted fragments of thousands-grouped numbers and
+exponents. Single-figure `*_as_written` fields had the same defect: verbatim substring membership is
+necessary, but `2` is a substring of every one of those different values.
+
+Version 4 compares whole numeric tokens, including signs, leading decimals, thousands grouping and
+exponents. Single-figure fields keep their exact-string check and additionally verify those tokens.
+D25's `reversals-3.7` typesetting and range endpoints are retained, as is D38's implicit-percent rule and
+its different-unit refusal. Explicit positive signs do not change magnitude. No domain labels are added.
+
+There are 57 new numeric regression cases. Of the first 49, thirty failed under version 3 before the
+repair. Eight further cases protect typography exposed by the full replays. Six further cases verify append-only gate supersession, replay idempotence,
+consumer exclusion and the inability to sign legacy annotations before their current gate runs.
+
+### The measurement, including the false rejections it caught during development
+
+The entire stored production batches were actually harvested twice on temporary copies of their JSONL
+ledgers, once with gate v3 loaded from commit `9e402e5` and once with gate v4. Both use the current
+converter and revision-aware harvester; the comparison isolates the gate, not every historical engine
+version. A third pass verifies that replay appends nothing. Reproduce with:
+
+```bash
+.venv/bin/python tools/measure_claim_gate_reharvest.py projects/pmc-screen-time --batch pmc-round-2026-09-27
+.venv/bin/python tools/measure_claim_gate_reharvest.py projects/alembic-s4 --batch full-shapes-2026-09-28
+```
+
+| batch | proposed | newly stamped v4 accepted | newly stamped v4 rejected | unchanged identity conflicts | v3 accepted annotations retired by v4 | recovered |
+|---|---:|---:|---:|---:|---:|---:|
+| PMC production | 1,927 | 1,668 | 259 | 0 | 0 | 0 |
+| full shapes | 3,749 | 3,051 | 606 | 92 | 7 | 0 |
+
+The seven retired annotations are six `NUMBER_NOT_IN_QUOTE` and one `VALUE_NOT_IN_QUOTE`. They include
+`17.24` borrowed from `-17.24`, `0` borrowed from a decimal, and positive window offsets borrowed from
+negative ones. They are not seven recovered claims. The full-shapes replay preserves 92 existing
+annotations whose ids collide with different readers/content, reports those conflicts, and does not
+pretend R09's annotation identity is repaired. The repeat passes wrote **zero** decisions. Hash snapshots
+before and after the tool confirm the real JSONL ledgers did not change.
+
+The first v4 measurement falsely retired four PMC annotations because the papers write `. 001`, with a
+space after the leading decimal point. Reading the actual re-harvest output caught it. Supporting that
+notation then exposed sentence punctuation, `vs. 2.89` and `... 1` being misread as decimals. The final
+scanner distinguishes them, and the added regression cases cover them all. The final PMC result is
+**zero retirements**, not the first development result's four. One existing PMC rejection changes its
+first failing check, `NUMBER_NOT_IN_QUOTE` to `UNPARSEABLE_VALUE`; the accepted set stays identical.
+
+The whole-store current counts in the normalized v3/v4 copies are 1,668/259 → 1,668/259 for PMC and
+7,022/1,142 → 7,015/1,149 for alembic-s4. The latter includes annotations from other batches, so those
+counts must not be substituted for the full-shapes row above. This is an actual replay of the named
+batches under the harvester's existing historical-answer selection, not certification of model-answer
+re-judgement authority (R05).
+
+### A corrected rejection must be able to retire a former acceptance
+
+Previously, a re-harvest could append a rejection while every consumer continued using the old accepted
+row. A higher `gate_revision`, shared across the two ledgers for a claim id, now makes either outcome
+authoritative. Identical decisions under the same instrument are not appended twice. A changed gate
+version is recorded once even when the decision stays the same.
+
+Legacy rows have revision zero and retain their established accepted-wins interpretation; chronology
+between separate legacy logs is not invented. New revisions supersede them. Profiles, review queues,
+extraction/review reports and secondhand discovery all use the same current-decision reader. Neither
+ledger is rewritten and a previous review is preserved without keeping a newly rejected claim usable.
+
+`profile_version 3` adds the current `claim_gate_version` and `extraction.unregated`. An annotation that
+has not reached that gate keeps its kind's profiles provisional with `awaiting_regate`. Thus changing
+the code cannot silently certify legacy accepted rows. Version 2's scope and live-signature checks remain.
+The real PMC ledger still has 1,927 current annotations awaiting gate v4; Q04 shares 786 effect-kind
+annotations and still has ten unanswered readings. Its historical hash remains unsignable.
+
+No production re-harvest was applied: the comparison preserves the real record while R05 and R09 remain
+open. Authoritative answer replay and immutable reader annotation identity are the next repair, before
+applying that replay to real batches. No model or publisher was called, no floor was changed and no
+adjudication was made.
+
+## D47 — Authoritative answer replay and immutable reader annotations
+
+Date: 2026-09-28 · `result_judge_version 2` · `annotation_version 2` · `profile_version 4`
+
+R05 showed that harvest read physical attempts and skipped rejudgements: a schema-invalidated success
+could remain usable forever. Replay itself could clear prompt mismatch, refusal or transport failures
+merely because the returned bytes parsed. R09 showed that quote/result ids shared by different readers
+could overwrite annotations, change their metadata or transfer a review to a different extraction.
+D14's measured latest-result policy already decided replay authority; this applies it to consumers.
+
+Results now record original transport/refusal/truncation facts and the effective judgement schema.
+Rejudge restores those facts from the physical attempt, preserves requested-reader identity and prompt
+verification, verifies stored bytes against their recorded hash and retains a schema override on repeat.
+An unchanged repeat judgement appends nothing. Missing response bytes remain skipped and counted by
+the measurement tool. A known failure or mismatched recorded prompt hash cannot be read as success.
+
+Extraction and review harvest use current results per reader, including replay rows. Read-only consumers
+also check those answers: a failed or empty extraction, changed annotation, or invalidated review retires
+its cached evidence immediately without erasing ledger history. Complete original records identify
+annotations, including optional metadata, together with chunk, call, reader and harness. New ids are
+32 hex digits. Exact legacy records keep their ids and reviews; changed content or another reader gets
+a new id. Batch provenance accumulates idempotently when the identical annotation is independently
+returned for the same call in several batches. It is still one annotation, not another study.
+
+Identical review prompts merge explicit annotation targets rather than dropping every target after the
+first. Harvest applies an answer to each eligible target and checks reader independence separately.
+A changed annotation cannot inherit its predecessor's review. This does not yet repair R10: the prompt
+still asks about claim and quote without the full extracted metadata.
+
+### Complete replay measurement
+
+Reproduce offline, without model calls or mutations of the original ledgers:
+
+```bash
+.venv/bin/python tools/measure_answer_replay.py projects/pmc-screen-time
+.venv/bin/python tools/measure_answer_replay.py projects/alembic-s4
+```
+
+The tool copies every JSONL ledger into a temporary store, rejudges every stored batch, runs both real
+harvesters, and repeats both operations. Hash snapshots verify the original ledgers remain unchanged.
+
+| corpus | extract/review batches | active claims/rejections before | active claims/rejections after | retained original claim ids | new claim ids | usable reviews after / retained original |
+|---|---:|---:|---:|---:|---:|---:|
+| PMC | 1 / 1 | 1,668 / 259 | 1,668 / 259 | 1,668 | 0 | 42 / 42 |
+| alembic-s4 | 7 / 2 | 7,021 / 1,143 | 7,194 / 1,166 | 6,991 | 203 | 74 / 41 |
+
+The historical alembic claim ledger contains 7,021 ids, all initially active. Thirty original ids
+are absent after replay; 203 newly distinct annotations enter the accepted set. The after counts include
+all seven extraction batches and all readers, not only D46's full-shapes batch. They must not be
+interpreted as independent studies, gate quality, reviewer ground truth or new network acquisition.
+All original 83 reviews across the two corpora remain attached to unchanged annotations; the additional
+33 usable alembic reviews come from already stored results. Every repeat operation writes **zero** rows.
+
+PMC rejudges 2,944 answers OK, 26 NOT_JSON, 5 SCHEMA_INVALID and 3 TRUNCATED; no response lacks stored
+bytes. Alembic rejudges 3,874 OK, 29 NOT_JSON, 30 SCHEMA_INVALID and 18 TRUNCATED; 27 current results
+have no stored response bytes and are skipped. These include byte-less failed calls; missing bytes
+are not counted as successful empty answers. Extraction harvest reports 34 and 95 unanswered current
+reader results respectively. Review harvest reports zero and nine. These are current-result counts,
+not the number of historical paid attempts and not per-question completion counts.
+
+Twenty-one regression cases cover invalidation before harvest, replay recovery, immutable metadata,
+multiple readers, legacy record equality, merged review targets, independent batch provenance,
+original failures, raw hash corruption, requested-reader identity and persistent schema tightening.
+Existing fixture tests also verify exact legacy-id migration and repeat replay cost accounting.
+`profile_version 4` changes authoritative evidence selection and whole-record completion; historical
+profiles require a fresh build and reading. No adjudication was performed.
+
+D46's numeric table describes the actual historical execution with its previous answer/identity
+selection. `measure_claim_gate_reharvest.py` now reports these additional instrument versions because
+running it with the new harvester measures a different instrument; its figures cannot silently replace
+that dated table. The full D47 replay is the current migration measurement.
+
+The real stores have not been reharvested. R06 chunk-generation identity and R10 full-result review
+remain to be repaired before applying a production replay; this measurement does not certify them.

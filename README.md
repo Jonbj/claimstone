@@ -50,7 +50,7 @@ crash is resumable, and every figure is greppable.
 ## Running it
 
 ```bash
-.venv/bin/pytest -q                                    # 743 passing
+.venv/bin/pytest -q                                    # 846 passing
 .venv/bin/claimstone validate --all-projects           # the contract check
 .venv/bin/claimstone report projects/<name>            # the acquisition rate and its losses
 .venv/bin/claimstone verdicts projects/<name>          # the profiles, and any signature
@@ -65,7 +65,7 @@ so `.env` must hold `CLAIMSTONE_CONTACT_EMAIL`.
 - **[docs/README.md](docs/README.md)** — the documentation map: which file answers which question.
 - **[docs/GUIDE.md](docs/GUIDE.md)** — a walkthrough of a whole round, stage by stage, with what each
   number means. Start here if you want to run one.
-- **[docs/DESIGN_DECISIONS.md](docs/DESIGN_DECISIONS.md)** — 45 decisions, each with the measurement that
+- **[docs/DESIGN_DECISIONS.md](docs/DESIGN_DECISIONS.md)** — 47 decisions, each with the measurement that
   decided it. Read the entry before arguing with the choice.
 - **[docs/HANDOFF.md](docs/HANDOFF.md)** — what is running now, what is pending, and which decisions belong
   to a person rather than to the engine.

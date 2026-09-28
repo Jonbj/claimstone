@@ -1,6 +1,6 @@
 # Handoff
 
-Written 2026-09-28, at the end of the session that closed the first complete round. It holds what the
+Written 2026-09-28, after the first end-to-end round; completeness corrected by D45. It holds what the
 repository does not: live state, pending decisions, and the things that were established in conversation
 and would otherwise be lost.
 
@@ -10,7 +10,16 @@ what order.
 ## Where the work stands
 
 One round has run all six stages: `pmc-screen-time`, 37 of 40 confirmed against a floor of 0.80, 1,668
-claims, 8 profiles, **0 verdicts**. `Q04`'s profile is the only adjudicable one and is waiting for a person.
+claims, 8 historical profiles, **0 verdicts**. **None is adjudicable under the completeness check in D45.**
+There are 34 unanswered extraction readings: effect 10, heterogeneity 4, method 15, premise 5.
+Q04 has no outstanding reviews of harvested claims, but its kind still has 10 unread passages.
+D46 additionally requires gate v4: the real ledger has not been re-harvested, so every profile reports
+`awaiting_regate` too. The full temporary replays retire zero PMC annotations and seven full-shapes
+annotations in alembic-s4. D47 repairs R05/R09 and measures a complete replay on temporary copies: PMC preserves all 1,668
+claim ids and 42 reviews; alembic-s4 retains 6,991 claim ids, creates 203 new ids and yields 74 usable
+reviews (all original 41 retained). These are annotation counts, not independent studies or ground truth.
+Both repeat passes append zero rows. Real ledgers remain unchanged pending R06 chunk generations
+and R10 full-result review, the next correctness repairs before applying a production replay.
 
 Two other instances exist and both stand below their floor and produce nothing: `alembic-s4` at 0.56 with a
 measured ceiling of 0.72, and `pilot-screen-time` at 0.45. That is the correct behaviour, not a backlog.
@@ -19,10 +28,11 @@ measured ceiling of 0.72, and `pilot-screen-time` at 0.45. That is the correct b
 
 - **GROBID** is up (`docker compose up -d grobid`), healthy, ~3.6 GB. Only `normalize` needs it. Stop it
   with `docker compose down` when idle; it is `restart: unless-stopped`, so it will come back on reboot.
-- **Nothing else is in flight.** Every batch in `store/*/calls/` is drained. A batch is resumable by
+- **Nothing else is in flight.** Drained means no routine retry is pending, not that every reading
+  succeeded. Every batch in `store/*/calls/` is drained. A batch is resumable by
   `call_id`, so re-running `model-run` on any of them costs nothing for work already done.
 
-## The six decisions to read first
+## The decisions to read first
 
 `DESIGN_DECISIONS.md` is 2,000 lines. For what happens next, these are the ones that bind:
 
@@ -33,12 +43,17 @@ measured ceiling of 0.72, and `pilot-screen-time` at 0.45. That is the correct b
 | **D39** | 0.64 on literature that declares itself free, and why the gap does not close by retrying. This is the only evidence a floor revision could rest on. |
 | **D40 + D44** | a second reader marks 23 of 41 and 36 of 42 gate-passed claims `NOT_APPLICABLE`. Over-attachment is the dominant cost of the current call shape, and it is not a property of one question kind. |
 | **D41** | why the closed round is legitimate: the selector is deposits, not outcomes, and it excludes 159 of 199 candidates. |
+| **D47** | authoritative replay and immutable reader annotations; measured across all stored batches without changing real ledgers. |
+| **D46** | whole numeric tokens, revision-aware gate outcomes and `awaiting_regate`; measurements used temporary ledgers. |
+| **D45** | completeness, scope and live signature validation; corrects D44’s claim that Q04 was ready to sign. |
 | **D43** | the notation vocabulary was domain knowledge in the engine and a corpus in another field proved it. The `extraction` config section that fixes it had never been loaded at all. |
 
 ## What is a person's decision and not an engine's
 
-**The adjudication.** `Q04`'s profile is complete, not provisional, and hashed
-`8e93cbde7a5a11a2e6d84933dd48539194d22ace3b149f7f2b10003e440c0bf0`. Nothing in the profile supports the
+**The adjudication.** Q04 must first complete its 10 missing effect readings, harvest and review any new
+claims, and be rebuilt and read again. Its historical hash
+`8e93cbde7a5a11a2e6d84933dd48539194d22ace3b149f7f2b10003e440c0bf0` is not signable under
+`profile_version 4`. The current read-only preview marks it provisional. Nothing in the historical profile supports the
 question; five results bear on it, and one of the five is not a result at all (D44). Whether that reads
 `CONTRADICTED` on two independent papers or `UNANSWERED_IN_LITERATURE` on a coverage of 3 sources of 37 is
 a judgement, and an agent must not make it. The rationale has to state the round's scope, its coverage, and

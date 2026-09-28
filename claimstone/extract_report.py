@@ -13,6 +13,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from claimstone import claim_records
 from claimstone.store import Store
 
 
@@ -28,18 +29,15 @@ def summarise(
     # Computed once. Calling `_batch_calls` inside the comprehension re-read all 1,888 request rows for
     # every one of 4,358 claims, and the report took minutes on a ledger it should read in a second.
     wanted = _batch_calls(store, batch) if batch is not None else None
+    current_claims, current_rejections = claim_records.current(store)
     claims = [
-        row for row in store.latest_by("claims.jsonl", "claim_id").values()
+        row for row in current_claims.values()
         if wanted is None or str(row.get("call_id")) in wanted
     ]
     accepted_ids = {str(row.get("claim_id")) for row in claims}
     rejections = [
-        row for row in store.latest_by("rejections.jsonl", "claim_id").values()
-        if (wanted is None or str(row.get("call_id")) in wanted)
-        # A claim in claims.jsonl is accepted now, whatever an older rejection row says. Correcting the
-        # numeral rule moved 77 from rejected to accepted, and the rejection rows stay — append-only, and
-        # they record what the old rule did — but counting both inflated `proposed`.
-        and str(row.get("claim_id")) not in accepted_ids
+        row for row in current_rejections.values()
+        if wanted is None or str(row.get("call_id")) in wanted
     ]
     superseded = len([
         row for row in store.latest_by("rejections.jsonl", "claim_id").values()

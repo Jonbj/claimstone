@@ -21,7 +21,7 @@ from __future__ import annotations
 import datetime as _dt
 from typing import Any, Iterable
 
-from claimstone import claimgate, model_call, numbers
+from claimstone import claim_records, claimgate, model_call, numbers
 from claimstone.store import Store, sha256_text
 
 # The registry's word, not "lane". `model_call.LANES` is ("extract", "review") — the boundary's two
@@ -254,12 +254,11 @@ def build(
 
 
 def claim_id(chunk_id: str, question_id: str, quote: str, result_id: str = "") -> str:
-    """Stable across a re-harvest, so gating the same answer twice does not double a claim.
+    """The legacy identity, used only to locate an unchanged annotation during migration.
 
     `result_id` joins the hash only when the record supplies one. A batch built before the field existed
-    cannot, and re-deriving every stored claim's id would write the already-harvested ones a second time
-    for nothing — the same reasoning as `kind_verified`. Two records sharing a quote and supplying no
-    result_id therefore still collapse, which is a known limit of those batches and not of this one.
+    cannot. Exact record, call and reader equality preserve that historical id; all new annotations
+    use claim_records.annotation_id, including legacy answers without a result_id.
     """
     parts = [chunk_id, question_id, quote] if not result_id else [
         chunk_id, question_id, result_id, quote]
@@ -277,8 +276,12 @@ def harvest(project: Any, store: Store, *, batch: str) -> dict[str, Any]:
     requests = {str(u["call_id"]): u for u in queue.requests()}
     chunks = store.latest_by("chunks.jsonl", "chunk_id")
     classes = _source_classes(store)
-    seen = set(store.latest_by("claims.jsonl", "claim_id"))
-    seen_rejections = set(store.latest_by("rejections.jsonl", "claim_id"))
+    # Include historical rows when locating an unchanged legacy annotation: an invalidated answer
+    # may later become valid again, and that must retain its identity and its audit history.
+    held = store.latest_by('claims.jsonl', 'claim_id')
+    for identifier, rejected_row in store.latest_by('rejections.jsonl', 'claim_id').items():
+        if int(rejected_row.get('gate_revision', 0)) > int(held.get(identifier, {}).get('gate_revision', -1)):
+            held[identifier] = rejected_row
 
     thresholds = dict(getattr(project, "extraction", {}) or {})
     comparatives = thresholds.pop("comparatives", None)
@@ -292,10 +295,9 @@ def harvest(project: Any, store: Store, *, batch: str) -> dict[str, Any]:
 
     proposed = accepted = rejected = unanswered = kind_unverified = already = 0
     failures: dict[str, int] = {}
+    annotation_conflicts = 0
 
-    for row in queue.attempts():
-        if row.get("rejudged_from"):
-            continue
+    for row in queue.results().values():
         request = requests.get(str(row.get("call_id")))
         if request is None:
             continue
@@ -315,9 +317,17 @@ def harvest(project: Any, store: Store, *, batch: str) -> dict[str, Any]:
                 if chunk is None:
                     continue
                 proposed += 1
-                identifier = claim_id(chunk_id, str(record.get("question_id")),
-                                      str(record.get("evidence_quote")),
-                                      str(record.get("result_id") or ""))
+                identifier = claim_records.annotation_id(chunk_id, row, record)
+                legacy_id = claim_id(chunk_id, str(record.get("question_id")),
+                                     str(record.get("evidence_quote")), str(record.get("result_id") or ""))
+                legacy = held.get(legacy_id)
+                if (legacy is not None and legacy.get('call_id') == row.get('call_id')
+                        and legacy.get('backend') == row.get('backend')
+                        and legacy.get('model') == row.get('model')
+                        and (not legacy.get('harness_version')
+                             or legacy['harness_version'] == row.get('harness_version'))
+                        and claim_records.matches(legacy, record)):
+                    identifier = legacy_id
                 # WRONG_KIND catches a model answering about a question outside the kind it was asked
                 # about. A request that never recorded which kind was asked cannot support that check,
                 # so the question's own kind is used and the claim says the check did not run — the
@@ -337,6 +347,11 @@ def harvest(project: Any, store: Store, *, batch: str) -> dict[str, Any]:
                 )
                 common = {
                     "claim_id": identifier,
+                    "annotation_version": claim_records.ANNOTATION_VERSION,
+                    "raw_record": record,
+                    "answer_batches": sorted(set((held.get(identifier) or {}).get('answer_batches', []))
+                                             | {batch}),
+                    "result_key": model_call.result_key(row),
                     "call_id": row.get("call_id"),
                     "backend": row.get("backend"),
                     "model": row.get("model"),
@@ -373,26 +388,24 @@ def harvest(project: Any, store: Store, *, batch: str) -> dict[str, Any]:
                         converted["unconverted"] = fields
                         converted["unconverted_why"] = "; ".join(unreadable)
 
+                previous = held.get(identifier)
                 if verdict.ok:
-                    if identifier in seen:
-                        already += 1
-                        continue
-                    seen.add(identifier)
-                    store.append("claims.jsonl", common | converted)
-                    accepted += 1
+                    decision = common | converted
+                    ledger = "claims.jsonl"
                 else:
                     failures[verdict.failure or "?"] = failures.get(verdict.failure or "?", 0) + 1
-                    if identifier in seen_rejections:
-                        already += 1
-                        continue
-                    seen_rejections.add(identifier)
-                    # The record whole, so a rejection is examinable rather than merely counted.
-                    store.append("rejections.jsonl", common | {
-                        "failure": verdict.failure,
-                        "detail": verdict.detail,
-                        "record": record,
-                    })
-                    rejected += 1
+                    decision = common | {
+                        "failure": verdict.failure, "detail": verdict.detail, "record": record,
+                    }
+                    ledger = "rejections.jsonl"
+                if previous is not None and claim_records.same_decision(previous, decision):
+                    already += 1
+                    continue
+                decision["gate_revision"] = int((previous or {}).get("gate_revision", 0)) + 1
+                store.append(ledger, decision)
+                held[identifier] = decision
+                accepted += bool(verdict.ok)
+                rejected += not verdict.ok
 
     return {
         "batch": batch,
@@ -402,6 +415,7 @@ def harvest(project: Any, store: Store, *, batch: str) -> dict[str, Any]:
         "accepted": accepted,
         "rejected": rejected,
         "already_held": already,
+        "annotation_conflicts": annotation_conflicts,
         # Not zero claims: a call with no valid answer says nothing about its chunk.
         "calls_without_an_answer": unanswered,
         "kind_unverified": kind_unverified,

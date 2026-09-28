@@ -25,6 +25,9 @@ RECORD = ROOT / "docs" / "DESIGN_DECISIONS.md"
 # Each instrument: the module holding its version, the constant, and the phrase the record must
 # use so the mention is deliberate rather than accidental.
 INSTRUMENTS = (
+    ("claimstone/model_call.py", "RESULT_JUDGE_VERSION", "result_judge_version"),
+    ("claimstone/claim_records.py", "ANNOTATION_VERSION", "annotation_version"),
+    ("claimstone/synthesize.py", "PROFILE_VERSION", "profile_version"),
     ("claimstone/fulltext.py", "GATE_VERSION", "gate_version"),
     # The claim gate is the executable form of invariant 1, and went unversioned through the first full
     # round. Two claims admitted under different rule sets are not the same kind of row.

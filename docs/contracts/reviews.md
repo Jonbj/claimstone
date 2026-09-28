@@ -15,7 +15,7 @@ supports is the claim that was made.
 | `reason` | one sentence naming what the quote actually says where it differs from the claim |
 | `reviewed_by` | `{backend, model, harness_version}` — who judged |
 | `extracted_by` | `{backend, model, harness_version}` — who produced the claim |
-| `call_id`, `reviewed_at` | which call, and when |
+| `call_id`, `batch`, `result_key`, `reviewed_at` | which call, originating batch and reader, and when |
 
 ## The verdicts
 
@@ -73,3 +73,16 @@ matters is one sentence: **a backend emitting one bland, safe, well-quoted claim
 And one fixed reviewer controls reviewer *variation* while keeping reviewer *bias*: a reviewer that
 systematically accepts a certain kind of overreach flatters every extractor equally. The fixed reviewer makes
 the comparison internally consistent, not correct.
+
+## Current reviews and replay (D47)
+
+Use `review.current(store)`, not a raw latest-row lookup. The claim must still be accepted and the
+current review answer must still contain the same verdict and reason. Invalidating an answer makes
+its cached review unusable immediately. Harvest uses current results, including rejudgements, and
+appends a changed review once. The historical review remains auditable. Legacy imports with no
+model-call provenance retain their earlier interpretation.
+
+Identical review prompts merge explicit targets; a valid answer fans out to all eligible annotations.
+The reviewer is checked separately against each extractor. A changed annotation id never inherits
+another annotation's review. This corrects identity and replay; the review prompt still needs R10's
+full-result metadata repair before it can attest that metadata.

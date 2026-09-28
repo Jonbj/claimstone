@@ -183,6 +183,22 @@ Il suo unico esito categorico è `NO_VERIFIED_CLAIM`, che dice che nulla è sopr
 `NEVER_ASKED`: una mancata estrazione, una domanda tutta rifiutata e una domanda davvero mai posta da qui si
 somigliano, e solo uno screening le distingue.
 
+D45 ha corretto la completezza del giro salvato: 34 letture di estrazione non hanno una risposta valida,
+comprese le 10 letture di tipo effect che mantengono Q04 provvisorio. Un fallimento terminale del modello
+non è una lettura con zero claim. Il profilo riporta `extraction.expected`, `unanswered`, `unharvested`
+e `unchunked_sources`.
+
+Usare gli stessi `--round` e `--manifest-only` per `synthesize`, `verdicts` e `adjudicate`: il perimetro è
+nell’hash e profili e firme restano distinti. `verdicts` ricalcola in memoria senza aggiungere righe; se il
+profilo salvato differisce, eseguire `synthesize` e leggere il nuovo hash prima di firmare.
+
+D46 aggiunge `extraction.unregated` e `awaiting_regate`: le annotazioni giudicate da un vecchio gate
+non si possono firmare sotto quello attuale prima della ri-raccolta. Le revisioni del gate possono
+superare sia un’accettazione sia un rifiuto, conservando entrambi i ledger. I ledger reali sono intatti;
+D47 corregge il replay di risposte e annotazioni (R05/R09). La misura completa è riproducibile con
+`tools/measure_answer_replay.py <progetto>`. Restano R06 (generazioni dei chunk) e R10
+(revisione dei metadati del risultato) prima di applicare la ri-raccolta ai ledger reali.
+
 ## adjudicate — l'unico posto da cui nasce un verdetto
 
 ```bash

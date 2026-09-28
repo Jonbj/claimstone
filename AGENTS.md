@@ -20,7 +20,7 @@ a list.
 3. **`docs/GUIDE.md`** — a whole round stage by stage, with what each number means and which commands
    re-judge what is already on disk without touching the network. Read this before running anything.
 4. **`docs/HANDOFF.md`** — what is running, what is pending, and the decisions that are a person's.
-5. **`docs/DESIGN_DECISIONS.md`** — 44 decisions, each with the measurement that decided it. It is 2,000
+5. **`docs/DESIGN_DECISIONS.md`** — 47 decisions, each with the measurement that decided it. It is 2,000
    lines and not meant to be read cold: `HANDOFF.md` names the six that matter for what happens next.
    **Do not relitigate a decision from first principles** — find its entry, and argue with the measurement.
 6. **`docs/contracts/`** — one file per ledger, describing every field. Read the one for the ledger you
@@ -39,7 +39,7 @@ a list.
 - **`store/`** is 197 MB of fetched bytes and append-only ledgers, gitignored, and **not reproducible
   without re-fetching**. It is the record of every request this project has made. Do not delete it, and do
   not rewrite a ledger — they are append-only and `Store.read` is what makes a crash resumable.
-- Run `.venv/bin/pytest -q` (743 passing) and `.venv/bin/claimstone validate --all-projects` before and
+- Run `.venv/bin/pytest -q` (846 passing) and `.venv/bin/claimstone validate --all-projects` before and
   after any change.
 - `.venv/bin/python tools/check_instrument_versions.py` **must exit 0**. It refuses to pass when an
   instrument's version changed and `DESIGN_DECISIONS.md` does not say what changed. That refusal is the

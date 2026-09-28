@@ -417,3 +417,81 @@ def test_the_unit_vocabulary_is_the_converters_and_not_a_second_copy():
 
     declared = {s for suffixes, _f, _s in numbers._UNITS for s in suffixes}
     assert set(claimgate._UNIT_WORDS) == declared
+
+
+@pytest.mark.parametrize('quoted', ['-2', '−2', '- 2', '.2', '0.2', '2.7', '2,000', '2e3', '1e-2'])
+def test_a_positive_integer_cannot_be_borrowed_from_another_numeric_token(quoted):
+    quote = f'The coefficient is {quoted}.'
+    rec = record(claim='The coefficient is 2.', evidence_quote=quote)
+    assert verdict(rec, chunk=quote).failure == 'NUMBER_NOT_IN_QUOTE'
+
+
+@pytest.mark.parametrize('quoted', ['.25', '2.5', '2,500', '2e5'])
+def test_the_claims_own_leading_decimal_and_exponent_are_not_split_into_digits(quoted):
+    quote = 'The coefficient is 25 and the sample has 5 entries.'
+    rec = record(claim=f'The coefficient is {quoted}.', evidence_quote=quote)
+    assert verdict(rec, chunk=quote).failure == 'NUMBER_NOT_IN_QUOTE'
+
+
+@pytest.mark.parametrize('field', ['estimate_as_written', 'uncertainty_as_written', 'contrast_uncertainty_as_written'])
+@pytest.mark.parametrize('quoted', ['-2', '.2', '2.7', '2,000', '2e3'])
+def test_verbatim_numeric_fields_also_need_complete_numeric_tokens(field, quoted):
+    quote = f'The coefficient is {quoted}.'
+    rec = record(evidence_quote=quote, **{field: '2'})
+    assert verdict(rec, chunk=quote).failure == 'VALUE_NOT_IN_QUOTE'
+
+
+@pytest.mark.parametrize('quoted', ['-2', '.2', '2.7', '2,000', '2e3'])
+def test_implicit_percent_cannot_borrow_digits_from_another_token(quoted):
+    quote = f'The coefficient is {quoted}.'
+    rec = record(claim='The coefficient is 2%.', evidence_quote=quote)
+    assert verdict(rec, chunk=quote).failure == 'NUMBER_NOT_IN_QUOTE'
+
+
+@pytest.mark.parametrize('written', ['.2', '-.2', '−.2', '+2', '- 2', '2e-3', '2E+3', '2,000', '2.'])
+def test_an_identical_numeric_token_still_passes(written):
+    quote = f'The coefficient is {written} in the sample.'
+    rec = record(claim=f'The coefficient is {written}.', evidence_quote=quote)
+    assert verdict(rec, chunk=quote).ok
+
+
+@pytest.mark.parametrize('written', ['2-5', '2–5', '1964-1997', '[-2,-1]', '[-2--1]', '[2,5]'])
+def test_range_separators_preserve_each_endpoint(written):
+    quote = f'The window is {written}.'
+    rec = record(claim=f'The window is {written}.', evidence_quote=quote)
+    assert verdict(rec, chunk=quote).ok
+
+
+def test_another_correct_occurrence_can_verify_a_figure_after_a_wrong_one():
+    quote = 'The coefficient is -2 in one group and 2 in the other.'
+    assert verdict(record(claim='The coefficient is 2.', evidence_quote=quote), chunk=quote).ok
+
+
+@pytest.mark.parametrize('quoted', ['. 001', '.\t001'])
+def test_a_spaced_leading_decimal_in_the_paper_still_verifies_the_same_figure(quoted):
+    quote = f'The comparison has p < {quoted}.'
+    assert verdict(record(claim='The comparison has p < .001.', evidence_quote=quote), chunk=quote).ok
+
+
+def test_a_spaced_leading_decimal_is_not_its_positive_integer_digits():
+    quote = 'The coefficient is . 2.'
+    assert verdict(record(claim='The coefficient is 2.', evidence_quote=quote), chunk=quote).failure == 'NUMBER_NOT_IN_QUOTE'
+
+
+@pytest.mark.parametrize('preceding', ['The study ended.', 'The study (complete).'])
+def test_sentence_punctuation_does_not_create_a_decimal(preceding):
+    quote = f'{preceding} 2 participants returned.'
+    assert verdict(record(claim='In total 2 participants returned.', evidence_quote=quote), chunk=quote).ok
+
+
+def test_an_ellipsis_in_a_composite_field_does_not_create_a_decimal():
+    quote = 'The first group has 1 h and the second has 2 h.'
+    rec = record(evidence_quote=quote, contrast_as_written='1 h ... 2 h')
+    assert verdict(rec, chunk=quote).ok
+
+
+@pytest.mark.parametrize('quoted', ['The comparison is 2.97 vs. 2.89.', 'The comparison is .001 vs. .002.'])
+def test_abbreviation_punctuation_does_not_swallow_the_next_number(quoted):
+    figure = '2.89' if '2.89' in quoted else '.002'
+    rec = record(claim=f'The comparison is {figure}.', evidence_quote=quoted)
+    assert verdict(rec, chunk=quoted).ok

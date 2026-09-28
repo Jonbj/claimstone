@@ -1,7 +1,11 @@
 # Stage 4 — extract: design
 
-Date: 2026-09-25 · Scope: stage 4 only · Status: approved, not implemented
+Date: 2026-09-25 · Scope: stage 4 only · Status: implemented; gate/replay correction in D46 (2026-09-28)
 
+
+**Corrected 2026-09-28 (D47):** authoritative current answers and immutable reader annotations
+follow [the model-call contract](../../contracts/model_calls.md), [claims](../../contracts/claims.md)
+and [reviews](../../contracts/reviews.md). Chunk generations and full-result review remain open (R06/R10).
 Where invariant 1 lives. Chunks become records bound to verbatim quotes, verified in code, and
 everything that fails verification is kept rather than softened.
 

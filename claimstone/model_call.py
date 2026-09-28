@@ -24,6 +24,7 @@ from typing import Any
 from claimstone.store import sha256_text
 
 SCHEMA_VERSION = 1
+RESULT_JUDGE_VERSION = 2
 
 LANES = ("extract", "review")
 
@@ -168,14 +169,21 @@ class Queue:
             previous = held.get(unit["call_id"])
             if previous is None:
                 row = {**unit, "asked_by": [asker]}
+                if self.lane == 'review':
+                    row['review_targets'] = [review_target(unit)]
                 held[unit["call_id"]] = row
                 self.store.append(self.requests_name, row)
                 written += 1
                 continue
             askers = list(previous.get("asked_by") or [])
-            if asker in askers:
+            targets = list(previous.get('review_targets') or [review_target(previous)])
+            target = review_target(unit)
+            new_target = self.lane == 'review' and target not in targets
+            if asker in askers and not new_target:
                 continue
-            row = {**previous, "asked_by": askers + [asker]}
+            row = {**previous, "asked_by": askers if asker in askers else askers + [asker]}
+            if new_target:
+                row['review_targets'] = targets + [target]
             held[unit["call_id"]] = row
             self.store.append(self.requests_name, row)
         return written
@@ -207,6 +215,8 @@ class Queue:
         not a backend.
         """
         latest: dict[str, dict[str, Any]] = {}
+        requests = {row['call_id']: row for row in self.requests()}
+        origins = {}
         for row in self.store.read(self.results_name):
             if backend is not None and row.get("backend") != backend:
                 continue
@@ -216,8 +226,26 @@ class Queue:
             # is two places to disagree, and they did: a reader with no declared model wrote a key ending in
             # an empty segment while this rebuilt one from the model the backend *reported*, so a drain
             # never saw its own answer and repeated every call.
-            key = str(row.get("result_key") or
-                      f"{row.get('call_id')}|{row.get('backend')}|{row.get('model') or ''}")
+            key = result_key(row)
+            physical = (row.get('call_id'), row.get('backend'), row.get('model'),
+                        row.get('attempt_no', 1), row.get('raw_sha256'))
+            if 'rejudged_from' not in row:
+                origins[physical] = row
+            elif physical in origins:
+                # Older rejudge rebuilt a requested-empty key from the reported model. It is the
+                # same physical answer, not a new reader; collapse it under that answer's key.
+                origin = origins[physical]
+                key = result_key(origin)
+                row = row | {'result_key': key}
+                failure = origin.get('failure_class')
+                if failure not in (None, 'NOT_JSON', 'SCHEMA_INVALID', 'EMPTY'):
+                    row = row | {'ok': False, 'output': None, 'failure_class': failure}
+            request = requests.get(row.get('call_id'))
+            if (request and row.get('prompt_sha256') is not None
+                    and row['prompt_sha256'] != request['prompt_sha256']):
+                row = row | {'ok': False, 'output': None, 'failure_class': 'PROMPT_MISMATCH'}
+            elif row.get('failure_class'):
+                row = row | {'ok': False, 'output': None}
             latest[key] = row
         return latest
 
@@ -327,6 +355,11 @@ def build_result(
     return {
         "call_id": request["call_id"],
         "lane": request["lane"],
+        "result_judge_version": RESULT_JUDGE_VERSION,
+        "judged_schema": request["response_schema"],
+        "answer_failure_class": answer.failure_class,
+        "answer_refused": bool(answer.refused),
+        "answer_truncated": bool(answer.truncated),
         # Identity is the call **and the reader** — backend and model — on which attempt. A row keyed by
         # call_id alone cannot say whether a cost was a first try or a third; one keyed by backend alone
         # cannot tell two models of the same backend apart, which is what D30 compares.
@@ -470,6 +503,11 @@ def rejudge(
     from claimstone.runners.base import RawAnswer
 
     requests = {row["call_id"]: row for row in queue.requests()}
+    originals = {}
+    for attempt in queue.attempts():
+        if "rejudged_from" not in attempt:
+            originals[(result_key(attempt), attempt.get("attempt_no", 1),
+                       attempt.get("raw_sha256"))] = attempt
     for held in queue.results(backend=backend).values():
         request = requests.get(str(held.get("call_id")))
         if request is None:
@@ -481,16 +519,32 @@ def rejudge(
             continue
         if response_schema is not None:
             request = {**request, "response_schema": response_schema}
+        elif held.get("judged_schema") is not None:
+            request = {**request, "response_schema": held["judged_schema"]}
+
+        origin = originals.get((result_key(held), held.get("attempt_no", 1),
+                                held.get("raw_sha256")), held)
+        failure = origin.get("failure_class")
+        transport = origin.get("answer_failure_class")
+        if "answer_failure_class" not in origin and failure not in (
+                None, "NOT_JSON", "SCHEMA_INVALID", "EMPTY", "REFUSED", "TRUNCATED"):
+            transport = failure
+        body = pathlib.Path(stored).read_bytes()
+        import hashlib
+        if held.get("raw_sha256") and hashlib.sha256(body).hexdigest() != held["raw_sha256"]:
+            transport = "RAW_HASH_MISMATCH"
 
         # Rebuilt from what was recorded, not re-fetched. `truncated` and `refused` are facts the
         # backend reported at the time and cannot be re-derived, so they are carried across.
         answer = RawAnswer(
-            body=pathlib.Path(stored).read_bytes(),
-            model=str(held.get("model") or ""),
+            body=body,
+            model=str(origin.get("model_reported", origin.get("model")) or ""),
             prompt_sent=None,
             usage=dict(held.get("usage") or {}),
             cost_usd=None,
-            truncated=bool(held.get("failure_class") == "TRUNCATED"),
+            truncated=bool(origin.get("answer_truncated") or failure == "TRUNCATED"),
+            refused=bool(origin.get("answer_refused") or failure == "REFUSED"),
+            failure_class=transport,
         )
         row = build_result(
             request, answer,
@@ -507,8 +561,51 @@ def rejudge(
         # The echo check cannot run on stored bytes: the runner is not here to say what it sent. The
         # earlier row's answer to that question stands, rather than being downgraded by a re-reading
         # that was never in a position to ask.
-        row["prompt_sha256"] = held.get("prompt_sha256")
-        row["prompt_verified"] = bool(held.get("prompt_verified"))
+        row["prompt_sha256"] = origin.get("prompt_sha256")
+        row["prompt_verified"] = bool(origin.get("prompt_verified"))
+        row["result_key"] = result_key(held)
+        if failure == "PROMPT_MISMATCH":
+            row.update(ok=False, output=None, failure_class="PROMPT_MISMATCH")
         row["rejudged_from"] = held.get("finished_at") or held.get("started_at") or ""
+        ignored = {"finished_at", "rejudged_from", "cost_usd", "latency_s", "detail"}
+        if ("rejudged_from" in held and {k: v for k, v in row.items() if k not in ignored}
+                == {k: v for k, v in held.items() if k not in ignored}):
+            continue
         queue.store.append(queue.results_name, row)
         yield row
+
+
+def result_key(row: dict[str, Any]) -> str:
+    return str(row.get("result_key") or
+               f"{row.get('call_id')}|{row.get('backend')}|{row.get('model') or ''}")
+
+
+def review_target(unit: dict[str, Any]) -> dict[str, Any]:
+    return {key: unit.get(key) for key in ('claim_id', 'question_id', 'extracted_by')}
+
+
+def current_answers(store: Any, lane: str) -> dict[tuple[str, str], dict[str, Any]]:
+    """Read-only batch/reader index. Rejudgements and failures supersede old successes."""
+    return {(path.parent.name, key): row
+            for path in sorted(store.path(f"calls/{lane}").glob("*/results.jsonl"))
+            for key, row in Queue(store, lane=lane, batch=path.parent.name).results().items()}
+
+
+def answers_for(row: dict[str, Any], answers: dict[tuple[str, str], dict[str, Any]],
+                *, reader: dict[str, Any] | None = None) -> list[dict[str, Any]] | None:
+    """Legacy rows without a batch can refer to any matching batch, never to an old attempt."""
+    if not row.get("call_id"):
+        return None
+    identity = {**row, **(reader or {})}
+    key = result_key(identity)
+    batches = row.get('answer_batches') or ([row['batch']] if row.get('batch') else [])
+    def same_reader(held_key: str, value: dict[str, Any]) -> bool:
+        if row.get('result_key'):
+            return held_key == key
+        return (value.get('call_id') == row.get('call_id')
+                and value.get('backend') == identity.get('backend')
+                and str(value.get('model') or '') == str(identity.get('model') or ''))
+    matches = [value for (batch, held_key), value in answers.items()
+               if same_reader(held_key, value) and (not batches or batch in batches)]
+    # Old imports without a model-call ledger retain their documented legacy meaning.
+    return matches if matches or batches else None

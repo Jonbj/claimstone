@@ -37,7 +37,9 @@ from . import numbers
 #      and an unreadable auxiliary field recorded as `unconverted` instead of dropping the claim.
 #   3  a per-cent sign the quote leaves implicit no longer makes the figure absent, unless the quote
 #      attaches a different unit to those digits.
-CLAIM_GATE_VERSION = 3
+#   4  whole numeric tokens, including sign, leading decimal, grouping and exponent; single-figure
+#      as-written fields retain their verbatim check and also verify whole tokens.
+CLAIM_GATE_VERSION = 4
 
 FAILURES = (
     "UNKNOWN_QUESTION_ID", "WRONG_KIND", "QUOTE_NOT_FOUND", "VALUE_NOT_IN_QUOTE",
@@ -58,7 +60,10 @@ FAILURES = (
 # interval `[2,5]` as the single figure `2,5` — twenty-five — and then asked the quote for a number
 # nobody wrote: 45 rejections on the first full round, all of them true claims stating an event window.
 # It is the same error as reading `1964-1997` as minus 1997, one separator over.
-NUMERAL = re.compile(r"[-−]?\d+(?:,\d{3})*(?:\.\d+)?(?:[eE][-−+]?\d+)?%?")
+# A detached `. 001` is a spaced leading decimal. A dot attached to a word, another dot or a
+# closing delimiter is punctuation, so `vs. 2.89` and `... 1` keep their whole next figure.
+NUMERAL = re.compile(
+    r"(?:[-−+][ \t]*)?(?:\d+(?:,\d{3})*(?:\.\d+)?|(?<![\w.)\]])\.[ \t]*\d+)(?:[eE][-−+]?\d+)?%?")
 
 # A digit inside a hyphenated word is a name, not a figure. `day-0` and `T+63` read as numerals
 # rejected two true claims on the first real harvest, whose quotes had no reason to contain a zero.
@@ -137,30 +142,35 @@ class Verdict:
     record: dict[str, Any] = field(default_factory=dict)
 
 
-def _asserted_numerals(claim: str) -> list[str]:
-    """The figures the claim asserts: citation years and identifiers removed.
+def _numeric_tokens(text: str) -> Iterable[tuple[int, int, str]]:
+    """Whole figures, preserving signs except a range or a dash attached to a typeset label.
 
-    Trailing sentence punctuation is not part of a figure — `13 weeks.` ends in a full stop — and a
-    digit hanging off a word is not one either.
+    `1964-1997` has two positive endpoints; `reversals-3.7` uses the paper's label separator
+    (D25). A detached minus, including `- 2`, remains a sign. No magnitude is converted here.
     """
+    for found in NUMERAL.finditer(text):
+        figure = found.group(0).replace("−", "-").replace(" ", "").replace("\t", "")
+        start = found.start()
+        before = text[:start]
+        if figure.startswith("-") and before[-1:] and before[-1:].isalnum():
+            figure = figure[1:]
+        if figure.startswith("+"):
+            figure = figure[1:]
+        yield start, found.end(), figure
+
+
+def _asserted_numerals(claim: str) -> list[str]:
+    """The whole figures asserted: citation years and identifiers removed."""
     text = CITATION_YEAR.sub(" ", claim)
     out: list[str] = []
-    for found in NUMERAL.finditer(text):
-        before = text[: found.start()]
-        figure = found.group(0)
+    for start, end, figure in _numeric_tokens(text):
+        before = text[:start]
         if before[-1:].isalpha() or IDENTIFIER_TAIL.search(before):
             continue
-        after = text[found.end() : found.end() + 2]
+        after = text[end:end + 2]
         if after[:1].isalpha() or IDENTIFIER_HEAD.match(after):
-            # `3-factor`, `2-day`: a digit naming a thing, not a quantity.
             continue
-        if figure[:1] in "-\u2212" and before[-1:].isdigit():
-            # `1964-1997` is two years, not 1964 and minus 1997. The worst false rejection of the first
-            # full round: the claim and the quote said the same words, the sign was read off a range
-            # separator, and the presence test then refused to find `-1997` in a quote where the hyphen
-            # follows a digit — so the rule rejected the very text it had read.
-            figure = figure[1:]
-        out.append(figure.rstrip(".,").replace("\u2212", "-"))
+        out.append(figure)
     return out
 
 
@@ -180,10 +190,9 @@ def _unit_after(text: str, at: int) -> str:
 def _figure_present(figure: str, quote: str) -> bool:
     """Is this figure in the quote, as a figure?
 
-    Searched as a string rather than compared against the quote's own extracted numerals, because a
-    paper's typesetting runs them into words — `return reversals-3.7 bps versus 16.7` holds both, and
-    extracting from the quote found neither. Bounded by digits on each side so a claim of `1.5` does
-    not pass on a quote of `11.5`, which is a different figure.
+    Compare whole numeric tokens without removing figures attached to typeset labels. Thus
+    `return reversals-3.7 bps versus 16.7` still holds both (D25), but `2` cannot borrow digits
+    from `-2`, `.2`, `2.7`, `2,000` or `2e3`. Sentence punctuation is outside the token.
 
     **A per-cent sign the quote leaves implicit does not make the figure absent.** A table cell reads
     `1.99` under a header declaring percent, and the claim writes `1.99%`. Measured on the first full
@@ -195,15 +204,10 @@ def _figure_present(figure: str, quote: str) -> bool:
     digits. A claim of `2.4%` against a quote of `2.4 basis points` is a real disagreement about
     magnitude, and dropping the sign blindly would pass it.
     """
-    body = quote.replace("\u2212", "-")
-    found = re.search(r"(?<![\d])" + re.escape(figure) + r"(?![\d])", body)
-    if found is not None:
-        return True
-    if not figure.endswith("%"):
-        return False
-    bare = figure[:-1]
-    for found in re.finditer(r"(?<![\d])" + re.escape(bare) + r"(?![\d%])", body):
-        if not _unit_after(body, found.end()):
+    for _start, end, quoted in _numeric_tokens(quote):
+        if quoted == figure or (not figure.endswith("%") and quoted == figure + "%"):
+            return True
+        if figure.endswith("%") and quoted == figure[:-1] and not _unit_after(quote, end):
             return True
     return False
 
@@ -252,8 +256,13 @@ def check(
     # so the string is what the quote has to bear.
     for name in numbers.NUMERIC_FIELDS:
         value = record.get(name)
-        if value and str(value) not in quote:
-            return no("VALUE_NOT_IN_QUOTE", f"{name}={value!r} is not in the quote")
+        if value:
+            if str(value) not in quote:
+                return no("VALUE_NOT_IN_QUOTE", f"{name}={value!r} is not in the quote")
+            for figure in _asserted_numerals(str(value)):
+                if not _figure_present(figure, quote):
+                    return no("VALUE_NOT_IN_QUOTE",
+                              f"{name}={value!r} asserts {figure!r}, which is not in the quote")
 
     # Every other as-written field is prose or a composite — `weekly`, `0.31% versus 0.04%` — and stage 4
     # asks for exactly that. Demanding the whole string verbatim rejected 295 true claims on the first

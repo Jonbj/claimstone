@@ -49,7 +49,7 @@ appends a row, and a drain over raw rows would pay for the same call once per ch
 
 | field | meaning |
 |---|---|
-| `call_id`, `result_key` | the unit this answers, and `call_id\|backend` |
+| `call_id`, `result_key` | the unit this answers, and `call_id\|backend\|requested_model` |
 | `attempt_no` | which try this was, for this backend |
 | `ok` | true only when there is a validated output |
 | `backend`, `model`, `harness_version` | who answered, and what sat between the prompt and the model |
@@ -151,3 +151,17 @@ batch, draining it with backend B produced nothing, because every call already l
 a second backend at the same `requests.jsonl` now produces a second set of rows whose answers line up
 per `call_id` — which is what makes "is backend A better than B at this lane" a question with an
 answer, and why D13 refuses to assign a lane to a vendor in advance.
+
+## Authoritative replay (D47)
+
+`result_judge_version 2` records `answer_failure_class`, `answer_refused`, `answer_truncated` and
+`judged_schema` on results. Replay preserves transport, refusal, truncation and prompt-mismatch facts
+from the original physical attempt, even if a historical rejudgement accidentally cleared them.
+Only parsing/schema failures can be repaired by parsing again. A recorded raw hash mismatch becomes
+`RAW_HASH_MISMATCH`, never a successful answer. Missing raw bytes remain explicitly skipped.
+A schema override is recorded and retained on repeat replay; identical repeat judgements append nothing.
+The original requested-reader `result_key` is preserved even when the backend reports a model name.
+
+Review requests additionally carry `review_targets`: each `{claim_id, question_id, extracted_by}`
+judged by an identical prompt. Queue merging retains every target. Harvest checks reader independence
+for each target, reports excluded own-reader targets and refuses a call with no eligible target.

@@ -17,7 +17,7 @@ from __future__ import annotations
 import re
 from typing import Any, Iterable
 
-from claimstone import classify, ids, net, searchers
+from claimstone import claim_records, classify, ids, net, searchers
 from claimstone.config import Project
 from claimstone.searchers import CHANNEL_CITATION, CHANNEL_KEYWORD, SEARCHERS, _limit_kw, _row
 from claimstone.store import Store
@@ -413,7 +413,7 @@ def promote_contested(project: Project, store: Store, *, round_name: str = ROUTI
     ambiguous: list[list[Any]] = []
     seen: set[tuple[str, str]] = set()
 
-    for row in store.latest_by("rejections.jsonl", "claim_id").values():
+    for row in claim_records.current(store)[1].values():
         if row.get("failure") != "SECONDHAND_CLAIM":
             continue
         claim = str((row.get("record") or {}).get("claim") or "")

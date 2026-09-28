@@ -91,7 +91,6 @@ def _validate(args: argparse.Namespace) -> int:
 
 def _import_manifest(args: argparse.Namespace) -> int:
     from claimstone import discover
-    from claimstone.store import Store
 
     project = load_project(args.project)
     if not project.manifest:
@@ -181,7 +180,6 @@ def _acquire(args: argparse.Namespace) -> int:
 
 def _report(args: argparse.Namespace) -> int:
     from claimstone import admissibility
-    from claimstone.store import Store
 
     project = load_project(args.project)
     # A round is the unit the floor is judged on. Without this, a discovery sweep's candidates join a
@@ -252,7 +250,6 @@ def _report(args: argparse.Namespace) -> int:
 
 def _gate_audit(args: argparse.Namespace) -> int:
     from claimstone import gate_audit
-    from claimstone.store import Store
 
     project = load_project(args.project)
     store = _checked_store(args, project)
@@ -290,7 +287,6 @@ def _gate_audit(args: argparse.Namespace) -> int:
 
 def _regate(args: argparse.Namespace) -> int:
     from claimstone import fulltext, gate_audit
-    from claimstone.store import Store
 
     project = load_project(args.project)
     store = _checked_store(args, project)
@@ -392,7 +388,6 @@ APIS = ("openalex", "crossref", "arxiv")
 
 def _discover(args: argparse.Namespace) -> int:
     from claimstone import discover
-    from claimstone.store import Store
 
     unknown = [api for api in (args.api or ()) if api not in APIS]
     if unknown:
@@ -400,7 +395,7 @@ def _discover(args: argparse.Namespace) -> int:
         return 2
 
     project = load_project(args.project)
-    store = Store(project.name, base=args.store)
+    store = _checked_store(args, project)
 
     if args.promote_contested:
         # Reads two ledgers, opens no socket. D26: a rejected SECONDHAND_CLAIM names a work the corpus
@@ -487,11 +482,10 @@ def _discover(args: argparse.Namespace) -> int:
 
 def _discover_report(args: argparse.Namespace) -> int:
     from claimstone import discover_report
-    from claimstone.store import Store
 
     project = load_project(args.project)
     summary = discover_report.summarise(
-        Store(project.name, base=args.store), round_name=args.round)
+        _checked_store(args, project), round_name=args.round)
 
     if args.json:
         import json
@@ -522,7 +516,6 @@ def _discover_report(args: argparse.Namespace) -> int:
 
 def _model_run(args: argparse.Namespace) -> int:
     from claimstone import model_call, runners
-    from claimstone.store import Store
 
     if args.lane not in model_call.LANES:
         print(f"unknown lane {args.lane!r}: {', '.join(model_call.LANES)}", file=sys.stderr)
@@ -539,7 +532,7 @@ def _model_run(args: argparse.Namespace) -> int:
         return 2
 
     project = load_project(args.project)
-    store = Store(project.name, base=args.store)
+    store = _checked_store(args, project)
     queue = model_call.Queue(store, lane=args.lane, batch=args.batch)
 
     if args.rejudge:
@@ -580,11 +573,10 @@ def _model_run(args: argparse.Namespace) -> int:
 
 def _model_report(args: argparse.Namespace) -> int:
     from claimstone import model_report
-    from claimstone.store import Store
 
     project = load_project(args.project)
     summary = model_report.summarise(
-        Store(project.name, base=args.store), lane=args.lane, batch=args.batch)
+        _checked_store(args, project), lane=args.lane, batch=args.batch)
 
     if args.json:
         import json
@@ -625,6 +617,9 @@ def _extract(args: argparse.Namespace) -> int:
               f"{result['rejected']} rejected{held}")
         if result["failures"]:
             print("  " + "  ".join(f"{k} {v}" for k, v in result["failures"].items()))
+        if result["annotation_conflicts"]:
+            print(f"  {result['annotation_conflicts']} annotation identity conflicts; "
+                  "existing annotations preserved, reader identity repair still required")
         if result["calls_without_an_answer"]:
             # Not zero claims. A call with no valid answer says nothing about its chunk.
             print(f"  {result['calls_without_an_answer']} call(s) returned no valid answer and are "
@@ -684,11 +679,11 @@ def _extract_report(args: argparse.Namespace) -> int:
     print("  The two ratios are never fused: a clean gate on a silent corpus would read like a "
           "well-covered one.")
     if args.show_rejected:
-        from claimstone.store import Store
+        from claimstone import claim_records
 
-        store = Store(project.name, base=args.store)
+        store = _checked_store(args, project)
         print()
-        for row in store.latest_by("rejections.jsonl", "claim_id").values():
+        for row in claim_records.current(store)[1].values():
             print(f"  {row.get('chunk_id')}  {row.get('failure')}")
             print(f"    {row.get('detail')}")
             print(f"    claim: {str((row.get('record') or {}).get('claim'))[:100]}")
@@ -822,7 +817,8 @@ def _verdicts(args: argparse.Namespace) -> int:
 
     project = load_project(args.project)
     store = _checked_store(args, project)
-    result = synthesize.verdicts(store)
+    result = synthesize.verdicts(store, project=project, round_name=args.round,
+                                 manifest_only=args.manifest_only)
     if not result["rows"]:
         print("no profiles; run synthesize first")
         return 0
@@ -840,11 +836,20 @@ def _verdicts(args: argparse.Namespace) -> int:
             print(f"  reason   {profile.get('reason')}")
             continue
         flag = ""
-        if profile.get("provisional"):
+        if row["unavailable"]:
+            flag = "historical profile — " + row["unavailable"]
+        elif profile.get("provisional"):
             flag = f"provisional — {', '.join(profile.get('blocking') or [])}"
         elif profile.get("state"):
             flag = str(profile["state"])
         print(f"{profile['question_id']:5} {profile.get('kind', ''):15} {flag}")
+        if row["stored_profile_stale"] and not row["unavailable"]:
+            print("    stored profile differs; showing current evidence, run synthesize before signing")
+        completion = profile.get("extraction") or {}
+        if completion:
+            print(f"    extraction       {completion['expected']} expected readings; "
+                  f"{completion['unanswered']} unanswered, {completion['unharvested']} unharvested"
+                  f", {completion['unregated']} annotations awaiting the current gate")
         for result_row in profile.get("results", [])[: args.results]:
             figure = result_row.get("estimate_as_written") or result_row.get("contrast_as_written") or ""
             print(f"    {str(result_row.get('source_id')):8} {str(result_row.get('stance')):11} "
@@ -897,10 +902,11 @@ def _adjudicate(args: argparse.Namespace) -> int:
     store = _checked_store(args, project)
     rationale = pathlib.Path(args.rationale_file).read_text(encoding="utf-8")
     try:
-        row = synthesize.adjudicate(store, args.question, verdict=args.verdict,
+        row = synthesize.adjudicate(store, args.question, project=project, verdict=args.verdict,
+                                    round_name=args.round, manifest_only=args.manifest_only,
                                     rationale=rationale, by=args.by,
                                     profile_sha256=args.profile_sha256 or "")
-    except (synthesize.Provisional, synthesize.StaleProfile, ValueError, KeyError) as exc:
+    except (synthesize.NotAdmissible, synthesize.Provisional, synthesize.StaleProfile, ValueError, KeyError) as exc:
         print(str(exc).strip("'"), file=sys.stderr)
         return 2
     print(f"{row['question_id']}: {row['verdict']} against profile "
@@ -1020,7 +1026,7 @@ def build_parser() -> argparse.ArgumentParser:
                                  help="one question's claims, which is what one adjudicable profile "
                                       "needs; a verdict is per question")
             command.add_argument("--limit", type=int, default=None)
-        if name == "synthesize":
+        if name in ("synthesize", "verdicts", "adjudicate"):
             command.add_argument("--round", default=None,
                                  help="judge the floor over one round; a discovery sweep changes the "
                                       "denominator by design (D24)")
@@ -1038,7 +1044,7 @@ def build_parser() -> argparse.ArgumentParser:
             command.add_argument("--rationale-file", required=True,
                                  help="the reasoning, which is the verdict's only defence")
             command.add_argument("--by", required=True, help="who is signing this")
-            command.add_argument("--profile-sha256", default=None,
+            command.add_argument("--profile-sha256", required=True,
                                  help="the profile hash you were shown; refused if it has moved")
         if name == "review-report":
             command.add_argument("--json", action="store_true")

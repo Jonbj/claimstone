@@ -6,7 +6,7 @@ vote counting with a threshold, so the work split in two and this module impleme
 
 import pytest
 
-from claimstone import admissibility, evidence, synthesize
+from claimstone import admissibility, claimgate, evidence, extract, model_call, synthesize
 from claimstone.config import Project, Question, SourceClass
 from claimstone.store import Store
 from tests.test_admissibility import _ledger, row
@@ -30,7 +30,7 @@ def _project(tmp_path, floor=0.5):
 
 
 def claim(**overrides):
-    base = {"claim_id": "c1", "question_id": "H02", "stance": "SUPPORTS",
+    base = {"claim_gate_version": claimgate.CLAIM_GATE_VERSION, "registry_version": 3, "claim_id": "c1", "question_id": "H02", "stance": "SUPPORTS",
             "claim": "News tone affects returns.", "evidence_quote": "news tone has an effect",
             "chunk_id": "ACA001#c1", "source_id": "ACA001", "source_class": "ACA",
             "estimate": 0.024, "estimate_as_written": "2.4%", "sample": "US equities"}
@@ -39,7 +39,8 @@ def claim(**overrides):
 
 def _store(tmp_path, *, obtained=2, found=2, claims=(), reviews=(), final=True):
     store = Store("t", base=tmp_path)
-    rows = [row(f"s{i}", acquired=i < obtained) for i in range(found)]
+    source_ids = ["ACA001", "MET001"] + [f"s{i}" for i in range(2, found)]
+    rows = [row(source_ids[i], acquired=i < obtained) for i in range(found)]
     for r in rows:
         if not r["acquired"]:
             r["failure_class"] = "PAYWALL_403"
@@ -54,6 +55,17 @@ def _store(tmp_path, *, obtained=2, found=2, claims=(), reviews=(), final=True):
                                                  "fulltext_confirmed": True})
     store.append("chunks.jsonl", {"chunk_id": "ACA001#c1", "source_id": "ACA001",
                                   "text": "news tone has an effect", "kind": "prose"})
+    for r in rows:
+        if r["acquired"] and r["candidate_key"] != "ACA001":
+            store.append("chunks.jsonl", {"source_id": r["candidate_key"],
+                         "chunk_id": r["candidate_key"] + "#c1", "kind": "prose",
+                         "text": "news tone has an effect"})
+    if final:
+        extract.build(_project(tmp_path), store, batch="production")
+        queue = model_call.Queue(store, lane="extract", batch="production")
+        for unit in queue.requests():
+            store.append(queue.results_name, {"call_id": unit["call_id"],
+                         "backend": "b", "model": "m", "ok": True, "output": []})
     for c in claims:
         store.append("claims.jsonl", c)
     for r in reviews:

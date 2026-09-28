@@ -22,7 +22,7 @@ from __future__ import annotations
 import datetime as _dt
 from typing import Any
 
-from claimstone import model_call
+from claimstone import claim_records, model_call
 from claimstone.store import Store
 
 VERDICTS = ("SUPPORTED", "OVERSTATED", "AMBIGUOUS", "NOT_APPLICABLE")
@@ -116,14 +116,14 @@ def build(
     thousand. Without this, `--limit` takes whichever claims the ledger happens to hold first, which on
     this store is an entirely different reader's batch.
     """
-    reviewed = set(store.latest_by("reviews.jsonl", "claim_id"))
+    reviewed = set(current(store))
     chunks = store.latest_by("chunks.jsonl", "chunk_id")
     questions = {q.id: q for q in project.questions}
 
     units: list[dict[str, Any]] = []
     same_reader = missing_chunk = unknown_question = 0
 
-    for claim in store.latest_by("claims.jsonl", "claim_id").values():
+    for claim in claim_records.current(store)[0].values():
         if str(claim.get("claim_id")) in reviewed:
             continue
         if question_id is not None and str(claim.get("question_id")) != question_id:
@@ -178,14 +178,12 @@ def harvest(project: Any, store: Store, *, batch: str) -> dict[str, Any]:
     """Write `reviews.jsonl` from the drained verdicts. Opens no socket; touches no other ledger."""
     queue = model_call.Queue(store, lane="review", batch=batch)
     requests = {str(u["call_id"]): u for u in queue.requests()}
-    held = set(store.latest_by("reviews.jsonl", "claim_id"))
+    held = store.latest_by("reviews.jsonl", "claim_id")
 
-    reviewed = already = unanswered = 0
+    reviewed = already = unanswered = same_reader = 0
     verdicts: dict[str, int] = {}
 
-    for row in queue.attempts():
-        if row.get("rejudged_from"):
-            continue
+    for row in queue.results().values():
         request = requests.get(str(row.get("call_id")))
         if request is None:
             continue
@@ -196,39 +194,57 @@ def harvest(project: Any, store: Store, *, batch: str) -> dict[str, Any]:
             unanswered += 1
             continue
 
-        extracted = request.get("extracted_by") or {}
-        if (str(extracted.get("backend")), str(extracted.get("model"))) == reader_of(row):
-            raise SameReader(
-                f"claim {request.get('claim_id')!r} was extracted by "
-                f"{extracted.get('backend')}/{extracted.get('model')} and reviewed by the same reader. "
-                f"A second opinion from the same opinion is not a control."
-            )
-
-        claim_id = str(request.get("claim_id"))
-        if claim_id in held:
-            already += 1
-            continue
-        held.add(claim_id)
-        verdict = str(row["output"].get("verdict"))
-        verdicts[verdict] = verdicts.get(verdict, 0) + 1
-        store.append("reviews.jsonl", {
-            "claim_id": claim_id,
-            "question_id": request.get("question_id"),
-            "verdict": verdict,
-            "reason": row["output"].get("reason"),
-            "reviewed_by": _identity(row),
-            # Copied rather than left to a join: a row saying who produced it and who judged it can be
-            # argued with on its own.
-            "extracted_by": extracted,
-            "call_id": row.get("call_id"),
-            "reviewed_at": _now(),
-        })
-        reviewed += 1
+        targets = request.get('review_targets') or [request]
+        eligible = []
+        for target in targets:
+            extracted = target.get('extracted_by') or {}
+            if (str(extracted.get('backend')), str(extracted.get('model'))) == reader_of(row):
+                same_reader += 1
+            else:
+                eligible.append(target)
+        if not eligible:
+            raise SameReader(f"claim {targets[0].get('claim_id')!r} was reviewed by the same reader "
+                             f"{row.get('backend')}/{row.get('model')}")
+        for target in eligible:
+            claim_id = str(target.get('claim_id'))
+            verdict = str(row['output'].get('verdict'))
+            decision = {
+                'claim_id': claim_id, 'question_id': target.get('question_id'),
+                'verdict': verdict, 'reason': row['output'].get('reason'),
+                'reviewed_by': _identity(row), 'extracted_by': target.get('extracted_by') or {},
+                'call_id': row.get('call_id'), 'batch': batch,
+                'result_key': model_call.result_key(row),
+            }
+            previous = held.get(claim_id)
+            if previous and {k: v for k, v in previous.items() if k != 'reviewed_at'} == decision:
+                already += 1
+                continue
+            store.append('reviews.jsonl', decision | {'reviewed_at': _now()})
+            held[claim_id] = decision
+            reviewed += 1
+            verdicts[verdict] = verdicts.get(verdict, 0) + 1
 
     return {
         "batch": batch,
         "reviewed": reviewed,
         "already_held": already,
         "calls_without_an_answer": unanswered,
+        "same_reader": same_reader,
         "verdicts": dict(sorted(verdicts.items(), key=lambda kv: -kv[1])),
     }
+
+
+def current(store: Store) -> dict[str, dict[str, Any]]:
+    """Only reviews whose current model answer still supports exactly this annotation."""
+    claims = claim_records.current(store)[0]
+    answers = model_call.current_answers(store, 'review')
+    valid = {}
+    for identifier, row in store.latest_by('reviews.jsonl', 'claim_id').items():
+        if identifier not in claims:
+            continue
+        readings = model_call.answers_for(row, answers, reader=row.get('reviewed_by') or {})
+        expected = {key: row.get(key) for key in ('verdict', 'reason')}
+        if readings is None or any(answer.get('ok') and answer.get('output') == expected
+                                   for answer in readings):
+            valid[identifier] = row
+    return valid

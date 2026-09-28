@@ -19,6 +19,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from claimstone import claim_records, review
 from claimstone.store import Store
 
 CAVEAT = (
@@ -37,9 +38,8 @@ def _reader(identity: Any) -> str:
 
 def summarise(store: Store) -> dict[str, Any]:
     """Verdict counts per extraction reader, the reviewers that judged, and what is still unreviewed."""
-    claims = store.latest_by("claims.jsonl", "claim_id")
-    reviews = store.latest_by("reviews.jsonl", "claim_id")
-    rejections = store.latest_by("rejections.jsonl", "claim_id")
+    claims, rejections = claim_records.current(store)
+    reviews = review.current(store)
 
     by_extractor: dict[str, dict[str, Any]] = {}
     reviewers: dict[str, int] = {}

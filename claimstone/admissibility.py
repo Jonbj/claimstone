@@ -157,6 +157,10 @@ def rate(
     started = bool(confirmed_rows)
 
     blocking: list[str] = []
+    if classified < found:
+        blocking.append("awaiting_classification")
+    if attempted < found:
+        blocking.append("awaiting_acquire")
     if not started:
         blocking.append("normalize_not_started")
     elif awaiting:
