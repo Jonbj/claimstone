@@ -140,48 +140,54 @@ on D4 before applying it to any other backend.
 
 ## Status
 
-The contract and its validator exist, and **all six stages are implemented** — discover, acquire,
-normalize, extract, review, synthesize — along with `model_call`, the file boundary every model-using
-stage goes through. `numbers.py` converts, and 223 claims in the first full round carry a value.
+All six stages are implemented and **one complete round has run end to end**, through to an evidence
+profile a person can sign (D44, 2026-09-28).
 
-**Stage 6 refuses every corpus in this repository, which is the design working.** `alembic-s4` stands at
-0.56 on its manifest round against a floor of 0.80, so `synthesize` writes no profiles and exits
-`INSUFFICIENT_ACQUISITION` (invariant 3). That is the first place in the project where the floor has had
-something to gate, and the deliverable being a refusal is a finding rather than a failure. What is
-missing for a verdict is a corpus that clears its floor — an acquisition problem — and a **reviewer whose
-judgement has been checked**, which is still open: an attempt to check one mechanically produced a ground
-truth of seven usable rows and a retracted table (D38), and the stage 5 spec had already said a blind
-human-adjudicated sample is what settles it.
+```
+pmc-screen-time — the round that closed
+  discover    40 candidates, scope declared before acquiring
+  acquire     38/40 obtained
+  normalize   37/40 = 0.93 confirmed        floor 0.80  OK
+  extract     2,936 units -> 1,668 claims, 8 of 8 questions, 36 sources
+  review      Q04, 42 claims, claude-cli/claude-opus-5
+  synthesize  8 profiles, 1 adjudicable, 0 verdicts
+```
 
-**The vertical slice reaches a stored claim.** 112 claims across two kinds, every evidence quote verified
-in code against the chunk it came from. The gate accepts 0.97 overall and 0.98 on a kind it was never tuned
-against (D28), so that rate is not an artefact of the fitting. Coverage is 6 of 22 verdict-bearing
-questions from 26 chunks of 472, and a full extraction is 1,888 calls — about sixteen hours on `claude-cli`
-at the observed rate.
+**No verdict exists.** `synthesize` writes an evidence profile and never a verdict; `adjudicate` is the only
+command that writes one, and it takes a person's signature, a rationale, and the hash of the profile they
+were shown. `Q04`'s profile is complete and waiting for one.
 
-**The floor is judged per round** (D24). A discovery sweep changes the denominator by design, so
-`report --round <name>` is how a settled population is read: one citation sweep took `alembic-s4` from
-14/25 = 0.56 to 14/75 = 0.19, and only the first compares like with like.
+**Invariant 3 gates, and it gated everything until this round.** `alembic-s4` stands at 14 of 25 = 0.56
+against a floor of 0.80, and its measured ceiling is 18 of 25 = 0.72 because six of its eleven misses are
+vendor product pages with no open copy in existence (D35, D36). `pilot-screen-time` reaches 0.45 over 199
+candidates. Both produce no profiles.
 
-One thing stage 1 does not do: no request has ever left this repository. The searchers and the
-reference resolver are tested against saved payloads only, and running either needs
-`CLAIMSTONE_CONTACT_EMAIL` set to an address the operator chooses — identifying the crawler is a
-condition of using these APIs politely, and the code refuses to guess one.
+That deliverable may legitimately be `INSUFFICIENT_ACQUISITION` with the losses broken down by failure
+class. **That is a finding, not a failure.** Lowering `acquisition_floor` because the number came out awkward
+is the one response that is off the table: a floor change is a dated, versioned, motivated event, on the
+same terms as a question-registry bump.
 
-Order of work, decided 2026-09-22: **stage 2, then a thin vertical slice** (stages 3-6 on the
-25-source manifest, through to real verdicts), **then the dashboard** — it is the one
-component whose value needs data in every stage and whose spec depends on every other stage's
-schema, so it goes last and gets built against real rows.
+So what closed the round was changing the **population** and not the bar — a scope declared in advance to
+literature deposited in PubMed Central, selected by whether a copy exists and never by whether we obtained
+it. **It excludes 159 of the 199 candidates** found on those topics, which is written into that round's own
+`sources.yaml`, and it means a verdict from it is about PMC-deposited literature rather than about the
+literature (D41).
 
-Acquisition is the first milestone, not extraction, because it is the binding constraint on
-the science (D8) — and since D13 it is the *only* remaining one. The first deliverable is a
-sentence with a number in it, and it exists: **14 of 25 = 0.56, `final`**, with OA status, licence
-and failure reason recorded per source, **plus the sensitivity of that rate to the thresholds that
-produced it**. A rate quoted without its thresholds invites comparing two incomparable numbers.
-Measured, none of the six thresholds decides it — the gate's four swept flat (D8) and both
-confirmation constants swept flat (D21). The rate is set by structure, not by a constant.
+**On literature that declares itself free, legal routes obtain 0.64** (D39). The gap is hosts refusing a
+crawler — including journals that publish nothing but open access — and metadata naming a repository record
+page as a free copy. Neither closes by retrying, and that is the evidence any future floor revision would
+have to rest on.
 
-That deliverable may legitimately be `INSUFFICIENT_ACQUISITION` with the losses broken down
-by failure class. That is a finding, not a failure. Lowering `acquisition_floor` because the
-number came out awkward is the one response that is off the table: a floor change is a dated,
-versioned, motivated event, on the same terms as a question-registry bump.
+**Coverage after extraction is a statement about the extractor.** Measured on two questions of two different
+kinds, a second reader marked 23 of 41 and 36 of 42 gate-passed claims `NOT_APPLICABLE` — they do not speak
+to the question they cite, though every one passed the gate's kind check. Honest coverage is post-review, and
+for 7 of the 8 questions in the closed round it does not exist yet (D40, D44).
+
+**A rate is quoted with its thresholds or not at all.** Measured on `alembic-s4`, none of six constants
+decides its 0.56: the gate's four swept flat (D8) and both confirmation constants swept flat (D21). The rate
+is set by structure. **And the floor is judged per round** (D24) — a discovery sweep changes the denominator
+by design, and one citation sweep took `alembic-s4` from 14/25 = 0.56 to 14/75 = 0.19, where only the first
+compares like with like.
+
+**Where to go next is in `docs/HANDOFF.md`**, which names what is running, what is pending, and which
+decisions are a person's rather than an engine's.
