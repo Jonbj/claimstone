@@ -8,6 +8,7 @@ Which file answers which question. *In italiano: [README.it.md](README.it.md).*
 |---|---|
 | know what this project is, in two minutes | [`../README.md`](../README.md) |
 | run a round and understand what comes out | [`GUIDE.md`](GUIDE.md) |
+| reproduce the production replay and remaining work | [`replays/2026-09-28-production-replay.md`](replays/2026-09-28-production-replay.md) |
 | know what is running and what is pending right now | [`HANDOFF.md`](HANDOFF.md) |
 | work on the code as an agent | [`../CLAUDE.md`](../CLAUDE.md), then [`../AGENTS.md`](../AGENTS.md) |
 | argue with an architectural choice | [`DESIGN_DECISIONS.md`](DESIGN_DECISIONS.md) — find its entry first |
@@ -16,7 +17,7 @@ Which file answers which question. *In italiano: [README.it.md](README.it.md).*
 
 ## The design record
 
-[`DESIGN_DECISIONS.md`](DESIGN_DECISIONS.md) is 48 numbered decisions in ~2,000 lines, each carrying **the
+[`DESIGN_DECISIONS.md`](DESIGN_DECISIONS.md) is 49 numbered decisions in ~2,000 lines, each carrying **the
 measurement that decided it**. It is not meant to be read front to back.
 
 Its purpose is narrow and worth stating: **so that a choice is not relitigated from first principles.** Most

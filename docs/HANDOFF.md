@@ -11,23 +11,32 @@ what order.
 
 One round has run all six stages: `pmc-screen-time`, 37 of 40 confirmed against a floor of 0.80, 1,668
 claims, 8 historical profiles, **0 verdicts**. **None is adjudicable under the completeness check in D45.**
-There are 34 unanswered extraction readings: effect 10, heterogeneity 4, method 15, premise 5.
-D46 additionally requires gate v4: the real ledger has not been re-harvested, so every profile reports
-`awaiting_regate` too. D47 repaired authoritative replay and immutable reader annotations; D48 closes
-all fifteen software review findings, including active chunk generations and complete result review.
-The full D48 temporary replay preserves all 1,668 PMC claim ids; alembic-s4 retains 6,991 old ids and
-creates 203 new ids, with 7,194 accepted annotations and 1,166 rejections afterwards. These are
-annotation counts, not independent studies or ground truth. Every repeat appends zero rows and hashes
-confirm the real ledgers are unchanged.
+D49 applies the complete offline replay to the real PMC and Alembic stores. Every original byte is
+preserved; derived ledgers only receive additional rows and each whole repeat appends zero rows.
+PMC retains all 1,668 claim ids and has 259 current rejections. Alembic retains 6,991 original claim
+ids, gains 203 distinct ids and has 7,194 accepted annotations / 1,166 rejections across the whole
+store. These are annotations, not independent studies. No model or publisher was called.
 
-**The original 83 reviews remain historical, and zero attest the new v2 full-annotation task.** Q04
-therefore needs an independent complete review as well as its 10 missing effect readings. Its prior
-review counts describe the narrower old task and cannot certify its metadata. Profile instrument 5
-requires rebuilding and reading; no historical hash is signable. No paid review or acquisition ran.
+**All current scoped annotations now satisfy gate v4; `unregated` and `unharvested` are zero.**
+The original 83 review ids remain historical, plus 33 additional Alembic reviews harvested from stored
+responses: 116 historical ids and zero usable complete-annotation v2 reviews. A replay cannot supply
+the new independent reading. Profile instrument 5 requires rebuilding and reading; no historical hash
+is signable, and profiles were not rebuilt in this operation.
 
-The next operational step is production offline replay of stored answers, followed by completing
-unanswered extraction and independent v2 review under an operator-approved budget/backend. The
-software checks and copy-based replay are complete; new scientific readings are not.
+PMC still has 34 unanswered readings: effect 10, heterogeneity 4, method 15, premise 5. Its measured
+full-review workload is 1,668 unique calls. Q04 needs 42 current annotations reviewed and shares the
+10 missing effect readings. Completing extraction can add review work. All PMC annotations were
+extracted by `ollama-cloud/deepseek-v4.1-flash`, which cannot review them.
+
+Alembic's curated manifest has 28 unanswered readings and 6,183 prospective review calls covering
+6,188 annotations. That population is 14/25 confirmed (0.56), below its floor; the whole-store
+annotation count must not replace it. Its 27 results without raw response bytes remain unresolved.
+
+The next decision is a backend and budget for completing missing extraction and testing an independent
+reviewer on the full v2 task. Q04 is the bounded first target. Queue measurement is offline and used
+only temporary copies; no production work queue was drained. See
+[the production replay report](replays/2026-09-28-production-replay.md) and local content-addressed
+audits under `store/<project>/audits/offline-replay/`.
 
 Two other instances exist and both stand below their floor and produce nothing: `alembic-s4` at 0.56 with a
 measured ceiling of 0.72, and `pilot-screen-time` at 0.45. That is the correct behaviour, not a backlog.
@@ -51,6 +60,7 @@ measured ceiling of 0.72, and `pilot-screen-time` at 0.45. That is the correct b
 | **D39** | 0.64 on literature that declares itself free, and why the gap does not close by retrying. This is the only evidence a floor revision could rest on. |
 | **D40 + D44** | a second reader marks 23 of 41 and 36 of 42 gate-passed claims `NOT_APPLICABLE`. Over-attachment is the dominant cost of the current call shape, and it is not a property of one question kind. |
 | **D41** | why the closed round is legitimate: the selector is deposits, not outcomes, and it excludes 159 of 199 candidates. |
+| **D49** | production replay completed, with preserved bytes; actual scoped remaining readings and full-review workload. |
 | **D48** | all review repairs; full-result reviews are a new task, legacy revisions are retained but cannot certify it. |
 | **D47** | authoritative replay and immutable reader annotations; measured across all stored batches without changing real ledgers. |
 | **D46** | whole numeric tokens, revision-aware gate outcomes and `awaiting_regate`; measurements used temporary ledgers. |
@@ -74,7 +84,8 @@ operator's call. An agent proposing it must cite the measurement and must not fo
 
 **Whether to spend on independent full-result review.** D48 changes the task: the historical estimate
 of about 1,100 calls covered only the remaining seven questions. Now all eligible annotations, including
-Q04, need a v2 review. Rebuild the proposed queue and measure its size before choosing a backend/budget.
+Q04, need a v2 review. D49 measures 1,668 PMC calls, including 42 for Q04, before any new extraction
+results. Choose the reader and budget using this measured queue, not the historical estimate.
 
 ## Open problems, with what is known about each
 

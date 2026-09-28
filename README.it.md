@@ -51,7 +51,7 @@ l'altro, un crash è ripartibile, e ogni cifra si trova con `grep`.
 ## Come si esegue
 
 ```bash
-.venv/bin/pytest -q                                    # 878 test
+.venv/bin/pytest -q                                    # 881 test
 .venv/bin/claimstone validate --all-projects           # il controllo del contratto
 .venv/bin/claimstone report projects/<nome>            # il tasso di acquisizione e le sue perdite
 .venv/bin/claimstone verdicts projects/<nome>          # i profili, e qualunque firma
@@ -67,7 +67,7 @@ codice si rifiuta di inventarne uno, quindi `.env` deve contenere `CLAIMSTONE_CO
   domanda.
 - **[docs/GUIDE.it.md](docs/GUIDE.it.md)** — un percorso attraverso un giro intero, stadio per stadio, con
   cosa significa ogni numero. Da qui, se vuoi eseguirne uno.
-- **[docs/DESIGN_DECISIONS.md](docs/DESIGN_DECISIONS.md)** *(in inglese)* — 48 decisioni, ognuna con la
+- **[docs/DESIGN_DECISIONS.md](docs/DESIGN_DECISIONS.md)** *(in inglese)* — 49 decisioni, ognuna con la
   misura che l'ha decisa. Leggi la voce prima di discutere la scelta.
 - **[docs/HANDOFF.md](docs/HANDOFF.md)** *(in inglese)* — cosa sta girando, cosa è in sospeso, e quali
   decisioni appartengono a una persona e non al motore.
@@ -94,6 +94,6 @@ Altri due corpus stanno sotto la loro soglia e correttamente non producono nient
 cosa significa e cosa lo cambierebbe — e vale notare che ciò che ha chiuso il primo giro è stato cambiare la
 **popolazione**, dichiarata in anticipo, non abbassare l'asta.
 
-La review del software è chiusa con D48: tutte le quindici correzioni sono verificate. Le 83 revisioni
-storiche restano conservate, ma riguardavano un compito più ristretto: le annotazioni complete
+La review del software è chiusa con D48: tutte le quindici correzioni sono verificate. D49 applica
+il replay offline agli archivi reali. Le revisioni storiche restano conservate e riguardano un compito più ristretto: le annotazioni complete
 richiedono nuove revisioni indipendenti prima di poter firmare un profilo.

@@ -2407,3 +2407,35 @@ All fifteen software findings now have a repair and a reproducer. Applying offli
 finishing unanswered extraction, commissioning independent v2 reviews and rebuilding profiles remain
 operational follow-up. Paid work, floor changes and adjudication remain the operator's decisions.
 No publisher or model was called, no floor changed, and no verdict was signed.
+
+
+## D49 — Apply the measured replay and measure the full-review workload
+
+Date: 2026-09-28 · same instruments as D48: `result_judge_version 2`, `annotation_version 2`,
+`claim_gate_version 4`, `review_version 2`, `chunk_version 2`, `profile_version 5`.
+
+D48 established a complete, idempotent migration on temporary stores. The operator then authorized
+applying it to production and measuring the remaining work without a model or publisher call.
+`tools/replay_answers.py --apply` now performs that operation, verifies every original file prefix,
+checks that only result/gate/review/registry ledgers grow, and repeats the replay to prove zero writes.
+The measurement details and exact commands are in
+[the production replay report](replays/2026-09-28-production-replay.md).
+
+The actual accepted/rejected sets are 1,668/259 for PMC and 7,194/1,166 for alembic-s4, matching
+D48. Original claim ids retained are 1,668 and 6,991, with zero and 203 new ids. All original 83
+review ids remain, and 33 additional Alembic reviews are harvested from stored responses. None
+attests the full-annotation v2 task. No original bytes are rewritten or deleted; both complete
+repeat operations append zero rows. Missing raw answers remain zero and 27 respectively.
+
+The scoped workload is **1,668 unique review calls and 34 unanswered readings** for PMC;
+**6,183 review calls covering 6,188 annotations and 28 unanswered readings** for Alembic's curated
+manifest. Those are measured by the real review builder on temporary copies, not estimated from a
+sample. The manifest is 14/25 confirmed, still below its 0.80 floor; its whole-store annotation count
+is a different population. Q04 currently needs 42 full-annotation reviews and shares 10 missing
+effect readings. New extraction results can add review work.
+
+Current scoped gate and harvest completion have zero outstanding annotations. The remaining
+blocking work is successful extraction and independent full-result review. Historical profiles
+were not rebuilt or signed. Reader selection, paid budget and adjudication remain the operator's
+choices; the narrower historical review task cannot serve as full-field ground truth. This operation
+changes no software instrument, parser, floor, registry or acquisition population.

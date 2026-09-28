@@ -61,7 +61,7 @@ outside a **named campaign**, and no request is ever routed through a shadow lib
 `report` is the figure that matters:
 
 ```
-  ACA            38/40  0.95   floor 0.80
+  ACA            37/40 confirmed  0.93   floor 0.80
   obtained       38/40  0.95
   confirmed      37/40  0.93  <- the figure
   floor          0.80 (v1, 2026-09-27)   OK   basis: confirmed
@@ -134,7 +134,7 @@ corpus refused 63 estimates.
 .venv/bin/claimstone review projects/<name> --batch <b> --harvest
 ```
 
-The reviewer gets the question, the claim, the quote, **and the whole chunk** — and must be a different model
+The reviewer gets the question, the complete original and converted annotation, **and the whole chunk** — and must be a different model
 from the one that extracted, which is enforced rather than requested. A reader sharing the extractor's blind
 spots is a second opinion from the same opinion.
 
@@ -186,8 +186,8 @@ appending; if the saved profile differs, run `synthesize` and read the new hash 
 D46 adds `extraction.unregated` and `awaiting_regate`: annotations admitted by an older claim gate
 cannot be signed under the current one until re-harvested. Gate revisions now supersede either outcome
 across both ledgers. D47 repairs answer/annotation replay (R05/R09). A full offline replay can be measured with
-`tools/measure_answer_replay.py <project>`. D48 repairs chunk generations and full-result review too. The real ledgers remain unchanged; all old
-reviews attest task v1 and cannot certify v2 complete annotations. Production offline replay, unanswered
+`tools/measure_answer_replay.py <project>`. D48 repairs chunk generations and full-result review too. D49 applies that replay to the real ledgers, preserving every original byte; all old
+reviews attest task v1 and cannot certify v2 complete annotations. Unanswered
 readings and independent complete review precede rebuilding and reading a signable v5 profile.
 
 ## adjudicate — the only place a verdict comes from
@@ -228,3 +228,8 @@ is rewritten.
 **Quote what a re-judgement returns, never what a sample suggests.** In one day, four predicted recoveries
 from counting a defect's signature in a small sample were 45→1, 166→18, 6→1, and one hypothesis falsified
 outright. Run the re-harvest and quote its output.
+
+
+The reproducible operational command is `tools/replay_answers.py <project>` for read-only workload
+measurement, or with `--apply` for stored-answer replay. Scope flags select the measurement; replay
+always processes every stored batch. See [the production measurement](replays/2026-09-28-production-replay.md).

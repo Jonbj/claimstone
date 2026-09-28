@@ -62,7 +62,7 @@ fuori da una **campagna nominata**, e nessuna richiesta passa mai per una biblio
 `report` è la cifra che conta:
 
 ```
-  ACA            38/40  0.95   floor 0.80
+  ACA            37/40 confirmed  0.93   floor 0.80
   obtained       38/40  0.95
   confirmed      37/40  0.93  <- the figure
   floor          0.80 (v1, 2026-09-27)   OK   basis: confirmed
@@ -196,9 +196,9 @@ D46 aggiunge `extraction.unregated` e `awaiting_regate`: le annotazioni giudicat
 non si possono firmare sotto quello attuale prima della ri-raccolta. Le revisioni del gate possono
 superare sia un’accettazione sia un rifiuto, conservando entrambi i ledger. I ledger reali sono intatti;
 D47 corregge il replay di risposte e annotazioni (R05/R09). La misura completa è riproducibile con
-`tools/measure_answer_replay.py <progetto>`. D48 corregge anche le generazioni dei chunk e la revisione completa. I ledger reali restano intatti;
+`tools/measure_answer_replay.py <progetto>`. D48 corregge anche le generazioni dei chunk e la revisione completa. D49 applica il replay ai ledger reali, conservando tutti i byte originali;
 le vecchie revisioni attestano il compito v1 e non possono certificare le annotazioni complete v2.
-Seguono replay offline in produzione, completamento delle letture e nuove revisioni indipendenti,
+Seguono completamento delle letture e nuove revisioni indipendenti,
 prima di ricostruire e leggere un profilo v5 firmabile.
 
 ## adjudicate — l'unico posto da cui nasce un verdetto
@@ -239,3 +239,8 @@ perde e niente viene riscritto.
 **Cita quello che un ri-giudizio restituisce, mai quello che un campione suggerisce.** In un giorno, quattro
 recuperi previsti contando la firma di un difetto su un campione piccolo sono stati 45→1, 166→18, 6→1, e una
 ipotesi falsificata del tutto. Esegui la ri-raccolta e cita il suo output.
+
+
+`tools/replay_answers.py <progetto>` misura il lavoro residuo senza modificare i ledger; con `--apply`
+applica il replay delle risposte salvate. I selettori delimitano la misura, mentre il replay tratta tutti
+i batch salvati. Vedi [la misura in produzione](replays/2026-09-28-production-replay.md).
