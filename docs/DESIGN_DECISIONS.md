@@ -2004,3 +2004,85 @@ Making the label's connector optional — needed because `p < .01` puts an inequ
 the one-character labels eat the start of a word: `n` took the `n` of `nearly 6%` and left `early 6%`,
 breaking a hedge that had been parsing correctly since this morning. A label may not be followed by a
 letter. The test suite caught it on the run after the change, which is the argument for the suite.
+
+---
+
+## D44 — The first complete round, and the first evidence profile
+
+Date: 2026-09-28 · `pmc-screen-time`, decision contract v1, registry v1 `82007de2b5`
+
+All six stages ran end to end on an admissible corpus, for the first time since the project began.
+
+```
+discover    40 candidates, round pmc-oa-v1, scope declared before acquiring
+acquire     38/40 obtained
+normalize   37/40 = 0.93 confirmed          floor 0.80  OK
+extract     2,936 units -> 1,668 claims, 8 of 8 questions, 36 sources
+review      Q04, 42 claims, claude-cli/claude-opus-5
+synthesize  8 profiles, 1 adjudicable
+```
+
+### The profile
+
+`Q04` (effect) — *"The effect survives preregistration and correction for multiple comparisons."*
+
+```
+  PMC005  CONTRADICTS   all tests two-tailed, no adjustment to alpha for multiple tests
+  PMC006  QUALIFIES     preregistered studies' small associations unlikely to be of practical significance
+  PMC006  CONTRADICTS   preregistered studies report a lack of sizable or meaningful associations
+  PMC006  CONTRADICTS   (see below — this row should not be here)
+  PMC024  QUALIFIES     Bonferroni within domain, .05 divided by the number of tests
+  direction count   CONTRADICTS 3  QUALIFIES 2      (a count, not a strength)
+  linkage           unestablished: 1 sample label, verbatim
+  coverage          3 of 37 examined sources
+  gate rejected     UNPARSEABLE_VALUE 19  VALUE_NOT_IN_QUOTE 1  SECONDHAND_CLAIM 1
+  read, not used    NOT_APPLICABLE 36  OVERSTATED 1
+  profile_sha256    8e93cbde7a5a11a2
+  provisional       false
+```
+
+**Nothing supports the question and five results bear on it**, which is a profile, not a verdict. Whether
+that is `CONTRADICTED` on three results from two independent papers, or `UNANSWERED_IN_LITERATURE` on a
+coverage of 3 of 37, is the judgement `adjudicate` exists to record and this stage refuses to make.
+
+### One review that should not have passed, found by reading the profile
+
+The fourth row's claim reads *"This passage does not address whether any screen-use and wellbeing effect
+survives preregistration or correction for multiple comparisons"* — a **meta-statement about the passage**,
+not a finding, carrying `stance: CONTRADICTS` when it contradicts nothing. `claude-opus-5` marked it
+`SUPPORTED`.
+
+So the reviewer's 5 usable results contain one that is not a result, and the direction count is really 2
+contradicting and 2 qualifying. Three things follow, and the third matters most.
+
+The extractor produced a claim whose content is "this text does not answer the question", which no lane
+asks for. The reviewer, asked whether the claim is what the quote supports, answered a narrower question
+than the one that mattered and said yes — the quote does support the sentence, which is the wrong sentence
+to be in a claim at all. And **a person reading the profile sees it immediately**, which is the argument for
+the two-layer design in the verdict contract: layer 1 describes, and the failure a mechanical check and a
+model reader both passed is visible to the adjudicator in one line.
+
+### D40's open question, answered against the guess
+
+D40 measured 23 of 41 `NOT_APPLICABLE` on `H15` and said the rate elsewhere was unmeasured, adding that
+`method` is the kind a chunk about anything can most easily be made to gesture at — so an `effect` question
+might come out very differently.
+
+It came out **worse**: `Q04` is `effect` and **36 of 42 are `NOT_APPLICABLE`, 86%**. Over-attachment is not
+a property of `method` questions. Every chunk is asked about every question of its kind and the model
+answers rather than declining, and that is the dominant cost of the current call shape.
+
+On this question the reviewer is probably right to say so: screen-time papers rarely speak to
+preregistration and multiple-comparison correction, so a corpus that genuinely does not address it produced
+42 claims anyway. **Which makes `coverage: 8 of 8 questions` after extraction a statement about the
+extractor.** Post-review, `Q04`'s coverage is 3 sources of 37.
+
+### What this round is, and is not
+
+It is the pipeline working: an admissible corpus, verified quotes, a second reader, a profile with its
+counts and its rejections and its hash, and no verdict invented anywhere in it.
+
+It is not a finding about screen time. The round reads **40 of 199** candidates discovered on these topics,
+restricted to what PubMed Central holds, and one of eight questions has been reviewed. A verdict recorded
+against this profile is a verdict about PMC-deposited literature, on one question, at a coverage of 3
+sources — and the rationale has to say all three.
