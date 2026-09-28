@@ -20,7 +20,7 @@ a list.
 3. **`docs/GUIDE.md`** — a whole round stage by stage, with what each number means and which commands
    re-judge what is already on disk without touching the network. Read this before running anything.
 4. **`docs/HANDOFF.md`** — what is running, what is pending, and the decisions that are a person's.
-5. **`docs/DESIGN_DECISIONS.md`** — 51 decisions, each with the measurement that decided it. It is 2,000
+5. **`docs/DESIGN_DECISIONS.md`** — 52 decisions, each with the measurement that decided it. It is 2,000
    lines and not meant to be read cold: `HANDOFF.md` names the decisions that matter for what happens next.
    **Do not relitigate a decision from first principles** — find its entry, and argue with the measurement.
 6. **`docs/contracts/`** — one file per ledger, describing every field. Read the one for the ledger you

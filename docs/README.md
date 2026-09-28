@@ -17,7 +17,7 @@ Which file answers which question. *In italiano: [README.it.md](README.it.md).*
 
 ## The design record
 
-[`DESIGN_DECISIONS.md`](DESIGN_DECISIONS.md) is 51 numbered decisions in ~2,000 lines, each carrying **the
+[`DESIGN_DECISIONS.md`](DESIGN_DECISIONS.md) is 52 numbered decisions in ~2,000 lines, each carrying **the
 measurement that decided it**. It is not meant to be read front to back.
 
 Its purpose is narrow and worth stating: **so that a choice is not relitigated from first principles.** Most

@@ -67,7 +67,7 @@ codice si rifiuta di inventarne uno, quindi `.env` deve contenere `CLAIMSTONE_CO
   domanda.
 - **[docs/GUIDE.it.md](docs/GUIDE.it.md)** — un percorso attraverso un giro intero, stadio per stadio, con
   cosa significa ogni numero. Da qui, se vuoi eseguirne uno.
-- **[docs/DESIGN_DECISIONS.md](docs/DESIGN_DECISIONS.md)** *(in inglese)* — 51 decisioni, ognuna con la
+- **[docs/DESIGN_DECISIONS.md](docs/DESIGN_DECISIONS.md)** *(in inglese)* — 52 decisioni, ognuna con la
   misura che l'ha decisa. Leggi la voce prima di discutere la scelta.
 - **[docs/HANDOFF.md](docs/HANDOFF.md)** *(in inglese)* — cosa sta girando, cosa è in sospeso, e quali
   decisioni appartengono a una persona e non al motore.
@@ -82,21 +82,18 @@ raramente e cambia raramente; inglese è ciò su cui si lavora.
 
 ## Stato
 
-Tutti e sei gli stadi sono implementati e un giro ha girato da un capo all'altro, su un corpus di
-letteratura depositata in PubMed Central: 37 fonti su 40 confermate contro una soglia di 0,80, 1.688
-affermazioni, 8 profili di evidenza.
+Tutti e sei gli stadi sono implementati e un giro ha percorso l'intera pipeline sulla letteratura
+depositata in PubMed Central: 37 fonti su 40 confermate contro una soglia di 0,80, 1.721 annotazioni
+accettate e 271 rifiutate.
 
-**Nessun verdetto esiste e nessun profilo è pronto per la firma.** La verifica di completezza (D45) ha
-rilevato 34 letture di estrazione senza risposta valida, di cui 10 nel tipo di Q04. Gli otto profili salvati
-sono storici; `verdicts` ricalcola in memoria l’evidenza attuale e mostra tutti i profili come provvisori.
+**Nessun verdetto esiste. Q04 è formalmente completo e pronto per la lettura umana; gli altri sette
+profili restano provvisori.** D52 completa le 734 letture del tipo effect e le 42 revisioni indipendenti
+delle annotazioni complete di Q04. Restano quattro risultati da quattro delle 37 fonti esaminate.
+La lettura umana deve verificarne rilevanza scientifica e posizioni assegnate: la completezza formale
+non le certifica. Nel resto del corpus mancano 24 letture e 1.679 revisioni indipendenti.
 
-Altri due corpus stanno sotto la loro soglia e correttamente non producono niente. In `docs/HANDOFF.md` c'è
-cosa significa e cosa lo cambierebbe — e vale notare che ciò che ha chiuso il primo giro è stato cambiare la
-**popolazione**, dichiarata in anticipo, non abbassare l'asta.
+D48 chiude le quindici correzioni del software; D49 applica il replay offline; D50/D51 preparano
+il giro cloud con budget limitato e preservano i risultati parziali. D52 registra il giro Q04 completato
+e la scheda di lettura. `docs/HANDOFF.md` contiene hash, scope, budget e decisione umana ancora pendente.
 
-La review del software è chiusa con D48: tutte le quindici correzioni sono verificate. D49 applica
-il replay offline agli archivi reali. Le revisioni storiche restano conservate e riguardano un compito più ristretto: le annotazioni complete
-richiedono nuove revisioni indipendenti prima di poter firmare un profilo.
-D51 raccoglie cinque letture recuperate (20 nuove annotazioni): restano 29 letture senza risposta, cinque
-nel tipo di Q04. È pronto un estrattore alternativo per i JSON invalidi; il comando per proseguire
-sull'host è in `docs/HANDOFF.md`.
+Gli altri due corpus rimangono sotto la propria soglia e correttamente non producono conclusioni.

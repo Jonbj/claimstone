@@ -65,7 +65,7 @@ so `.env` must hold `CLAIMSTONE_CONTACT_EMAIL`.
 - **[docs/README.md](docs/README.md)** — the documentation map: which file answers which question.
 - **[docs/GUIDE.md](docs/GUIDE.md)** — a walkthrough of a whole round, stage by stage, with what each
   number means. Start here if you want to run one.
-- **[docs/DESIGN_DECISIONS.md](docs/DESIGN_DECISIONS.md)** — 51 decisions, each with the measurement that
+- **[docs/DESIGN_DECISIONS.md](docs/DESIGN_DECISIONS.md)** — 52 decisions, each with the measurement that
   decided it. Read the entry before arguing with the choice.
 - **[docs/HANDOFF.md](docs/HANDOFF.md)** — what is running now, what is pending, and which decisions belong
   to a person rather than to the engine.
@@ -73,16 +73,18 @@ so `.env` must hold `CLAIMSTONE_CONTACT_EMAIL`.
 
 ## Status
 
-All six stages are implemented and one round has run end to end, on a corpus of literature deposited in
-PubMed Central: 37 of 40 sources confirmed against a floor of 0.80, 1,688 claims, 8 evidence profiles.
+All six stages are implemented and one round has run end to end on literature deposited in PubMed
+Central: 37 of 40 sources confirmed against a floor of 0.80, 1,721 accepted annotations and 271 rejections.
 
-**No verdict exists, and no profile is ready for a signature.** The completeness audit (D45) found 34
-unanswered extraction readings, including 10 in Q04's kind. The eight saved profiles are historical;
-`verdicts` recomputes the current evidence in memory and shows every profile as provisional.
-D48 closes all fifteen software review findings. D49 applies offline replay to the real archives. Historical reviews attest an older task; complete annotations require new independent reviews before signing.
-D51 harvests five recovered readings (20 new annotations), leaving 29 unanswered readings and five in
-Q04’s kind. A bounded alternate extractor is prepared for invalid JSON; the host continuation command
-is in `docs/HANDOFF.md`.
+**No verdict exists. Q04 is formally complete and ready for human reading; the other seven profiles
+remain provisional.** D52 completes all 734 effect readings and 42 independent full-result Q04 reviews.
+Four results from four of 37 examined sources remain in its current v5 profile. Human reading must
+assess their scientific relevance and assigned stances; formal completeness does not certify those.
+The remaining corpus workload is 24 unanswered readings and 1,679 independent-review calls.
+
+D48 closes all fifteen software findings; D49 applies offline replay; D50/D51 prepare bounded cloud
+continuation and preserve partial success. D52 records the completed Q04 run and its reading packet.
+`docs/HANDOFF.md` holds the current hash, scope, budget and human decision still pending.
 
 Two other corpora stand below their floor and correctly produce nothing. Read `docs/HANDOFF.md` for what
 that means and what would change it — and note that what closed the first round was changing the

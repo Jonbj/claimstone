@@ -16,7 +16,7 @@ Quale file risponde a quale domanda. *In English: [README.md](README.md).*
 
 ## Il registro delle decisioni
 
-[`DESIGN_DECISIONS.md`](DESIGN_DECISIONS.md) sono 51 decisioni numerate in circa 2.000 righe, ognuna con **la
+[`DESIGN_DECISIONS.md`](DESIGN_DECISIONS.md) sono 52 decisioni numerate in circa 2.000 righe, ognuna con **la
 misura che l'ha decisa**. Non è fatto per essere letto dall'inizio alla fine.
 
 Il suo scopo è stretto e vale dirlo: **che una scelta non venga rilitigata da principi primi.** Quasi tutte

@@ -2502,3 +2502,37 @@ calls without repayment on resume, and cumulative mixed-reader/unknown-cost acco
 889 passed, 7 skipped; six valid project configurations; all 16 instrument versions acknowledged.
 Commands, plan hashes, source documentation and current audits are in
 [the continuation report](replays/2026-09-28-q04-continuation.md).
+
+## D52 — Q04 completes its obligations; scientific interpretation remains human
+
+Date: 2026-09-28 · All 16 instruments unchanged
+
+The operator completed the bounded v2 host plan. Seven valid DeepSeek answers and three targeted
+Gemma answers close all ten missing effect readings. All 734 current effect obligations have zero
+unanswered, unharvested, unregated or unchunked backlog. The original invalid responses remain
+invalid. Forty-two Mistral full-annotation v2 reviews are valid and current: 4 SUPPORTED, 31 OVERSTATED,
+7 NOT_APPLICABLE. No narrower historical review was relabelled as a complete review.
+
+The saved audit and live profile agree on
+`9340389c9aac29b77e901c20e27434d211fe9e7825a68d99995d8c6fa5b20fdd`.
+It is profile v5, not provisional, with no blocking reasons. Four results from four of 37 examined
+sources remain; seven other profiles are still provisional and no adjudication exists.
+Corpus counts are 1,721 accepted / 271 rejected, with 24 remaining readings and 1,679 prospective
+full-review calls elsewhere. Repeated extract/review harvest appends zero annotations or reviews.
+
+The host's original-byte check passed. Physical attempts are 14 extraction and 42 review. Conservative
+plan pricing totals USD 0.0556299; the unknown-cost DNS attempt reserves USD 0.339. The USD 1 ceiling
+accounts for USD 0.3946299. Agent verification made no additional model/publisher call or profile build.
+
+Formal readiness does not decide Q04. Inspection of all four retained annotations/passages flags
+preregistration/correction coverage, secondary attribution and stance relevance. In particular, PMC009
+is a GRADE quality assessment labelled CONTRADICTS; its review reason restates the claim but does not
+justify that stance on Q04's preregistration/multiple-comparison question. The other three passages
+also require explicit examination of both conditions and the estimand. These are reading notes, not
+new ledger decisions or a measured accuracy rate. The four accepted reasons do not establish both
+conditions. A person alone chooses the verdict, states the PMC scope/coverage and signs the current hash.
+
+Commands, exact current measurements and the local reading packet are in
+[the completed round report](replays/2026-09-28-q04-ready.md). Required checks: 889 tests, 7 skipped;
+six valid projects; 16 acknowledged versions. Scientific agreement on the complete v2 task remains
+unmeasured, and spending on the other seven questions remains the operator's decision.

@@ -9,57 +9,54 @@ what order.
 
 ## Where the work stands
 
-One round has run all six stages: `pmc-screen-time`, 37 of 40 confirmed against a floor of 0.80, 1,688
-claims, 8 historical profiles, **0 verdicts**. **None is adjudicable under the completeness check in D45.**
-D49 applies the complete offline replay to the real PMC and Alembic stores. Every original byte is
-preserved; derived ledgers only receive additional rows and each whole repeat appends zero rows.
-PMC retains all 1,668 claim ids and has 259 current rejections. Alembic retains 6,991 original claim
-ids, gains 203 distinct ids and has 7,194 accepted annotations / 1,166 rejections across the whole
-store. These are annotations, not independent studies. No model or publisher was called in D49.
-D51 harvests 20 additional PMC annotations from five newly successful host readings; none adds a Q04
-annotation. A repeated harvest appends zero annotations and zero rejections.
+One round has run all six stages: `pmc-screen-time`, 37 of 40 confirmed against a floor of 0.80,
+1,721 accepted annotations and 271 current rejections, **0 verdicts**. There are eight historical
+profiles and eight newly built v5 profiles. **Q04 is formally complete and awaiting human reading;
+the other seven remain provisional.** Its current hash is
+`9340389c9aac29b77e901c20e27434d211fe9e7825a68d99995d8c6fa5b20fdd`.
 
-**All current scoped annotations now satisfy gate v4; `unregated` and `unharvested` are zero.**
-The original 83 review ids remain historical, plus 33 additional Alembic reviews harvested from stored
-responses: 116 historical ids and zero usable complete-annotation v2 reviews. A replay cannot supply
-the new independent reading. Profile instrument 5 requires rebuilding and reading; no historical hash
-is signable, and profiles were not rebuilt in this operation.
+D49 applied the offline replay while preserving original bytes. D51/D52 subsequently harvest 53 new
+PMC annotations and 12 new rejections from model responses. Repeat extraction harvest appends zero
+of either; repeat review harvest reports zero reviewed and 42 already held. These are annotations,
+not independent studies. All current scoped annotations satisfy gate v4; harvest/regate backlog is zero.
+The historical narrow-task reviews remain in the append-only ledgers; 42 Q04 annotations now also
+have usable complete-annotation v2 reviews. No historical profile hash is relabelled or signed.
 
-PMC still has 29 unanswered readings: effect 5, heterogeneity 4, method 15, premise 5. Its measured
-full-review workload is 1,688 unique calls. Q04 needs 42 current annotations reviewed and shares the
-5 missing effect readings. Completing extraction can add review work. All PMC annotations were
-extracted by `ollama-cloud/deepseek-v4.1-flash`, which cannot review them.
+PMC has 24 unanswered readings: effect 0, heterogeneity 4, method 15, premise 5. The measured
+remaining full-review workload is 1,679 unique calls, all outside Q04. The completed effect readings
+cover all 734 active chunks. Q04 has 42 current annotations, all independently reviewed by
+`ollama-cloud/mistral-large-3:675b`: 4 SUPPORTED, 31 OVERSTATED and 7 NOT_APPLICABLE. SUPPORTED
+is the single-annotation review label, not a verdict on the question. The profile retains four results
+from four of 37 examined sources, with sample linkage unestablished.
 
-Alembic's curated manifest has 28 unanswered readings and 6,183 prospective review calls covering
-6,188 annotations. That population is 14/25 confirmed (0.56), below its floor; the whole-store
-annotation count must not replace it. Its 27 results without raw response bytes remain unresolved.
+The operator delegated the bounded Q04 run. Seven primary extraction answers and three targeted
+`gemma4:31b` answers complete its ten missing readings; original invalid responses remain invalid.
+Mistral differs from both extractors. No publisher, parser, registry, floor or population was changed.
+The USD 1 plan records USD 0.0556299 at conservative rates, plus USD 0.339 reserved for the old
+unknown-cost DNS failure: USD 0.3946299 accounted. This is not a provider invoice. Agent inspection
+matches the saved audit/profile hash; no additional model call or profile rebuild was made by the agent.
 
-On 2026-09-28 the operator delegated reader selection and authorised continuing Q04. The selected
-extractor is `ollama-cloud/deepseek-v4.1-flash`; the independent reviewer is
-`ollama-cloud/mistral-large-3:675b`. The bounded run plan has a USD 1 ceiling. Ten current effect
-requests are prepared with an output cap of 7,500, and 42 full v2 reviews are queued. The first
-extraction attempt failed resolving `ollama.com` in the agent environment. The subsequent host run
-completed five readings, then stopped on `NOT_JSON`: `[]` followed by explanatory prose. The whole
-response remains invalid. Twenty new annotations have been harvested; no profile was rebuilt.
-Reviewer quality remains unmeasured. D51 adds `gemma4:31b` only for primary JSON/schema failures;
-Mistral remains independent of both extractors. Ollama Cloud does not guarantee structured outputs.
+The human-reading packet is local and gitignored:
+`store/pmc-screen-time/audits/reading/6b11da9f50a22c8fbeb4a1cd3b43a132c7034f88e0c75ca9e19a60647781254e.md`.
+It flags the relevance/stance of each of the four retained results, especially PMC009's GRADE rating
+labelled CONTRADICTS without testing preregistration or correction for multiple comparisons. These
+are inspection notes, not new ledger decisions or a scientific verdict. Throughput and valid-output
+rate are measured; scientific agreement with an independent v2 reference is not established.
 
-Continue on the host with network access:
+Read the live profile without requests:
 
 ```bash
-.venv/bin/python tools/complete_question_round.py --plan store/pmc-screen-time/audits/q04-run-plan-v2.json --execute
+.venv/bin/claimstone verdicts projects/pmc-screen-time --question Q04
 ```
 
-Without `--execute` the command only inspects. It reads the two required values from `.env`,
-resumes prepared calls, harvests extraction, adds reviews for new annotations, reviews with the
-independent reader and rebuilds profiles only after Q04 is complete. It never adjudicates.
-Every physical attempt counts against the cumulative budget; an unpriced failure reserves the
-full declared context and output cap rather than being treated as free. The current unknown-cost
-DNS attempt reserves USD 0.339; the six host attempts are priced at USD 0.0054975 under plan rates.
-Execution stops at transport, truncation, alternate-reader failure or budget boundaries. With the
-v2 plan, primary JSON/schema failures are read once by the configured alternate reader, without
-repaying successful calls. Partial valid extraction and review are harvested even on interruption.
-See D50/D51 and [the bounded continuation report](replays/2026-09-28-q04-continuation.md).
+The completed host audit is
+`store/pmc-screen-time/audits/question-round/1943dcbe8082fa76370d8b9fd0b013a55c59e74c04a6a2e24b3b9afa19442e4b.json`.
+See D52 and [the completed round report](replays/2026-09-28-q04-ready.md). The cumulative local v2
+plan is retained for audit/resume; it is not an instruction to start the other seven questions.
+
+Alembic's curated manifest still has 28 unanswered readings and 6,183 prospective review calls covering
+6,188 annotations. It is 14/25 confirmed (0.56), below its floor. Its 27 missing raw responses remain
+unresolved; the whole-store count must not replace the selected population.
 
 The earlier queue measurement was offline and used only temporary copies. See
 [the production replay report](replays/2026-09-28-production-replay.md) and local content-addressed
@@ -73,7 +70,7 @@ measured ceiling of 0.72, and `pilot-screen-time` at 0.45. That is the correct b
 - **GROBID** is up (`docker compose up -d grobid`), healthy, ~3.6 GB. Only `normalize` needs it. Stop it
   with `docker compose down` when idle; it is `restart: unless-stopped`, so it will come back on reboot.
 - **Nothing else is in flight.** Drained means no routine retry is pending, not that every reading
-  succeeded. Historical batches are drained; D50's new Q04 extraction and review batches are pending.
+  succeeded. The bounded Q04 driver now has no eligible extraction/review work remaining.
   A batch is resumable by `call_id`; answered calls are skipped, while transient failures may retry.
 
 ## The decisions to read first
@@ -90,6 +87,7 @@ measured ceiling of 0.72, and `pilot-screen-time` at 0.45. That is the correct b
 | **D49** | production replay completed, with preserved bytes; actual scoped remaining readings and full-review workload. |
 | **D50** | delegated Q04 readers, bounded continuation and the first recorded DNS failure; no reading or review was completed. |
 | **D51** | five host readings harvested, strict prose rejection, targeted alternate extractor and shared budget. |
+| **D52** | Q04 formally complete; four retained results need human relevance/stance assessment before adjudication. |
 | **D48** | all review repairs; full-result reviews are a new task, legacy revisions are retained but cannot certify it. |
 | **D47** | authoritative replay and immutable reader annotations; measured across all stored batches without changing real ledgers. |
 | **D46** | whole numeric tokens, revision-aware gate outcomes and `awaiting_regate`; measurements used temporary ledgers. |
@@ -98,14 +96,11 @@ measured ceiling of 0.72, and `pilot-screen-time` at 0.45. That is the correct b
 
 ## What is a person's decision and not an engine's
 
-**The adjudication.** Q04 must first complete its 5 remaining effect readings, harvest and review any new
-claims, and be rebuilt and read again. Its historical hash
-`8e93cbde7a5a11a2e6d84933dd48539194d22ace3b149f7f2b10003e440c0bf0` is not signable under
-`profile_version 5`. The current read-only preview marks it provisional. Nothing in the historical profile supports the
-question; five results bear on it, and one of the five is not a result at all (D44). Whether that reads
-`CONTRADICTED` on two independent papers or `UNANSWERED_IN_LITERATURE` on a coverage of 3 sources of 37 is
-a judgement, and an agent must not make it. The rationale has to state the round's scope, its coverage, and
-that bad row.
+**The adjudication.** Q04 is now formally complete under profile v5, with the current hash above;
+the historical D44 hash is not signable. A person must read the four retained annotations and their
+passages, assess their relevance to both preregistration and multiple-comparison correction, and
+state the PMC-deposit scope and coverage in the rationale. D52's reading packet identifies specific
+stance/attribution ambiguities. An agent does not choose or sign the verdict, and no verdict exists.
 
 **Whether the floor moves.** D39 is the first evidence that 0.80 may be unreachable for openly-obtainable
 literature by legal routes. That is a real basis for a dated, versioned, motivated revision — and it is the
@@ -114,8 +109,8 @@ operator's call. An agent proposing it must cite the measurement and must not fo
 **Whether to spend on independent full-result review.** D48 changes the task: the historical estimate
 of about 1,100 calls covered only the remaining seven questions. Now all eligible annotations, including
 Q04, need a v2 review. D49 measures 1,668 PMC calls, including 42 for Q04, before any new extraction
-results. Q04 reader selection was delegated and bounded in D50; extending paid review to the
-other questions remains the operator's decision, based on this measured queue.
+results. Q04 is completed in D52. The remaining queue is 1,679 calls and extending paid review to
+the other questions remains the operator's decision, based on the current measured queue.
 
 ## Open problems, with what is known about each
 
@@ -125,11 +120,13 @@ claims are checkable and correct on inspection — but it runs on an interactive
 limit reset. CLAUDE.md's standing constraint ("interactive subscription plans are not batch
 infrastructure") is therefore measured, not precautionary. The calls retry cleanly afterwards.
 
-*The honest path to a reviewer that scales*: measure a hosted reader's **agreement with `claude-opus-5`**
-over the 83 claims already reviewed **using the same old task**. Full-annotation v2 reviews require a
-new comparison; agreement with an old verdict cannot measure agreement on fields it never saw.
-That is inter-rater agreement and not ground truth, and it must be reported as such — but it is a real measurement, unlike D38's retracted attempt, and it costs a few hundred
-Ollama Cloud calls. `SameReader` forbids `deepseek-v4.1-flash`, which did the extracting.
+*The hosted reviewer measurement*: D52 records 42/42 valid full-v2 Mistral responses on Q04.
+The four retained cases carry relevance/stance flags for human reading. This measures valid output
+and execution, not scientific accuracy. Agreement with `claude-opus-5` over the original 83 reviews
+would require using the same old task; it cannot certify metadata those reviews never saw. Full-v2
+agreement requires a new independent reading or human reference. Inter-rater agreement is not ground
+truth, and no such full-v2 comparison has yet been measured. `SameReader` still forbids the extractor
+from reviewing its own annotations.
 
 **Europe PMC is the highest-value acquisition improvement left, and was deliberately not done.** Its REST
 API serves full-text JATS XML by design and would plausibly beat the 0.93 the HTML route reaches. It was
