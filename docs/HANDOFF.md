@@ -32,9 +32,28 @@ Alembic's curated manifest has 28 unanswered readings and 6,183 prospective revi
 6,188 annotations. That population is 14/25 confirmed (0.56), below its floor; the whole-store
 annotation count must not replace it. Its 27 results without raw response bytes remain unresolved.
 
-The next decision is a backend and budget for completing missing extraction and testing an independent
-reviewer on the full v2 task. Q04 is the bounded first target. Queue measurement is offline and used
-only temporary copies; no production work queue was drained. See
+On 2026-09-28 the operator delegated reader selection and authorised continuing Q04. The selected
+extractor is `ollama-cloud/deepseek-v4.1-flash`; the independent reviewer is
+`ollama-cloud/mistral-large-3:675b`. The bounded run plan has a USD 1 ceiling. Ten current effect
+requests are prepared with an output cap of 7,500, and 42 full v2 reviews are queued. The first
+extraction attempt failed resolving `ollama.com` in the agent environment; no response arrived,
+no new annotation was harvested and no profile was rebuilt. Reviewer quality remains unmeasured.
+
+Continue on the host with network access:
+
+```bash
+.venv/bin/python tools/complete_question_round.py --plan store/pmc-screen-time/audits/q04-run-plan.json --execute
+```
+
+Without `--execute` the command only inspects. It reads the two required values from `.env`,
+resumes prepared calls, harvests extraction, adds reviews for new annotations, reviews with the
+independent reader and rebuilds profiles only after Q04 is complete. It never adjudicates.
+Every physical attempt counts against the cumulative budget; an unpriced failure reserves the
+full declared context and output cap rather than being treated as free. The current unknown-cost
+DNS attempt reserves USD 0.339. Execution stops at the first failed response or budget boundary.
+See D50 and [the bounded continuation report](replays/2026-09-28-q04-continuation.md).
+
+The earlier queue measurement was offline and used only temporary copies. See
 [the production replay report](replays/2026-09-28-production-replay.md) and local content-addressed
 audits under `store/<project>/audits/offline-replay/`.
 
@@ -46,8 +65,8 @@ measured ceiling of 0.72, and `pilot-screen-time` at 0.45. That is the correct b
 - **GROBID** is up (`docker compose up -d grobid`), healthy, ~3.6 GB. Only `normalize` needs it. Stop it
   with `docker compose down` when idle; it is `restart: unless-stopped`, so it will come back on reboot.
 - **Nothing else is in flight.** Drained means no routine retry is pending, not that every reading
-  succeeded. Every batch in `store/*/calls/` is drained. A batch is resumable by
-  `call_id`, so re-running `model-run` on any of them costs nothing for work already done.
+  succeeded. Historical batches are drained; D50's new Q04 extraction and review batches are pending.
+  A batch is resumable by `call_id`; answered calls are skipped, while transient failures may retry.
 
 ## The decisions to read first
 
@@ -61,6 +80,7 @@ measured ceiling of 0.72, and `pilot-screen-time` at 0.45. That is the correct b
 | **D40 + D44** | a second reader marks 23 of 41 and 36 of 42 gate-passed claims `NOT_APPLICABLE`. Over-attachment is the dominant cost of the current call shape, and it is not a property of one question kind. |
 | **D41** | why the closed round is legitimate: the selector is deposits, not outcomes, and it excludes 159 of 199 candidates. |
 | **D49** | production replay completed, with preserved bytes; actual scoped remaining readings and full-review workload. |
+| **D50** | delegated Q04 readers, bounded continuation and the first recorded DNS failure; no reading or review was completed. |
 | **D48** | all review repairs; full-result reviews are a new task, legacy revisions are retained but cannot certify it. |
 | **D47** | authoritative replay and immutable reader annotations; measured across all stored batches without changing real ledgers. |
 | **D46** | whole numeric tokens, revision-aware gate outcomes and `awaiting_regate`; measurements used temporary ledgers. |
@@ -85,7 +105,8 @@ operator's call. An agent proposing it must cite the measurement and must not fo
 **Whether to spend on independent full-result review.** D48 changes the task: the historical estimate
 of about 1,100 calls covered only the remaining seven questions. Now all eligible annotations, including
 Q04, need a v2 review. D49 measures 1,668 PMC calls, including 42 for Q04, before any new extraction
-results. Choose the reader and budget using this measured queue, not the historical estimate.
+results. Q04 reader selection was delegated and bounded in D50; extending paid review to the
+other questions remains the operator's decision, based on this measured queue.
 
 ## Open problems, with what is known about each
 

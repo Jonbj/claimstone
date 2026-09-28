@@ -2439,3 +2439,34 @@ blocking work is successful extraction and independent full-result review. Histo
 were not rebuilt or signed. Reader selection, paid budget and adjudication remain the operator's
 choices; the narrower historical review task cannot serve as full-field ground truth. This operation
 changes no software instrument, parser, floor, registry or acquisition population.
+
+## D50 — Delegated Q04 readers and bounded continuation, blocked before inference
+
+Date: 2026-09-28 · Gate 4 / review 2 / profile 5, unchanged
+
+The operator delegated choosing cloud models and continuing Q04. Extraction remains
+`ollama-cloud/deepseek-v4.1-flash`; full-result independent review is assigned to
+`ollama-cloud/mistral-large-3:675b`. The choice uses a separate reader with documented JSON
+support and metered pricing; it is not a measurement of review accuracy or an engine default.
+
+All ten missing effect responses were inspected: seven `NOT_JSON` stopped below the cap, three
+`TRUNCATED` consumed all 2,500 output tokens. Ten current prompts/schemas are now queued with
+a 7,500-token cap, a recorded change of call identity, not a prediction of recovery. The full v2
+Q04 review queue has 42 calls and 319,562 prompt characters; new extraction can add annotations.
+
+The first real attempt failed resolving `ollama.com` before reaching the service. It is recorded
+as `BACKEND_ERROR`, with unknown usage/cost and no response bytes. No new annotations or reviews
+were produced and no profile was rebuilt. Q04 remains provisional with both completeness blocks.
+
+`tools/complete_question_round.py --plan <local-plan>` measures without calls; `--execute`
+resumes extraction, harvests, extends independent review and rebuilds profiles only after Q04 is
+complete. The dated plan imposes a USD 1 cumulative ceiling, reserves each whole call before
+contact, retains conservative reservations for unknown-cost attempts, excludes replay rows from
+cost and stops after the first failure. The DNS attempt reserves USD 0.339; that is an accounting
+bound, not a claim that the provider charged it. The host command and measured state are in
+[the continuation report](replays/2026-09-28-q04-continuation.md).
+
+Five tests cover budget enforcement, unknown-cost attempts and resume, pre-payment reader
+independence, newly harvested extraction extending review without repeated calls or adjudication,
+and reading `.env` without executing it. All 16 existing instruments remain unchanged. Adjudication,
+floor revision and extending expenditure beyond Q04 still belong to the operator.
