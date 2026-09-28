@@ -1,5 +1,7 @@
 # Claimstone
 
+[English](README.md) · **Italiano**
+
 **Una macchina che legge la letteratura e si rifiuta di dire più di quello che ha letto.**
 
 Le dai un insieme di temi e una lista congelata di domande. Trova la letteratura, ottiene legalmente quello
@@ -8,8 +10,6 @@ letterali, con la copertura su cui quell'evidenza si appoggia.
 
 È costruita attorno a un errore che non commetterà: **riportare «non abbiamo trovato evidenza» come «non
 c'è effetto».** Tutto ciò che è inusuale nel disegno viene da lì.
-
-*This file in English: [README.md](README.md).*
 
 ## Perché funziona così
 
@@ -67,7 +67,7 @@ codice si rifiuta di inventarne uno, quindi `.env` deve contenere `CLAIMSTONE_CO
   domanda.
 - **[docs/GUIDE.it.md](docs/GUIDE.it.md)** — un percorso attraverso un giro intero, stadio per stadio, con
   cosa significa ogni numero. Da qui, se vuoi eseguirne uno.
-- **[docs/DESIGN_DECISIONS.md](docs/DESIGN_DECISIONS.md)** *(in inglese)* — 44 decisioni, ognuna con la
+- **[docs/DESIGN_DECISIONS.md](docs/DESIGN_DECISIONS.md)** *(in inglese)* — 45 decisioni, ognuna con la
   misura che l'ha decisa. Leggi la voce prima di discutere la scelta.
 - **[docs/HANDOFF.md](docs/HANDOFF.md)** *(in inglese)* — cosa sta girando, cosa è in sospeso, e quali
   decisioni appartengono a una persona e non al motore.
@@ -86,7 +86,9 @@ Tutti e sei gli stadi sono implementati e un giro ha girato da un capo all'altro
 letteratura depositata in PubMed Central: 37 fonti su 40 confermate contro una soglia di 0,80, 1.668
 affermazioni, 8 profili di evidenza.
 
-**Nessun verdetto esiste.** Un profilo è completo e aspetta una firma.
+**Nessun verdetto esiste e nessun profilo è pronto per la firma.** La verifica di completezza (D45) ha
+rilevato 34 letture di estrazione senza risposta valida, di cui 10 nel tipo di Q04. Gli otto profili salvati
+sono storici; `verdicts` ricalcola in memoria l’evidenza attuale e mostra tutti i profili come provvisori.
 
 Altri due corpus stanno sotto la loro soglia e correttamente non producono niente. In `docs/HANDOFF.md` c'è
 cosa significa e cosa lo cambierebbe — e vale notare che ciò che ha chiuso il primo giro è stato cambiare la

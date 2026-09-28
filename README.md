@@ -1,5 +1,7 @@
 # Claimstone
 
+**English** · [Italiano](README.it.md)
+
 **A reading machine that refuses to overstate what it read.**
 
 You give it a set of topics and a frozen list of questions. It finds the literature, obtains legally what
@@ -8,8 +10,6 @@ with the coverage that evidence rests on.
 
 It is built around one failure it will not commit: **reporting "we found no evidence" as "there is no
 effect."** Everything unusual about the design follows from that.
-
-*Questo file in italiano: [README.it.md](README.it.md).*
 
 ## Why it works this way
 
@@ -65,7 +65,7 @@ so `.env` must hold `CLAIMSTONE_CONTACT_EMAIL`.
 - **[docs/README.md](docs/README.md)** — the documentation map: which file answers which question.
 - **[docs/GUIDE.md](docs/GUIDE.md)** — a walkthrough of a whole round, stage by stage, with what each
   number means. Start here if you want to run one.
-- **[docs/DESIGN_DECISIONS.md](docs/DESIGN_DECISIONS.md)** — 44 decisions, each with the measurement that
+- **[docs/DESIGN_DECISIONS.md](docs/DESIGN_DECISIONS.md)** — 45 decisions, each with the measurement that
   decided it. Read the entry before arguing with the choice.
 - **[docs/HANDOFF.md](docs/HANDOFF.md)** — what is running now, what is pending, and which decisions belong
   to a person rather than to the engine.
@@ -76,7 +76,9 @@ so `.env` must hold `CLAIMSTONE_CONTACT_EMAIL`.
 All six stages are implemented and one round has run end to end, on a corpus of literature deposited in
 PubMed Central: 37 of 40 sources confirmed against a floor of 0.80, 1,668 claims, 8 evidence profiles.
 
-**No verdict exists.** One profile is complete and waiting for a signature.
+**No verdict exists, and no profile is ready for a signature.** The completeness audit (D45) found 34
+unanswered extraction readings, including 10 in Q04's kind. The eight saved profiles are historical;
+`verdicts` recomputes the current evidence in memory and shows every profile as provisional.
 
 Two other corpora stand below their floor and correctly produce nothing. Read `docs/HANDOFF.md` for what
 that means and what would change it — and note that what closed the first round was changing the
