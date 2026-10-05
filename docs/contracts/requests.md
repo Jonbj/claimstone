@@ -4,6 +4,10 @@ D48 adds append-only scholarly request and query-completion logs. Discovery, cit
 acquisition own their contextual rows through `RecordingFetcher`; no model backend writes here.
 Historic unlogged calls cannot be reconstructed and are never assumed successful.
 
+The bounded Europe PMC JATS pilot uses `purpose: jats_pilot` and a named campaign. Its
+responses are stored under `requests/raw/`, while parse outcomes live in a separate audit
+ledger; it does not write production acquisition or document rows.
+
 ## Request events
 
 | field | meaning |

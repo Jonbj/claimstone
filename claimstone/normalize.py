@@ -17,7 +17,7 @@ import pathlib
 from typing import Any, Iterator
 
 from claimstone import chunk as chunking
-from claimstone import html_doc, tei, model_call
+from claimstone import html_doc, jats, tei, model_call
 from claimstone.store import sha256_text
 from claimstone.store import Store
 
@@ -36,6 +36,8 @@ TEI_UNREADABLE = "TEI_UNREADABLE"
 # itself until someone looks. Recording it as unconfirmed instead would count an absent file as
 # an established negative and lower the rate on an infrastructure failure.
 ARTIFACT_UNREADABLE = "ARTIFACT_UNREADABLE"
+JATS_UNREADABLE = "JATS_UNREADABLE"
+JATS_UNSUPPORTED = "JATS_UNSUPPORTED"
 
 
 def _now() -> str:
@@ -100,6 +102,9 @@ def run(
         # Decided on the recorded content type, not on the stored suffix: the suffix is chosen
         # by acquire from that same type, so reading it back would just be the answer twice.
         is_pdf = "pdf" in str(source.get("content_type") or "").lower()
+        media_type = str(source.get("content_type") or "").lower().split(";", 1)[0].strip()
+        is_jats = not is_pdf and media_type in {"application/xml", "text/xml", "application/jats+xml"}
+        parser_fields = {"jats_parser_version": jats.JATS_PARSER_VERSION} if is_jats else {}
         tei_path = store.root / "tei" / f"{digest}.xml"
 
         try:
@@ -117,7 +122,7 @@ def run(
                 # source without a PDF is still a document — the confirmation rule's second clause,
                 # long enough to stand without a bibliography, admits a regulatory filing.
                 payload = pathlib.Path(stored).read_bytes()
-                parse, parsed_from = html_doc.parse, str(stored)
+                parse, parsed_from = jats.parse if is_jats else html_doc.parse, str(stored)
         except (OSError, TypeError) as exc:
             # The bytes are gone, unreadable, or were never recorded. One such source used to end
             # the sweep before any other was touched.
@@ -133,8 +138,17 @@ def run(
 
         try:
             doc = parse(payload)
+        except jats.UnsupportedJats as exc:
+            # Unsupported structure is our limitation, not an established negative about the source.
+            attempted += 1
+            yield common | parser_fields | {
+                "fulltext_confirmed": None, "failure_class": JATS_UNSUPPORTED,
+                "reason": str(exc)[:200], "chunks": 0, "stored_path": parsed_from,
+            }
+            continue
         except tei.TeiError as exc:
-            row = common | {"fulltext_confirmed": False, "failure_class": TEI_UNREADABLE,
+            row = common | parser_fields | {"fulltext_confirmed": False,
+                            "failure_class": JATS_UNREADABLE if is_jats else TEI_UNREADABLE,
                             "reason": str(exc)[:200], "chunks": 0, "chunk_ids": [], "tei_path": parsed_from}
             store.append("documents.jsonl", row)
             attempted += 1
@@ -148,8 +162,8 @@ def run(
         generation = sha256_text(model_call.canonical({
             'payload_sha256': hashlib.sha256(payload).hexdigest(),
             'source_sha256': digest, 'chunk_version': chunking.CHUNK_VERSION, 'thresholds': th,
-            'html_parser_version': None if is_pdf else html_doc.HTML_PARSER_VERSION,
-        }))
+            'html_parser_version': None if is_pdf or is_jats else html_doc.HTML_PARSER_VERSION,
+        } | parser_fields))
         chunk_ids = []
         existing = store.latest_by('chunks.jsonl', 'chunk_id')
         for one in result.chunks:
@@ -178,13 +192,13 @@ def run(
                 }
                 store.append("references.jsonl", references[reference.key])
 
-        row = common | {
+        row = common | parser_fields | {
             "tei_path": parsed_from,
-            "format": "pdf" if is_pdf else "html",
+            "format": "pdf" if is_pdf else ("jats" if is_jats else "html"),
             # Which parser read it. The PDF side is the GROBID image, pinned by digest in compose.yaml and
             # checked against `grobid.IMAGE`; the HTML side is code in this repository and carries a
             # version of its own, because what it extracts decides `references` and so `fulltext_confirmed`.
-            "html_parser_version": None if is_pdf else html_doc.HTML_PARSER_VERSION,
+            "html_parser_version": None if is_pdf or is_jats else html_doc.HTML_PARSER_VERSION,
             "fulltext_confirmed": confirmed,
             "failure_class": None if confirmed else NOT_A_DOCUMENT,
             "reason": reason,
@@ -227,7 +241,7 @@ def confirm_sweep(store: Store, name: str, values: list[int]) -> list[dict[str, 
         # The parser follows the recorded format, never the stored suffix. Handing markup to the
         # TEI parser would count the one source confirmed by characters as unreadable, and a sweep
         # of `confirm_chars` that excludes it would report that the threshold decides nothing.
-        parse = html_doc.parse if row.get("format") == "html" else tei.parse
+        parse = {"html": html_doc.parse, "jats": jats.parse}.get(row.get("format"), tei.parse)
         try:
             parsed.append(parse(path.read_bytes()))
         except tei.TeiError:

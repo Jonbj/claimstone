@@ -4,6 +4,7 @@ from dataclasses import replace
 import pytest
 
 from claimstone import admissibility, config, evidence, extract, model_call, synthesize
+from claimstone.config import SourceClass
 from claimstone.store import Store
 from tests.test_adjudicate import RATIONALE
 from tests.test_synthesize import _project, claim, review
@@ -207,6 +208,52 @@ def test_verdict_display_marks_floor_failure_stale_without_rebuild(tmp_path):
     assert result['stale'] == 1
     assert result['rows'][0]['unavailable'].startswith(admissibility.INSUFFICIENT)
     assert result['awaiting_adjudication'] == 0
+
+
+def test_a_class_floor_flip_makes_a_signed_verdict_stale_at_unchanged_counts(tmp_path):
+    """The recorded counts are not the whole premise. A `discover --reclassify` row that moves a
+    failed candidate into a class whose own floor it breaks leaves `found`, `obtained` and
+    `confirmed` identical and still refuses the round — and a verdict signed against the round
+    that passed is a verdict about a corpus that no longer exists.
+    """
+    project = replace(
+        _project(tmp_path, floor=0.8),
+        classes=(SourceClass(id='ACA', name='refereed', weight_hint='high', role='empirical'),
+                 SourceClass(id='IND', name='industry', weight_hint='low', role='empirical',
+                             acquisition_floor=0.33, floor_set_at='2026-09-25',
+                             floor_rationale='vendor research has no open copy in existence')),
+    )
+    store = Store('t', base=tmp_path)
+    config.check_registry_drift(project, store)
+    add_source(store, 'ACA001', 'one')
+    for source in ('IND001', 'IND002', 'IND003'):
+        store.append('candidates.jsonl', {'candidate_key': source, 'source_id': source,
+                     'source_class': 'IND', 'round': 'one'})
+        store.append('acquisitions.jsonl', {'candidate_key': source, 'source_id': source,
+                     'acquired': True})
+        store.append('documents.jsonl', {'source_id': source, 'fulltext_confirmed': True})
+        store.append('chunks.jsonl', {'source_id': source, 'chunk_id': source + '#c1',
+                     'text': 'news tone has an effect', 'kind': 'prose'})
+    store.append('candidates.jsonl', {'candidate_key': 'IND004', 'source_id': 'IND004',
+                 'source_class': 'IND', 'round': 'one'})
+    store.append('acquisitions.jsonl', {'candidate_key': 'IND004', 'source_id': 'IND004',
+                 'acquired': False, 'failure_class': 'PAYWALL_403'})
+    answer(project, store)
+    assert admissibility.admit(project, store)['status'] == admissibility.OK
+    synthesize.build(project, store)
+    synthesize.adjudicate(store, 'H02', project=project, verdict='SUPPORTED', rationale=RATIONALE,
+                         by='synthetic operator',
+                         profile_sha256=synthesize.latest_profiles(store)['H02']['profile_sha256'])
+    # The reclassify re-reads `assign_when` and the paywalled vendor page is a refereed one.
+    store.append('candidates.jsonl', {'candidate_key': 'IND004', 'source_id': 'IND004',
+                 'source_class': 'ACA', 'round': 'one'})
+    measured = admissibility.admit(project, store)
+    assert measured['status'] == admissibility.INSUFFICIENT
+    assert (measured['found'], measured['obtained'], measured['confirmed']) == (5, 4, 4)
+    result = synthesize.verdicts(store, project=project)
+    assert result['adjudicated'] == 0
+    assert result['stale'] == 1
+    assert result['rows'][0]['unavailable'].startswith(admissibility.INSUFFICIENT)
 
 
 def test_preview_and_verdict_display_do_not_append_to_any_ledger(tmp_path):

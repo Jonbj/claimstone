@@ -19,7 +19,7 @@ from typing import Any
 import requests
 from typing import Protocol
 
-FETCH_VERSION = 2
+FETCH_VERSION = 3
 
 REDIRECT = "REDIRECT_ERROR"
 
@@ -267,9 +267,16 @@ class Fetcher:
             chain.append(url)
             assert self._session is not None
             self._throttle()
+            headers = {'Accept': 'application/json'} if as_json else {}
+            # A header keeps the key out of permanent request URLs. Recompute per hop:
+            # redirects to publishers, HTTP or lookalike hosts must never receive it.
+            parsed = urllib.parse.urlsplit(url)
+            if (parsed.scheme == 'https' and parsed.netloc == 'api.openalex.org'
+                    and (key := os.environ.get('OPENALEX_API_KEY', '').strip())):
+                headers['Authorization'] = f'Bearer {key}'
             try:
                 response = self._session.get(url, timeout=self.timeout_s, allow_redirects=False,
-                    headers={'Accept': 'application/json'} if as_json else None)
+                    headers=headers or None)
             except requests.Timeout as exc:
                 self._record_failure(host)
                 return finish(Outcome(url, False, failure_class=TIMEOUT, detail=str(exc)))

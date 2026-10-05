@@ -19,7 +19,7 @@ from claimstone import ids, net
 from claimstone.store import sha256_text
 
 
-DISCOVERY_VERSION = 2
+DISCOVERY_VERSION = 3
 
 
 class SearchError(ValueError):

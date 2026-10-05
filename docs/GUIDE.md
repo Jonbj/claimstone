@@ -33,8 +33,9 @@ This checks the contract and nothing else. It is cheap and it is the first thing
 ```
 
 Two channels: **keyword** (OpenAlex, Crossref, arXiv) and **citation** (the reference lists stage 3
-extracted). They are kept separate because completeness is estimated by comparing two *independent* channels
-— counting what one channel found says nothing about what is missing.
+extracted). Keep their results separate: citations can expose works keyword search missed. Neither
+their overlap nor an acquisition percentage establishes literature completeness. D10 records why
+capture-recapture assumptions fail here; `discover-report` deliberately gives no completeness percentage.
 
 Every candidate records the query that found it and the channel it came through. A curated reading list
 enters instead through `import-manifest`, which is how a corpus someone chose by hand becomes a round.
@@ -42,6 +43,14 @@ enters instead through `import-manifest`, which is how a corpus someone chose by
 **Rounds matter.** The floor is judged per round, because a discovery sweep changes the denominator by
 design: one citation sweep took a corpus from 14/25 = 0.56 to 14/75 = 0.19, and only the first compares like
 with like.
+
+If discovery needs a restricted metadata population, declare `population` in `sources.yaml` before
+the first candidate of that round. It requires a positive `version`, ISO `declared_at`, `rationale`
+and at least one of `hosts`, `source_apis` or `venues`. Host and venue matches are exact; there are
+no domain wildcards. The predicates are alternatives and never depend on acquisition success.
+The declared manifest seed remains included. Both accepted and excluded discovery observations
+are preserved in `discovery_population.jsonl`; only accepted ones enter `candidates.jsonl`.
+The policy is frozen in `populations.jsonl`: changing or removing it requires a new round (D54).
 
 ## 2 · acquire — the best legal copy, and every attempt recorded
 
@@ -233,3 +242,124 @@ outright. Run the re-harvest and quote its output.
 The reproducible operational command is `tools/replay_answers.py <project>` for read-only workload
 measurement, or with `--apply` for stored-answer replay. Scope flags select the measurement; replay
 always processes every stored batch. See [the production measurement](replays/2026-09-28-production-replay.md).
+
+## Testing a prompt before adoption
+
+For a prepared comparison plan, preview without network calls or writes:
+
+```bash
+.venv/bin/python tools/run_prompt_comparison.py --plan <comparison-plan.json>
+```
+
+With explicit calibration spending authorization, add `--execute` to run or resume. The comparison
+uses a separate experimental store and the original cumulative budget, including earlier failed
+calls with unknown costs. It keeps the production prompts and scientific ledgers unchanged.
+It compares diagnostic reference cases, rereads the original sample with an experimental extraction
+prompt, and independently reviews every newly accepted annotation. Successful calls are retained
+on resume. BACKEND_ERROR stops after the attempted call and preserves its accounting reservation.
+
+The paired diagnostic labels describe a provisional agent-authored development reference selected
+after inspecting errors. They are not general accuracy, and positive controls must be examined
+alongside problematic cases. Read new annotations and their supporting passages before deciding
+whether to adopt a prompt. No variant is adopted automatically, and this tool produces no profile
+or signed verdict.
+
+For a prepared reviewer-only diagnostic plan, use:
+
+```bash
+.venv/bin/python tools/run_review_diagnostics.py --plan <diagnostic-plan.json>
+```
+
+Add `--execute` only within the existing spending authorization. This task holds annotations and
+passages fixed and asks for separate applicability, fidelity and direction labels with reasons.
+The queue is isolated and the cumulative budget includes both earlier experiments. It runs no
+extraction and writes no production reviews. The report's summary label is experimental; its
+uncertainty mapping does not change production review states. Expected reference axes left
+unscored stay out of agreement denominators. Evaluate reasons and positive controls before adopting
+any new scientific review task; successful JSON alone does not validate that task.
+
+An invalid output shape remains SCHEMA_INVALID even if its prose looks useful. A format repair
+uses an explicitly versioned prompt and new request ids rather than rewriting the failed response.
+Its prepared plan freezes the previous diagnostic queue and carries every failed attempt forward
+into the same cumulative budget. Use the repaired plan supplied by the operator workflow; a
+terminal-invalid original answer cannot become complete merely by rerunning the original plan.
+
+To compare an independent reviewer on a completed diagnostic task, use its prepared plan:
+
+```bash
+.venv/bin/python tools/compare_reviewers.py --plan <reviewer-comparison-plan.json>
+```
+
+Adding `--execute` runs only the second reviewer in another isolated store. Requests are byte-identical
+to the completed baseline, including prompts, annotations, passages, schema, output caps and merged
+annotation targets. The baseline answers and development reference are never sent to the new reader.
+Earlier priced attempts and unknown-cost reservations retain their original readers' rates and
+context bounds. Each next call must fit inside the original cumulative budget before contact.
+The report pairs both readers' checks and reasons with the provisional reference, separating positive
+controls from challenge cases. Inter-reader agreement and reference agreement are different measures;
+neither certifies scientific accuracy. This comparison cannot adopt a task or write production reviews.
+
+## A first supervised use
+
+A curated passage plan can produce a consultative reading dossier without model calls:
+
+```bash
+.venv/bin/python tools/build_consultative_dossier.py --plan <curated-passage-plan.json>
+```
+
+Preview is read-only. `--write` creates content-addressed JSON and Markdown under the source store's
+`audits/consultative/`, retaining all original files. The plan pins the registry, current passage text
+and normalized document hashes. Every curated record must pass the existing claim gate; the source
+class remains attached. The acquisition floor still blocks publication, and incomplete admission is
+reported even above the floor. These documents are selected reading notes, not scientific profiles:
+they neither harvest claims/reviews nor sign a verdict or certify semantic accuracy. Interactive
+curation is named explicitly and must not be reported as a batch backend's extraction measurement.
+The selection and missing coverage must accompany the interpretation. Cases already inspected for
+this dossier are development material, not unseen validation of a tuned prompt.
+
+## Search coverage and updates
+
+An acquisition rate measures documents confirmed out of candidates found, not the share of the
+literature discovered. Completing a finite search protocol also does not establish universal recall.
+Record the question, admissible population, search terms, APIs, result limits and search dates before
+searching. `tools/audit_research_search.py --plan <search-plan.json>` compares that frozen query
+matrix against recorded queries offline. Missing queries, failed queries and insufficient search
+depth remain distinct. A query reaching its result cap needs inspection or a deeper follow-up;
+successful execution alone does not mean its result set was exhausted.
+
+`--write` saves a content-addressed baseline under `audits/research-search/`. It lists candidates,
+document hashes/generations, bibliography references still needing relevance screening, current
+reading completion and question-specific review labels. No semantic screening is inferred from
+titles, source counts, acquisition or the presence of claims. Literature recall and screening
+precision stay unknown until separately justified; no scientific ledger or verdict is written.
+
+For effectiveness, record relevance decisions and reasons for every screened work, identify
+eligible known papers the search should recover, and inspect opposing/null findings as well as
+positive ones. Recovery of these known papers is a benchmark check, not total-literature recall.
+Track new relevant works per completed search wave and what citations add beyond keywords.
+Low yield supports stopping a declared protocol only after search failures, capped results and
+unscreened references are accounted for. It does not prove saturation of all literature. The
+default citation threshold misses singly cited references; a focused bibliographic review must
+inspect those too. Relevance screening never retroactively removes admitted candidates from the
+acquisition denominator.
+
+For updates, use a dated new discovery round and retain an audit of the previous cumulative corpus.
+`--previous <baseline-audit.json>` reports new candidate keys and changed document generations;
+candidate keys are not independently deduplicated studies, so possible duplicates require inspection.
+An unchanged byte/prompt/schema combination can reuse existing work. A revised paper or parser
+generation needs current readings; changed annotations need new independent reviews. Historical
+evidence and signatures remain recorded, and changed live evidence makes an old signature stale.
+Keep both the update-round acquisition report and the cumulative one: candidates belong to the
+round that first found them, so the update round alone is not the whole updated corpus. Population
+changes require a new dated policy and round; question changes require a registry bump. Existing
+commands do not provide an automatic publication watch. Initially run an explicit weekly update;
+indexing delays mean newly discovered is not necessarily newly published.
+
+For OpenAlex recovery, an optional free `OPENALEX_API_KEY` in `.env` is passed into the container
+and sent as an Authorization header only to its exact HTTPS API origin. Never put it into a query
+URL or a committed input. A key increases the provider's anonymous budget but does not remove
+daily limits. `tools/resume_research_search.py --plan <search-plan.json> --limit <N>` previews only
+missing, failed or insufficient-depth queries from a frozen protocol. With `--execute` on the host,
+it reads contact and keys safely from `.env`, shares one fetcher across the selected queries and
+stops at the first failure. Completed queries, including capped ones, are skipped: deeper search
+requires an explicit follow-up protocol. Default limit is one query; it launches no model calls.

@@ -24,6 +24,19 @@ whose `source_class` is null, which is invariant 6 enforced at the boundary rath
 
 ## The class comes from the project, never from the engine
 
+An optional `sources.yaml.population` (D54) admits discovery rows by exact URL host,
+source API or exact venue, independently of whether acquisition succeeds. Its dated version,
+rationale and metadata predicates are frozen per round in `populations.jsonl`, with
+`population_version`, `policy_sha256`, `policy` and the recording timestamp `declared_at`.
+Changing or removing a held declaration requires a new round; retrofitting one onto existing
+candidates is refused. Predeclared manifest seeds remain included.
+
+`discovery_population.jsonl` preserves observations both inside and outside that selector,
+including duplicates. Each observation carries the candidate metadata, `population_version`,
+`policy_sha256`, `admitted` and `population_reason`. Excluded observations never enter the
+candidate denominator. Citation discovery and secondhand-claim promotion use the same selector.
+These counts describe metadata coverage; they do not certify copy identity or author ownership.
+
 `assign_when` on a source class in `sources.yaml` declares the conditions that assign a candidate to
 it. Four predicates: `source_api`, `openalex_source_type`, `crossref_type`, `host`. A venue type only
 counts alongside the API that reported it, because "journal" from OpenAlex and "journal-article" from

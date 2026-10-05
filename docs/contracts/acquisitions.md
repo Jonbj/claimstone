@@ -22,7 +22,7 @@ whether a round may produce verdicts at all.
 | `sha256` | content hash of the stored bytes; `null` when not acquired |
 | `stored_path` | where those bytes live under `store/<project>/raw/` |
 | `url` | the location that succeeded, or the candidate URL when nothing did |
-| `provenance` | who named that location: `unpaywall`, `openalex`, `arxiv`, `candidate`, `wayback` |
+| `provenance` | who named that location: `unpaywall`, `openalex`, `arxiv`, `candidate`, `wayback`, `europe-pmc` |
 | `version` | `publishedVersion`, `acceptedVersion`, `submittedVersion`, or empty |
 | `licence` | as reported by the resolver; `"unknown"` for archived web sources |
 | `oa_status` | `gold`, `green`, `hybrid`, `bronze`, `closed`, or `null` where not applicable |
@@ -39,6 +39,37 @@ difference is invisible.
 An attempt whose bytes arrived carries `stored_path` **whether or not the gate accepted them**.
 That is what makes `claimstone gate-audit` able to re-run the gate at other thresholds without
 re-fetching, and what gives the by-hand rejection check something to look at.
+
+Gate version 4 adds `JATS_FULLTEXT`. Europe PMC XML is offered only for an explicit PMC
+article identity; an unavailable XML copy falls through to the existing HTML location.
+The JATS gate checks article structure and body text, while stage 3 separately checks parser
+support and document confirmation. The XML article's declared licence URL is retained when
+present; endpoint availability alone is not a licence. Each attempt now carries the location's
+licence, OA status and host type, including failed attempts when those fields were known.
+
+Gate version 5 also accepts a primary article's body-level `ref-list` as the
+reference signal. It excludes nested sub-articles; XML bodies below the full-text
+character threshold no longer fail solely because the bibliography is in `body`
+instead of `back`. A JATS licence URL on an `ext-link` inside `license` is retained.
+
+## Verified local reuse (D54)
+
+`provenance: store-reuse` records a local byte transfer, re-gated under the receiving project's
+thresholds, gate policy and source class. The original acquired row must match the receiving
+candidate's exact URL; its hash must match the file and the explicit reuse plan. Identity checking
+is recorded separately and is never inferred from a matching source id.
+
+`reuse_version` pins this operation. `reuse_origin` carries the original store, candidate key,
+stored path, byte hash and identity assessment. `fetched_at` retains the original acquisition time;
+`reused_at` records the transfer. Licence, OA status and publication version retain the original
+metadata, including unknown values. `attempts` is empty: no HTTP request occurred. A failed new
+content gate retains the bytes with `acquired: false` and `sha256: null`.
+
+`tools/prepare_research_round.py` verifies a plan's four project-input hashes and original raw/parsed
+hashes before writing. Default is read-only; `--apply` imports the declared seed, transfers verified
+bytes and cached TEI, rechecks normalization, and creates fresh extraction requests. It never imports
+scientific answers, calls a model, or requests a new parse. Its content-addressed audit includes
+acquisition coverage and checks that every original byte was preserved.
 
 ## Failure classes
 

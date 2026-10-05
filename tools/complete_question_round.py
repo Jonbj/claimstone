@@ -48,13 +48,13 @@ def readers(config):
 
 
 def load_environment(path):
-    """Read only the two needed values. Do not execute .env or assign its Docker UID."""
+    """Read only API credentials/contact. Do not execute .env or assign its Docker UID."""
     if not path.exists():
         return
     for line in path.read_text().splitlines():
         key, sep, value = line.removeprefix('export ').partition('=')
         key = key.strip()
-        if sep and key in ('OLLAMA_API_KEY', 'CLAIMSTONE_CONTACT_EMAIL') and not os.environ.get(key):
+        if sep and key in ('OLLAMA_API_KEY', 'OPENALEX_API_KEY', 'CLAIMSTONE_CONTACT_EMAIL') and not os.environ.get(key):
             parts = shlex.split(value, comments=True)
             if len(parts) != 1:
                 raise ValueError(f'invalid .env value for {key}')
@@ -129,7 +129,7 @@ def validate_plan(plan, project, store):
     return question
 
 
-def drain(lane, queues, plan, *, reader=None, call_ids=None):
+def drain(lane, queues, plan, *, reader=None, call_ids=None, accounting_queues=None):
     import requests
     primary = reader is None
     reader = plan[lane] if primary else reader
@@ -145,11 +145,11 @@ def drain(lane, queues, plan, *, reader=None, call_ids=None):
             unit = pending[0]
             if lane == 'review':
                 for target in unit.get('review_targets') or [unit]:
-                    if target.get('question_id') != plan['question_id']:
+                    if target.get('question_id') not in plan.get('question_ids', [plan.get('question_id')]):
                         raise Stopped('review batch includes another question')
                     if review.reader_of(target.get('extracted_by') or {}) == (runner.name, runner.model):
                         raise Stopped('reviewer is also the extractor')
-            spent = expenditure(queues, plan)['budget_accounted_usd']
+            spent = expenditure(accounting_queues or queues, plan)['budget_accounted_usd']
             if spent + reservation(reader, unit) > plan['budget_usd']:
                 raise Stopped('USD ceiling: insufficient room to reserve the next whole call')
             row = next(model_call.drain(queue, runner, limit=1))

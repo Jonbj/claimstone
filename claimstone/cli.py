@@ -97,7 +97,7 @@ def _import_manifest(args: argparse.Namespace) -> int:
         print(f"no manifest.tsv under {args.project}/", file=sys.stderr)
         return 1
     result = discover.import_manifest(_checked_store(args, project), project.manifest,
-                                      round_name=args.round)
+                                      round_name=args.round, population_policy=project.population)
     print(f"{project.name}: {result['new']} new, {result['updated']} corrected, "
           f"of {result['rows']} manifest rows")
     return 0
@@ -118,7 +118,7 @@ def _checked_store(args: argparse.Namespace, project: "Project") -> "Store":
 
 
 def _acquire(args: argparse.Namespace) -> int:
-    from claimstone import acquire, net, resolve
+    from claimstone import acquire, net, resolve, population
 
     retry_classes = frozenset(args.retry_class or ())
     if retry_classes and not args.campaign:
@@ -133,9 +133,15 @@ def _acquire(args: argparse.Namespace) -> int:
     store = _checked_store(args, project)
     fetcher = net.Fetcher(excluded_hosts=frozenset(project.excluded_hosts))
     candidates = list(store.latest_by("candidates.jsonl", "candidate_key").values())
+    for round_name in {str(c.get("round") or "routine") for c in candidates
+                       if args.round is None or c.get("round") == args.round}:
+        population.check_round(store, project.population, round_name, record=False)
 
     if args.dry_run:
-        for candidate in candidates:
+        previous = store.latest_by('acquisitions.jsonl', 'candidate_key')
+        for candidate in acquire.eligible_candidates(candidates, previous,
+                retry_classes=retry_classes, round_name=args.round, manifest_only=args.manifest,
+                only_oa=args.only_oa, limit=args.limit):
             locations, _ = resolve.plan(fetcher, candidate, use_apis=not args.no_apis)
             print(f"{candidate.get('source_id') or candidate['candidate_key']}")
             for position, location in enumerate(locations, start=1):
@@ -927,6 +933,21 @@ def _adjudicate(args: argparse.Namespace) -> int:
     return 0
 
 
+def _serve(args: argparse.Namespace) -> int:
+    from claimstone import dashboard
+
+    project = load_project(args.project)
+    store = _checked_store(args, project)
+    warning = dashboard.host_warning(args.host)
+    if warning:
+        # §10: a non-loopback bind is accepted only because --host was passed explicitly, and the
+        # warning names the rule rather than mumbling about security.
+        print(f"warning: {warning}", file=sys.stderr)
+    dashboard.serve(project, store, round_name=args.round, manifest_only=args.manifest_only,
+                    host=args.host, port=args.port)
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="claimstone", description="Topics in, verdicts out.")
     parser.add_argument("--version", action="version", version=f"claimstone {__version__}")
@@ -955,6 +976,7 @@ def build_parser() -> argparse.ArgumentParser:
         ("synthesize", _synthesize, "stage 6: an evidence profile per question, or the refusal"),
         ("verdicts", _verdicts, "the profiles, with any adjudication and whether it is stale"),
         ("adjudicate", _adjudicate, "record one person's verdict; the only place one comes from"),
+        ("serve", _serve, "the dashboard: a read-only page over this round's ledgers"),
     ):
         command = sub.add_parser(name, help=help_text)
         command.add_argument("project", help="path to a project directory")
@@ -1078,6 +1100,15 @@ def build_parser() -> argparse.ArgumentParser:
                                  help="sweep a confirmation threshold; needs no GROBID")
             command.add_argument("--sweep", choices=sorted(CONFIRM_SWEEP_VALUES),
                                  help="which threshold --confirm-audit moves")
+        if name == "serve":
+            command.add_argument("--port", type=int, default=8787)
+            command.add_argument("--host", default="127.0.0.1",
+                                 help="loopback only by default; a non-loopback bind prints the "
+                                      "privacy warning and proceeds because you asked")
+            command.add_argument("--round", default=None,
+                                 help="one declared round; default every candidate held")
+            command.add_argument("--manifest-only", action="store_true",
+                                 help="the operator's reading list alone, as synthesize judges it")
 
     for name, handler, help_text in (
         ("model-run", _model_run, "drain a lane's queue on a named backend"),

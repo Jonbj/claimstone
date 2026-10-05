@@ -137,6 +137,14 @@ class Project:
     def class_ids(self) -> frozenset[str]:
         return frozenset(c.id for c in self.classes)
 
+    @property
+    def population(self) -> dict[str, Any]:
+        from claimstone import population
+        try:
+            return population.validate(_read_yaml(self.root / "sources.yaml").get("population"))
+        except ValueError as exc:
+            raise ConfigError(f"sources.yaml: {exc}") from exc
+
 
 def _read_yaml(path: pathlib.Path) -> dict[str, Any]:
     if not path.exists():
@@ -707,7 +715,7 @@ def load_project(root: str | pathlib.Path) -> Project:
     citation_channel = load_citation_channel(path)
     floor_version, floor_set_at, floor_rationale = load_floor_provenance(path)
 
-    return Project(
+    project = Project(
         name=path.name,
         root=path,
         classes=classes,
@@ -728,6 +736,8 @@ def load_project(root: str | pathlib.Path) -> Project:
         floor_set_at=floor_set_at,
         floor_rationale=floor_rationale,
     )
+    project.population  # Validate the optional metadata selector before any requests.
+    return project
 
 
 def discover_projects(projects_dir: str | pathlib.Path = "projects") -> list[pathlib.Path]:

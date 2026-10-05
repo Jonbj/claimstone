@@ -20,10 +20,11 @@ One row per normalized document, keyed by `source_id`.
 | field | meaning |
 |---|---|
 | `source_id`, `sha256` | the source, and the hash of the bytes normalized |
-| `format` | `pdf` or `html` — which parser read it, recorded rather than inferred |
-| `tei_path` | the TEI under `store/<project>/tei/<sha256>.xml`, or the stored markup for `html` |
+| `format` | `pdf`, `html` or `jats` — which parser read it, recorded rather than inferred |
+| `tei_path` | the TEI under `store/<project>/tei/<sha256>.xml`, or the original markup for `html`/`jats` |
+| `html_parser_version`, `jats_parser_version` | the applicable markup instrument; JATS version participates in its generation digest |
 | `fulltext_confirmed` | `true`, `false`, or **`null` when nothing was established** |
-| `failure_class` | `NOT_A_DOCUMENT`, `TEI_UNREADABLE`, or null |
+| `failure_class` | `NOT_A_DOCUMENT`, `TEI_UNREADABLE`, `JATS_UNREADABLE`, or null |
 | `reason` | the counts that decided it, so the verdict can be argued with |
 | `title`, `body_chars`, `references`, `tables`, `notes` | what the parser found |
 | `chunks`, `dropped_sections`, `merged_sections`, `oversized_chunks` | what chunking did |
@@ -47,6 +48,12 @@ reports `ARTIFACT_UNREADABLE` on the run and moves to the next source. This is d
 absent file as unconfirmed would lower the acquisition rate on an infrastructure failure. With no
 row, the source stays *awaiting* — which raises the ceiling, never moves the figure, and keeps
 `final` false so the round cannot certify itself until someone looks.
+
+D53 adds the same no-row behaviour for `JATS_UNSUPPORTED`: tables the parser cannot represent
+(including CALS or image-only tables) are an infrastructure limitation. The run reports
+`fulltext_confirmed: null` and publishes no partial document/chunk generation. Malformed or
+non-article XML records `JATS_UNREADABLE`, consistent with malformed TEI.
+See [the JATS boundary and pending measurement](../superpowers/specs/2026-09-28-jats-normalize-design.md).
 
 ## `chunks.jsonl`
 

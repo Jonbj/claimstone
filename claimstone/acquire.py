@@ -13,6 +13,9 @@ bytes and writes the row.
 from __future__ import annotations
 
 import datetime as _dt
+import hashlib
+import xml.etree.ElementTree as ET
+from pathlib import Path
 from typing import Any, Iterable, Iterator
 
 from claimstone import fulltext, net, resolve
@@ -20,14 +23,63 @@ from claimstone.store import Store
 from claimstone.request_log import RecordingFetcher
 
 PDF_TYPES = ("application/pdf", "application/octet-stream")
-HTML_TYPES = ("text/html", "application/xhtml+xml", "application/xml", "text/xml", "text/plain")
+HTML_TYPES = ("text/html", "application/xhtml+xml", "application/xml", "text/xml",
+              "application/jats+xml", "text/plain")
+JATS_TYPES = ("application/xml", "text/xml", "application/jats+xml")
 
 ROUTINE = "routine"
 DEFAULT_RETRY_AFTER_S = 6 * 3600
+REUSE_VERSION = 1
 
 
 class MissingSourceClass(ValueError):
     """Invariant 6: a blog post and a refereed paper never share a pool unrecorded."""
+
+
+def reuse_cached(store, candidate, origin, *, origin_store, expected_sha256,
+                 campaign, identity, thresholds=None, policy=None, classes=None):
+    """Reuse verified acquired bytes, re-gated locally; never simulate an HTTP request."""
+    if not candidate.get("source_class"):
+        raise MissingSourceClass("cached candidate requires source_class")
+    if not campaign or campaign == ROUTINE:
+        raise ValueError("local reuse requires a named campaign")
+    if not origin.get("acquired") or origin.get("url") != candidate.get("url"):
+        raise ValueError("reuse requires a successful acquisition at the declared exact URL")
+    if not identity.get("document_title") or not identity.get("checked_by"):
+        raise ValueError("reuse requires an explicit title/identity assessment")
+    payload = Path(origin["stored_path"]).read_bytes()
+    digest = hashlib.sha256(payload).hexdigest()
+    if digest != expected_sha256 or digest != origin.get("sha256"):
+        raise ValueError("cached byte hash does not match the reuse plan")
+    existing = store.latest_by("acquisitions.jsonl", "candidate_key").get(candidate["candidate_key"])
+    if existing and existing.get("acquired"):
+        return existing
+    th = {**fulltext.DEFAULT_THRESHOLDS, **(thresholds or {})}
+    if classes is not None:
+        from claimstone.config import resolve_gate_policy
+        policy = resolve_gate_policy(policy or {}, classes, candidate["source_class"])
+    judged = fulltext.classify(payload, origin.get("content_type", ""), candidate["url"], th,
+                               policy=policy)
+    _, path = store.store_bytes(payload, _suffix_for(origin.get("content_type", ""), candidate["url"]))
+    row = {
+        "candidate_key": candidate["candidate_key"], "source_id": candidate.get("source_id"),
+        "source_class": candidate["source_class"], "campaign": campaign,
+        "attempt_no": (existing or {}).get("attempt_no", 0) + 1,
+        "acquired": judged.accepted, "sha256": digest if judged.accepted else None,
+        "stored_path": str(path), "url": candidate["url"], "provenance": "store-reuse",
+        "version": origin.get("version", ""), "licence": origin.get("licence"),
+        "oa_status": origin.get("oa_status"), "host_type": origin.get("host_type"),
+        "content_type": origin.get("content_type", ""), "bytes": len(payload),
+        "gate": judged.as_row(th, policy), "failure_class": None if judged.accepted else judged.kind,
+        "attempts": [], "fetched_at": origin.get("fetched_at"), "reused_at": _now(),
+        "reuse_version": REUSE_VERSION, "reuse_origin": {
+            "store": str(origin_store), "candidate_key": origin["candidate_key"],
+            "stored_path": origin["stored_path"], "sha256": digest,
+            "identity": dict(identity),
+        },
+    }
+    store.append("acquisitions.jsonl", row)
+    return row
 
 
 def _now() -> str:
@@ -40,6 +92,23 @@ def _suffix_for(content_type: str, url: str) -> str:
     if "xml" in content_type:
         return ".xml"
     return ".html"
+
+
+def _jats_licence(body: bytes) -> str | None:
+    """Retain the article's declared licence, without inferring one from endpoint access."""
+    root = ET.fromstring(body)
+    front = next((element for element in root if element.tag.rsplit('}', 1)[-1] == 'front'), None)
+    if front is None:
+        return None
+    for element in front.iter():
+        if element.tag.rsplit('}', 1)[-1] == 'license':
+            for linked in element.iter():
+                for key, value in linked.attrib.items():
+                    if key.rsplit('}', 1)[-1] == 'href' and value:
+                        return value
+            declared = element.get('license-type') or ''
+            return declared if declared.lower().startswith('cc-') else None
+    return None
 
 
 def acquire_one(
@@ -86,11 +155,15 @@ def acquire_one(
     followed = False
     while pending:
         location = pending.pop(0)
-        expect = PDF_TYPES if location.url.lower().endswith(".pdf") else PDF_TYPES + HTML_TYPES
+        expect = (JATS_TYPES if location.url.endswith('/fullTextXML') else
+                  PDF_TYPES if location.url.lower().endswith('.pdf') else PDF_TYPES + HTML_TYPES)
         outcome = fetcher.get(location.url, expect=expect)
         attempt = outcome.as_row() | {
             "provenance": location.provenance,
             "version": location.version,
+            "licence": location.licence,
+            "oa_status": location.oa_status or oa_status,
+            "host_type": location.host_type,
             "gate_kind": None,
             "gate_reason": None,
             "stored_path": None,
@@ -102,6 +175,9 @@ def acquire_one(
 
         verdict = fulltext.classify(outcome.body, outcome.content_type, outcome.url, th,
                                     policy=policy)
+        licence = (_jats_licence(outcome.body) or location.licence
+                   if verdict.kind == fulltext.JATS_FULLTEXT else location.licence)
+        attempt['licence'] = licence
         digest, path = store.store_bytes(
             outcome.body, _suffix_for(outcome.content_type, outcome.url)
         )
@@ -144,7 +220,7 @@ def acquire_one(
             "url": location.url,
             "provenance": location.provenance,
             "version": location.version,
-            "licence": location.licence,
+            "licence": licence,
             "oa_status": location.oa_status or oa_status,
             "host_type": location.host_type,
             "content_type": outcome.content_type,
@@ -205,6 +281,30 @@ def should_attempt(
     return _age_seconds(previous) >= retry_after_s
 
 
+def eligible_candidates(
+    candidates: Iterable[dict[str, Any]], previous: dict[str, dict[str, Any]], *,
+    retry_classes: frozenset[str] = frozenset(),
+    retry_after_s: int = DEFAULT_RETRY_AFTER_S, limit: int | None = None,
+    round_name: str | None = None, manifest_only: bool = False, only_oa: bool = False,
+) -> Iterator[dict[str, Any]]:
+    """The same scope, retry policy and attempt cap for preview and execution."""
+    selected = 0
+    for candidate in candidates:
+        if limit is not None and selected >= limit:
+            return
+        if round_name is not None and candidate.get('round') != round_name:
+            continue
+        if manifest_only and not candidate.get('source_id'):
+            continue
+        if only_oa and candidate.get('is_oa') is not True:
+            continue
+        if not should_attempt(previous.get(str(candidate['candidate_key'])),
+                              retry_classes=retry_classes, retry_after_s=retry_after_s):
+            continue
+        selected += 1
+        yield candidate
+
+
 def run(
     candidates: Iterable[dict[str, Any]],
     store: Store,
@@ -242,22 +342,10 @@ def run(
     in the denominator it belongs to.
     """
     previous = store.latest_by("acquisitions.jsonl", "candidate_key")
-    attempted = 0
-    for candidate in candidates:
-        if limit is not None and attempted >= limit:
-            return
-        if round_name is not None and candidate.get("round") != round_name:
-            continue
-        # A manifest row declares itself with a `source_id`; a discovered one has none.
-        if manifest_only and not candidate.get("source_id"):
-            continue
-        # Only what discovery already called open. Absent is not closed — it is unknown, and treating
-        # unknown as closed would silently shrink the population this selector claims to describe.
-        if only_oa and candidate.get("is_oa") is not True:
-            continue
+    for candidate in eligible_candidates(candidates, previous, retry_classes=retry_classes,
+            retry_after_s=retry_after_s, limit=limit, round_name=round_name,
+            manifest_only=manifest_only, only_oa=only_oa):
         prior = previous.get(str(candidate["candidate_key"]))
-        if not should_attempt(prior, retry_classes=retry_classes, retry_after_s=retry_after_s):
-            continue
         try:
             row = acquire_one(
                 fetcher, store, candidate, campaign=campaign, use_apis=use_apis,
@@ -287,5 +375,4 @@ def run(
             }
         row["attempt_no"] = int((prior or {}).get("attempt_no") or 0) + 1
         store.append("acquisitions.jsonl", row)
-        attempted += 1
         yield row

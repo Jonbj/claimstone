@@ -1,0 +1,1158 @@
+<!doctype html>
+<html lang="it" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Claimstone · Console</title>
+<style>
+/* ============================================================
+   Claimstone Console — mockup di design (non è il prodotto)
+   Riferimenti: kestra.io, n8n.io, tremor.so, ui.shadcn.com, rayyan.ai
+   Regola del progetto: un documento autonomo, niente CDN, niente
+   font esterni, niente librerie di chart (spec dashboard §11).
+   Palette: verde smeraldo + blu, con ciano/teal di raccordo.
+   ============================================================ */
+:root[data-theme="dark"]{
+  --bg:#071019; --bg-grad:radial-gradient(1200px 500px at 85% -10%, rgba(20,184,166,.10), transparent 60%),
+                      radial-gradient(900px 420px at -10% 110%, rgba(56,189,248,.08), transparent 55%);
+  --surface:#0a1622; --card:#0e1e31; --card-2:#0c1a2b; --inset:#091523;
+  --border:#1c3450; --border-soft:#14283e;
+  --text:#e9f1fa; --muted:#9db5ce; --faint:#829db8;
+  --teal:#14b8a6; --mint:#5eead4; --emerald:#34d399; --green:#4ade80;
+  --blue:#3b82f6; --sky:#38bdf8; --cyan:#22d3ee;
+  --amber:#fbbf24; --red:#f87171; --violet:#a78bfa; --slate:#94a3b8;
+  --shadow:0 10px 30px rgba(2,8,20,.45);
+  --chipbg:rgba(148,180,210,.08);
+}
+:root[data-theme="light"]{
+  --bg:#eef4f9; --bg-grad:radial-gradient(1200px 500px at 85% -10%, rgba(13,148,136,.10), transparent 60%),
+                      radial-gradient(900px 420px at -10% 110%, rgba(2,132,199,.08), transparent 55%);
+  --surface:#ffffff; --card:#ffffff; --card-2:#f6fafd; --inset:#f0f6fa;
+  --border:#d7e3ee; --border-soft:#e3edf5;
+  --text:#0e2236; --muted:#4e6b85; --faint:#5b7186;
+  --teal:#0d9488; --mint:#0f766e; --emerald:#059669; --green:#16a34a;
+  --blue:#2563eb; --sky:#0284c7; --cyan:#0891b2;
+  --amber:#b45309; --red:#dc2626; --violet:#7c3aed; --slate:#64748b;
+  --shadow:0 8px 24px rgba(23,50,77,.10);
+  --chipbg:rgba(78,107,133,.08);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+/* transizione morbida al cambio tema (§11: leggibile in chiaro e scuro) */
+body,.sidebar,.topbar,.card,.kpi,.node,.select,.search,.icon-btn,.btn,.chip,.meter,
+.bar-track,.hash,textarea.rationale,.vradio,.log .r td,.fbar{
+  transition:background-color .25s ease,color .25s ease,border-color .25s ease
+}
+:root[data-theme="light"] .overlay{background:rgba(15,35,60,.38)}
+:root[data-theme="light"] .palette{box-shadow:0 30px 80px rgba(23,50,77,.22)}
+:root[data-theme="dark"] .ico-sun{display:none}
+:root[data-theme="light"] .ico-moon{display:none}
+.icon-btn .ico-sun,.icon-btn .ico-moon{line-height:1}
+body{
+  background:var(--bg); background-image:var(--bg-grad); background-attachment:fixed;
+  color:var(--text);
+  font:14px/1.55 ui-sans-serif,system-ui,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+.mono{font-family:ui-monospace,"JetBrains Mono","Cascadia Code",Consolas,Menlo,monospace}
+a{color:var(--sky);text-decoration:none}
+a:hover{text-decoration:underline}
+::selection{background:rgba(56,189,248,.30)}
+
+/* ---------- shell ---------- */
+.app{display:grid;grid-template-columns:236px 1fr;min-height:100vh}
+.sidebar{
+  position:sticky;top:0;height:100vh;display:flex;flex-direction:column;
+  background:var(--surface);border-right:1px solid var(--border-soft);
+  padding:18px 12px 12px;
+}
+.brand{display:flex;align-items:center;gap:10px;padding:4px 10px 16px}
+.brand .logo{width:34px;height:34px;border-radius:10px;flex:none;
+  background:linear-gradient(135deg,var(--teal),var(--sky));
+  display:grid;place-items:center;color:#fff;font-weight:800;font-size:15px;
+  box-shadow:0 4px 14px rgba(20,184,166,.35)}
+.brand b{font-size:15px;letter-spacing:.2px}
+.brand small{display:block;color:var(--faint);font-weight:400;font-size:10.5px;letter-spacing:.6px;text-transform:uppercase}
+.nav{display:flex;flex-direction:column;gap:2px;margin-top:6px}
+.nav .sec{font-size:10.5px;letter-spacing:.8px;text-transform:uppercase;color:var(--faint);padding:12px 10px 4px}
+.nav a{
+  display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:9px;
+  color:var(--muted);font-weight:500;cursor:pointer;border:1px solid transparent
+}
+.nav a .ic{width:18px;height:18px;flex:none;opacity:.85}
+.nav a:hover{background:var(--chipbg);color:var(--text);text-decoration:none}
+.nav a.on{background:linear-gradient(90deg,rgba(20,184,166,.16),rgba(56,189,248,.10));color:var(--text);border-color:rgba(56,189,248,.25)}
+.nav a .kbd{margin-left:auto;font-size:10px;color:var(--faint);border:1px solid var(--border);border-radius:5px;padding:1px 5px}
+.side-foot{margin-top:auto;padding:10px;color:var(--faint);font-size:11px;border-top:1px solid var(--border-soft)}
+.side-foot .row{display:flex;justify-content:space-between;padding:2px 0}
+.side-foot .ok{color:var(--emerald)}
+
+.main{min-width:0;display:flex;flex-direction:column}
+.topbar{
+  position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:10px;
+  padding:10px 22px;background:color-mix(in srgb, var(--surface) 82%, transparent);
+  backdrop-filter:blur(10px);border-bottom:1px solid var(--border-soft)
+}
+.crumb{font-size:12.5px;color:var(--faint)}
+.crumb b{color:var(--text);font-weight:600}
+.select{
+  appearance:none;background:var(--inset);border:1px solid var(--border);color:var(--text);
+  border-radius:8px;padding:6px 28px 6px 10px;font-size:12.5px;cursor:pointer;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' stroke='%238fa9c4' fill='none' stroke-width='1.6'/></svg>");
+  background-repeat:no-repeat;background-position:right 10px center
+}
+.search{
+  margin-left:auto;display:flex;align-items:center;gap:8px;background:var(--inset);
+  border:1px solid var(--border);border-radius:9px;padding:6px 10px;color:var(--faint);
+  font-size:12.5px;cursor:pointer;min-width:210px
+}
+.search:hover{border-color:var(--teal)}
+.icon-btn{
+  width:32px;height:32px;border-radius:9px;border:1px solid var(--border);background:var(--inset);
+  color:var(--muted);cursor:pointer;display:grid;place-items:center;font-size:14px
+}
+.icon-btn:hover{color:var(--text);border-color:var(--teal)}
+.who{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--teal));
+  color:#fff;display:grid;place-items:center;font-size:12px;font-weight:700}
+
+.content{padding:22px;max-width:1460px;width:100%;margin:0 auto}
+.view{display:none}
+.view.on{display:block;animation:fade .18s ease}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+h1{font-size:20px;margin:2px 0 4px;letter-spacing:-.2px}
+.sub{color:var(--muted);margin:0 0 18px;font-size:13px;max-width:900px}
+h2{font-size:14.5px;margin:0}
+h3{font-size:12.5px;margin:0;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.6px}
+
+/* ---------- cards & grids ---------- */
+.card{background:var(--card);border:1px solid var(--border-soft);border-radius:14px;box-shadow:var(--shadow)}
+.card .hd{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border-soft)}
+.card .hd .spacer{margin-left:auto;display:flex;gap:8px;align-items:center}
+.card .bd{padding:16px}
+.grid{display:grid;gap:14px}
+.g-kpi{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+.g-2{grid-template-columns:2fr 1fr}
+.g-2e{grid-template-columns:1fr 1fr}
+.g-3{grid-template-columns:1fr 1fr 1fr}
+@media(max-width:1150px){.g-2,.g-2e,.g-3{grid-template-columns:1fr}}
+.stack{display:flex;flex-direction:column;gap:14px}
+
+.kpi{background:var(--card);border:1px solid var(--border-soft);border-radius:13px;padding:13px 15px;position:relative;overflow:hidden}
+.kpi::after{content:"";position:absolute;inset:0 0 auto 0;height:2px;background:linear-gradient(90deg,var(--teal),var(--sky));opacity:.7}
+.kpi .lab{font-size:11px;color:var(--faint);text-transform:uppercase;letter-spacing:.7px}
+.kpi .val{font-size:24px;font-weight:700;margin:3px 0 1px;letter-spacing:-.5px}
+.kpi .den{font-size:11.5px;color:var(--muted)}
+.kpi.warn::after{background:var(--amber)}
+.kpi.bad::after{background:var(--red)}
+.kpi .delta{font-size:11px;margin-left:6px;font-weight:600}
+
+/* ---------- chips ---------- */
+.chip{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:2px 10px;
+  font-size:11px;font-weight:600;background:var(--chipbg);border:1px solid var(--border);color:var(--muted);white-space:nowrap}
+.chip .dot{width:7px;height:7px;border-radius:50%;flex:none}
+.c-green{color:var(--green);border-color:color-mix(in srgb,var(--green) 35%,transparent)}
+.c-green .dot{background:var(--green)}
+.c-blue{color:var(--sky);border-color:color-mix(in srgb,var(--sky) 35%,transparent)}
+.c-blue .dot{background:var(--sky)}
+.c-amber{color:var(--amber);border-color:color-mix(in srgb,var(--amber) 40%,transparent)}
+.c-amber .dot{background:var(--amber)}
+.c-red{color:var(--red);border-color:color-mix(in srgb,var(--red) 40%,transparent)}
+.c-red .dot{background:var(--red)}
+.c-violet{color:var(--violet);border-color:color-mix(in srgb,var(--violet) 40%,transparent)}
+.c-violet .dot{background:var(--violet)}
+.c-slate{color:var(--slate);border-color:color-mix(in srgb,var(--slate) 40%,transparent)}
+.c-slate .dot{background:var(--slate)}
+.c-teal{color:var(--teal);border-color:color-mix(in srgb,var(--teal) 40%,transparent)}
+.c-teal .dot{background:var(--teal)}
+.chip.dashed{border-style:dashed;color:var(--faint)}
+.tag{display:inline-block;border:1px solid var(--border);border-radius:6px;padding:0 6px;
+  font-size:10.5px;color:var(--muted);background:var(--inset)}
+
+/* ---------- meters ---------- */
+.meter{height:8px;border-radius:6px;background:var(--inset);border:1px solid var(--border-soft);position:relative;overflow:visible}
+.meter>i{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,var(--teal),var(--sky))}
+.meter.warn>i{background:linear-gradient(90deg,#d97706,var(--amber))}
+.meter.bad>i{background:linear-gradient(90deg,#b91c1c,var(--red))}
+.meter .floor{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--text);opacity:.75}
+.meter .floor::after{content:attr(data-lab);position:absolute;top:-16px;left:-14px;font-size:9.5px;color:var(--faint);white-space:nowrap}
+
+/* ---------- buttons ---------- */
+.btn{display:inline-flex;align-items:center;gap:7px;border-radius:9px;padding:7px 13px;font-size:12.5px;font-weight:600;
+  border:1px solid var(--border);background:var(--inset);color:var(--text);cursor:pointer}
+.btn:hover{border-color:var(--teal)}
+.btn.pri{background:linear-gradient(135deg,var(--teal),var(--blue));border:none;color:#fff;
+  box-shadow:0 4px 14px rgba(20,184,166,.30)}
+.btn.pri:hover{filter:brightness(1.07)}
+.btn.ghost{background:transparent}
+.btn.sm{padding:4px 9px;font-size:11.5px;border-radius:7px}
+.btn.danger{border-color:color-mix(in srgb,var(--red) 45%,transparent);color:var(--red)}
+.btn:disabled{opacity:.45;cursor:not-allowed;filter:none}
+
+/* ---------- tables ---------- */
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{font-size:10.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--faint);text-align:left;
+  padding:8px 10px;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:9px 10px;border-bottom:1px solid var(--border-soft);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:var(--chipbg)}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+.qtext{max-width:430px}
+.qtext b{display:block}
+.qtext small{color:var(--muted)}
+
+/* ---------- pipeline topology (stile Kestra) ---------- */
+.topo{display:flex;align-items:stretch;gap:0;overflow-x:auto;padding:6px 2px 2px}
+.node{
+  min-width:138px;flex:1;background:var(--card-2);border:1px solid var(--border);border-radius:12px;
+  padding:11px 12px;position:relative;cursor:pointer;transition:border-color .15s, transform .15s
+}
+.node:hover{border-color:var(--teal);transform:translateY(-2px)}
+.node.done{border-color:color-mix(in srgb,var(--emerald) 45%,transparent)}
+.node.done::before{content:"";position:absolute;top:10px;right:10px;width:8px;height:8px;border-radius:50%;
+  background:var(--emerald);box-shadow:0 0 0 3px color-mix(in srgb,var(--emerald) 20%,transparent)}
+.node.blocked{border-color:color-mix(in srgb,var(--red) 45%,transparent)}
+.node.blocked::before{content:"";position:absolute;top:10px;right:10px;width:8px;height:8px;border-radius:50%;background:var(--red)}
+.node .n{display:flex;align-items:center;gap:8px;font-weight:700;font-size:12.5px}
+.node .n .ic{width:22px;height:22px;border-radius:7px;display:grid;place-items:center;flex:none;
+  background:linear-gradient(135deg,rgba(20,184,166,.25),rgba(56,189,248,.2));color:var(--mint)}
+.node .m{font-size:11px;color:var(--muted);margin-top:7px;line-height:1.45}
+.node .m b{color:var(--text)}
+.edge{width:34px;flex:none;display:grid;place-items:center;color:var(--faint)}
+.node.adj{border-style:dashed;background:transparent}
+.pulse{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--mint);
+  animation:pulse 1.6s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(94,234,212,.5)}70%{box-shadow:0 0 0 7px rgba(94,234,212,0)}100%{box-shadow:0 0 0 0 rgba(94,234,212,0)}}
+
+/* ---------- funnel (stile PRISMA) ---------- */
+.funnel{display:flex;flex-direction:column;gap:9px}
+.fstep{display:grid;grid-template-columns:210px 1fr 120px;gap:12px;align-items:center}
+.fstep .fl{font-size:12px;color:var(--muted)}
+.fstep .fl b{color:var(--text)}
+.fbar{height:26px;border-radius:7px;background:linear-gradient(90deg,rgba(20,184,166,.85),rgba(56,189,248,.75));position:relative;min-width:3px}
+.fbar.drop{background:linear-gradient(90deg,rgba(148,163,184,.5),rgba(148,163,184,.35))}
+.fbar.rej{background:linear-gradient(90deg,rgba(248,113,113,.55),rgba(251,191,36,.5))}
+.fstep .fv{font-size:12px;text-align:right;font-variant-numeric:tabular-nums}
+.fstep .fv small{color:var(--faint);display:block;font-size:10.5px}
+
+/* ---------- log feed ---------- */
+.log{display:flex;flex-direction:column;font-size:12px;max-height:420px;overflow:auto}
+.log .r{display:grid;grid-template-columns:64px 74px 1fr;gap:10px;padding:6px 4px;border-bottom:1px dashed var(--border-soft);align-items:baseline}
+.log .t{color:var(--faint)}
+.log .s{font-size:10.5px;font-weight:700;letter-spacing:.3px}
+.log .m{color:var(--muted)}
+.log .m b{color:var(--text);font-weight:600}
+.log .new{animation:fade .4s ease}
+
+/* ---------- bars / charts ---------- */
+.bars{display:flex;flex-direction:column;gap:8px}
+.bar-row{display:grid;grid-template-columns:190px 1fr 90px;gap:10px;align-items:center;font-size:12px}
+.bar-track{height:16px;background:var(--inset);border-radius:5px;overflow:hidden;border:1px solid var(--border-soft)}
+.bar-fill{height:100%;border-radius:5px 0 0 5px}
+.bar-row .bv{text-align:right;font-variant-numeric:tabular-nums;color:var(--muted)}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:11.5px;color:var(--muted)}
+.legend i{width:9px;height:9px;border-radius:3px;display:inline-block;margin-right:5px;vertical-align:-1px}
+svg text{font-family:inherit}
+
+/* ---------- adjudication ---------- */
+.verdict-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:9px}
+.vradio{border:1px solid var(--border);border-radius:11px;padding:10px 12px;cursor:pointer;display:flex;gap:10px;align-items:flex-start;background:var(--card-2)}
+.vradio input{margin-top:3px;accent-color:var(--teal)}
+.vradio .vt{font-weight:700;font-size:12px}
+.vradio .vd{font-size:11px;color:var(--muted);margin-top:2px}
+.vradio.sel{border-color:var(--teal);background:linear-gradient(135deg,rgba(20,184,166,.10),rgba(56,189,248,.08))}
+.vradio.dis{opacity:.5;cursor:not-allowed}
+textarea.rationale{width:100%;min-height:120px;background:var(--inset);color:var(--text);
+  border:1px solid var(--border);border-radius:10px;padding:11px;font:12.5px/1.6 inherit;resize:vertical}
+textarea.rationale:focus{outline:none;border-color:var(--teal)}
+.hash{display:flex;align-items:center;gap:8px;background:var(--inset);border:1px dashed var(--border);
+  border-radius:9px;padding:8px 11px;font-size:11.5px;color:var(--muted);word-break:break-all}
+.hash button{background:none;border:none;color:var(--sky);cursor:pointer;font-size:11px}
+
+/* ---------- banners & notes ---------- */
+.banner{display:flex;gap:12px;align-items:flex-start;border-radius:12px;padding:12px 14px;font-size:12.5px;margin-bottom:16px;border:1px solid}
+.banner .bi{font-size:16px;line-height:1.2}
+.banner.warn{background:color-mix(in srgb,var(--amber) 9%,transparent);border-color:color-mix(in srgb,var(--amber) 35%,transparent);color:var(--text)}
+.banner.info{background:color-mix(in srgb,var(--sky) 8%,transparent);border-color:color-mix(in srgb,var(--sky) 30%,transparent)}
+.banner.danger{background:color-mix(in srgb,var(--red) 8%,transparent);border-color:color-mix(in srgb,var(--red) 35%,transparent)}
+.banner p{margin:4px 0 0;color:var(--muted)}
+.note{font-size:11px;color:var(--faint);margin-top:10px;display:flex;gap:6px;align-items:baseline}
+
+/* ---------- command palette ---------- */
+.overlay{position:fixed;inset:0;background:rgba(4,10,18,.62);backdrop-filter:blur(3px);z-index:100;display:none;align-items:flex-start;justify-content:center;padding-top:12vh}
+.overlay.on{display:flex}
+.palette{width:min(620px,92vw);background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:0 30px 80px rgba(0,0,0,.5);overflow:hidden}
+.palette input{width:100%;background:transparent;border:none;border-bottom:1px solid var(--border-soft);color:var(--text);
+  padding:15px 18px;font-size:14px;outline:none}
+.palette .list{max-height:340px;overflow:auto;padding:8px}
+.palette .cmd{display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:9px;cursor:pointer;font-size:13px;color:var(--muted)}
+.palette .cmd:hover,.palette .cmd.sel{background:var(--chipbg);color:var(--text)}
+.palette .cmd .k{margin-left:auto}
+.pill{font-size:9.5px;border:1px solid var(--border);border-radius:5px;padding:1px 5px;color:var(--faint)}
+
+/* ---------- misc ---------- */
+.split{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:1000px){.split{grid-template-columns:1fr}}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:12.5px}
+.kv dt{color:var(--faint)}
+.kv dd{margin:0;color:var(--text)}
+.progressline{display:flex;align-items:center;gap:10px;font-size:12px}
+.timeline{position:relative;padding-left:18px}
+.timeline::before{content:"";position:absolute;left:5px;top:6px;bottom:6px;width:2px;background:var(--border)}
+.timeline .ev{position:relative;padding:7px 0 7px 6px}
+.timeline .ev::before{content:"";position:absolute;left:-17px;top:13px;width:8px;height:8px;border-radius:50%;background:var(--teal);border:2px solid var(--bg)}
+.timeline .ev .d{font-size:11px;color:var(--faint)}
+.timeline .ev .x{font-size:12.5px}
+@media(max-width:900px){
+  .app{grid-template-columns:64px 1fr}
+  .brand b,.brand small,.nav a .lab,.nav a .kbd,.nav .sec,.side-foot .row span:last-child{display:none}
+  .nav a{justify-content:center}
+  .content{padding:14px}
+  .fstep{grid-template-columns:130px 1fr 90px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ======================= SIDEBAR ======================= -->
+<aside class="sidebar">
+  <div class="brand">
+    <div class="logo">C</div>
+    <div><b>Claimstone</b><small>console operatore</small></div>
+  </div>
+
+  <nav class="nav" id="nav">
+    <div class="sec">Il round · spec v1 §4–8</div>
+    <a href="#view-overview" data-view="overview" class="on"><span class="ic">◈</span><span class="lab">Panoramica</span><span class="kbd">1</span></a>
+    <a href="#view-questions" data-view="questions"><span class="ic">❓</span><span class="lab">Domande</span><span class="kbd">2</span></a>
+    <a href="#view-funnel" data-view="funnel"><span class="ic">▽</span><span class="lab">Funnel &amp; scarti</span><span class="kbd">3</span></a>
+    <a href="#view-activity" data-view="activity"><span class="ic">⟳</span><span class="lab">Attività live</span><span class="kbd">4</span></a>
+    <div class="sec">Estensioni v2 · oltre la spec</div>
+    <a href="#view-pipeline" data-view="pipeline"><span class="ic">⦗◧⦖</span><span class="lab">Pipeline &amp; batch</span><span class="kbd">5</span></a>
+    <a href="#view-trends" data-view="trends"><span class="ic">📈</span><span class="lab">Andamenti</span><span class="kbd">6</span></a>
+    <a href="#view-adjudicate" data-view="adjudicate"><span class="ic">✍</span><span class="lab">Adjudication</span><span class="tag" style="color:var(--amber)">0 firme</span></a>
+    <a href="#view-admin" data-view="admin"><span class="ic">⚙</span><span class="lab">Amministrazione</span><span class="kbd">8</span></a>
+  </nav>
+
+  <div class="side-foot">
+    <div class="row"><span>pytest -q</span><span>1006 ok · 7 skip · 28/09</span></div>
+    <div class="row"><span>store</span><span class="mono">271 MB</span></div>
+    <div class="row"><span>strumenti</span><span class="ok">versioni verificate</span></div>
+    <div class="row" style="margin-top:6px"><span style="color:var(--faint)">claimstone serve · 127.0.0.1:8787 · §10</span></div>
+  </div>
+</aside>
+
+<!-- ======================= MAIN ======================= -->
+<div class="main">
+  <header class="topbar">
+    <span class="crumb">progetto <b>pmc-screen-time</b> · round <b>r1-deposits</b></span>
+    <select class="select" disabled title="Mockup: un serve per progetto (§13) — i dati restano quelli di pmc-screen-time"><option>pmc-screen-time</option></select>
+    <select class="select" disabled title="Mockup: selettore non operativo"><option>r1-deposits (2026-09-28)</option></select>
+    <div class="search" id="openPalette">🔍 Cerca comandi, domande, batch… <span style="margin-left:auto" class="pill">Ctrl K</span></div>
+    <button class="icon-btn" id="themeToggle" aria-label="Cambia tema chiaro/scuro" title="Cambia tema (auto: segue il sistema finché non scegli)">
+      <span class="ico-sun">☀</span><span class="ico-moon">☾</span>
+    </button>
+    <div class="who" title="Operatore (firmatario)">OP</div>
+  </header>
+
+  <main class="content">
+
+  <!-- ============================================================ -->
+  <!-- VISTA 1 · PANORAMICA                                          -->
+  <!-- ============================================================ -->
+  <section class="view on" id="view-overview">
+    <h1>Panoramica</h1>
+    <p class="sub">Una lettura sola: quanto corpus è stato ottenuto legalmente, contro quale soglia, e dove si trova ogni fase. <b>Snapshot al 2026-09-28 12:24</b> — ogni cifra porta accanto il comando o il ledger che l'ha prodotta. Ogni percentuale porta accanto il suo denominatore.</p>
+
+    <div class="grid g-kpi">
+      <div class="kpi"><div class="lab">Candidati nel round</div><div class="val">40</div><div class="den">da manifest curato (import-manifest) · 199 scoperti nel pilota, 159 esclusi dal selettore depositi PMC</div></div>
+      <div class="kpi"><div class="lab">Confermati (il dato)</div><div class="val">37/40 <span class="delta" style="color:var(--emerald)">0.93</span></div><div class="den">floor 0.80 · v1 · 2026-09-27 · base: confermati · da <span class="mono">report</span></div></div>
+      <div class="kpi"><div class="lab">Annotazioni accettate</div><div class="val">1.721</div><div class="den">3.389 righe nel ledger · correnti per <span class="mono">latest_by</span> con supersede (D46)</div></div>
+      <div class="kpi warn"><div class="lab">Profili</div><div class="val">8</div><div class="den">Q04 completo, in attesa di lettura umana · 7 provvisori · da <span class="mono">verdicts</span></div></div>
+      <div class="kpi bad"><div class="lab">Verdetti firmati</div><div class="val">0</div><div class="den">conta conoscibile: nessuna riga in <span class="mono">adjudications.jsonl</span></div></div>
+    </div>
+
+    <div class="grid g-2" style="margin-top:14px">
+      <div class="card">
+        <div class="hd"><h2>Pipeline del round</h2><div class="spacer"><span class="chip c-green"><span class="dot"></span>floor superato</span><span class="chip"><span class="pulse"></span>ultima scrittura 12:24 · inferenza da mtime</span></div></div>
+        <div class="bd">
+          <div class="topo">
+            <div class="node done">
+              <div class="n"><span class="ic">◉</span>1 · discover</div>
+              <div class="m"><b>40</b> candidati da manifest<br>canale unico: <b>completezza non stimabile</b> (§6)</div>
+            </div>
+            <div class="edge">→</div>
+            <div class="node done">
+              <div class="n"><span class="ic">⇩</span>2 · acquire</div>
+              <div class="m"><b>38/40</b> ottenuti = <b>0.95</b><br>2 scarti: BOT_CHALLENGE · da <span class="mono">report</span></div>
+            </div>
+            <div class="edge">→</div>
+            <div class="node done">
+              <div class="n"><span class="ic">▤</span>3 · normalize</div>
+              <div class="m"><b>37/38</b> confermati · <b>2.194</b> chunk<br>1 scarto: NOT_A_DOCUMENT · GROBID in container</div>
+            </div>
+            <div class="edge">→</div>
+            <div class="node done">
+              <div class="n"><span class="ic">✂</span>4 · extract</div>
+              <div class="m"><b>1.721</b> annotazioni correnti · 271 scarti correnti<br><span style="color:var(--amber)">24 letture senza risposta</span> (effect 0 · het 4 · method 15 · premise 5)</div>
+            </div>
+            <div class="edge">→</div>
+            <div class="node blocked">
+              <div class="n"><span class="ic">👁</span>5 · review</div>
+              <div class="m">Q04 letta (v2 completa)<br><span style="color:var(--red)">coda residua: 1.679 chiamate</span> sulle altre sette</div>
+            </div>
+            <div class="edge">→</div>
+            <div class="node blocked">
+              <div class="n"><span class="ic">Σ</span>6 · synthesize</div>
+              <div class="m"><b>8</b> profili correnti (16 righe)<br>Q04 senza blocchi · 7 provvisori</div>
+            </div>
+            <div class="edge">⇢</div>
+            <div class="node adj">
+              <div class="n"><span class="ic">✍</span>adjudicate</div>
+              <div class="m"><b>0</b> verdetti<br>Q04 attende la persona · D52</div>
+            </div>
+          </div>
+          <div class="note">◈ Un nodo tratteggiato non è «non ancora fatto»: è una fase che <b>declara</b> il proprio stato invece di mostrare zero. Rosso su review/synthesize = il blocco che tiene sette profili provvisori, non un errore di esecuzione.</div>
+        </div>
+      </div>
+
+      <div class="stack">
+        <div class="card">
+          <div class="hd"><h2>Soglia di questo round</h2><div class="spacer"><span class="tag">gate floor v1 · 2026-09-27</span></div></div>
+          <div class="bd">
+            <div class="progressline" style="justify-content:space-between;margin-bottom:7px">
+              <b style="font-size:12.5px">pmc-screen-time · r1-deposits</b>
+              <span class="chip c-green"><span class="dot"></span>OK · 0.93 su floor 0.80</span>
+            </div>
+            <div class="meter"><i style="width:93%"></i><span class="floor" style="left:80%" data-lab="floor .80"></span></div>
+            <div class="note">37/40 confermati · 38/40 ottenuti — una risposta 200 con una landing page non è un documento. Il confronto con gli altri due progetti, che sono <b>popolazioni diverse e non round dello stesso progetto</b>, sta in Andamenti (§13 esclude la vista multi-progetto da qui).</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="hd"><h2>Stato del round — StageState (§4)</h2><div class="spacer"><span class="tag">round_state.py · puro, testabile</span></div></div>
+          <div class="bd" style="padding:6px 10px 10px">
+            <table>
+              <thead><tr><th>Fase</th><th class="num">inputs</th><th class="num">outputs</th><th class="num">rejected</th><th>ultima scrittura</th></tr></thead>
+              <tbody>
+                <tr><td>discover</td><td class="num">—</td><td class="num">40</td><td class="num">—</td><td class="mono" style="font-size:11px">manifest</td></tr>
+                <tr><td>acquire</td><td class="num">40</td><td class="num">38</td><td class="num">2</td><td class="mono" style="font-size:11px">09-27</td></tr>
+                <tr><td>normalize</td><td class="num">38</td><td class="num">37</td><td class="num">1</td><td class="mono" style="font-size:11px">09-27</td></tr>
+                <tr><td>extract</td><td class="num">2.194</td><td class="num">1.721</td><td class="num">271</td><td class="mono" style="font-size:11px">09-28</td></tr>
+                <tr><td>review</td><td class="num">1.721</td><td class="num">126 righe</td><td class="num">—</td><td class="mono" style="font-size:11px">09-28</td></tr>
+                <tr><td>synthesize</td><td class="num">8</td><td class="num">8</td><td class="num">—</td><td class="mono" style="font-size:11px">12:24</td></tr>
+              </tbody>
+            </table>
+            <div class="note">⊘ outputs e rejected seguono <b>la stessa regola</b>: ultimo esito per <span class="mono">claim_id</span> con supersede tra i due ledger (D46) — 1.721 accettate + 271 scarti = 1.992 identificativi. «—» = non conoscibile in principio, mai zero.</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="hd"><h2>Adesso</h2><div class="spacer"><span class="chip c-teal"><span class="dot"></span>GROBID attivo · 3.6 GB</span></div></div>
+          <div class="bd">
+            <div class="kv">
+              <dt>in attesa della persona</dt><dd><b style="color:var(--amber)">Q04</b>: profilo completo (4 risultati trattenuti, copertura 4/37), richiede valutazione di rilevanza/posizione prima della firma (D52)</dd>
+              <dt>coda review</dt><dd>1.679 chiamate uniche fuori da Q04; estendere la review a pagamento richiede l'autorizzazione dell'operatore (D59)</dd>
+              <dt>riprese</dt><dd>ogni batch è riprendibile per <span class="mono">call_id</span>: i work già fatti non si rifanno</dd>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- VISTA 2 · DOMANDE                                             -->
+  <!-- ============================================================ -->
+  <section class="view" id="view-questions">
+    <h1>Il registro delle domande</h1>
+    <p class="sub">La spina dorsale della pagina, nell'ordine del registro (v1, congelato 2026-09-28). La copertura è <b>fonti che ne parlano / fonti esaminate</b>: il numero di claim che una domanda potrebbe ricevere non esiste, e qualsiasi barra su quel denominatore sarebbe inventata.</p>
+
+    <div class="banner info"><span class="bi">⚖</span><div><b>Cinque stati di verdetto, e nessuno collassa in un altro.</b>
+      <p>Renderli uguali è l'errore che questo progetto esiste per prevenire. <span style="color:var(--green)">SUPPORTED</span> e <span style="color:var(--sky)">CONTRADICTED</span> sono entrambi esiti riusciti; <span style="color:var(--violet)">CONTESTED</span> non è <span style="color:var(--slate)">UNANSWERED</span> spostato di una categoria.</p></div>
+    </div>
+
+    <div class="card">
+      <div class="hd"><h2>questions.yaml · registry v1 · digest verificato</h2>
+        <div class="spacer"><button class="btn sm ghost">▼ diff con v2 proposto</button><button class="btn sm">Esporta spina</button></div></div>
+      <div class="bd" style="padding:6px 10px 10px">
+      <table>
+        <thead><tr><th>ID</th><th style="width:32%">Domanda (testo congelato)</th><th>kind</th><th class="num">Annotazioni · per classe</th><th style="width:14%">Copertura / fonti esaminate</th><th class="num">n/37</th><th>Review</th><th>Stato del profilo</th><th>Verdetto</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">Q01</td>
+            <td class="qtext"><b>Il tempo di schermo auto-riportato è una misura valida dell'uso reale del dispositivo.</b><small>la premessa su cui poggiano le altre</small></td>
+            <td><span class="tag">premise</span></td>
+            <td class="num">252 <small style="color:var(--faint)">ACA 252</small></td>
+            <td><div class="meter"><i style="width:0%"></i></div></td><td class="num">0</td>
+            <td class="num" title="0 review registrate per questa domanda — conteggio conoscibile; il tasso SUPPORTED non è misurabile finché non si legge">non eseguita</td>
+            <td><span class="chip c-amber"><span class="dot"></span>provvisorio · awaiting_extract + 252 in coda review</span></td>
+            <td><span class="chip dashed">—</span></td></tr>
+          <tr><td class="mono">Q02</td>
+            <td class="qtext"><b>Un maggiore uso di schermi o social è associato a un benessere adolescenziale più basso.</b></td>
+            <td><span class="tag">effect</span></td>
+            <td class="num">474 <small style="color:var(--faint)">ACA 474</small></td>
+            <td><div class="meter"><i style="width:0%"></i></div></td><td class="num">0</td>
+            <td class="num" title="0 review registrate per questa domanda — conteggio conoscibile; il tasso SUPPORTED non è misurabile finché non si legge">non eseguita</td>
+            <td><span class="chip c-amber"><span class="dot"></span>provvisorio · 474 in coda review</span></td>
+            <td><span class="chip dashed">—</span></td></tr>
+          <tr><td class="mono">Q03</td>
+            <td class="qtext"><b>L'associazione tra uso di schermi e benessere è causale e non confusa o invertita.</b></td>
+            <td><span class="tag">effect</span></td>
+            <td class="num">138 <small style="color:var(--faint)">ACA 138</small></td>
+            <td><div class="meter"><i style="width:0%"></i></div></td><td class="num">0</td>
+            <td class="num" title="0 review registrate per questa domanda — conteggio conoscibile; il tasso SUPPORTED non è misurabile finché non si legge">non eseguita</td>
+            <td><span class="chip c-amber"><span class="dot"></span>provvisorio · 138 in coda review</span></td>
+            <td><span class="chip dashed">—</span></td></tr>
+          <tr style="background:color-mix(in srgb,var(--emerald) 7%,transparent)">
+            <td class="mono">Q04</td>
+            <td class="qtext"><b>L'effetto sopravvive a preregistrazione e correzione per confronti multipli.</b><small>completo: attende la lettura e la firma di una persona</small></td>
+            <td><span class="tag">effect</span></td>
+            <td class="num">42 <small style="color:var(--faint)">ACA 42</small></td>
+            <td><div class="meter"><i style="width:11%"></i></div></td><td class="num">4</td>
+            <td class="num">v2 completa<small style="color:var(--faint)"> · 4S / 31O / 7 N.A. su 42</small></td>
+            <td><span class="chip c-green"><span class="dot"></span>senza blocchi · sha 9340389c… · D52</span></td>
+            <td><span class="chip dashed">—</span></td></tr>
+          <tr><td class="mono">Q05</td>
+            <td class="qtext"><b>L'effetto varia materialmente per sesso, ed è più grande per le ragazze adolescenti.</b></td>
+            <td><span class="tag">heterogeneity</span></td>
+            <td class="num">90 <small style="color:var(--faint)">ACA 90</small></td>
+            <td><div class="meter"><i style="width:0%"></i></div></td><td class="num">0</td>
+            <td class="num" title="0 review registrate per questa domanda — conteggio conoscibile; il tasso SUPPORTED non è misurabile finché non si legge">non eseguita</td>
+            <td><span class="chip c-amber"><span class="dot"></span>provvisorio · awaiting_extract + 90 in coda review</span></td>
+            <td><span class="chip dashed">—</span></td></tr>
+          <tr><td class="mono">Q06</td>
+            <td class="qtext"><b>La relazione è dose-dipendente, non presente solo all'uso estremo.</b></td>
+            <td><span class="tag">heterogeneity</span></td>
+            <td class="num">125 <small style="color:var(--faint)">ACA 125</small></td>
+            <td><div class="meter"><i style="width:0%"></i></div></td><td class="num">0</td>
+            <td class="num" title="0 review registrate per questa domanda — conteggio conoscibile; il tasso SUPPORTED non è misurabile finché non si legge">non eseguita</td>
+            <td><span class="chip c-amber"><span class="dot"></span>provvisorio · awaiting_extract + 125 in coda review</span></td>
+            <td><span class="chip dashed">—</span></td></tr>
+          <tr><td class="mono">Q07</td>
+            <td class="qtext"><b>Uso loggato oggettivamente e auto-resoconto sono misure distinte che richiedono inferenze diverse.</b></td>
+            <td><span class="tag">method</span></td>
+            <td class="num">427 <small style="color:var(--faint)">ACA 427</small></td>
+            <td><div class="meter"><i style="width:0%"></i></div></td><td class="num">0</td>
+            <td class="num" title="0 review registrate per questa domanda — conteggio conoscibile; il tasso SUPPORTED non è misurabile finché non si legge">non eseguita</td>
+            <td><span class="chip c-amber"><span class="dot"></span>provvisorio · awaiting_extract + 427 in coda review</span></td>
+            <td><span class="chip dashed">—</span></td></tr>
+          <tr><td class="mono">Q08</td>
+            <td class="qtext"><b>Disegni between-person e within-person rispondono a domande diverse e non vanno riuniti.</b></td>
+            <td><span class="tag">method</span></td>
+            <td class="num">173 <small style="color:var(--faint)">ACA 173</small></td>
+            <td><div class="meter"><i style="width:0%"></i></div></td><td class="num">0</td>
+            <td class="num" title="0 review registrate per questa domanda — conteggio conoscibile; il tasso SUPPORTED non è misurabile finché non si legge">non eseguita</td>
+            <td><span class="chip c-amber"><span class="dot"></span>provvisorio · awaiting_extract + 173 in coda review</span></td>
+            <td><span class="chip dashed">—</span></td></tr>
+        </tbody>
+      </table>
+      </div>
+      <div class="bd" style="border-top:1px solid var(--border-soft);padding-top:12px">
+        <h3 style="margin-bottom:9px">Stati: cinque verdetti umani + un esito categorico del motore</h3>
+        <div class="verdict-grid">
+          <div class="vradio"><div><div class="vt" style="color:var(--green)">SUPPORTED</div><div class="vd">l'evidenza letta sostiene l'affermazione</div></div></div>
+          <div class="vradio"><div><div class="vt" style="color:var(--sky)">CONTRADICTED</div><div class="vd">esito riuscito, non un errore: concludere contro è un risultato</div></div></div>
+          <div class="vradio"><div><div class="vt" style="color:var(--violet)">CONTESTED_IN_LITERATURE</div><div class="vd">la letteratura parla e discorda</div></div></div>
+          <div class="vradio"><div><div class="vt" style="color:var(--slate)">UNANSWERED_IN_LITERATURE</div><div class="vd">il corpus è stato letto e non decide</div></div></div>
+          <div class="vradio" style="border-style:dashed"><div><div class="vt" style="color:var(--faint)">NEVER_ASKED</div><div class="vd">mai posta a questa letteratura — <b>lo stabilisce lo screening umano</b>, mai l'assenza di claim</div></div></div>
+          <div class="vradio" style="border-style:dashed;background:var(--inset)"><div><div class="vt" style="color:var(--amber)">NO_VERIFIED_CLAIM</div><div class="vd">esito categorico di synthesize, <b>non un verdetto</b>: nulla è sopravvissuto, e da solo non distingue estrazione mancata, tutto-scartato o mai chiesto</div></div></div>
+        </div>
+        <div class="note">⚖ La spec (§8.5) dice «quattro stati» e precede l'aggiunta di <b>CONTESTED_IN_LITERATURE</b> (2026-09-25): dove spec e record divergono vince il record. La copertura è <b>post-review</b>: una domanda non ancora letta mostra 0/37 — fonti che parlano dopo la review — non la conta dei claim grezzi. «Esaminata» = fonte acquisita i cui chunk sono tutti passati da extract.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- VISTA 3 · PIPELINE                                             -->
+  <!-- ============================================================ -->
+  <section class="view" id="view-pipeline">
+    <h1>Pipeline &amp; esecuzioni</h1>
+    <p class="sub">Ogni fase appende a un ledger JSONL e la console rilegge da disco a ogni richiesta: la scrittura appende, la lettura rilegge, append-only elimina il lock. I batch di modello attraversano il confine di file di <span class="mono">model_calls</span> — stesso schema per backend diversi, mai un SDK nel motore.</p>
+
+    <div class="grid g-2">
+      <div class="card">
+        <div class="hd"><h2>Ispettore di fase</h2><div class="spacer">
+          <select class="select"><option>4 · extract</option><option>5 · review</option><option>2 · acquire</option><option>3 · normalize</option></select></div></div>
+        <div class="bd stack" style="gap:12px">
+          <div class="kv">
+            <dt>unità di lavoro</dt><dd class="mono">store/pmc-screen-time/calls/extract/</dd>
+            <dt>letture attese</dt><dd><b>2.194 chunk × domande del kind</b> — vedi completeness</dd>
+            <dt>estrattore</dt><dd><span class="mono">ollama-cloud · deepseek-v4.1-flash</span> · <span class="tag">harness registrato</span></dd>
+            <dt>gate claim</dt><dd><span class="chip c-green"><span class="dot"></span>gate v4 attivo · re-harvest eseguito (D51/D52: 53 letture nuove)</span></dd>
+            <dt>stima di fine (§6)</dt><dd>estrapolata dal ritmo osservato <b>in questa esecuzione</b>, con intervallo, <b>accanto a backend e modello</b> che l'hanno prodotta — un ETA che non dice chi l'ha misurato non è interpretabile. I backend differiscono di ordini di magnitudine: ~5 chiamate/h in locale, una coda intera in un pomeriggio sul cloud</dd>
+            <dt>completeness</dt><dd><b style="color:var(--amber)">24 letture senza risposta</b> — effect 0 (Q04 completa) · method 15 · premise 5 · heterogeneity 4</dd>
+          </div>
+          <div style="border:1px solid var(--border-soft);border-radius:10px;overflow:hidden">
+            <div style="padding:8px 12px;border-bottom:1px solid var(--border-soft);font-size:11px;color:var(--faint)">anteprima · claims.jsonl (ultime righe, coda tollerata se spezzata)</div>
+            <div class="log" style="max-height:210px">
+              <div class="r"><span class="t mono">21:14:02</span><span class="s" style="color:var(--teal)">CLAIM</span><span class="m"><span class="mono">S31·Q02</span> · «…adolescents in the highest quartile… <b>AOR=1.66</b> (95% CI 1.21–2.28)» · gate: PASS</span></div>
+              <div class="r"><span class="t mono">21:13:58</span><span class="s" style="color:var(--red)">REJECT</span><span class="m"><span class="mono">S31·Q03</span> · NUMBER_NOT_IN_QUOTE · la cifra è nel chunk, fuori dalla citazione (riga della tabella sottostante)</span></div>
+              <div class="r"><span class="t mono">21:13:51</span><span class="s" style="color:var(--teal)">CLAIM</span><span class="m"><span class="mono">S29·Q05</span> · «the association was stronger among girls (β = −.22, p &lt; .01)» · gate: PASS</span></div>
+              <div class="r"><span class="t mono">21:13:44</span><span class="s" style="color:var(--amber)">REVIEW</span><span class="m"><span class="mono">S27·Q02</span> · OVERSTATED — la citazione è reale e dice meno del claim</span></div>
+              <div class="r"><span class="t mono">21:13:40</span><span class="s" style="color:var(--teal)">CLAIM</span><span class="m"><span class="mono">S28·Q07</span> · «self-report and logged use correlated at r = .38» · gate: PASS</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="stack">
+        <div class="card">
+          <div class="hd"><h2>Batch (model-report)</h2><div class="spacer"><span class="chip c-green"><span class="dot"></span>tutti drained</span></div></div>
+          <div class="bd" style="padding:6px 10px 10px">
+            <table>
+              <thead><tr><th>Batch</th><th>Lane</th><th>Backend · modello</th><th class="num">Chiamate</th><th class="num">Costo</th><th>Stato</th></tr></thead>
+              <tbody>
+                <tr><td class="mono">q04-full-v2</td><td>review</td><td class="mono" style="font-size:11px">ollama-cloud · mistral-large-3:675b</td><td class="num">42/42 valide</td><td class="num">a consumo</td><td><span class="chip c-green"><span class="dot"></span>completa · D52</span></td></tr>
+                <tr><td class="mono">q04-opus-2026-09-27</td><td>review</td><td class="mono" style="font-size:11px">claude-cli · claude-opus-5</td><td class="num">42</td><td class="num">incluso nel piano</td><td><span class="chip c-amber"><span class="dot"></span>storico task v1</span></td></tr>
+                <tr><td class="mono">x-b3</td><td>extract</td><td class="mono" style="font-size:11px">ollama-cloud · deepseek-v4.1-flash</td><td class="num">drainato</td><td class="num">incluso nel piano</td><td><span class="chip c-green"><span class="dot"></span>drained</span></td></tr>
+              </tbody>
+            </table>
+            <div class="note">⚠ Un piano in abbonamento interattivo non è infrastruttura batch: i limiti sono misurati, non precauzionali (8/43 e 36/42 BACKEND_ERROR su claude-cli prima del reset, misurazione storica). Il reviewer che scala si misura con <span class="mono">mistral-large-3</span> su Q04 v2: 42/42 risposte valide, e l'accuratezza va letta nel pacchetto D52 — come accordo, non come verità. Coda residua totale: <b>1.679 chiamate uniche</b> fuori da Q04 (D59: l'esperimento reviewer-only richiede autorizzazione esplicita dell'operatore).</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="hd"><h2>Rigiudica offline — quattro strade a costo zero</h2></div>
+          <div class="bd grid g-2e" style="gap:10px">
+            <button class="btn" style="justify-content:flex-start">↻ <span>regate <small style="color:var(--faint)">byte già in mano, gate corrente · --campaign obbligatorio</small></span></button>
+            <button class="btn" style="justify-content:flex-start">▤ <span>normalize --force <small style="color:var(--faint)">chunk dal già parsato</small></span></button>
+            <button class="btn" style="justify-content:flex-start">✂ <span>extract --harvest <small style="color:var(--faint)">risposte archiviate, gate corrente</small></span></button>
+            <button class="btn" style="justify-content:flex-start">⟲ <span>model-run --rejudge <small style="color:var(--faint)">regole correnti, zero chiamate</small></span></button>
+            <div class="note" style="grid-column:1/-1">I ledger sono append-only: una ri-esecuzione appende e <span class="mono">latest_by</span> prende l'ultima. Nulla si perde, nulla si riscrive. <b>Quota ciò che il re-harvest ritorna, mai ciò che un campione suggerisce.</b></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- VISTA 4 · FUNNEL                                               -->
+  <!-- ============================================================ -->
+  <section class="view" id="view-funnel">
+    <h1>Funnel &amp; scarti</h1>
+    <p class="sub">Sotto la striscia, il ledger degli scarti per ogni gate: è il denominatore, e una pagina che mostra solo cosa è passato racconta metà della storia. Le perdite sono per causa e per host — la colonna host è quella che rivela una campagna mangiata da un solo editore.</p>
+
+    <div class="grid g-2">
+      <div class="card">
+        <div class="hd"><h2>Il percorso del round</h2><div class="spacer"><span class="tag">stile PRISMA</span></div></div>
+        <div class="bd funnel">
+          <div class="fstep"><div class="fl"><b>Scoperti nel pilota</b> · keyword + citation, 2 canali</div><div><div class="fbar" style="width:100%"></div></div><div class="fv">199 <small>progetto pilota · popolazione di partenza</small></div></div>
+          <div class="fstep"><div class="fl"><b>Esclusi dal selettore</b> · non depositati in PMC</div><div><div class="fbar drop" style="width:80%"></div></div><div class="fv">−159 <small>dichiarato in anticipo, D41</small></div></div>
+          <div class="fstep"><div class="fl"><b>Ammessi al round</b> · manifest curato (import-manifest)</div><div><div class="fbar" style="width:20%"></div></div><div class="fv">40 <small>tutti ACA · canale unico: completezza non stimabile (§6)</small></div></div>
+          <div class="fstep"><div class="fl"><b>Ottenuti</b> · acquire</div><div><div class="fbar" style="width:19%"></div></div><div class="fv">38/40 <small>0.95 · −2 BOT_CHALLENGE</small></div></div>
+          <div class="fstep"><div class="fl"><b>Confermati</b> · normalize, regola di conferma</div><div><div class="fbar" style="width:18.5%"></div></div><div class="fv">37/38 <small>−1 NOT_A_DOCUMENT · il dato del round è 37/40 = 0.93</small></div></div>
+          <div class="fstep"><div class="fl"><b>Chunk</b> · tabelle estratte, non appiattite</div><div><div class="fbar" style="width:14%"></div></div><div class="fv">2.194</div></div>
+          <div class="fstep"><div class="fl"><b>Annotazioni correnti</b> · ultimo esito per claim_id, supersede (D46)</div><div><div class="fbar" style="width:12%"></div></div><div class="fv">1.721 <small>3.389 righe accettate + 593 scarti nel ledger</small></div></div>
+          <div class="fstep"><div class="fl"><b>Letture senza risposta</b> · terminali, non zero-claim</div><div><div class="fbar drop" style="width:2%"></div></div><div class="fv">24 <small>effect 0 · het 4 · method 15 · premise 5</small></div></div>
+          <div class="fstep"><div class="fl"><b>Review</b> · Q04 letta (v2), 7 domande in coda</div><div><div class="fbar rej" style="width:3%"></div></div><div class="fv">126 righe <small>coda residua 1.679 chiamate</small></div></div>
+          <div class="fstep"><div class="fl"><b>Profili</b> · deterministici, nessun modello</div><div><div class="fbar" style="width:2.5%"></div></div><div class="fv">8 <small>Q04 senza blocchi · 7 provvisori</small></div></div>
+          <div class="fstep"><div class="fl"><b>Verdetti firmati</b></div><div><div class="fbar drop" style="width:1%"></div></div><div class="fv">0</div></div>
+        </div>
+      </div>
+
+      <div class="stack">
+        <div class="card">
+          <div class="hd"><h2>Scarti correnti per motivo — 271</h2><div class="spacer"><span class="tag">ultimo esito per claim_id · cross-ledger</span></div></div>
+          <div class="bd bars">
+            <div class="bar-row"><span>UNPARSEABLE_VALUE</span><div class="bar-track"><div class="bar-fill" style="width:100%;background:linear-gradient(90deg,var(--red),var(--amber))"></div></div><span class="bv">110</span></div>
+            <div class="bar-row"><span>NUMBER_NOT_IN_QUOTE</span><div class="bar-track"><div class="bar-fill" style="width:66%;background:linear-gradient(90deg,var(--red),var(--amber))"></div></div><span class="bv">73</span></div>
+            <div class="bar-row"><span>VALUE_NOT_IN_QUOTE</span><div class="bar-track"><div class="bar-fill" style="width:38%;background:var(--slate)"></div></div><span class="bv">42</span></div>
+            <div class="bar-row"><span>QUOTE_NOT_FOUND</span><div class="bar-track"><div class="bar-fill" style="width:28%;background:var(--slate)"></div></div><span class="bv">31</span></div>
+            <div class="bar-row"><span>COMPARATIVE_NOT_IN_QUOTE</span><div class="bar-track"><div class="bar-fill" style="width:12%;background:var(--slate)"></div></div><span class="bv">13</span></div>
+            <div class="bar-row"><span>SECONDHAND_CLAIM</span><div class="bar-track"><div class="bar-fill" style="width:3%;background:var(--slate)"></div></div><span class="bv">2</span></div>
+            <div class="note">ℹ Misurazione registrata in HANDOFF: «in 586 di 593 casi NUMBER_NOT_IN_QUOTE la cifra è <i>nel</i> chunk e fuori dalla citazione» — il modello cita una frase e prende il numero dalla tabella due righe sotto. È una misura storica, <b>non riconducibile al mix corrente di questo round</b> (73 correnti): si cita con la sua data, non come stato presente. È il motivo per cui lo standard del gate e quello del reviewer devono differire (D38).</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="hd"><h2>Perdite di acquisizione — per causa, fase e host</h2></div>
+          <div class="bd">
+            <table>
+              <thead><tr><th>Causa</th><th>Fase</th><th class="num">N</th><th>Host</th><th>Natura</th></tr></thead>
+              <tbody>
+                <tr><td class="mono">BOT_CHALLENGE</td><td>acquire</td><td class="num">2</td><td class="mono" style="font-size:11px">sciencedirect.com</td><td><span class="chip c-amber"><span class="dot"></span>nostra limitazione</span></td></tr>
+                <tr><td class="mono">NOT_A_DOCUMENT</td><td>normalize</td><td class="num">1</td><td>—</td><td><span class="chip c-slate"><span class="dot"></span>del contenuto</span></td></tr>
+                <tr><td class="mono">ABSTRACT_ONLY</td><td>acquire</td><td class="num">0</td><td>—</td><td><span class="chip c-slate"><span class="dot"></span>della fonte · non registrato questo round</span></td></tr>
+              </tbody>
+            </table>
+            <div class="note">Una causa che nomina <b>la nostra</b> limitazione resta distinta da una che nomina <b>la fonte</b>: registrare un CAPTCHA come «esiste solo l'abstract» sarebbe un guasto d'infrastruttura scritto nel record come un fatto sulla letteratura. La conferma del documento avviene in <b>normalize</b>, non in acquire: 40 → 38 in acquire, 38 → 37 in normalize. Host a 403: non ri-richiesto fuori da una campagna con nome.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- VISTA 5 · ANDAMENTI                                            -->
+  <!-- ============================================================ -->
+  <section class="view" id="view-trends">
+    <h1>Andamenti</h1>
+    <p class="sub">La spec (§13) esclude il confronto round-su-round dalla v1 — i ledger append-only lo rendono possibile dopo, e questa ne è la v2. I confronti restano validi solo tra registri compatibili: il digest vieta il confronto tra due versioni diverse senza bump datato. Ogni stima porta la parola <i>stima</i> e il suo intervallo; ogni ETA dice su quale backend è stata misurata (§6).</p>
+
+    <div class="grid g-2">
+      <div class="card">
+        <div class="hd"><h2>Tasso di conferma — tre progetti, tre popolazioni</h2><div class="spacer"><span class="tag">floor 0.80 · v1</span></div></div>
+        <div class="bd">
+          <svg viewBox="0 0 520 195" width="100%" role="img" aria-label="Tasso di conferma per progetto">
+            <line x1="40" y1="160" x2="500" y2="160" stroke="var(--border)"/>
+            <line x1="40" y1="10" x2="40" y2="160" stroke="var(--border)"/>
+            <line x1="40" y1="40" x2="500" y2="40" stroke="var(--amber)" stroke-dasharray="5 4" opacity=".8"/>
+            <text x="497" y="35" font-size="9.5" fill="var(--amber)" text-anchor="end">floor 0.80</text>
+            <line x1="40" y1="52" x2="500" y2="52" stroke="var(--sky)" stroke-dasharray="2 5" opacity=".6"/>
+            <text x="497" y="66" font-size="9.5" fill="var(--sky)" text-anchor="end">soffitto alembic-s4: 0.72 (misurato)</text>
+            <circle cx="110" cy="92.5" r="5" fill="var(--red)"/>
+            <text x="110" y="84" font-size="10" fill="var(--muted)" text-anchor="middle">pilot 0.45</text>
+            <text x="110" y="178" font-size="9.5" fill="var(--faint)" text-anchor="middle">199 candidati · scoperta aperta</text>
+            <circle cx="270" cy="76" r="5" fill="var(--red)"/>
+            <text x="270" y="67" font-size="10" fill="var(--muted)" text-anchor="middle">alembic-s4 0.56</text>
+            <text x="270" y="178" font-size="9.5" fill="var(--faint)" text-anchor="middle">lista curata 14/25 · soffitto 18/25</text>
+            <circle cx="430" cy="20.5" r="5.5" fill="var(--emerald)"/>
+            <text x="430" y="12" font-size="10" fill="var(--emerald)" text-anchor="middle">pmc r1 0.93</text>
+            <text x="430" y="178" font-size="9.5" fill="var(--faint)" text-anchor="middle">manifest 40 · depositi PMC</text>
+          </svg>
+          <div class="note">⚠ Non sono tre round dello stesso progetto: sono <b>tre popolazioni diverse</b>, fianco a fianco senza linea perché nessuna traiettoria le collega — D24 e la regola dei registri vietano il confronto tra incomparabili. Ciò che ha chiuso il primo round è stato cambiare <b>la popolazione dichiarata in anticipo</b>, non abbassare l'asticella. I due sotto soglia producono correttamente nulla.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="hd"><h2>Il reviewer su claim gate-passed — misurazioni etichettate</h2><div class="spacer"><span class="tag">progetto e task sempre dichiarati</span></div></div>
+        <div class="bd stack" style="gap:12px">
+          <div>
+            <div style="font-size:12px;margin-bottom:6px"><b>pmc · Q04</b> · full-annotation v2 · mistral-large-3 · 42 letti · <span class="tag" style="color:var(--emerald)">corrente</span></div>
+            <div style="display:flex;height:20px;border-radius:6px;overflow:hidden;border:1px solid var(--border-soft)">
+              <div style="width:9.5%;background:var(--emerald)"></div>
+              <div style="width:73.8%;background:var(--amber)"></div>
+              <div style="width:16.7%;background:var(--slate)"></div>
+            </div>
+            <div class="legend" style="margin-top:6px"><span><i style="background:var(--emerald)"></i>SUPPORTED 4</span><span><i style="background:var(--amber)"></i>OVERSTATED 31</span><span><i style="background:var(--slate)"></i>NOT_APPLICABLE 7</span></div>
+          </div>
+          <div>
+            <div style="font-size:12px;margin-bottom:6px"><b>pmc · Q04</b> · task v1 · claude-opus-5 · 42 letti · <span class="tag">storico</span></div>
+            <div style="display:flex;height:20px;border-radius:6px;overflow:hidden;border:1px solid var(--border-soft)">
+              <div style="width:11.9%;background:var(--emerald)"></div>
+              <div style="width:2.4%;background:var(--amber)"></div>
+              <div style="width:85.7%;background:var(--slate)"></div>
+            </div>
+            <div class="legend" style="margin-top:6px"><span><i style="background:var(--emerald)"></i>SUPPORTED 5</span><span><i style="background:var(--amber)"></i>OVERSTATED 1</span><span><i style="background:var(--slate)"></i>NOT_APPLICABLE 36</span></div>
+          </div>
+          <div>
+            <div style="font-size:12px;margin-bottom:6px"><b>alembic-s4 · H15</b> (domanda metodologica) · task v1 · 41 letti · <span class="tag">misurazione D40</span></div>
+            <div style="display:flex;height:20px;border-radius:6px;overflow:hidden;border:1px solid var(--border-soft)">
+              <div style="width:43.9%;background:var(--emerald)"></div>
+              <div style="width:56.1%;background:var(--slate)"></div>
+            </div>
+            <div class="legend" style="margin-top:6px"><span><i style="background:var(--emerald)"></i>le parlano 18 di 41</span><span><i style="background:var(--slate)"></i>NOT_APPLICABLE 23</span></div>
+          </div>
+          <div class="note">⚠ Over-attachment misurato su <b>due corpus e due kind</b> (D40/D44): 23/41 e 36/42 gate-passed non parlano alla domanda che citano. La copertura misurata dopo l'estrazione è un'affermazione sull'estrattore; quella onesta è post-review. La barra OVERSTATED dominante nella v2 di Q04 è il caso che il check meccanico passa e un lettore no.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <div class="hd"><h2>Lane e backend — throughput misurato, non deciso</h2><div class="spacer"><span class="tag">una lane non si sposa con un venditore</span></div></div>
+      <div class="bd" style="padding:6px 10px 10px">
+        <table>
+          <thead><tr><th>Backend</th><th>Serve</th><th class="num">Ritmo misurato</th><th>Vincolo in piedi</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">llama.cpp · Q8_0 locale</td><td>lane a basso volume</td><td class="num">11.6 min/chiamata · ~5/h · 1.43 tok/s gen vs 121 prefill</td><td>finestra stretta, molte chiamate: ~2 claim/call comunque · misura D4 di <i>quella</i> macchina</td></tr>
+            <tr><td class="mono">ollama-cloud · deepseek-v4.1-flash</td><td>estrattore</td><td class="num">drainato · un pomeriggio</td><td>credito $60/mese sul piano $20 — alto volume, prezzo a token</td></tr>
+            <tr><td class="mono">ollama-cloud · mistral-large-3:675b</td><td>reviewer v2 su Q04</td><td class="num">42/42 risposte valide · <span class="tag" style="color:var(--emerald)">corrente</span></td><td>4S / 31O / 7NA · il reviewer che scala, misurato in D52; coda residua 1.679 chiamate</td></tr>
+            <tr><td class="mono">claude-cli · claude-opus-5</td><td>reviewer task v1</td><td class="num">83 verdict corretti ispezionati</td><td><span class="chip c-red"><span class="dot"></span>piano interattivo: BACKEND_ERROR 8/43 e 36/42 prima del reset · storico</span></td></tr>
+            <tr><td class="mono">API a consumo</td><td>lane riproducibili al byte</td><td class="num">non misurato qui</td><td>un CLI inserisce il proprio harness: dove serve riproducibilità esatta, registra <span class="mono">harness_version</span></td></tr>
+          </tbody>
+        </table>
+        <div class="note">SameReader vieta a <span class="mono">deepseek-v4.1-flash</span> (l'estrattore) di fare da reviewer: un lettore che condivide i punti ciechi dell'estrattore è un secondo parere dello stesso parere.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- VISTA 6 · ATTIVITÀ LIVE                                        -->
+  <!-- ============================================================ -->
+  <section class="view" id="view-activity">
+    <h1>Attività live</h1>
+    <p class="sub">Le ultime righe di ogni ledger, più recenti prima, con la fase che le ha scritte. «In corso» è inferito dall'mtime entro 30 secondi e dichiarato come inferenza — mai come pretesa che un processo sia vivo.</p>
+
+    <div class="card">
+      <div class="hd"><h2>Feed</h2><div class="spacer">
+        <span class="chip c-green"><span class="pulse"></span>ultima scrittura 4 s fa</span>
+        <select class="select"><option>tutti i ledger</option><option>acquisitions</option><option>claims</option><option>rejections</option><option>reviews</option></select>
+        <button class="btn sm" id="pauseFeed">⏸ pausa</button></div></div>
+      <div class="bd"><div class="log" id="feed"></div>
+        <div class="note">⟳ Il feed del mockup simula l'arrivo di righe; nella console vera ogni riga è una lettura da disco, senza cache né stato in memoria. Una coda spezzata viene saltata e il conteggio letto dichiarato.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- VISTA 7 · ADJUDICATION                                         -->
+  <!-- ============================================================ -->
+  <section class="view" id="view-adjudicate">
+    <h1>Adjudication — il banco di lettura</h1>
+    <p class="sub">L'unico posto da cui arriva un verdetto è il CLI, con la firma di una persona. Questo banco è <b>di sola lettura</b>: mostra il profilo da leggere e <b>compone il comando</b> da copiare nel terminale — non firma, non scrive, non è un controllo (§1, §13). La firma registra l'hash di ciò che è stato mostrato: se l'evidenza cambia, il verdetto è mostrato come <b>stale</b> con entrambi gli hash, mai silenziosamente mantenuto. Un agente non firma.</p>
+
+    <div class="banner info"><span class="bi">✍</span><div><b>Q04 è completo e attende una persona</b> (D52).
+      <p>Profilo ricostruito il 2026-09-28 12:24: 4 risultati trattenuti da 42 annotazioni lette (review v2 completa), zero blocchi. I quattro risultati richiedono la valutazione umana di rilevanza e posizione prima di qualsiasi firma — il pacchetto di lettura D52 la dettaglia. Le altre sette domande restano provvisorie: review non eseguita.</p></div>
+    </div>
+
+    <div class="grid g-2">
+      <div class="card">
+        <div class="hd"><h2>Profilo in lettura · Q04</h2>
+          <div class="spacer"><span class="chip c-green"><span class="dot"></span>senza blocchi · da verdicts</span></div></div>
+        <div class="bd stack" style="gap:13px">
+          <div class="kv">
+            <dt>scope</dt><dd>r1-deposits · manifest-only · 37/40 confermati</dd>
+            <dt>risultati</dt><dd><b>4</b> trattenuti, da 42 annotazioni lette (4S / 31O / 7NA, v2 mistral)</dd>
+            <dt>direzione</dt><dd><b>conteggio, etichettato conteggio</b> — SUPPORTS 1 · QUALIFIES 2 · CONTRADICTS 1 · mai pooled, mai R: D17</dd>
+            <dt>copertura</dt><dd>4 fonti su 37 esaminate · post-review</dd>
+            <dt>scarti del gate</dt><dd>UNPARSEABLE_VALUE 19 · VALUE_NOT_IN_QUOTE 2 · SECONDHAND_CLAIM 1 — il denominatore, non una nota a piè</dd>
+            <dt>etichette campione</dt><dd>verbatim, linkage dichiarato <b>unestablished</b></dd>
+          </div>
+          <div class="hash">profile_sha256 <span class="mono">9340389c9aac29b77e901c20e27434d211fe9e7825a68d99995d8c6fa5b20fdd</span><button id="copySha">copia</button></div>
+          <div class="timeline">
+            <div class="ev"><div class="d">2026-09-27/28</div><div class="x">Round chiuso: 37/40 confermati; prima lettura completa, 8 profili storici</div></div>
+            <div class="ev"><div class="d">D45</div><div class="x">La completeness corregge D44: letture mancanti tenute Q04 fuori dalla firma</div></div>
+            <div class="ev"><div class="d">D49–D52</div><div class="x">Replay offline, re-harvest (53 letture nuove), review v2 completa su Q04</div></div>
+            <div class="ev"><div class="d">2026-09-28 12:24</div><div class="x">Profilo ricostruito: <b>zero blocchi</b> — attende la lettura umana e la firma</div></div>
+          </div>
+          <div class="note">⚖ SUPPORTS 1 / QUALIFIES 2 / CONTRADICTS 1: se questo legge CONTRADICTED, CONTESTED o UNANSWERED, è un giudizio che sta alla persona — la rationale deve dichiarare scope, copertura 4/37 e come ha trattato i due QUALIFIES. «Quattro dicono sì e uno no» non è un risultato (invariante 7).</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="hd"><h2>Componi il comando — la firma avviene nel terminale</h2><div class="spacer"><span class="chip c-red"><span class="dot"></span>0 verdetti registrati</span></div></div>
+        <div class="bd stack" style="gap:14px">
+          <div>
+            <h3 style="margin-bottom:8px">Verdetto che il comando registrerà</h3>
+            <div class="verdict-grid" id="verdictRadios">
+              <label class="vradio"><input type="radio" name="v" value="SUPPORTED"><div><div class="vt" style="color:var(--green)">SUPPORTED</div></div></label>
+              <label class="vradio"><input type="radio" name="v" value="CONTRADICTED"><div><div class="vt" style="color:var(--sky)">CONTRADICTED</div></div></label>
+              <label class="vradio"><input type="radio" name="v" value="CONTESTED_IN_LITERATURE"><div><div class="vt" style="color:var(--violet)">CONTESTED</div></div></label>
+              <label class="vradio"><input type="radio" name="v" value="UNANSWERED_IN_LITERATURE"><div><div class="vt" style="color:var(--slate)">UNANSWERED</div></div></label>
+              <label class="vradio"><input type="radio" name="v" value="NEVER_ASKED"><div><div class="vt" style="color:var(--faint)">NEVER_ASKED</div></div></label>
+            </div>
+            <div class="note">⚖ La scelta qui non registra nulla: parametrizza il comando sotto. Il rifiuto delle rationale corte (<120 caratteri) e dei profili provvisori resta nel CLI — la stessa regola, lo stesso posto.</div>
+          </div>
+          <div>
+            <h3 style="margin-bottom:8px">Rationale (per rationale-q04.md)</h3>
+            <textarea class="rationale" id="rationale" placeholder="Deve dichiarare lo scope del round (depositi PMC), la copertura 4/37, e come ha trattato i due QUALIFIES. Minimo 120 caratteri — il CLI rifiuta sotto."></textarea>
+            <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:11px;color:var(--faint)">
+              <span id="ratHint">minimo 120 caratteri</span><span class="mono" id="ratCount">0 / 120</span>
+            </div>
+          </div>
+          <div class="hash" style="flex-direction:column;align-items:stretch;gap:6px">
+            <span style="color:var(--faint);font-size:10.5px">da incollare nel terminale, dopo aver salvato la rationale:</span>
+            <span class="mono" id="adjCmd" style="font-size:11px">claimstone adjudicate projects/pmc-screen-time Q04 \\\n  --verdict &lt;verdetto&gt; --rationale-file rationale-q04.md \\\n  --by "OP" --profile-sha256 9340389c…fdd --round r1-deposits</span>
+          </div>
+          <div style="display:flex;gap:10px;align-items:center">
+            <button class="btn pri" id="copyCmd">⧉ Copia comando</button>
+            <button class="btn" id="exportRat">↧ Esporta rationale-q04.md</button>
+            <span style="font-size:11.5px;color:var(--faint)">la console non esegue: compone</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- VISTA 8 · AMMINISTRAZIONE                                      -->
+  <!-- ============================================================ -->
+  <section class="view" id="view-admin">
+    <h1>Amministrazione</h1>
+    <p class="sub">Questa sezione non esegue nulla: <b>ispeziona e compone</b>. I file di input si leggono e si validano, le azioni diventano comandi CLI da copiare nel terminale. Chi esegue resta una persona al comando — con il registro dell'audit degli atti (append-only) a testimoniarlo.</p>
+
+    <div class="banner warn"><span class="bi">⊘</span><div><b>Nessun piano di controllo nel browser, ora o poi (§13).</b>
+      <p>La spec lo esclude permanentemente, per due ragioni misurate: un tab che lancia fetch esaurisce il budget per dominio a ogni refresh, e farebbe della console uno scrittore, che §1 vieta. Perciò qui non c'è niente da cliccare che tocca la rete o i ledger: ci sono comandi da comporre e copiare. Firmare dal browser è anch'esso una scrittura — la firma resta nel CLI, al banco di lettura.</p></div>
+    </div>
+
+    <div class="grid g-3">
+      <div class="card">
+        <div class="hd"><h2>Progetti &amp; contratto</h2><div class="spacer"><span class="tag">ispezione</span></div></div>
+        <div class="bd stack" style="gap:10px">
+          <div class="kv">
+            <dt>contratto</dt><dd>3 file per progetto: topics · questions · sources</dd>
+            <dt>digest registro</dt><dd class="mono">v1 · verificato a ogni apertura dello store</dd>
+          </div>
+          <div class="hash">copia e incolla <span class="mono">.venv/bin/claimstone validate --all-projects</span><button data-cmd=".venv/bin/claimstone validate --all-projects">copia</button></div>
+          <div class="hash">manifest curato <span class="mono">.venv/bin/claimstone import-manifest projects/&lt;nome&gt;</span><button data-cmd=".venv/bin/claimstone import-manifest projects/&lt;nome&gt;">copia</button></div>
+          <div style="border-top:1px solid var(--border-soft);padding-top:10px">
+            <h3 style="margin-bottom:8px">Registro domande · bump datato</h3>
+            <div style="font-size:12px;color:var(--muted)">Un inserimento silenzioso rende privo di senso ogni confronto round-su-round e ogni correzione per molteplicità. L'ispettore mostra il diff tra v1 e un'eventuale bozza; la modifica è una mano che edita <span class="mono">questions.yaml</span> con data e versione nuova — mai un pulsante.</div>
+            <div style="margin-top:8px"><button class="btn sm">▼ diff v1 → bozza (sola lettura)</button></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="hd"><h2>Soglia di acquisizione</h2><div class="spacer"><span class="tag">decisione dell'operatore</span></div></div>
+        <div class="bd stack" style="gap:10px">
+          <div class="kv">
+            <dt>floor attuale</dt><dd><b>0.80</b> · v1 · dal 2026-09-27</dd>
+            <dt>prima evidenza contraria</dt><dd>D39: 0.64 su letteratura che si dichiara aperta — il divario non si chiude ritentando</dd>
+          </div>
+          <div style="font-size:12px;color:var(--muted);border:1px dashed var(--border);border-radius:9px;padding:9px">Una revisione motivata, datata e versionata è legittima; abbassare la barra dopo aver visto il tasso è l'unica mossa esclusa. La proposta deve citare la misurazione e restare separata da ogni altro lavoro.</div>
+          <button class="btn sm">↧ Genera bozza di proposta (markdown, da allegare a una nuova decisione)</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="hd"><h2>Campagne &amp; budget per dominio</h2><div class="spacer"><span class="tag">sola lettura + compositore</span></div></div>
+        <div class="bd stack" style="gap:10px">
+          <table>
+            <thead><tr><th>Host</th><th class="num">Fallimenti</th><th>Budget</th></tr></thead>
+            <tbody>
+              <tr><td class="mono" style="font-size:11px">sciencedirect.com</td><td class="num">2 · 403</td><td><span class="chip c-red"><span class="dot"></span>terminalmente in rosso</span></td></tr>
+              <tr><td class="mono" style="font-size:11px">ncbi.nlm.nih.gov</td><td class="num">0</td><td><span class="chip c-green"><span class="dot"></span>verde</span></td></tr>
+            </tbody>
+          </table>
+          <div style="font-size:12px;color:var(--muted)">Un host a 403 non si ri-richiede fuori da una <b>campagna con nome</b>. Il compositore esige il nome: senza, il comando non si genera.</div>
+          <input id="campName" placeholder="nome campagna (obbligatorio, finisce nel ledger)" style="background:var(--inset);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 10px;font-size:12px">
+          <div class="hash">retry terminali <span class="mono" id="campCmd">— inserire un nome di campagna —</span><button id="copyCamp">copia</button></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid g-3" style="margin-top:14px">
+      <div class="card">
+        <div class="hd"><h2>Strumenti &amp; versioni</h2><div class="spacer"><span class="chip c-green"><span class="dot"></span>check_instrument_versions: exit 0</span></div></div>
+        <div class="bd" style="padding:6px 10px 10px">
+          <table>
+            <thead><tr><th>Strumento</th><th>Versione</th><th>Registrata in</th></tr></thead>
+            <tbody>
+              <tr><td>claim gate</td><td class="mono">v4</td><td>D46 · whole numeric tokens, revision-aware</td></tr>
+              <tr><td>acquisition floor</td><td class="mono">v1 · 2026-09-27</td><td>sources.yaml · pre-dichiarata</td></tr>
+              <tr><td>profile instrument</td><td class="mono">v5</td><td>D45 · completeness e scope</td></tr>
+              <tr><td>GROBID</td><td class="mono">container interno</td><td>compose.yaml · nessuna porta pubblicata</td></tr>
+            </tbody>
+          </table>
+          <div class="note">Uno strumento che cambia versione senza che il record dica cosa è cambiuto fa fallire il check: quel rifiuto è la funzione, non un difetto.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="hd"><h2>Console &amp; trasporto — §9–10</h2><div class="spacer"><span class="tag">claimstone serve</span></div></div>
+        <div class="bd stack" style="gap:9px">
+          <table>
+            <thead><tr><th>Rotta</th><th>Ritorna</th></tr></thead>
+            <tbody>
+              <tr><td class="mono" style="font-size:11px">GET /</td><td>la pagina: un documento HTML autonomo</td></tr>
+              <tr><td class="mono" style="font-size:11px">GET /api/state</td><td>mtime e conteggi per ledger — economico, per il poll</td></tr>
+              <tr><td class="mono" style="font-size:11px">GET /api/round</td><td>il RoundState completo in JSON</td></tr>
+              <tr><td class="mono" style="font-size:11px">GET /api/questions</td><td>la spina: una voce per domanda</td></tr>
+              <tr><td class="mono" style="font-size:11px">GET /api/activity?limit=N</td><td>le righe più recenti · default 50, cap 500</td></tr>
+              <tr><td class="mono" style="font-size:11px">altro</td><td><span class="chip c-red"><span class="dot"></span>405</span></td></tr>
+            </tbody>
+          </table>
+          <div class="kv">
+            <dt>poll</dt><dd>/api/state ogni 2 s; le rotte pesanti solo se un mtime è cambiato</dd>
+            <dt>stato</dt><dd>nessuno: ogni richiesta rilegge i ledger da disco e ricalcola</dd>
+            <dt>coda strappata</dt><dd>l'ultima riga mezza-scritta è saltata e il conteggio letto è dichiarato</dd>
+            <dt>privacy</dt><dd>bind 127.0.0.1; un host non-loopback solo esplicito, con l'avviso che nomina la regola (§10)</dd>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="hd"><h2>Integrità dello store</h2></div>
+        <div class="bd stack" style="gap:9px">
+          <div class="kv">
+            <dt>modello</dt><dd>JSONL append-only, fonte di verità — greppabile, diffabile, riprendibile</dd>
+            <dt>coda spezzata</dt><dd><span class="mono">Store.read</span> la salta e la registra · <span class="mono">Store.repair</span> tronca</dd>
+            <dt>corruzione altrove</dt><dd>una riga che non parsa a metà file è un errore: saltarla nasconderebbe un denominatore</dd>
+            <dt>dimensione</dt><dd class="mono">271 MB · byte + ledger — non riproducibile senza ri-fetchare · misurato con du -sh al 28/09</dd>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <div class="hash">integrità <span class="mono">.venv/bin/python -c "from claimstone.store import Store; Store(...).verify()"</span><button data-cmd="verifica integrità: vedi cli.py">copia</button></div>
+            <button class="btn sm ghost">↧ Esporta report acquire (sola lettura)</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  </main>
+</div>
+</div>
+
+<!-- ======================= COMMAND PALETTE ======================= -->
+<div class="overlay" id="palette">
+  <div class="palette">
+    <input id="paletteInput" placeholder="Comandi, domande, batch, ledger… (Esc per chiudere)" autocomplete="off">
+    <div class="list" id="paletteList"></div>
+  </div>
+</div>
+
+<script>
+/* ---------------- navigazione ---------------- */
+const nav = document.getElementById('nav');
+nav.addEventListener('click', e => {
+  const a = e.target.closest('a[data-view]'); if (!a) return;
+  e.preventDefault();
+  document.querySelectorAll('.nav a').forEach(x => x.classList.toggle('on', x === a));
+  document.querySelectorAll('.view').forEach(v => v.classList.toggle('on', v.id === 'view-' + a.dataset.view));
+  history.replaceState(null, '', a.getAttribute('href'));
+  window.scrollTo({top:0});
+});
+document.addEventListener('keydown', e => {
+  if (e.key >= '1' && e.key <= '8' && !e.metaKey && !e.ctrlKey && !e.altKey && document.activeElement.tagName !== 'TEXTAREA' && document.activeElement.tagName !== 'INPUT') {
+    const a = nav.querySelector(`a[data-view]:nth-of-type(${+e.key})`) || [...nav.querySelectorAll('a[data-view]')][+e.key-1];
+    if (a) a.click();
+  }
+});
+
+/* ---------------- tema (§11: chiaro e scuro) ----------------
+   Default: segue il sistema (prefers-color-scheme).
+   Il primo clic fissa la scelta e la persiste; cancellando la chiave
+   dal localStorage si torna a seguire il sistema. */
+const root = document.documentElement;
+const mqLight = matchMedia('(prefers-color-scheme: light)');
+function savedTheme(){ try { return localStorage.getItem('cs-theme'); } catch(e){ return null; } }
+function applyTheme(t, persist){
+  root.dataset.theme = t;
+  if (persist) { try { localStorage.setItem('cs-theme', t); } catch(e){} }
+  const btn = document.getElementById('themeToggle');
+  if (btn) btn.title = t === 'dark' ? 'Passa al tema chiaro' : 'Passa al tema scuro';
+}
+applyTheme(savedTheme() || (mqLight.matches ? 'light' : 'dark'), false);
+document.getElementById('themeToggle').addEventListener('click', () => {
+  applyTheme(root.dataset.theme === 'dark' ? 'light' : 'dark', true);
+});
+mqLight.addEventListener('change', e => { if (!savedTheme()) applyTheme(e.matches ? 'light' : 'dark', false); });
+
+/* ---------------- rationale counter + comando adjudicate ---------------- */
+const rat = document.getElementById('rationale');
+const SHA = '9340389c9aac29b77e901c20e27434d211fe9e7825a68d99995d8c6fa5b20fdd';
+function adjCommand(){
+  const sel = document.querySelector('#verdictRadios input:checked');
+  const v = sel ? sel.value : '<verdetto>';
+  return `claimstone adjudicate projects/pmc-screen-time Q04 \\\n  --verdict ${v} --rationale-file rationale-q04.md \\\n  --by "OP" --profile-sha256 ${SHA} --round r1-deposits`;
+}
+function updCmd(){ document.getElementById('adjCmd').textContent = adjCommand(); }
+rat.addEventListener('input', () => {
+  const n = rat.value.trim().length;
+  document.getElementById('ratCount').textContent = n + ' / 120';
+  document.getElementById('ratHint').textContent = n < 120 ? 'minimo 120 caratteri' : 'lunghezza ok — il CLI può accettarla';
+});
+document.querySelectorAll('#verdictRadios input').forEach(r => r.addEventListener('change', updCmd));
+
+/* ---------------- copia negli appunti / download (composizione, mai esecuzione) ---------------- */
+function copyText(t, btn){
+  const done = () => { if (btn){ const o = btn.textContent; btn.textContent = 'copiato ✓'; setTimeout(() => btn.textContent = o, 1400); } };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(done, done);
+  else { const ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select();
+         try { document.execCommand('copy'); } catch(e){} ta.remove(); done(); }
+}
+document.getElementById('copySha').addEventListener('click', function(){ copyText(SHA, this); });
+document.getElementById('copyCmd').addEventListener('click', function(){ copyText(adjCommand(), this); });
+document.getElementById('exportRat').addEventListener('click', function(){
+  const blob = new Blob([rat.value || ''], {type:'text/markdown'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'rationale-q04.md';
+  a.click(); URL.revokeObjectURL(a.href);
+});
+document.querySelectorAll('button[data-cmd]').forEach(b => b.addEventListener('click', () => copyText(b.dataset.cmd, b)));
+const campName = document.getElementById('campName'), campCmd = document.getElementById('campCmd'), copyCamp = document.getElementById('copyCamp');
+campName.addEventListener('input', () => {
+  const ok = campName.value.trim().length > 0;
+  campCmd.textContent = ok
+    ? `claimstone acquire projects/pmc-screen-time --round r1-deposits --campaign "${campName.value.trim()}"`
+    : '— inserire un nome di campagna —';
+  copyCamp.disabled = !ok;
+});
+copyCamp.disabled = true;
+copyCamp.addEventListener('click', function(){ copyText(campCmd.textContent, this); });
+
+/* ---------------- feed simulato ---------------- */
+const pool = [
+  ['acquire', 'var(--teal)',  '<b>S33</b> · ncbi.nlm.nih.gov → acquisito 412 KB · cc-by'],
+  ['acquire', 'var(--teal)',  '<b>S34</b> · unpaywall → pmc · acquisito 1.2 MB'],
+  ['acquire', 'var(--red)',   '<b>S39</b> · sciencedirect.com 403 → nessun retry senza campagna'],
+  ['extract', 'var(--teal)',  '<b>S31·Q02</b> · claim PASS · «AOR=1.66 (95% CI 1.21–2.28)»'],
+  ['extract', 'var(--red)',   '<b>S31·Q03</b> · REJECT NUMBER_NOT_IN_QUOTE · cifra nel chunk, fuori citazione'],
+  ['review',  'var(--amber)', '<b>S27·Q02</b> · OVERSTATED — la citazione dice meno del claim'],
+  ['review',  'var(--teal)',  '<b>S28·Q07</b> · SUPPORTED · r = .38 coerente con la citazione'],
+  ['normalize','var(--sky)',  '<b>S35</b> · GROBID TEI → documento · 42 referenze estratte'],
+  ['discover','var(--sky)',   'citation channel · 3 nuovi candidati dai reference list'],
+  ['registry','var(--violet)','digest verificato su apertura store · v1 invariato'],
+];
+const feed = document.getElementById('feed');
+let paused = false, clock = new Date(2026, 8, 28, 21, 14, 0);
+function pad(n){return String(n).padStart(2,'0')}
+function addRow(){
+  if (paused) return;
+  const p = pool[Math.floor(Math.random()*pool.length)];
+  clock = new Date(clock.getTime() + 3000 + Math.random()*9000);
+  const d = document.createElement('div');
+  d.className = 'r new';
+  d.innerHTML = `<span class="t mono">${pad(clock.getHours())}:${pad(clock.getMinutes())}:${pad(clock.getSeconds())}</span>
+    <span class="s" style="color:${p[1]}">${p[0]}</span><span class="m">${p[2]}</span>`;
+  feed.prepend(d);
+  while (feed.children.length > 26) feed.lastChild.remove();
+}
+for (let i=0;i<12;i++) addRow();
+setInterval(addRow, 4200);
+document.getElementById('pauseFeed').addEventListener('click', function(){
+  paused = !paused; this.textContent = paused ? '▶ riprendi' : '⏸ pausa';
+});
+
+/* ---------------- command palette (accessibile: frecce, Invio, focus trap) ---------------- */
+const commands = [
+  ['Vai a · Panoramica','vista','1'], ['Vai a · Domande','vista','2'], ['Vai a · Funnel & scarti','vista','3'],
+  ['Vai a · Attività live','vista','4'], ['Vai a · Pipeline & batch','vista','5'], ['Vai a · Andamenti','vista','6'],
+  ['Vai a · Adjudication','vista','7'], ['Vai a · Amministrazione','vista','8'],
+  ['claimstone validate --all-projects','CLI','contratto'], ['claimstone report projects/pmc-screen-time','CLI','tasso + perdite'],
+  ['claimstone verdicts … --question Q04','CLI','profilo in memoria'], ['claimstone regate --campaign <nome>','CLI','offline'],
+  ['claimstone extract … --harvest','CLI','offline'], ['claimstone model-run … --rejudge','CLI','zero chiamate'],
+  ['claimstone adjudicate … --profile-sha256 9340389c…','CLI','componi al banco di lettura'],
+  ['Copia · adjudicate Q04 (comando completo)','console','banco di lettura'], ['Cambia tema chiaro/scuro','console','◐'],
+];
+const overlay = document.getElementById('palette'), pInput = document.getElementById('paletteInput'), pList = document.getElementById('paletteList');
+let palIdx = 0, palItems = [], palOpener = null;
+function renderPal(q=''){
+  pList.innerHTML = ''; palItems = [];
+  const hits = commands.filter(c => c[0].toLowerCase().includes(q.toLowerCase()));
+  hits.forEach((c, i) => {
+    const d = document.createElement('div');
+    d.className = 'cmd' + (i === 0 ? ' sel' : '');
+    d.setAttribute('role','option'); d.setAttribute('aria-selected', i === 0 ? 'true' : 'false'); d.tabIndex = -1;
+    d.innerHTML = `<span>▸</span><span>${c[0]}</span><span class="k"><span class="pill">${c[1]}</span></span>`;
+    d.addEventListener('click', () => runPal(c));
+    pList.appendChild(d); palItems.push({el: d, cmd: c});
+  });
+  palIdx = 0; markSel();
+}
+function markSel(){
+  palItems.forEach((it, i) => { it.el.classList.toggle('sel', i === palIdx); it.el.setAttribute('aria-selected', i === palIdx ? 'true' : 'false'); });
+  palItems[palIdx]?.el.scrollIntoView({block:'nearest'});
+}
+function movePal(d){ if (!palItems.length) return; palIdx = (palIdx + d + palItems.length) % palItems.length; markSel(); }
+function runPal(c){
+  closePal();
+  if (c[1] === 'vista') { [...nav.querySelectorAll('a[data-view]')].find(x => x.textContent.includes(c[0].split('· ')[1]))?.click(); }
+  if (c[0].includes('tema')) document.getElementById('themeToggle').click();
+  if (c[0].startsWith('Copia ·')) copyText(adjCommand());
+}
+function openPal(){ palOpener = document.activeElement; overlay.classList.add('on'); pInput.value=''; renderPal(); pInput.focus(); }
+function closePal(){ overlay.classList.remove('on'); if (palOpener && palOpener.focus) palOpener.focus(); }
+document.getElementById('openPalette').addEventListener('click', openPal);
+overlay.addEventListener('click', e => { if (e.target === overlay) closePal(); });
+pInput.addEventListener('input', () => renderPal(pInput.value));
+overlay.setAttribute('role','dialog'); overlay.setAttribute('aria-modal','true'); pInput.setAttribute('role','combobox'); pList.setAttribute('role','listbox');
+overlay.addEventListener('keydown', e => {
+  if (e.key === 'ArrowDown') { e.preventDefault(); movePal(1); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); movePal(-1); }
+  else if (e.key === 'Enter') { e.preventDefault(); if (palItems[palIdx]) runPal(palItems[palIdx].cmd); }
+  else if (e.key === 'Tab') {
+    const f = [pInput, ...palItems.map(i => i.el)].filter(x => x.offsetParent !== null);
+    if (e.shiftKey && document.activeElement === f[0]) { e.preventDefault(); f[f.length-1].focus(); }
+    else if (!e.shiftKey && document.activeElement === f[f.length-1]) { e.preventDefault(); f[0].focus(); }
+    else if (document.activeElement !== pInput && !palItems.some(i => i.el === document.activeElement)) { e.preventDefault(); pInput.focus(); }
+  }
+});
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); overlay.classList.contains('on') ? closePal() : openPal(); }
+  if (e.key === 'Escape' && overlay.classList.contains('on')) closePal();
+});
+</script>
+</body>
+</html>

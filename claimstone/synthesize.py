@@ -252,9 +252,22 @@ def verdicts(store: Store, *, project: Project, round_name: str | None = None,
         found = recorded.get(question_id)
         if found is not None:
             # A judgement made against different evidence is a judgement about a different question,
-            # and quietly keeping it on screen is how a verdict outlives its reason.
-            row["stale"] = (live is None or live.get("provisional", False)
-                            or str(found.get("profile_sha256")) != str(live.get("profile_sha256")))
+            # and quietly keeping it on screen is how a verdict outlives its reason. With a live
+            # profile, its hash decides. Without one the round is inadmissible now — and since
+            # `build` refuses an inadmissible round, a profile it wrote records a round that
+            # passed when the premise was signed, so the refusal itself is the movement. The
+            # three recorded counts cannot prove admissibility, only refuse to disprove it: a
+            # `discover --reclassify` row flipping a candidate's class can break that class's own
+            # floor at identical found/obtained/confirmed, and comparing counts there would call
+            # the stale verdict fresh. A stored profile with no acquisition block is a hand-written
+            # row, not one `build` wrote, so only there does the hash the adjudicator signed decide.
+            if live is not None:
+                row["stale"] = (bool(live.get("provisional"))
+                                or str(found.get("profile_sha256")) != str(live.get("profile_sha256")))
+            else:
+                row["stale"] = (bool(profile.get("acquisition"))
+                                or str(found.get("profile_sha256"))
+                                != str(profile.get("profile_sha256")))
             row["verdict"] = found
         rows.append(row)
     return {

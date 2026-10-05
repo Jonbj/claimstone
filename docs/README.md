@@ -10,6 +10,8 @@ Which file answers which question. *In italiano: [README.it.md](README.it.md).*
 | run a round and understand what comes out | [`GUIDE.md`](GUIDE.md) |
 | reproduce the production replay and remaining work | [`replays/2026-09-28-production-replay.md`](replays/2026-09-28-production-replay.md) |
 | know what is running and what is pending right now | [`HANDOFF.md`](HANDOFF.md) |
+| find automation requirements gathered during supervised use | [`SCHEDULER_BACKLOG.md`](SCHEDULER_BACKLOG.md) — pending work, not an implemented scheduler |
+| review the proposed multi-flow research portal | [`superpowers/specs/2026-10-06-research-portal-design.md`](superpowers/specs/2026-10-06-research-portal-design.md) — proposal awaiting Claude Code review |
 | work on the code as an agent | [`../CLAUDE.md`](../CLAUDE.md), then [`../AGENTS.md`](../AGENTS.md) |
 | argue with an architectural choice | [`DESIGN_DECISIONS.md`](DESIGN_DECISIONS.md) — find its entry first |
 | write to a ledger, or read one | [`contracts/`](contracts/) — one file per ledger |
@@ -17,7 +19,7 @@ Which file answers which question. *In italiano: [README.it.md](README.it.md).*
 
 ## The design record
 
-[`DESIGN_DECISIONS.md`](DESIGN_DECISIONS.md) is 52 numbered decisions in ~2,000 lines, each carrying **the
+[`DESIGN_DECISIONS.md`](DESIGN_DECISIONS.md) is 68 numbered decisions in ~2,000 lines, each carrying **the
 measurement that decided it**. It is not meant to be read front to back.
 
 Its purpose is narrow and worth stating: **so that a choice is not relitigated from first principles.** Most
@@ -40,6 +42,7 @@ write to — several fields exist to prevent a specific defect and look optional
 | [`contracts/requests.md`](contracts/requests.md) | scholarly request events and completed/failed queries |
 | [`contracts/acquisitions.md`](contracts/acquisitions.md) | every fetch attempt, its licence, and why it failed |
 | [`contracts/normalize.md`](contracts/normalize.md) | documents and chunks |
+| [`contracts/source_selection.md`](contracts/source_selection.md) | preparatory audits and append-only advisory screening/identity ledgers; production admission unchanged |
 | [`contracts/claims.md`](contracts/claims.md) | a claim, its quote, and the engine's converted values |
 | [`contracts/reviews.md`](contracts/reviews.md) | a second reader's verdict on one claim |
 | [`contracts/model_calls.md`](contracts/model_calls.md) | the file boundary every model-using stage crosses |
@@ -51,7 +54,8 @@ two that are not stages:
 
 - **the verdict contract** — the five verdict states, why `operational` questions get none, and the two-layer
   split that makes every verdict a person's. Read this before touching stage 5 or 6.
-- **the dashboard** — specified, deliberately built last, and not built. Its value needs data in every stage.
+- **the dashboard** — the original single-round read-only design; the working-tree implementation is separate from the proposed multi-flow portal.
+- **the research portal** — a protocol-bound multi-flow design proposal covering human intake, access offers, administration and export; it is not implemented.
 
 A spec says what was intended. The design record says what was measured afterwards, and where they disagree
 the record wins.

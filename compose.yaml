@@ -78,6 +78,7 @@ services:
       CLAIMSTONE_CONTACT_EMAIL: ${CLAIMSTONE_CONTACT_EMAIL:?set it in .env — the APIs require an address and the code refuses to guess one}
       CLAIMSTONE_GROBID_URL: http://grobid:8070
       OLLAMA_API_KEY: ${OLLAMA_API_KEY:-}
+      OPENALEX_API_KEY: ${OPENALEX_API_KEY:-}
     volumes:
       # The two directories that must not live in an image. `store/` holds the fetched bytes of copyrighted
       # papers; `projects/` holds instances that encode a consuming system's internal design, which is why

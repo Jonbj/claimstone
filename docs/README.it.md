@@ -9,6 +9,7 @@ Quale file risponde a quale domanda. *In English: [README.md](README.md).*
 | sapere cos'è questo progetto, in due minuti | [`../README.it.md`](../README.it.md) |
 | eseguire un giro e capire cosa ne esce | [`GUIDE.it.md`](GUIDE.it.md) |
 | sapere cosa sta girando e cosa è in sospeso adesso | [`HANDOFF.md`](HANDOFF.md) *(inglese)* |
+| trovare gli appunti sulle automazioni da aggiungere | [`SCHEDULER_BACKLOG.md`](SCHEDULER_BACKLOG.md) *(inglese)* — lavoro previsto, schedulatore ancora da implementare |
 | lavorare sul codice come agente | [`../CLAUDE.md`](../CLAUDE.md), poi [`../AGENTS.md`](../AGENTS.md) *(inglese)* |
 | discutere una scelta architetturale | [`DESIGN_DECISIONS.md`](DESIGN_DECISIONS.md) *(inglese)* — prima trova la voce |
 | scrivere su un registro, o leggerne uno | [`contracts/`](contracts/) *(inglese)* — un file per registro |
@@ -16,7 +17,7 @@ Quale file risponde a quale domanda. *In English: [README.md](README.md).*
 
 ## Il registro delle decisioni
 
-[`DESIGN_DECISIONS.md`](DESIGN_DECISIONS.md) sono 52 decisioni numerate in circa 2.000 righe, ognuna con **la
+[`DESIGN_DECISIONS.md`](DESIGN_DECISIONS.md) sono 68 decisioni numerate in circa 2.000 righe, ognuna con **la
 misura che l'ha decisa**. Non è fatto per essere letto dall'inizio alla fine.
 
 Il suo scopo è stretto e vale dirlo: **che una scelta non venga rilitigata da principi primi.** Quasi tutte

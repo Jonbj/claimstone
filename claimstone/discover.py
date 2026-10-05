@@ -17,7 +17,7 @@ from __future__ import annotations
 import re
 from typing import Any, Iterable
 
-from claimstone import claim_records, classify, ids, net, searchers
+from claimstone import claim_records, classify, ids, net, searchers, population
 from claimstone.config import Project
 from claimstone.searchers import CHANNEL_CITATION, CHANNEL_KEYWORD, SEARCHERS, _limit_kw, _row
 from claimstone.store import Store, sha256_text
@@ -71,6 +71,8 @@ def run(
 ) -> dict[str, Any]:
     """Search every term of every selected topic; append only candidates not already seen."""
     wanted = set(topics) if topics else None
+    policy = getattr(project, "population", {})
+    population.check_round(store, policy, round_name)
     known = set(store.latest_by("candidates.jsonl", "candidate_key"))
     new = 0
     possible_duplicates = 0
@@ -79,6 +81,7 @@ def run(
     queries = 0
     completed = 0
     failures = {}
+    outside_population = 0
 
     for topic in project.topics:
         if wanted and topic.id not in wanted:
@@ -110,6 +113,10 @@ def run(
                     if not row["title"] and not row["url"]:
                         continue
                     seen_this_run += 1
+                    row["round"] = round_name
+                    if not population.observe(store, policy, row):
+                        outside_population += 1
+                        continue
                     if row["candidate_key"] in known:
                         continue
                     row["source_class"] = classify.classify(row, project.classes)
@@ -140,6 +147,7 @@ def run(
         "uncovered": classify.uncovered(unclassified, project.classes),
         "possible_duplicates": possible_duplicates,
         "round": round_name,
+        "outside_population": outside_population,
     }
 
 
@@ -170,6 +178,9 @@ def run_citations(
     it does introduce is a bias toward canonical works, recorded in the spec as a limit of any
     completeness estimate rather than hidden.
     """
+    policy = getattr(project, "population", {})
+    population.check_round(store, policy, round_name)
+    outside_population = 0
     if fetcher is not None:
         fetcher = RecordingFetcher(fetcher, store, purpose='citation-resolution', round=round_name)
     references = store.latest_by("references.jsonl", "key")
@@ -208,6 +219,9 @@ def run_citations(
             # Already resolved, or there is nothing new to say about it without a fetcher. A
             # previously unresolved row *is* retried when one is given, and supersedes itself.
             continue
+
+        if previous is not None:
+            population.check_round(store, policy, str(previous.get("round") or round_name), record=False)
 
         doi = reference.get("doi")
         found = (
@@ -251,6 +265,9 @@ def run_citations(
         # The round that first found it, as in `import_manifest`: a retry that resolves a candidate
         # must not move it out of the round that admitted it.
         row["round"] = str((previous or {}).get("round") or round_name)
+        if not population.observe(store, policy, row):
+            outside_population += 1
+            continue
         # A shared DOI under two keys is a *certain* duplicate rather than a near-match, and it only
         # becomes reachable once resolution can put a DOI on a title-keyed row. Still only noted: a
         # wrong merge loses a source, a duplicate costs one wasted fetch.
@@ -277,11 +294,13 @@ def run_citations(
         "resolved": resolved,
         "unresolved": dict(sorted(unresolved.items(), key=lambda kv: -kv[1])),
         "round": round_name,
+        "outside_population": outside_population,
     }
 
 
 def import_manifest(
-    store: Store, entries: Iterable[Any], *, round_name: str = ROUTINE
+    store: Store, entries: Iterable[Any], *, round_name: str = ROUTINE,
+    population_policy: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Seed candidates from a validated manifest. Parsing and validation live in config.
 
@@ -289,6 +308,7 @@ def import_manifest(
     search: the point of the first milestone is whether the acquisition rate moves on the
     manifest that produced 0.42, holding the source list constant.
     """
+    population.check_round(store, population_policy or {}, round_name)
     known = store.latest_by("candidates.jsonl", "candidate_key")
     added = 0
     updated = 0
@@ -417,6 +437,8 @@ def promote_contested(project: Project, store: Store, *, round_name: str = ROUTI
     reference is **reported and never invented** — nothing here knows a work's title or address, and the
     reference is what carries those.
     """
+    policy = getattr(project, "population", {})
+    population.check_round(store, policy, round_name)
     references = store.latest_by("references.jsonl", "key")
     by_author_year: dict[tuple[str, str], dict[str, Any]] = {}
     for reference in references.values():
@@ -438,7 +460,7 @@ def promote_contested(project: Project, store: Store, *, round_name: str = ROUTI
                 by_author[surname] = by_author.get(surname, 0) + 1
 
     held = store.latest_by("candidates.jsonl", "candidate_key")
-    named = promoted = 0
+    named = promoted = outside_population = 0
     unmatched: list[list[str]] = []
     ambiguous: list[list[Any]] = []
     seen: set[tuple[str, str]] = set()
@@ -494,6 +516,9 @@ def promote_contested(project: Project, store: Store, *, round_name: str = ROUTI
             )
             candidate["source_class"] = classify.classify(candidate, project.classes)
             candidate["round"] = round_name
+            if not population.observe(store, policy, candidate):
+                outside_population += 1
+                continue
             held[key] = candidate
             store.append("candidates.jsonl", candidate)
             promoted += 1
@@ -501,6 +526,7 @@ def promote_contested(project: Project, store: Store, *, round_name: str = ROUTI
     return {
         "named": named,
         "promoted": promoted,
+        "outside_population": outside_population,
         # Both reported so somebody can look, neither guessed into a candidate.
         "unmatched": unmatched,
         "ambiguous": ambiguous,

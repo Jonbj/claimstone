@@ -2536,3 +2536,1057 @@ Commands, exact current measurements and the local reading packet are in
 [the completed round report](replays/2026-09-28-q04-ready.md). Required checks: 889 tests, 7 skipped;
 six valid projects; 16 acknowledged versions. Scientific agreement on the complete v2 task remains
 unmeasured, and spending on the other seven questions remains the operator's decision.
+
+## D53 — Represent JATS locally before measuring another acquisition route
+
+Date: 2026-09-28 · `jats_parser_version 1` · Existing 16 instruments unchanged
+
+HANDOFF identifies Europe PMC after D39/D41's PMC acquisition measurements. Its fullTextXML
+service serves the open-access subset. The current normalization route sends XML to HTML;
+another URL would not establish that the acquired tables and bibliography were read correctly.
+
+The pure JATS parser produces the shared Document shape, retaining primary-article paragraph
+order, inline whitespace, nested headings, table geometry, notes and explicit citation metadata.
+Unsupported tables leave the source awaiting without publishing partial document/chunk rows.
+XML media types select JATS, XHTML stays HTML, and confirmation audits use the recorded format.
+
+Measured with `pytest -q tests/test_jats.py`: **22 synthetic cases pass**, covering evidence
+separation, cell alignment, malformed/unsupported inputs, offline normalization, unchanged replay,
+confirmation thresholds and new chunk identity when the parser version changes. This is not a
+publisher-corpus measurement. JATS generation identity records its parser version; previous
+HTML/PDF generation inputs remain identical. The instrument checker tracks the new parser.
+
+No production ledger, Q04 profile, registry, floor or model request was changed. No scholarly
+acquisition or paid model call was made. A JATS-aware acquisition gate, Europe PMC resolver route,
+operator-approved bounded pilot and live comparison remain pending; no improved acquisition rate
+is claimed. [The specification](superpowers/specs/2026-09-28-jats-normalize-design.md) records the
+implemented boundary and required next measurement.
+
+Required checks after this change: **911 passed, 7 skipped**, six valid project configurations,
+and all **17 instrument versions** acknowledged. Production profiles remain unchanged.
+
+## D54 — Freeze a metadata population and record local reuse as local reuse
+
+Date: 2026-09-28 · `population_version 1` · `discovery_version 3` · `reuse_version 1`
+
+The operator requested starting two configured finance strands. Offline inspection found their
+population predicate only in comments: naming a round did not restrict discovery. A new optional
+`sources.yaml.population` declares exact hosts, source API names or exact venues, with a dated
+version and rationale. Predicates never inspect acquisition success or scientific conclusions.
+The predeclared manifest seed remains included. Unmatched discovery observations are retained
+outside the candidate denominator in `discovery_population.jsonl`; the actual predicate and digest
+are frozen per round in `populations.jsonl`. Changing or removing a held predicate refuses, and a
+selector cannot be retrofitted onto a round that already has candidates. Citation discovery follows
+the same predicate. Unconfigured projects retain their existing behaviour.
+
+Local reuse must retain the original byte hash and provenance and be re-gated under the receiving
+project's policy, with its declared source class. A local file is not an HTTP response; its acquisition
+row records reuse separately, without fabricated requests. No floor or question registry is changed,
+and archive membership does not certify a copy's identity or a trading strategy's profit.
+
+Measurement: the first prepared instance has 19 predeclared seed sources. Eight exact-URL cached
+PDFs pass hash, identity and receiving-gate checks; all eight confirm from cached TEI, without a new
+HTTP or model request. Their 232 current chunks produce 232 effect and 232 method work units.
+Coverage is 8/19 = 0.4210526316: admission remains INSUFFICIENT_ACQUISITION. A bounded 30-query
+discovery pilot stops after its first recorded CONNECTION_ERROR rather than inventing a result or
+repeating transport failures. No scientific annotation or signed verdict is produced.
+
+Synthetic checks cover excluded metadata retained outside the denominator, exact-host matching,
+policy drift/removal/retrofit refusal, citation and promoted-citation filtering, receiving-class
+reuse, rejected-but-retained bytes, raw/parsed/input mismatches refused before appends, read-only
+previews, fresh queues without transferred answers, and idempotent reapplication.
+
+Verification for D53/D54: `pytest -q` passes 949 tests with 7 skips; all six project
+configurations validate; all 19 instrument versions are acknowledged by the version checker.
+
+## D55 — Meter a whole-document calibration without certifying the corpus
+
+Date: 2026-09-28 · All 19 scientific instrument versions unchanged
+
+The operator ran the bounded acquisition/normalization commands and explicitly authorized up to
+USD 10 for calibration. The stored host results confirm all 19 seed sources; two discovered
+candidates remain unattempted. Admission is 19/21 = 0.9047619, above the unchanged 0.80 floor,
+but provisional: the latest 30 discovery queries include eight OpenAlex failures (five 429s,
+three exhausted-domain budgets). There are 549 current chunks, not the earlier prepared 232.
+
+Calibration reads every current chunk of two predeclared primary documents in the selected kinds:
+18 effect readings and 22 method readings. It retains the full frozen registry task for each kind,
+then reviews every mechanically accepted annotation from this sample with a different model.
+`tools/run_calibration.py` distinguishes CALIBRATION_COMPLETE from a complete corpus profile:
+it never builds profiles or adjudicates. No inference about recall or scientific accuracy follows
+from valid JSON or agreement between two models without a reference assessment.
+
+Extraction uses deepseek-v4.1-flash, with gemma4:31b only for JSON/schema failures without a valid
+answer; full-result review uses mistral-large-3:675b. This reuses D51/D52's measured operational
+choices; it is not a claim that those readers are scientifically calibrated on a new domain.
+The unpaid preparation's 2,500-token cap becomes 7,500 in new call ids, following D50's measured
+truncation problem; the original requests remain intact. Peak rates are verified on the
+[provider pricing page](https://ollama.com/pricing) and retained in the private dated plan.
+
+The plan freezes all four input hashes, the registry and extraction requests, and checks all sample
+passages against current confirmed documents. One shared ceiling covers extraction, fallback and
+review, including full-context reservations for unknown-cost attempts. Partial answers are harvested
+even when the next call stops; successful calls are not repaid on resume. Review staging can contain
+unrelated work, but only this sample's immutable annotation ids enter the paid review queue, retaining
+all merged targets. Existing Q04 spending and authorization remain separate.
+
+The first physical attempt fails DNS resolving ollama.com: BACKEND_ERROR, no valid reading or new
+scientific annotation. Its USD 0.339 reservation is an accounting bound, not a provider charge.
+The private content-addressed audit preserves the error and confirms every original byte remains.
+Resume from the host using the same plan, rather than opening a second budget or discarding the error.
+
+Operational tests cover shared-budget enforcement, sample-only review queues, merged annotation
+targets, all declared review questions, partial-success harvest, idempotent resume without payment,
+read-only preview, and input/passage drift refused before contact.
+
+Verification: 979 tests pass with 7 skips; six project configurations validate; all 19
+instrument versions remain acknowledged. No registry, floor or parser instrument is changed.
+
+## D56 — The calibration runs; its reviewer labels are not a reference assessment
+
+Date: 2026-09-28 · All 19 scientific instrument versions unchanged
+
+The operator completed D55's same USD 10 plan on the host. Forty whole-document readings now have
+valid answers: 39 primary successes and one alternate-reader recovery of a NOT_JSON answer. The
+gate actually returns 80 accepted annotations and 13 rejections (two VALUE_NOT_IN_QUOTE, four
+COMPARATIVE_NOT_IN_QUOTE, one QUOTE_NOT_FOUND, six NUMBER_NOT_IN_QUOTE). All 80 accepted
+annotations have independent full-result reviews: 26 SUPPORTED, 53 OVERSTATED, one NOT_APPLICABLE.
+No review is outstanding in this sample. These are annotations on two studies, not 26 independent
+scientific confirmations. Priced attempts total USD 0.11250092 at the plan rates; the original
+unknown-cost DNS attempt retains its USD 0.339 reservation. Cumulative accounting is USD 0.45150092,
+not a provider invoice. Original bytes are preserved; no profile or adjudication is written.
+
+Interactive inspection reads all 80 review reasons and claim sentences, all 26 SUPPORTED original
+annotations with their current full chunks, and diagnostic rejected-by-review cases in context.
+It finds problems on both sides: an extractor names the wrong company and strengthens uncertainty;
+some claims describe a study without establishing the attached question. Reviewer reasons sometimes
+ignore context they explicitly acknowledge, treat an inclusive condition as an exclusive one, or
+criticize a missing horizon that the claim states. SUPPORTED rows can also carry an incoherent
+question-relative stance or establish only a study design rather than the question's proposition.
+
+Thus 53/80 is the observed label proportion, not a measured extractor-error rate. A bad rejection
+reason does not justify promotion: the annotation may separately be inapplicable. The private reading
+packet retains the original annotations, reviews, contexts and consultative flags without changing
+any scientific ledger. It is not an adjudication or a validated independent gold reference.
+
+Next measurement: test a prompt variant that checks question applicability, every asserted field
+against the whole passage, and stance against the exact question, with an explicit reference
+assessment and retained baseline. Do not relax the quote gate, relabel historical reviews, change
+the production review-task version or scale to the full corpus on the basis of these counts.
+The acquisition scope remains 19/21 confirmed (0.9048), with eight failed discovery queries and
+two unattempted acquisitions; the round remains provisional. Whole-corpus unanswered readings
+are 531 effect, 527 method, 549 heterogeneity and 549 premise. D55's calibration budget does not
+silently authorize paying for them. Existing PMC profiles and all instruments remain unchanged.
+
+## D57 — Compare prompt variants in isolation under the original calibration ceiling
+
+Date: 2026-09-28 · All 19 scientific instrument versions unchanged
+
+The operator authorizes D56's next comparison. `tools/run_prompt_comparison.py` reads a frozen
+plan and defaults to offline preview. It rereads the same two documents through 40 extraction
+tasks with an additional domain-neutral applicability, fidelity and stance checklist. An
+independent reader reviews every accepted annotation using a corresponding checklist. Production
+prompts, schemas, historical annotations, profiles and adjudications are untouched. Experimental
+requests, raw answers and harvested annotations live in a separate store with nonoverlapping roots.
+
+A second part sends the review variant 12 unchanged baseline annotations, including four positive
+controls. Their agent-authored reference assessment records labels, rationales, original annotations
+and baseline reviews in a hash-frozen private file. Cases were selected after inspecting errors:
+this is a provisional development reference, not independent gold or a held-out accuracy estimate.
+The baseline agrees on 4/12 selected cases; that fraction cannot estimate general accuracy.
+Adopting a variant remains a separate decision after reading results, including positive controls.
+
+The original USD 10 ceiling now aggregates physical attempts across both stores and all three
+experimental queues: diagnostic review, extraction with its bounded alternate reader, and full-result
+review. Prior priced costs and unknown-attempt reservations remain in the denominator. Model
+identities, rates and reservation bounds remain the original plan's; no new USD 10 budget is opened.
+Both input and copied source ledgers are frozen. On execution, production file hashes must remain
+identical and every old experimental byte must remain intact. Successful work resumes without
+another payment; unrelated or altered full-review requests refuse before contact.
+
+The first diagnostic attempt fails resolving ollama.com: BACKEND_ERROR, no valid diagnostic
+answer and no new extraction. Its USD 0.131672 unknown-cost reservation combines with the prior
+USD 0.339 reserve and USD 0.11250092 priced attempts. Cumulative accounted spending is
+USD 0.58317292, not a provider invoice. The content-addressed experimental audit confirms all
+original bytes and the complete production store are unchanged. Resume the same plan on the host.
+
+Tests exercise complete independent review with merged targets, production preservation,
+idempotent resume, prior unknown-cost spending blocking new calls, input/request drift, budget
+changes, overlapping stores and read-only preview. No gate, registry or floor is relaxed.
+
+Verification: 987 tests pass with 7 skips; six project configurations validate; all 19
+instrument versions are acknowledged. The prepared real-plan preview passes offline.
+
+## D58 — The prompt comparison completes, but neither variant is adopted
+
+Date: 2026-09-28 · All 19 scientific instrument versions unchanged
+
+The operator resumes D57's frozen plan on the host. All 12 diagnostic reviews and all 40
+experimental extraction tasks return valid answers; one SCHEMA_INVALID primary answer is recovered
+by the bounded alternate reader. Harvest actually admits 41 annotations and rejects 15 (13
+NUMBER_NOT_IN_QUOTE, two COMPARATIVE_NOT_IN_QUOTE). All 41 admitted annotations receive independent
+full reviews: 10 SUPPORTED, 28 OVERSTATED, three NOT_APPLICABLE. The production store and every
+original byte remain unchanged. Cumulative priced attempts are USD 0.20182786, unknown-cost
+reservations USD 0.470672, cumulative original-budget accounting USD 0.67249986, not an invoice.
+
+Agreement with the post-selected provisional development reference improves from 4/12 to 6/12.
+Positive controls remain 3/4; challenge-case agreement improves from 1/8 to 3/8. The variant catches
+a question-relative stance error and correctly withholds a result attached to a different
+methodological proposition. It still misreads an inclusive condition as an exclusive restriction,
+accepts regression design as evidence for a predictive proposition, and conflates predictive
+information leakage with causal identification. The reference remains agent-authored, not held-out
+or independent gold. These counts are not general scientific accuracy.
+
+Inspection reads every new claim, quote and review reason, and complete annotations and supplied
+contexts for the SUPPORTED cases and diagnostic concerns. A hypothetical mechanism remains admitted
+and labelled SUPPORTED as an effect annotation; another SUPPORTED annotation does not establish the
+incremental comparison required by its question. Some rejection reasons still add requirements the
+annotation does not assert, or ignore explicit context. One daily-return rejection invokes absent
+intraday timing despite the source expressly describing post-publication returns; the annotation
+is independently inapplicable to a weeks-to-months question, so the bad reason does not promote it.
+
+The fall from 80 to 41 admitted annotations, or from 26 to 10 SUPPORTED labels, cannot establish
+better precision or retained recall: these are different extractions, and neither reviewer is a
+reference oracle. Do not adopt either variant or scale reading on that basis. Preserve the isolated
+experiment and consultative reading packet. The next targeted measurement should hold annotations
+fixed and explicitly distinguish applicability, fidelity and question-relative stance, with
+positive controls retained; another whole-document extraction is not yet justified. No production
+prompt, task version, profile, adjudication, registry or floor changes.
+
+Verification: 987 tests pass with seven skips; six project configurations validate; all 19
+instrument versions are acknowledged.
+
+## D59 — Hold annotations fixed and request independent diagnostic checks
+
+Date: 2026-09-28 · All 19 production scientific instrument versions unchanged
+
+The operator authorizes the targeted reviewer experiment after D58. Rather than rereading documents,
+`tools/run_review_diagnostics.py` supplies unchanged complete annotations and their original entire
+passages to the same independently measured reviewer. A new experimental schema requires separate
+labels and reasons for applicability, fidelity and question-relative direction. The prompt is a
+replacement experimental task, not another appendix to the production task's single-label instructions.
+It does not privilege rejection, invent question requirements or treat a hypothetical mechanism as an
+observed effect. Context may establish metadata; named entities, quantities and uncertainty still need
+evidence. Fidelity can pass while applicability fails. Direction remains unclear for inapplicable work.
+
+The private hash-frozen development reference retains the previous 12 cases and adds six inspected
+annotations from D58, giving 18 tasks and seven positive controls. Extra cases cover hypotheses,
+missing incremental comparisons, neutral-publication findings, inclusive conditions, short-horizon
+applicability and a controlled positive-news finding. All were selected after inspecting results;
+this remains provisional agent-authored development assessment, not held-out accuracy. Expected axes
+are deliberately unscored where no defensible assessment was made: 18 applicability, 16 fidelity and
+eight direction cases are scored. Reference labels and rationales are never supplied to the model.
+
+Responses are saved only in a separate diagnostic queue. They are never harvested into reviews.jsonl,
+used to build a profile or treated as signed question verdicts. The report derives an explicitly
+experimental summary label for comparison: inapplicable first, then fidelity/direction failure,
+then uncertainty, otherwise supported. Its uncertainty mapping is diagnostic and does not redefine
+the production AMBIGUOUS contract. No production REVIEW_VERSION or gate changes. Both previous stores
+must remain byte-identical; diagnostic history remains append-only. Annotation and passage hashes,
+registry inputs, prepared requests and prior accounting histories are checked before contact.
+
+The same original USD 10 budget includes every physical attempt from baseline calibration, D57/D58
+comparison and this new diagnostic queue, including unknown-cost reservations. The preview returns
+18 unanswered cases and USD 0.67249986 already accounted, with zero new physical attempts. Because
+DNS access failed in this environment for both earlier experiments, no redundant attempt is made
+here. The operator runs the hash-frozen prepared plan on the host. Successful answers resume without
+payment; invalid terminal answers cannot falsely yield DIAGNOSTICS_COMPLETE on resume.
+
+Tests cover the independent schema, diagnostic summary priority, retained merged annotation targets,
+all prior priced and unknown spending, positive-control requirements, history/annotation/request
+drift, overlapping stores, unscored axes, read-only preview, preserved previous stores, idempotent
+resume and incomplete invalid answers. No extraction, production review, profile or adjudication
+is written by this experiment.
+
+Verification: 1,006 tests pass with seven skips; six project configurations validate; all 19
+instrument versions are acknowledged. The prepared real-plan preview passes without new spending.
+
+## D60 — Repair the diagnostic output instruction while retaining the failed attempt
+
+Date: 2026-09-28 · All 19 production scientific instrument versions unchanged
+
+D59's first host attempt returns SCHEMA_INVALID: `$: expected object, got list`. The retained raw
+answer contains three check/verdict/reason objects in a Markdown-fenced array. The declared schema
+requires one object keyed applicability/fidelity/direction, each with label/reason. The model was
+sent that schema through the provider's format option, but D51 already establishes that this is
+a request, not a guarantee. D59's prose named three independent checks without showing their exact
+output structure. No diagnostic case has a valid answer yet; the stop is a formatting failure,
+not a negative scientific assessment of 18 annotations.
+
+Add explicit format version 2 to the experimental prompt, displaying the exact nested object shape
+and prohibiting the observed array/check/verdict form. Keep the schema, model, semantic checks,
+reference cases and budget unchanged. The original format version remains reproducible under its
+original plan; new prompts get new call ids and a distinct queue. Do not reinterpret or transform
+the old answer into a successful result. This is a diagnostic prompt repair, not a production
+review-task revision or relaxed scientific gate.
+
+The repaired plan freezes the prior diagnostic request and result files and includes their physical
+attempts in cumulative spending. Prior queues must be distinct, nonduplicated and in the same
+isolated diagnostic store; both main previous scientific stores remain frozen. The failed priced
+attempt costs USD 0.00156 at plan rates: cumulative priced attempts USD 0.20338786, unknown reserves
+USD 0.470672, original-budget accounting USD 0.67405986. The new 18-task preview passes offline,
+with no new physical call here. Execute the repaired plan from the host; repeating the original
+terminal-invalid task does not repair it.
+
+Regression tests retain the old invalid result and request bytes, verify new prompt identities
+under the unchanged schema, include failed spending, and refuse missing, duplicated, altered or
+misplaced prior accounting queues. No production review, extraction, profile or adjudication is
+written, and no quality improvement has yet been measured.
+
+Verification: 1,012 tests pass with seven skips; six project configurations validate; all 19
+instrument versions are acknowledged. Both original and repaired diagnostic previews remain readable.
+
+## D61 — Separate reviewer checks recover positive cases but expose critical regressions
+
+Date: 2026-09-28 · All 19 production scientific instrument versions unchanged
+
+The operator completes all 18 repaired diagnostic tasks with valid responses. Both previous stores
+and all original bytes remain unchanged; no extraction or production review is written. Cumulative
+priced attempts total USD 0.22658886, unknown-cost reserves USD 0.470672, original-budget accounting
+USD 0.69726086. The diagnostic task is operationally complete, not adopted as scientific review.
+
+On the post-selected provisional reference, applicability agrees on 12/18 scored cases, fidelity
+on 15/16 and direction on 6/8. Summary-label agreement moves from 6/18 to 10/18: positive controls
+from 3/7 to 6/7, challenge cases from 3/11 to 4/11. On the original 12 cases, agreement remains 6/12.
+Those are paired development-reference counts, not held-out accuracy or an independent gold score.
+Separate checks correctly distinguish a faithfully quoted hypothesis from empirical evidence and
+a faithful daily result from evidence about a longer horizon. They recover inclusive-sample and
+neutral-publication positive controls previously rejected.
+
+Two critical regressions block adoption. A claim names Facebook but its quote concerns the
+Pfizer-Allergan example; the reviewer merges the entities and accepts both strengthened certainty
+and a demonstrated-failure label. The single scored fidelity disagreement thus contains a serious
+error, despite 15/16 aggregate agreement. Another annotation attaches CONTRADICTS to nonsignificant
+pre-earnings returns when the question asks about concentration around earnings. The reviewer changes
+around into prior to in its rationale and declares that direction coherent. Both were withheld by
+the preceding reviewer task and become SUPPORTED in this one.
+
+Inspection of the supplied contexts confirms continuing design/result, causal/predictive,
+horizon and missing-comparison errors. A remaining rejected positive control has its negative-news
+comparison in the immediately following sentence. Correct labels can also carry wrong reasons:
+one NOT_APPLICABLE diagnosis interprets Week 0, the news formation period, as the return horizon;
+its actual applicability defect is absence of coverage-versus-no-coverage evidence independent of
+tone. A recovered positive control's rationale invents a no-news comparison that the question did
+not require. Label agreement alone does not validate reasoning.
+
+Retain the three-axis task as an isolated diagnostic aid, not production review. Do not scale
+reading or promote annotations from these labels. The next discriminating measurement should
+compare another eligible independent reader on the same frozen cases and inspect the critical
+regressions and positive controls; before adoption, use additional cases not selected to tune the
+prompt. The private consultative packet retains all 18 full annotations, replies and contexts,
+including faulty rationales attached to matching labels. No historical label or question verdict
+is changed, and no additional paid experiment is started by this assessment.
+
+Verification: 1,012 tests pass with seven skips; six project configurations validate; all 19
+instrument versions are acknowledged. Offline diagnostic measurement agrees with the completed audit.
+
+## D62 — Compare an independent reviewer without changing the task or repricing history
+
+Date: 2026-09-28 · All 19 production scientific instrument versions unchanged
+
+The operator authorizes the next comparison after D61. Select Moonshot's `kimi-k2.6`, an independent
+reader from the extractor and the existing Mistral reviewer, available through
+[Ollama Cloud](https://ollama.com/library/kimi-k2.6). The dated
+[Ollama pricing table](https://ollama.com/pricing) lists USD 0.95 input, 0.16 cached input and 4.00
+output per million tokens. The provider's
+[configuration](https://huggingface.co/moonshotai/Kimi-K2.6/raw/main/config.json) sets 262,144 context
+positions; its [model card](https://huggingface.co/moonshotai/Kimi-K2.6) describes an instant mode.
+Request thinking off through the existing harness and record that request honestly. This is model
+selection for measurement, not evidence of better scientific review or verified endpoint support.
+
+`tools/compare_reviewers.py` uses a fresh isolated results store and byte-identical requests from the
+completed 18-case diagnostic queue. Schema, whole contexts, annotations, seven positive controls,
+prompt hashes, merged targets and 1,200-token output caps are unchanged. Neither the reference nor
+Mistral's answers enter the new reader's prompt. The baseline plan, diagnostic files, previous
+scientific histories and reference are frozen before contact. Summary labels remain experimental;
+no extraction, production review, profile or adjudication is written or automatically adopted.
+
+Historical and new-reader attempts occupy separate accounting buckets, priced/reserved under their
+own frozen reader configurations. A new model must not reprice an older unknown-cost attempt, and
+none of the earlier queues can drop out of the cumulative USD 10 budget. Offline preview reproduces
+USD 0.22658886 priced plus USD 0.470672 unknown-cost reserves: USD 0.69726086 accounted. All 18 first
+attempts with unknown usage would reserve another USD 4.5690624, fitting within the same budget.
+Actual execution reserves each next call before contact and stops after an invalid or failed attempt.
+Successful answers resume without another payment; terminal-invalid answers stay incomplete.
+
+Fourteen tests cover byte-identical requests, merged annotation targets, previous spending and
+reader-specific unknown-cost bounds, refusal of drift/self-review/nested stores/invalid rates,
+stopping before contact when prior spending exhausts the budget, offline preview, original-byte
+preservation and complete/invalid resume. No Kimi model call is made here: prior measured DNS failures
+establish that the operator must execute from the host. The next assessment must inspect reasons,
+especially the two critical regressions and positive controls, before any unseen-case validation.
+
+Verification: 1,026 tests pass with seven skips; six project configurations validate; all 19
+instrument versions are acknowledged. The prepared preview has 18 unanswered cases and reproduces
+Mistral's 10/18 label, 12/18 applicability, 15/16 fidelity and 6/8 direction reference agreement.
+
+## D63 — The independent reader improves fixed-case review but still confuses testing with evidence
+
+Date: 2026-09-28 · All 19 production scientific instrument versions unchanged
+
+The operator completes all 18 byte-identical diagnostic requests with `kimi-k2.6`, with no invalid
+responses. The existing harness records requested thinking off and schema enforcement. Earlier stores
+and all original bytes remain unchanged; no production review, extraction, profile or adjudication is
+written. The new attempts cost USD 0.04999230 at frozen plan rates. Cumulative priced attempts total
+USD 0.27658116, unknown-cost reserves USD 0.470672 and original-budget accounting USD 0.74725316.
+Those are plan-rate accounting figures, not a provider invoice.
+
+Offline `tools/compare_reviewers.py --plan <v4-plan>` reproduces the completed audit: reference-label
+agreement is 14/18 versus Mistral's 10/18, positive controls 7/7 versus 6/7 and challenge cases 7/11
+versus 4/11. The original twelve-case subset improves to 8/12 from 6/12. The readers agree on 13/18
+summary labels. Applicability agrees with the provisional reference on 14/18 scored axes, fidelity on
+16/16 and direction on 8/8. This reference is post-selected and agent-authored, not held-out accuracy
+or a human gold standard. Aggregate fidelity/direction agreement does not validate unscored axes.
+
+Both critical D61 regressions are now withheld. The reader identifies the entity substitution between
+Facebook and the Pfizer-Allergan example, plus speculative certainty being promoted to demonstrated
+failure. It marks fidelity UNFAITHFUL, but additionally calls the annotation NOT_APPLICABLE, giving a
+different summary label from the reference OVERSTATED. Preserve that disagreement: it successfully
+detects the entity defect without agreeing with the provisional applicability classification. Its
+applicability reason unnecessarily demands a cutoff-controlled returns comparison for a methodological
+question. Separately, it correctly recognizes that negligible pre-earnings returns do not contradict
+concentration around earnings and rejects the annotation's CONTRADICTS stance.
+
+The recovered seventh positive control uses the adjacent negative-news sentence to establish the
+required comparison. A daily finding is correctly withheld from a weeks-long question, and a generic
+neural-network conclusion is withheld from an incremental-comparison question. The coverage-design
+case keeps the right NOT_APPLICABLE label with a better reason about sentiment-sorted portfolios,
+although its fidelity reason still calls Week 0 a matching horizon when it is the formation period.
+
+Three false acceptances remain. A regression specification is described as an empirical predictive
+result; a paper-organization sentence about future earnings is treated as a finding of concentration;
+and an illustration of training-data knowledge is treated as causal identification of news effects.
+In that last case the reason changes the question's conditional requirement into an assertion that
+the relationship was causally identified, reversing the actual proposition. Its direction axis was
+unscored, so the headline 8/8 cannot certify stance reasoning throughout the sample. Some otherwise
+matching reasons add causal language to statistical controls or frame a semantic check as quote-only.
+Read reasons and whole contexts, not just label totals.
+
+Prefer Kimi as the candidate for the next validation, retaining the task unchanged so a new sample
+tests transfer rather than further tuning these eighteen cases. Before production adoption, freeze
+additional cases not used to tune this prompt, record the reference before obtaining model answers,
+and inspect residual applicability/stance errors. Neither reader consensus nor an agent-written
+reference replaces the person's adjudication. Do not scale corpus reading or promote annotations
+from this development comparison. A private consultative packet retains all eighteen current
+annotations, contexts, unchanged reference cases, both readers' reasons and these limitations.
+No further paid experiment is launched by this assessment.
+
+Verification: offline measurement matches the completed comparison audit and previous scientific and
+diagnostic stores remain byte-identical during assessment. Six project configurations validate and
+all 19 instrument versions are acknowledged. New dashboard/round-state files appear during this
+assessment: the expanded full suite reports 1,036 passed, seven skipped, two failed round-state
+assertions and four dashboard setup errors from sandbox-denied socket creation. The earlier suite,
+excluding those two newly added test modules, passes 1,026 tests with seven skips. This is a scoped
+verification, not a green full suite; the new dashboard work is not modified by this assessment.
+
+## D64 — Begin real use with a traceable partial reading rather than an implicit corpus verdict
+
+Date: 2026-09-28 · All 19 production scientific instrument versions unchanged
+
+The operator asks to begin actual supervised use. Select one existing effect question and local sources;
+make the first product a consultative dossier with concrete passages, interpretation and missing coverage.
+`tools/build_consultative_dossier.py --plan <curated-plan> --write` reproduces its JSON/Markdown in
+`audits/consultative/`. It pins registry/passage/document hashes, checks each record with existing
+claim gate v4, carries source classes and preserves every original file. It has no model runner and
+writes no production claim, review, profile or adjudication. The acquisition floor still blocks the
+product below threshold; provisional admission remains explicitly provisional above it. The renderer
+contains no domain rules, and the interactive curator is not misreported as a batch extractor.
+
+The measured pilot selects nine passages from seven active chunks in three already confirmed working
+papers. All nine mechanically pass. Repeating the build reproduces identical artifacts and appends no
+scientific ledger rows. The named acquisition round stays 19/21 confirmed, above 0.80, with
+awaiting_discovery and awaiting_acquire. Selected passages do not change this denominator or certify
+that the full papers/corpus were read. No new network/model call is made, and the cumulative USD 10
+calibration budget accounting remains USD 0.74725316.
+
+The reading's useful outcome is a distinction among variables and units. A text-sentiment study
+reports predictability up to thirteen weeks after weekly aggregation and different positive/negative
+durations. A second reports a risk-adjusted next-month association; its multi-year news momentum
+result concerns subsequent sentiment scores, not an equally long return forecast. A third forms
+weekly portfolios on news-associated price reactions and converts daily returns to monthly display
+units, separately examining long event-time drift. Neither that conversion nor the price-based signal
+establishes long-horizon text-sentiment predictability. These are source-specific reading observations,
+not source votes or a pooled effect, and do not establish net profitability today or causal identification.
+
+Passages from two sources were outside the fixed diagnostic task, but selection is targeted and inspected
+interactively. They are development material, not held-out model-validation cases. Freeze additional
+cases and an independent reference before model answers for that subsequent step. The first dossier
+can be used to refine the consuming research question without adopting a production reviewer or
+changing any question-registry wording. Its contents and private project details remain gitignored.
+
+Six focused tests verify exact quote/numeric/source identity, the acquisition floor, read-only preview,
+original-file preservation and identical repeat output. The expanded full suite retains the unrelated
+dashboard/round-state problems recorded in D63; no dashboard file is edited for this pilot. All six
+project configurations validate and all 19 scientific instrument versions remain acknowledged.
+
+## D65 — Measure a declared search protocol and preserve unknown literature recall
+
+Date: 2026-09-29 · All 19 production scientific instrument versions unchanged
+
+The operator requests a complete investigation of the pilot question and asks how to measure source
+selection and maintain updates. Reuse D10's measurement rather than resurrecting capture-recapture:
+its assumptions fail in this corpus. Correct GUIDE's contrary statement. Separate acquisition,
+search execution, relevance screening and full reading. Two discovery channels expose gaps; their
+agreement does not establish a completeness percentage. Current dashboard text that describes two
+channels as making completeness estimable contradicts D10 too and must not be used as such a measure.
+
+`tools/audit_research_search.py` is an offline audit of a frozen protocol, not a new admission or
+scientific decision rule. It checks all four project input hashes and the registry, matches planned
+API/topic/query combinations against logged outcomes, distinguishes failed, missing and shallower
+queries, flags result caps, and carries existing admission/reading/review measurements without
+reinterpreting them. It lists all current candidate identities and document generations and the
+bibliography still requiring screening. Recall and screening precision remain null. Its optional
+previous audit comparison separates new candidate keys, absent keys and changed document generations;
+those identities are explicitly not deduplicated independent studies. Population differences are
+reported rather than silently compared as identical scopes. `--write` creates only a content-addressed
+research-search audit. No request, production ledger row, profile or signature is generated.
+
+The initial measured inventory has 21 candidates, 19 confirmed documents and 549 active chunks.
+Effect completion has 531 unanswered readings. The production ledger carries 17 annotations for the
+selected question, all reviewed (six SUPPORTED and eleven OVERSTATED), and 896 bibliography identities.
+Neither the reviewed labels nor selected D64 passages establish complete reading or semantic accuracy.
+The first dedicated keyword wave freezes 57 query/API pairs across four existing topics at a cap of
+25 results each; all 57 are NOT_RUN at baseline. Its metadata population, registry and floor are
+unchanged. This is preparation, not a completed search. A successful capped search still requires
+inspection for missed results, and the default citation threshold cannot substitute for screening
+singly cited relevant works. Admitted candidates are never removed retrospectively because they
+prove irrelevant. Population-excluded works remain limitations, not negative evidence.
+
+Incremental use preserves dated discovery rounds plus cumulative corpus audits. Reuse identical
+byte/prompt/schema work, inspect possible duplicates, and reread revised documents under current
+instruments. Rebuild profiles after evidence changes; signatures on changed live evidence become
+stale. Newly indexed/discovered is not necessarily newly published. A weekly explicit update is a
+starting operational cadence, not an implemented autonomous watcher or scientific stopping rule.
+A complete-round reading/review budget needs the post-discovery queue; the existing calibration
+accounting of USD 0.74725316 is unchanged. The sandbox prohibits socket creation, so the prepared
+57-query discovery command must run on the operator's host.
+
+Four focused tests cover missing/failed/shallow/capped queries, document-generation deltas, immutable
+offline measurement with unknown recall, and refusal of changed protocol/input hashes. Full-suite
+baseline before these changes remains 1,042 passed, seven skipped, two round-state failures and four
+socket-denied dashboard fixture errors. These existing failures do not certify the new dashboard.
+
+Post-change verification: 1,046 tests pass and seven skip; the same two round-state failures and
+four sandbox socket errors remain. All four new audit tests pass. Six project configurations validate,
+all 19 instrument versions are acknowledged, and `git diff --check` passes. No model credit is spent.
+
+## D66 — Resume failed discovery with scoped OpenAlex authentication and inspect population losses
+
+Date: 2026-09-29 · `fetch_version 3` · discovery/population/admission instruments unchanged
+
+The operator executes D65's dedicated 57-query wave. The recorded outcome is 40 completed and
+17 failed, all failures OpenAlex (five RATE_LIMITED_429, twelve DOMAIN_BUDGET_EXHAUSTED).
+Crossref completes 19 queries; arXiv completes 19 but returns zero records for every query.
+The arXiv searcher wraps each multiword term as one exact phrase; this run cannot establish that
+there is no relevant arXiv literature. Twenty-one completed queries reach the cap of 25 records.
+
+Discovery records 525 observations, 462 distinct candidate identities. Only two observations are
+admitted; 523 are excluded, comprising 460 distinct excluded identities, of which 437 have DOI
+redirector URLs. Both admitted works are on an allowed host, but their titles concern consumption
+and Chinese social media, not directly the selected predictive proposition. This is a title-level
+screening flag, not full-text adjudication. Five excluded identities have exactly normalized titles
+matching three held manifest sources, including an NBER working paper and the Federal Reserve seed.
+The manifest copies are on admitted hosts while metadata contain doi.org links. Exact title matches
+are audit signals, not evidence establishing publication-version identity or automatic deduplication.
+The metadata predicate is working as declared but its URL representation constrains effective
+coverage. Do not silently whitelist doi.org, remove admitted irrelevant works from denominators,
+or fit the population to successful downloads. Inspect excluded works and declared copy identities
+before a separately dated population/resolution revision.
+
+Current cumulative acquisition is 19/23 (0.8261), but ACA is 2/4, below its 0.80 class floor, so
+admission is INSUFFICIENT_ACQUISITION. Discovery failures and four unattempted candidates remain.
+No corpus profile is ready. The audit and exclusion review are investigative records, not a verdict.
+
+OpenAlex's current official authentication documentation permits a bearer header and states that
+429 can reflect either daily-budget exhaustion or request rate. A free key increases the keyless
+budget; it is not a guarantee that failed queries will succeed. Source:
+https://help.openalex.org/api/authentication/ (checked 2026-09-29). The current fetcher does not use
+an OpenAlex key. Add optional OPENALEX_API_KEY from the environment and container configuration.
+`fetch_version 3` sends it as an Authorization header only to the exact HTTPS api.openalex.org
+origin, recomputing headers on every redirect. It is never placed in request URLs or session-global
+headers. Existing request logs remain unchanged; previous failures remain failures. Five synthetic
+tests verify same-origin authentication, stripping on redirects, absence on HTTP/lookalike/other
+origins, no secret in recorded request rows, and unchanged keyless requests. These tests measure
+credential confinement, not a live acquisition gain or proof of the provider's quota cause.
+
+`tools/resume_research_search.py` validates D65's frozen protocol and resumes only missing, failed
+or shallower queries. Successful capped queries require a deeper protocol, not a routine retry.
+It shares one fetcher and stops on the first search failure, preserving round/query identities and
+recorded outcomes. Default is offline preview; execution requires the OpenAlex key when that API is
+selected, with a one-query default limit. No acquisition, model call or scientific signature is
+launched. The safe .env reader accepts the optional key alongside contact/Ollama credentials;
+it never executes the file or assigns Docker UID. Population rules, registry, floors and scientific
+prompts are unchanged. A full investigation remains pending authentication, search depth and
+excluded-copy/bibliography screening.
+
+Verification after implementation: 17 focused authentication/resume/network/search-audit tests pass.
+The current full suite reports 1,055 passing, seven skipped and four dashboard fixture errors because
+the sandbox forbids sockets. Concurrent dashboard/round-state fixes are outside this change; their
+previous assertion failures no longer appear. Six configurations validate, all 19 instrument versions
+are acknowledged and `git diff --check` passes. The resume preview selects exactly the 17 failed
+queries, makes no network call and spends no model credit.
+
+## D67 — Recover the keyword wave and make acquisition preview obey execution scope
+
+Date: 2026-09-29 · All 19 scientific instrument versions unchanged
+
+The authenticated host resume completes all 17 failed OpenAlex queries and records no model calls.
+The dedicated wave now has 57/57 completed queries, 38 at their result cap, with arXiv still returning
+zero for all nineteen exact-phrase searches. Resume admits eleven new candidate identities, making
+thirteen in this wave and thirty-four across the project. The cumulative discovery-population log
+contains 950 observations, sixteen admitted observations (including repeats), and 809 distinct
+candidate identities. These are metadata counts, not independent studies or relevance precision.
+The earlier round's eight failed queries remain outside this recovery and still block cumulative
+admission finality. Search-depth, bibliography and excluded-copy identity investigation remain pending.
+
+The new wave contains ten ACA and three WP candidates. The BERT/financial-sentiment title merits
+full-text investigation; several other titles clearly concern different topics. Title inspection
+neither adjudicates applicability nor validates the identity/version of an API-supplied PDF URL.
+Acquisition and document inspection must precede new model spending. Current cumulative availability
+is 19/34; ACA is 2/12 and WP 11/16, both below the unchanged class floor. Admitted irrelevant candidates
+are not removed from the acquisition denominator after observing the search. Keep the population and
+failures; any future population or relevance-admission instrument is a separately measured revision.
+
+Preparing the bounded acquisition exposes a concrete preview defect. `acquire --round <new-wave>
+--limit 13 --no-apis --dry-run` prints all 34 candidates, including nineteen already obtained and two
+unrelated old-round candidates. Execution already applies scope, retry, OA/manifest filters and the
+attempt cap. Extract its existing selection into `acquire.eligible_candidates` and use that same
+function for both execution and preview. No eligibility, retry TTL, floor, source class, fetch/gate
+version or resolver rule changes. The real corrected preview prints exactly thirteen new candidates
+and performs no request with --no-apis. Do not interpret default --dry-run as network-free: resolver
+metadata APIs remain enabled unless --no-apis is supplied.
+
+Two regression cases compare CLI preview against actual acquisition with fake PDF responses,
+combining round, manifest, OA and limit filters with completed work, recent transient failures and
+terminal failures. The second explicitly authorizes a terminal retry in a named campaign. They also
+verify unchanged files during offline preview. All 34 acquisition/CLI tests pass. No production bytes,
+requests or scientific answers are generated by this preparation. The next authorized host step is
+bounded acquisition of the thirteen candidates, followed by normalization and scope/cumulative reports.
+The operator explicitly chooses continued manual calibration/debug; no full workflow orchestrator is
+implemented by this change, and prior calibration budget accounting remains unchanged.
+
+Post-change verification: 1,057 tests pass, seven skip and the same four dashboard fixtures cannot
+open sockets in this sandbox. All 34 acquisition/CLI tests pass, six project configurations validate,
+all 19 scientific instrument versions are acknowledged and `git diff --check` passes. The private
+acquisition plan freezes the thirteen candidate rows and the unchanged registry before host execution.
+
+## D68 — Audit question eligibility before preparing a new corpus, without fitting acquisition
+
+Date: 2026-09-29 · All 19 production instrument versions unchanged
+
+The operator identifies a distinction the URL-based population does not implement: discovery
+relevance must precede the denominator used for acquisition, while relevant unavailable works
+must remain in that denominator. D54 still forbids changing old round membership after outcomes.
+The remedy is a dated, separately scoped selection protocol, not filtering an existing report
+until it reaches its floor. D65's unknown literature recall remains unknown after screening.
+
+The latest update obtains and confirms three of thirteen works, while ten publisher locations
+fail through 403 or a redirected host's local budget. Manual full-text inspection finds a wrong
+DOI attached to one actual downloaded work, already present in the saved upstream API response.
+Independent archive/publisher records establish the distinct works and canonical identity.
+The other new PDFs address a mismatching source/horizon or model-training data supply. Readable
+document confirmation therefore does not establish identity or question relevance.
+
+`tools/audit_source_selection.py` checks a frozen inventory and project inputs against a dated
+manual screening protocol. Generic criterion dimensions exclude download success and result
+direction. Assessments identify their reader, reason, criterion and evidence locator; INCLUDE,
+EXCLUDE and UNCERTAIN remain distinct. Identity conflicts and unknown identity remain pending.
+Corrections retain original identities, explicitly describe canonical metadata and never merge
+colliding keys. The audit embeds the protocol and assessments, so immutable prior snapshots
+preserve decisions as working files evolve. It does not verify scientific reasoning or evidence
+locators automatically, classify sources, import a new production cohort, apply an identity
+correction to stage-owned ledgers, compute an acquisition percentage, or write profiles.
+
+The supervised development inventory contains 830 distinct candidate identities: 809 from the
+dedicated discovery observations, including metadata exclusions, plus held identities not present
+there. This is not 830 independent studies or a measured literature denominator. Initial eleven
+assessments admit two direct-question sources and exclude nine contextual/unrelated sources.
+Subsequent publisher metadata/abstract inspection screens all ten refused publisher works as
+outside the selected question, independently of their failed acquisition. The resulting snapshot
+contains 21 assessments: two included, nineteen excluded from this direct-effect cohort, and
+809 pending. Methodological context remains available separately; it is not deleted.
+
+Publisher pages for the blocked works advertise complimentary PDFs, so the historical HTTP
+PAYWALL_403 classification must not be read as proof of paid-only access. Actual acquisition
+failure remains recorded. No retry, model call, original-byte rewrite, floor revision or scientific
+signature occurs. The new cohort is not closed, the original rates stay unchanged, and acquisition,
+screening accuracy and literature recall are not substituted for one another.
+
+The public preparatory contract is `docs/contracts/source_selection.md`; private protocol and
+immutable snapshots are under the research store's `audits/source-selection/`. Screening still
+needs inspection of unresolved metadata, duplicate/version relationships and prospective error
+measurement before automated classification and production admission. A low-cost metadata screen
+may reduce unnecessary acquisition work; this development inventory cannot certify its accuracy.
+
+Seven focused tests cover pending/uncertain cases, immutable read-only preparation, frozen-input
+drift, evidence/criterion requirements, acquisition-independent selection dimensions, explicit
+canonical correction, refusal of duplicate corrected identities and nonempty closed cohorts.
+
+Post-change verification: 1,070 tests pass, seven skip and the four existing dashboard fixtures
+remain socket-denied in this sandbox. Seven new selection tests pass. Six project configurations
+validate, all 19 production instruments are acknowledged and `git diff --check` passes.
+
+## D69 — Cloud screening remains an isolated, budgeted experiment (2026-09-29)
+
+The operator requested that Ollama Cloud screen the large L02 metadata inventory so interactive
+agent effort can focus on implementation and calibration. The current inventory contains 830
+candidate identities, 34 assessed and 796 unassessed, but the 796 have no cached abstracts:
+OpenAlex discovery deliberately selected title, DOI, year and primary location. Sending titles
+alone as if they were abstracts would produce apparent progress without evidence of relevance.
+
+`tools/run_source_screening.py` declares screening_version 1 and uses experimental JSONL requests/results and the existing
+`ollama-cloud` runner; it never writes production screening, extraction, review or admission.
+A frozen 20-case development packet (current cloud-pilot-v2 plan, superseding a prepared-only v1 request format to carry source class) uses held source passages, with its prior agent assessments
+stored separately from model prompts. Two distinct readers see identical inputs. The prompt
+forces an explicit uncertainty option, the response schema restricts labels, and local checks
+require a stated criterion, nonempty reason and exact supplied-text quote for an inclusion or
+exclusion recommendation. These mechanical checks do not validate the semantic decision.
+
+The existing USD 10 calibration ceiling and its USD 0.74725316 previously accounted amount
+are carried forward. The 40-call pilot's conservative first-attempt reservation is USD
+0.9128; execution stops before a call when its full reservation cannot fit. Every physical
+attempt, including failed or unpriced attempts, remains in the append-only experimental ledger.
+At implementation time, twelve focused tests pass for reference isolation, two-reader resume,
+quote/missing-text gates, unknown-cost reservation, frozen input drift, queue tampering, store
+isolation, and budget refusal. No cloud calls have run in this decision; there is no measured
+screening accuracy, model winner or authorized automatic adoption. The shell sandbox refuses
+network sockets, so the prepared pilot must run from the operator's network-capable host.
+The original corpus, denominator, registry, floor, instrument assignments and past bytes are
+unchanged. A separate recorded metadata fetch is still needed before full-inventory screening.
+
+## D70 — First cloud screening pilot exposes semantic false inclusions (2026-09-29)
+
+The operator executed the frozen D69 plan. All 40 cloud calls returned parseable schemas. At the
+plan rates, this run cost USD 0.0875178; cumulative priced spending is USD 0.36409896, and
+cumulative budget-accounted spending including earlier unknown-attempt reserves is USD 0.83477096
+of the unchanged USD 10 calibration ceiling. The audit is
+`store/source-screening-pilots/v1/alembic-s4-lungo/audits/screening/9c74eaf11ef0d065b1266bb634297fb5d4674615070a9d846a0ec34ae23083f7.json`.
+
+DeepSeek supplied 20/20 mechanically valid recommendations and agreed with the development
+reference on 13/20. Kimi supplied 17/20 valid recommendations, agreed on 11/17 valid cases,
+and spliced or altered three evidence quotes, which the exact-substring gate rejected. These
+are development-reference comparisons, not held-out accuracy estimates or human gold. The
+experiment status is `AWAITING_VALID_SCREENING`; it wrote zero production screening rows.
+
+The most consequential error is shared: both readers included *Stock Price Reaction to News and
+No-News* as direct evidence for textual news sentiment, although the supplied study uses news
+incidence and price reactions rather than a sentiment measure extracted from text. DeepSeek
+also included *Bad News Travels Slowly* despite its own reason acknowledging that textual
+sentiment is not measured. Kimi's exclusion of that work had an invalid quote. On *Lazy Prices*,
+the readers disagree about whether tone in 10-K/10-Q filings fits the project's news exposure;
+the development reference leaves it uncertain. This boundary is a protocol decision, not a
+model vote. The pilot therefore does not justify unattended screening of the 796 metadata-only
+records. Next calibration needs explicit evidence for the measured exposure and tested return
+horizon, independent human reference cases, and recorded abstracts/full text where missing.
+
+The same review found that `round_state` described two discovery channels as making literature
+completeness estimable by capture-recapture, contradicting D10 and D65. The dashboard wording is
+corrected to say completeness remains unknown; this changes no scientific instrument or ledger.
+
+## D71 — Separate evidence spans and bounded abstract hydration (2026-09-29)
+
+D70 measured one shared false inclusion, another by DeepSeek, and three non-verbatim Kimi
+quotations. The experimental
+screening_version 2 supersedes screening_version 1 for subsequent development comparisons.
+Version 1 remains replayable with its original prompt,
+schema and request identities. Version 2 asks for separate exact source spans identifying the
+measured exposure and tested future-outcome horizon when the project criteria declare those
+dimensions. Missing or non-verbatim spans invalidate an INCLUDE recommendation. This is a
+traceability gate, **not** a semantic proof: a model can still quote real words and misinterpret
+them. It writes no production decision, and no reader is adopted from the development reference.
+
+The 796 unassessed records lack cached abstracts. `tools/fetch_screening_abstracts.py` prepares a
+named, frozen ten-record lookup batch with an offline preview. Execution uses the project's
+recorded HTTP transport, preserves raw payload bytes and every outcome, and appends a separate
+metadata ledger. It checks candidate DOI and normalized title against the returned work before
+making an abstract available; missing or conflicting metadata remain pending. Requests already
+attempted in the same campaign are not repeated. The batch has only been previewed: ten pending,
+zero network requests, zero model calls. It cannot establish recall or close source selection.
+The operator chose media/newswire news only for L02 direct evidence; 10-K/10-Q filing tone stays
+context. The dated selection-scope v2 records that answer without altering the question registry
+or the already frozen v1 protocol. A seven-case v2 development regression is prepared under
+`store/alembic-s4-lungo/audits/source-selection/l02-v2/cloud-regression-v1/plan.json`, with
+USD 0.31948 reserved for its first 14 calls under the existing ceiling. Its reference is still
+post-selected development material and no call has run. An independent human reference on new
+cases remains necessary before any scaled screening run.
+
+## D72 — Resume independent screening cases after a terminal format error (2026-09-29)
+
+The operator ran D71's first ten OpenAlex metadata lookups. Four abstracts passed DOI/title
+identity checks; six valid work responses supplied no abstract. All ten raw responses and
+outcomes are preserved. `NO_ABSTRACT` is missing metadata, not an exclusion. A six-DOI Crossref
+fallback is now prepared under
+`store/alembic-s4-lungo/audits/source-selection/l02-v1/abstract-crossref-v1-plan.json`.
+Its frozen keys require the recorded OpenAlex `NO_ABSTRACT` outcome. Offline preview shows six
+pending, zero requests. No Crossref call has run in this decision.
+
+The operator also started the seven-case screening_version 2 regression. DeepSeek's first two
+INCLUDE outputs passed mechanical validation and matched the development reference. The third
+response selected UNCERTAIN but omitted both newly required quote fields. The schema gate
+correctly recorded `SCHEMA_INVALID` and the original bytes; no output was adopted. Execution
+stopped after three of fourteen planned reader attempts. The new run is USD 0.0031386 at plan
+rates, bringing cumulative accounted spending to USD 0.83790956 under the existing USD 10
+ceiling. One of the valid INCLUDE outputs used a generic news-dataset sentence as its exposure
+span; that span is exact but does not alone prove that sentiment was measured. The semantic
+selection risk from D70 therefore remains.
+
+The experimental driver now processes each frozen case independently. A terminal NOT_JSON or
+SCHEMA_INVALID answer remains unanswered for that reader and is never retried automatically,
+while subsequent cases and the second reader continue. Other stop reasons, including budget,
+usage and transport failures, still stop execution. The instrument prompt/schema and v2 plan
+are unchanged, as are the first three physical result rows. One focused regression test verifies
+both reader completion and non-retry after an omitted-field response. Rerunning the same v2 plan
+on the host resumes its remaining attempts; final model quality is not yet measured.
+
+## D73 — Finished v2 regression rejects automatic screening; prepare independent reference (2026-09-29)
+
+The operator completed both D72 host commands. Crossref supplied two additional identity-checked
+abstracts, leaving four of the first ten metadata records without abstracts after both provider
+lookups. These four remain pending for a legal authoritative copy or another recorded source;
+they are not excluded. The six available abstracts do not represent the remaining inventory.
+
+The completed seven-case screening_version 2 development regression cost USD 0.03971895 in total
+at plan rates, including the earlier three attempts; cumulative budget-accounted spending is
+USD 0.87448991 of the same USD 10 ceiling. DeepSeek had three mechanically valid answers,
+four schema-invalid answers, and two of three valid labels matched the development reference.
+Kimi had five schema-valid outputs, one of which failed the exact quote gate, leaving four
+valid answers; two of four matched the development reference. DeepSeek again INCLUDED *Stock
+Price Reaction to News and No-News*, using “at least one news story” as its exposure quote.
+That text establishes news incidence, not sentiment measured from news text, and violates the
+operator's E1 boundary. This is a measured semantic false inclusion despite exact quote checks.
+No production selection row was written and neither reader is adopted.
+
+The format failures are specific: DeepSeek omitted the two quote fields on three responses and
+added an undeclared field on another; Kimi omitted `missing_information` on two. The experimental
+screening_version 3 prompt now states explicitly that every schema field must appear for every
+decision, with empty strings where appropriate, and warns that news incidence is not sentiment
+measurement. It keeps versions 1 and 2 replayable and changes call identities. **No v3 model
+result has been measured.** It is not a scientific fix until tested on new cases.
+
+A new blind metadata plan selects twenty previously unassessed candidate identities from the
+remaining queue: ten in existing priority order and ten by a fixed SHA-256 ordering, after
+excluding the first ten lookups and normalized titles of all twenty development cases. The
+plan freezes the queue and project inputs and has zero model calls. The unlabeled human packet
+builder retains exact abstract text, provider and payload digest, or marks the abstract missing;
+it supplies no model answer or agent reference label. This packet is preparation for an
+independent human reference, not a held-out accuracy result yet. Further paid model comparison
+waits for that reference rather than repeating prompt edits against the same seven cases.
+
+## D74 — Held-out metadata acquired; missing abstracts remain pending (2026-09-30)
+
+The operator ran the frozen twenty-key OpenAlex metadata plan. All twenty recorded requests
+completed: thirteen supplied title/DOI-checked abstracts and seven returned `NO_ABSTRACT`.
+`NO_ABSTRACT` is missing metadata, not an eligibility decision. The unlabeled human-reference
+packet was written under `l02-v2/human-reference-packets/`; it contains the thirteen exact
+abstracts with provider and raw-payload hashes and marks seven cases `metadata_only` with blank
+human decisions. No model was called and no production selection decision was written.
+
+A seven-DOI Crossref fallback is frozen in `l02-v2/heldout-crossref-v1-plan.json`. It requires
+each key to have the prior OpenAlex `NO_ABSTRACT` outcome, uses a new named campaign, and
+caps requests at seven. Its offline preview selected exactly seven pending keys with no
+unresolvable target. The operator subsequently ran all seven recorded Crossref requests;
+each returned an identity-checked abstract. Rebuilding the packet produced twenty available
+abstracts, zero missing, with thirteen from OpenAlex and seven from Crossref. The original
+thirteen-abstract packet remains intact beside the new content-addressed packet and its
+unlabeled human review sheet. All twenty human decisions remain blank. An independent person
+must assess them before any held-out model score or production adoption claim.
+
+## D75 — Audit bibliographic relationships without merging candidates (2026-10-03)
+
+The L02 selection inventory has 830 candidate keys, but those are not 830 independent
+studies. An offline exact-title pass finds 61 nonempty groups with more than one key. They
+include plausible preprint/journal versions and also unrelated records with the same short
+title. A title-only merge would therefore silently alter the selection denominator.
+
+`tools/audit_identity_relationships.py` reuses the frozen manual-selection validation and
+records those groups as `REVIEW_REQUIRED`, along with appendix/supplement title leads and
+the acquisitions touched by already assessed identity corrections. Its first immutable
+report is under `store/alembic-s4-lungo/audits/source-selection/l02-v1/identity-audits/`.
+It finds one assessed DOI correction, one acquired PDF still indexed by its original wrong
+key, zero different-key pairs with identical acquired bytes, and one possible appendix parent
+in the inventory. The correction is the already
+documented Balahur/Tavares conflict; the report does not create a second independent
+scientific judgment. The appendix and its parent carry separate DOI keys and are not
+counted as a verified study relationship from title matching alone.
+
+The source PDF's first page names Balahur and coauthors and “Sentiment Analysis in the
+News”; the historical acquisition remains under Tavares's DOI. The original bytes and
+all stage ledgers stay intact. The relationship audit makes zero merges, zero network or
+model calls and no new production admission rule. Version, supplement and copy status
+still require per-work evidence before any cohort closes. Its scope is preparatory, so
+none of the production instrument versions changes.
+
+## D76 — Verify held-copy identities while preserving unproven version links (2026-10-03)
+
+D75's equal-title queue includes three keys for “News versus Sentiment” and two for
+“Which News Moves Stock Prices”. Local first-page inspection finds two definite work
+links. The Federal Reserve PDF held under the title-based `ACA001` key prints Heston,
+Sinha, FEDS 2016-048 and DOI `10.17016/FEDS.2016.048`; the DOI candidate describes
+that work. The NBER PDF held under title-based `ACA002` prints Working Paper 18725,
+matching DOI key `10.3386/w18725`. Its January 2012 cover conflicts with the inventory's
+2013 year, so the date discrepancy remains recorded rather than normalized away.
+
+The 2013 SSRN “News versus Sentiment” DOI shares title and authors with FEDS 2016-048,
+but neither local metadata record establishes that its text and results are the same;
+it is a pending possible version. Crossref records for the pollution-news paper and a
+separate “Online Appendix” DOI share the first two authors and the parent title, but
+their relation fields are empty and no appendix text has been inspected; that link is
+pending. Four located assessments, two verified work mappings and two pending leads,
+are frozen in the new identity audit. No title-derived work merge is performed.
+
+The `--relationships` option validates original keys, pair uniqueness, certainty labels,
+reason and provenance before embedding the assessments and their input hash in the
+content-addressed report. It does not independently check scientific or bibliographic
+truth, transfer acquisitions, close L02 selection, change a denominator or spend on
+network/model calls. The 20-case blinded human reference remains unlabelled.
+
+## D77 — Route declared PMC articles to JATS without claiming an acquisition gain (2026-10-03)
+
+D53 implemented the local parser but left the acquisition route unmeasured. Europe PMC's
+documented `/{id}/fullTextXML` endpoint serves the open-access subset, not every PMC
+article. Gate version 4 checks XML as a JATS article with front/article-meta/body,
+minimum body text and the declared reference-list policy; a large XML error response
+cannot pass as HTML full text. Unsupported JATS tables can still pass acquisition and
+remain awaiting at stage 3, which records the parser limitation honestly.
+
+For an explicit PMC article URL, the resolver proposes Europe PMC XML ahead of the PMC
+HTML location, retaining the latter as fallback. The existing Fetcher applies robots,
+timeouts, redirects, excluded hosts and failure budgets; `RecordingFetcher` logs its
+outcomes. An XML article's declared licence URL is retained if present, and `null`
+remains an unknown licence rather than an inferred Creative Commons grant. The gate
+records `gate_version 4` on new rows; historical gate-3 rates are not recast.
+
+A separate six-article pilot is frozen from the first six PMC manifest rows, with manifest
+and source-policy hashes, a named campaign and offline preview. Its executable path
+records requests and parse outcomes without writing acquisitions, documents, chunks or
+profiles. Synthetic route/gate/fallback and refusal-resume tests pass; they establish
+control flow, not live XML availability or parsing accuracy on publisher articles.
+The operator must approve the bounded sweep before execution. Q04's profile and every
+production ledger remain untouched.
+
+## D78 — Six recorded Europe PMC requests expose body bibliographies and image tables (2026-10-03)
+
+The operator authorized D77's frozen six-article pilot. Run with
+`.venv/bin/python tools/pilot_europe_pmc_jats.py --plan store/pmc-screen-time/audits/europe-pmc/jats-pilot-v1-plan.json --execute`.
+All six attempts and their responses were recorded under campaign
+`europe-pmc-jats-pilot-2026-10-03-v1`; the pilot wrote no production acquisition,
+document, chunk or profile. Two XML requests returned HTTP 200 and four returned
+HTTP 500 (`SERVER_ERROR_5XX`). The HTTP 500s establish no absence of open XML;
+their existing HTML documents remain confirmed.
+
+The original `gate_version 4` accepted both XML articles. PMC001 could not be
+normalized: its three `table-wrap` elements have graphics but no textual JATS
+`table`, so dropping them would lose tabular evidence. PMC004 parsed with six
+tables but zero references because its 45-entry `ref-list` is inside `body`, not
+`back`. The first pilot outcome rows remain immutable.
+
+`jats_parser_version 2` collects primary-article references from both `body` and
+`back`, excluding nested articles and keeping references out of body prose.
+`gate_version 5` recognizes those same body references for the short-article
+reference signal. The declared licence URL can appear on a descendant
+`ext-link` inside `license`; acquisition now retains it without inferring rights
+from endpoint availability. Versioned gates and parsers mean old outcome figures
+are not silently recast.
+
+Reproduce the offline reassessment with
+`.venv/bin/python tools/pilot_europe_pmc_jats.py --plan store/pmc-screen-time/audits/europe-pmc/jats-pilot-v1-plan.json --rejudge`.
+It hashes and reads only the two retained XML payloads and makes zero requests.
+PMC004 now has 45 JATS references and six tables, matching the stored HTML's
+45 references and six tables; the JATS body has 35,022 characters against
+56,837 in HTML, so character counts are not interchangeable. PMC001 remains
+`JATS_UNSUPPORTED`; its XML declares CC BY 4.0. PMC004 declares CC BY 2.0.
+Both XML files declare the PMCID in their frozen target URL. This checks the
+article identifier, not every title, DOI or scientific attribution. No historical stage row was
+rewritten, and this pilot does not establish a six-source acquisition gain.
+
+## D79 — Keep AI screening observations append-only and outside admission (2026-10-05)
+
+The operator asks to make the existing L02 audits usable for automation without
+silently selecting a new corpus. The first versioned boundary is deliberately an
+**advisory record**: `source_selection_version 1` owns append-only
+`source_screening.jsonl` and `source_identity.jsonl`, but admission, candidate
+denominators and verdicts do not read these ledgers yet. A content-derived row id
+and explicit `supersedes` link make an edited assessment a new fact instead of a
+rewrite. All rows retain original candidate keys and explicit source classes;
+`UNCLASSIFIED` blocks the inference that a readable copy is automatically ACA.
+
+The frozen L02 import plan hashes its 830-key inventory, 20-case abstract packet,
+Claude Code's `AI_PROVISIONAL` output, project inputs, REIT full-text assessment
+and extracted PDF text. Its importer verifies each abstract quote against the
+packet and each full-text quote against saved text, the metadata and PDF hashes,
+and the recorded successful copy campaign. Claude's model and harness version
+are preserved; the exact interactive prompt hash is `null`, not invented.
+The full-text row supersedes only the REIT abstract row. The title mismatch
+between its DOI metadata and held PDF becomes `POSSIBLE_VERSION`, never a
+canonical merge.
+
+Reproduce the read-only preview with
+`.venv/bin/python tools/import_source_selection.py --plan store/alembic-s4-lungo/audits/source-selection/l02-v2/source-selection-import-2026-10-05/plan.json`.
+It shows 20 observed keys in this v2 scope: 15 provisional not-direct, one
+provisional sector context (REIT), four provisional uncertain, zero direct
+inclusions and 810 inventory keys not observed **in this ledger**. The older
+34 agent assessments belong to the earlier protocol and are not mixed into
+this count. `--apply` appended 21 screening rows and one identity row; a second
+application appended zero. The 14 pre-existing top-level JSONL ledgers retained
+their exact SHA-256 hashes; the pre-apply digest list is retained in the private
+`source-selection-import-2026-10-05/stage-ledger-baseline.json`. No request,
+model call, candidate admission, new
+acquisition rate, screening accuracy or literature-recall claim resulted.
+
+The next boundary is not a flag to treat these 15 AI exclusions as truth.
+It is a measured selection policy and controlled import of a closed cohort,
+after resolving protocol/version relationships and auditing false exclusions.
+
+## D80 — Bind advisory evidence to retained bytes and serialize writers (2026-10-05)
+
+Claude Code's read-only adversarial review supplied four reproducible counterexamples
+to D79's first implementation. A packet could substitute invented `source_text`
+while retaining a valid raw file hash; frozen text could diverge from the held PDF
+and `copy_campaign` was optional; two writers could both replay before either
+appended, permanently duplicating an ID; and the append API accepted keys outside
+the inventory that preview would later reject. These are integrity failures even
+though advisory rows still cannot admit candidates or change verdicts.
+
+The importer now matches each packet abstract to a recorded `ABSTRACT_AVAILABLE`
+metadata row and reconstructs it from the retained OpenAlex/Crossref response,
+including the provider's title/DOI identity check. It regenerates full text from
+the held PDF with `pdftotext -layout` and requires the named campaign to have a
+`FULLTEXT_BYTES` outcome for those bytes. Empty PDF titles fail. The append API
+requires scope, question and inventory, and holds a project-local `flock` across
+both chain replays and appends. Reruns remain idempotent; the L02 frozen plan
+still previews zero new rows after the change. Screening transitions now reject
+a downgrade from full text to abstract or a registry/class change within one
+scope. The record format stays `source_selection_version 1`; stored rows do not
+need migration. A quote's scientific interpretation remains outside these checks.
+
+Targeted regression tests cover forged packet text, unmatched PDF text, missing
+campaign/outcome, empty title, out-of-inventory append and two competing writers.
+The existing 14 production-stage ledgers remain outside this importer. A changed
+AI output still needs an explicit supersession plan; it is not automatically
+adopted when its input hash changes.
+
+## D81 — Separate identity counterparts and require pinned rescreen links (2026-10-05)
+
+The D80 review also exposed two workflow limits. The first identity view keyed
+only by candidate, so a second possible relationship could hide the first.
+The first importer could not replace an abstract after a new AI file was frozen:
+its generated row always used `supersedes: null`, and the ledger correctly
+rejected it. A naive replacement could also lower the REIT's PDF-backed
+assessment to a new abstract.
+
+`identity_relation_version 2` adds an explicit `related_kind` and `related_key`.
+The current REIT v1 record replays as a relation to its held `copy_sha256`;
+new candidate or copy relations get independent chains. The preview counts
+current relationships, rather than collapsing them by subject candidate.
+No candidate identities or old rows are rewritten, and a relationship still
+does not merge works or transfer copy/claim evidence.
+
+`source_selection_import_version 2` adds a frozen replacement map: every
+abstract row names the current assessment ID it supersedes, and the REIT PDF
+row is explicitly preserved by ID. Stale links, a changed REIT AI decision,
+an unchanged AI file or a proposal to downgrade that full-text row fail.
+The importer still checks original metadata responses, PDF bytes and campaign
+provenance. A test batch with two abstract cases and one later PDF override
+appended one replacement, zero identity rows and zero on rerun; a stale map
+failed. The old version-1 plan still previews 20 observed keys and zero new
+rows. These tests establish ledger behavior, not AI screening accuracy.

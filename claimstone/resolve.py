@@ -35,13 +35,23 @@ WAYBACK_API = "https://archive.org/wayback/available?url="
 _PMC_ARTICLE = re.compile(
     r"^https?://(?:www\.)?ncbi\.nlm\.nih\.gov/pmc/articles/(PMC)?(\d+)/?$", re.I
 )
+_PMC_ANY_ARTICLE = re.compile(
+    r"^https?://(?:(?:www\.)?ncbi\.nlm\.nih\.gov/pmc|pmc\.ncbi\.nlm\.nih\.gov)/articles/(PMC)?(\d+)/?$", re.I
+)
 PMC_HOST = "https://pmc.ncbi.nlm.nih.gov/articles"
+EUROPE_PMC_FULLTEXT = "https://www.ebi.ac.uk/europepmc/webservices/rest"
 
 
 def pmc_route(url: str) -> str | None:
     """The allowed address for a PMC article location, or None when the URL is not one."""
     found = _PMC_ARTICLE.match(str(url or "").strip())
     return f"{PMC_HOST}/PMC{found.group(2)}/" if found else None
+
+
+def europe_pmc_route(url: str) -> str | None:
+    """The OA-subset JATS endpoint for an explicit PMC article identity."""
+    found = _PMC_ANY_ARTICLE.match(str(url or '').strip())
+    return f'{EUROPE_PMC_FULLTEXT}/PMC{found.group(2)}/fullTextXML' if found else None
 
 
 @dataclass(frozen=True)
@@ -203,7 +213,9 @@ def _preference(loc: Location) -> tuple[int, int]:
     carry the full text at all. ACA001 in the reference manifest regressed exactly this way:
     Unpaywall's HTML beat a direct PDF.
     """
-    return (0 if loc.url.lower().endswith(".pdf") else 1, _version_rank(loc.version))
+    format_rank = (0 if loc.url.lower().endswith('.pdf') else
+                   1 if loc.url.endswith('/fullTextXML') else 2)
+    return (format_rank, _version_rank(loc.version))
 
 
 def plan(
@@ -245,9 +257,12 @@ def plan(
     rewritten: list[Location] = []
     for location in locations:
         allowed = pmc_route(location.url)
+        xml = europe_pmc_route(location.url)
+        if xml:
+            rewritten.append(replace(location, url=xml, provenance='europe-pmc'))
         rewritten.append(
             replace(location, url=allowed, provenance=f"{location.provenance}+pmc")
-            if allowed else location
+            if allowed and allowed != location.url else location
         )
 
     # Deduped, and an address that is only the DOI resolver is dropped: it adds nothing over the candidate

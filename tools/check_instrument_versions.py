@@ -25,6 +25,7 @@ RECORD = ROOT / "docs" / "DESIGN_DECISIONS.md"
 # Each instrument: the module holding its version, the constant, and the phrase the record must
 # use so the mention is deliberate rather than accidental.
 INSTRUMENTS = (
+    ("tools/run_source_screening.py", "SCREENING_VERSION", "screening_version"),
     ("claimstone/review.py", "REVIEW_VERSION", "review_version"),
     ("claimstone/net.py", "FETCH_VERSION", "fetch_version"),
     ("claimstone/admissibility.py", "ADMISSION_VERSION", "admission_version"),
@@ -42,6 +43,12 @@ INSTRUMENTS = (
     # The HTML parser is an instrument too: what it extracts decides body_chars and references, and those
     # decide fulltext_confirmed. The PDF parser is pinned by digest in compose.yaml; this one is code.
     ("claimstone/html_doc.py", "HTML_PARSER_VERSION", "html_parser_version"),
+    ("claimstone/jats.py", "JATS_PARSER_VERSION", "jats_parser_version"),
+    ("claimstone/source_selection.py", "SOURCE_SELECTION_VERSION", "source_selection_version"),
+    ("claimstone/source_selection.py", "IDENTITY_RELATION_VERSION", "identity_relation_version"),
+    ("tools/import_source_selection.py", "SOURCE_SELECTION_IMPORT_VERSION", "source_selection_import_version"),
+    ("claimstone/population.py", "POPULATION_VERSION", "population_version"),
+    ("claimstone/acquire.py", "REUSE_VERSION", "reuse_version"),
     ("claimstone/ids.py", "CANDIDATE_KEY_VERSION", "candidate_key_version"),
 )
 

@@ -20,12 +20,14 @@ actually occurs: an HTML error page wearing a PDF content type.
 from __future__ import annotations
 
 import re
+import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from html.parser import HTMLParser
 from typing import Any, Sequence
 
 PDF_FULLTEXT = "PDF_FULLTEXT"
 HTML_FULLTEXT = "HTML_FULLTEXT"
+JATS_FULLTEXT = "JATS_FULLTEXT"
 LANDING_PAGE_ONLY = "LANDING_PAGE_ONLY"
 ABSTRACT_ONLY = "ABSTRACT_ONLY"
 # A 200 carrying an interstitial that asks the client to prove it is not a robot. It is **not**
@@ -40,7 +42,7 @@ TOO_SHORT = "TOO_SHORT"
 CORRUPT_PDF = "CORRUPT_PDF"
 NOT_TEXT = "NOT_TEXT"
 
-ACCEPTED = (PDF_FULLTEXT, HTML_FULLTEXT)
+ACCEPTED = (PDF_FULLTEXT, HTML_FULLTEXT, JATS_FULLTEXT)
 
 # Phrases a challenge page carries and an article does not. Matched against the visible text only, so
 # a paper *discussing* CAPTCHAs is not caught by its own prose: the phrases are the interstitial's own
@@ -61,7 +63,9 @@ CHALLENGE_PHRASES: tuple[str, ...] = (
 # against 25 real artifacts and accepted three abstract pages out of six.
 # Version 3: a bot challenge is its own kind rather than ABSTRACT_ONLY, which was recording a fact
 # about our crawler as a fact about the literature.
-GATE_VERSION = 3
+# Version 4: XML is checked as JATS, with explicit article structure, instead of being
+# treated as HTML and potentially admitting an API error page as full text.
+GATE_VERSION = 5
 
 DEFAULT_THRESHOLDS: dict[str, int] = {
     # Low on purpose: a short conference note can be a legitimate 12 KB PDF, and a false
@@ -253,6 +257,43 @@ def _classify_markup(body: bytes, th: dict[str, int], policy: dict[str, Any]) ->
     return FullText(HTML_FULLTEXT, count, "no structural signal is required by this project")
 
 
+def _classify_jats(body: bytes, th: dict[str, int], policy: dict[str, Any]) -> FullText:
+    if re.search(br'<!ENTITY\b', body, re.I):
+        return FullText(NOT_TEXT, None, 'XML entity declarations are not accepted')
+    try:
+        root = ET.fromstring(body)
+    except ET.ParseError:
+        return FullText(NOT_TEXT, None, 'malformed XML')
+    tag = lambda node: node.tag.rsplit('}', 1)[-1]
+    if tag(root) != 'article':
+        return FullText(NOT_TEXT, None, 'XML root is not a JATS article')
+    front = next((n for n in root if tag(n) == 'front'), None)
+    body_node = next((n for n in root if tag(n) == 'body'), None)
+    if front is None or body_node is None or not any(tag(n) == 'article-meta' for n in front):
+        return FullText(NOT_TEXT, None, 'JATS front/article-meta/body structure is missing')
+    def primary_text(node: ET.Element) -> str:
+        parts = [node.text or '']
+        for child in node:
+            if tag(child) not in {'sub-article', 'response', 'ref-list'}:
+                parts.append(primary_text(child))
+            parts.append(child.tail or '')
+        return ''.join(parts)
+
+    chars = len(' '.join(primary_text(body_node).split()))
+    if chars < th['min_text_chars']:
+        return FullText(TOO_SHORT, chars, f'{chars} body chars below min_text_chars {th["min_text_chars"]}')
+    back = next((n for n in root if tag(n) == 'back'), None)
+    def has_primary_reference(node: ET.Element) -> bool:
+        if tag(node) in {'sub-article', 'response'}:
+            return False
+        return tag(node) == 'ref' or any(has_primary_reference(child) for child in node)
+    references = has_primary_reference(body_node) or (back is not None and has_primary_reference(back))
+    if policy['structural_signal'] == 'reference_list' and not references \
+            and chars < th['fulltext_chars']:
+        return FullText(ABSTRACT_ONLY, chars, 'JATS article has no references and is below fulltext_chars')
+    return FullText(JATS_FULLTEXT, chars, '')
+
+
 def classify(
     body: bytes,
     content_type: str,
@@ -269,5 +310,8 @@ def classify(
         )
     if not body:
         return FullText(TOO_SHORT, 0, "empty body")
+    mime = (content_type or '').split(';', 1)[0].strip().lower()
+    if mime in {'application/xml', 'text/xml', 'application/jats+xml'}:
+        return _classify_jats(body, th, applied)
     looks_pdf = "pdf" in (content_type or "").lower() or url.lower().endswith(".pdf")
     return _classify_pdf(body, th) if looks_pdf else _classify_markup(body, th, applied)
