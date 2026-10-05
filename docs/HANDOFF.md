@@ -28,6 +28,20 @@ ambiguity for negative sentiment at lags 2 and 6. `ACA012`'s held Appendix B
 confirms the hard/soft split is by event category, not publisher source; no
 media/newswire-only result was located in that version.
 
+The operator then approved a frozen two-copy check of provisional abstract
+exclusions. Toronto's accepted manuscript for `10.2308/accr-51865` and Modena's
+open article for `10.1080/23322039.2016.1142847` were obtained through recorded
+institutional routes and passed the full-text gate. Each PDF itself gives matching
+DOI, title and authors. Toronto contains RavenPack traditional-news sentiment,
+but its return test covers the three-day earnings-announcement window. Modena
+tests weeks of returns after newspaper publication of price-to-book figures,
+without measuring sentiment. Neither supplies direct L02 v2 evidence; both
+original Claude exclusions remain `AI_PROVISIONAL`, with no production import.
+Toronto's same-host redirect exhausted a physical-transfer guard before the
+second PDF request; a one-time resume verified that Modena had received only a
+robots response, then fetched that already-approved copy. The private guided
+readout has hashes and evidence; the scheduler backlog records this resume case.
+
 2026-10-06 research portal proposal: the operator requested protocol-bound research flows,
 per-stage drilldown, live events, human source/PDF intake, extractable results and model/key
 administration. The design at

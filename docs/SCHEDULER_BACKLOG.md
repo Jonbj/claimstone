@@ -168,6 +168,21 @@ are required before unattended scientific selection. The current guided campaign
 regression fixture for all three stop paths: sandbox DNS, robots redirect to an unapproved
 host, and a 403 landing page without a paid offer.
 
+The next approved two-copy L02 check exposed a separate accounting rule. The first
+candidate PDF URL redirected once on the same institutional host, so two physical
+transfers consumed a guard configured as though it counted candidate URLs. The second
+candidate had only a recorded robots response and no copy request. The scheduler must
+track **candidate copy attempts** and **redirect transfers** separately, enforce both
+limits across restarts, and show the remaining allowance in a preview. It may resume
+the untouched second candidate under the same approval only after checking both the
+isolated audit and `requests.jsonl`; it must never re-request the first successful copy.
+The final two PDFs also provide regression cases for screening: one contains a
+media-sentiment control but only a three-day return window, while the other measures
+week-scale returns after publication of a raw valuation figure, not news sentiment.
+Source exposure, outcome horizon and role in the model must each be checked before a
+provisional exclusion becomes a controlled decision. Their private byte hashes and
+exact passages are in the guided L02 audit.
+
 D72 adds a measured resume requirement: a malformed model answer is a terminal unanswered case,
 not a reason to abandon all independent cases or retry the same call invisibly. The scheduler
 should finish the remaining frozen work, preserve the failed bytes, and report the missing
