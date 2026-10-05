@@ -9,6 +9,18 @@ what order.
 
 ## Where the work stands
 
+2026-10-06 guided L02 continuation: a private, offline batch read two held PDFs against
+the frozen v2 media/newswire exposure rule. `ACA001` is a strong direct candidate with
+verified held bytes and a previously evidenced same-work DOI relation; `ACA012` has
+monthly results but uses a mixed RavenPack feed, and its hard/soft split is by event
+category rather than publisher. These remain agent observations, not controlled
+admission or human reference. The operator approved a two-landing, one-copy Durham
+recovery for an AI-uncertain UK paper. A sandbox DNS attempt was recorded; the host
+retry stopped at an unapproved robots redirect, and the other approved institutional
+landing returned 403. No PDF, paid offer, stage admission or verdict resulted. The
+private readout and plan are in `store/alembic-s4-lungo/audits/source-selection/l02-v2/`;
+the concrete scheduler duties observed here are in `docs/SCHEDULER_BACKLOG.md`.
+
 2026-10-06 research portal proposal: the operator requested protocol-bound research flows,
 per-stage drilldown, live events, human source/PDF intake, extractable results and model/key
 administration. The design at

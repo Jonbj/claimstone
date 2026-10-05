@@ -138,6 +138,34 @@ The operator fixed L02's direct exposure scope to media/newswire news; corporate
 context. The scheduler must bind each screening batch to the dated selection protocol and refuse
 to mix v1 and v2 recommendations as though they were produced under the same criteria.
 
+## Requirements observed during the 2026-10-06 guided L02 batch
+
+This batch is recorded in the private
+`store/alembic-s4-lungo/audits/source-selection/l02-v2/guided-batch-2026-10-06.md`.
+Its Durham recovery used a frozen plan, a sandbox DNS attempt and a bounded host retry.
+The old repository host redirected its robots check to an unapproved host; the approved
+Worktribe page returned HTTP 403. No PDF was obtained or imported. These are measured
+workflow cases, not a new scientific selection rule.
+
+| Work now governed by the agent | Scheduler behavior and acceptance |
+|---|---|
+| Choose a small next batch | Build a queue from frozen scope, current advisory observations, held copies, identity relations and previous request outcomes. Show why each case is next, its question/criterion, reading level and missing evidence. Ordering may not depend on whether a result favors a strategy. Never turn priority into an exclusion. |
+| Freeze and verify the operation | Bind project configuration, selection scope, packet, AI observations, cached metadata, candidate key, allowed hosts, request ceilings and campaign name to hashes. Preview offline; refuse execution after any frozen input changes. |
+| Reuse held work | Verify content-addressed PDF bytes and active chunk generation, then present exact local passages with source class and candidate/work/copy identities. A same-work DOI and title key must not become two studies. A summary quote still requires the underlying specification and table for scientific extraction. |
+| Keep selection levels distinct | Show `AI_PROVISIONAL`, targeted full-text context, identity uncertainty and controlled admission separately. A media/newswire criterion cannot be satisfied merely because a mixed RavenPack feed includes some media. Hard/soft event categories are not publisher-source filters. No agent judgment signs a verdict or changes the acquisition denominator. |
+| Recover legal copies | Search cached authoritative locations first. Record landing pages, robots checks, redirect hops and actual bytes through the project transport. Before each hop enforce the approved host set, excluded hosts, persisted failure budget and remaining request ceiling. A newly seen redirect host stops for a revised plan instead of being followed implicitly. |
+| Interpret access failures | Distinguish DNS/transport failure, robots result, HTTP 403, stale URL/404, a verified paywall, a verified purchase offer, and an identity-checked copy. The transport currently calls 403 `PAYWALL_403`; the scheduler must display this as an access-blocked request until independent paywall/offer evidence exists. A 403 creates no purchase queue item by itself. |
+| Resume safely | A retry after sandbox-only DNS failure must prove that prior events had no HTTP response and must retain the failed request rows. A run stopped by an unapproved redirect may continue only with still-approved routes and the remaining aggregate request ceiling. Rechecking a terminal response needs a new named campaign and operator decision. |
+| Report a bounded outcome | State attempted transfers separately from `requests.jsonl` event rows, bytes obtained, identity/gate status, unresolved cases and next useful human action. No-copy outcomes remain pending rather than excluded. The request/audit ledgers gain rows; stage-owned ledgers stay byte-identical until an explicit import. |
+| Hand off to a person | Present a concise intervention: exact work/version, inspected routes, evidence for access or offer, cost/terms if verified, and the scientific criterion still unresolved. An operator-supplied PDF enters an identity and full-text gate before any admission or floor calculation. |
+
+Automation should first provide a repeatable offline dossier and request preview. Durable
+jobs, leases, project-wide writer coordination and persistent host budgets are required
+before unattended requests. Controlled admission and a measured screening error boundary
+are required before unattended scientific selection. The current guided campaign is a
+regression fixture for all three stop paths: sandbox DNS, robots redirect to an unapproved
+host, and a 403 landing page without a paid offer.
+
 D72 adds a measured resume requirement: a malformed model answer is a terminal unanswered case,
 not a reason to abandon all independent cases or retry the same call invisibly. The scheduler
 should finish the remaining frozen work, preserve the failed bytes, and report the missing
