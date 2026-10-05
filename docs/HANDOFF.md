@@ -20,6 +20,13 @@ retry stopped at an unapproved robots redirect, and the other approved instituti
 landing returned 403. No PDF, paid offer, stage admission or verdict resulted. The
 private readout and plan are in `store/alembic-s4-lungo/audits/source-selection/l02-v2/`;
 the concrete scheduler duties observed here are in `docs/SCHEDULER_BACKLOG.md`.
+The subsequent current-view join corrected a raw-ledger counting mistake: `ACA001`
+has 17 current L02 claims and 17 current v2 reviews, six supported and eleven
+overstated; review rows link by claim ID rather than repeat source ID. The six are
+annotations from one work. A targeted Table 5 reading flags a rounded-t-statistic
+ambiguity for negative sentiment at lags 2 and 6. `ACA012`'s held Appendix B
+confirms the hard/soft split is by event category, not publisher source; no
+media/newswire-only result was located in that version.
 
 2026-10-06 research portal proposal: the operator requested protocol-bound research flows,
 per-stage drilldown, live events, human source/PDF intake, extractable results and model/key
