@@ -580,7 +580,7 @@ Checks: `npm ci` added 304; typecheck clean; vitest 31 passed; build + check-csp
 - [x] R3.3 `IntegrityPanel` component (ported) and the project page `p/:project`:
       integrity, flows, unbound selectors, whole-project activity; 3 s poll (§4.2
       rule 8) with a discreet "refreshing…" on same-view refresh (R2 review rule)
-- [ ] R3.4 admin page: credentials presence booleans only, configured/available
+- [x] R3.4 admin page: credentials presence booleans only, configured/available
       backends with the server's notes verbatim, instrument versions
 - [ ] R3.5 full checks green: web (`npm run typecheck && npm test && npm run build`)
       and Python (`pytest -q`, `validate --all-projects`,
