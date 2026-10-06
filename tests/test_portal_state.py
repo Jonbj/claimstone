@@ -456,3 +456,22 @@ def test_missing_instrument_checker_is_a_named_problem(monkeypatch):
     monkeypatch.setattr(portal_state, "_checker_path", lambda: None)
     problems = portal_state.instrument_check()
     assert len(problems) == 1 and problems[0].startswith("UNAVAILABLE")
+
+
+def test_question_page_card_is_the_inbox_card(workspace):
+    """Review of S5: the question page carries the server's ADJUDICATION card, identical to the
+    inbox's, so no view builds a signing command of its own; a provisional or operational
+    question has none."""
+    _projects_dir, _store_dir, project, store = workspace
+    selector = scope.Selector("r1")
+    inbox = {card.subject: card for card in portal_state.inbox_cards(project, store, selector)
+             if card.category == "ADJUDICATION"}
+    assert inbox
+    for question in project.questions:
+        detail = portal_state.question_detail(project, store, selector, question.id)
+        card = detail["adjudication_card"]
+        if question.id in inbox:
+            expected = dataclasses.asdict(inbox[question.id])
+            assert card == {**expected, "scope": card["scope"]}
+        else:
+            assert card is None

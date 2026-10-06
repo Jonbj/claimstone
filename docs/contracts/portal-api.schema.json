@@ -1281,6 +1281,55 @@
    "$schema": "https://json-schema.org/draft/2020-12/schema",
    "additionalProperties": false,
    "properties": {
+    "adjudication_card": {
+     "additionalProperties": false,
+     "properties": {
+      "category": {
+       "enum": [
+        "INTEGRITY",
+        "PROTOCOL",
+        "ACQUISITION",
+        "CLASSIFICATION",
+        "NORMALIZE",
+        "EXTRACT",
+        "REVIEW",
+        "ADJUDICATION",
+        "ADVISORY"
+       ],
+       "type": "string"
+      },
+      "cause": {
+       "type": "string"
+      },
+      "command": {
+       "type": [
+        "string",
+        "null"
+       ]
+      },
+      "note": {
+       "type": "string"
+      },
+      "scope": {
+       "type": "string"
+      },
+      "subject": {
+       "type": "string"
+      }
+     },
+     "required": [
+      "category",
+      "scope",
+      "subject",
+      "cause",
+      "command",
+      "note"
+     ],
+     "type": [
+      "object",
+      "null"
+     ]
+    },
     "api_version": {
      "enum": [
       1
@@ -1422,6 +1471,15 @@
       "adjudicated_by": {
        "type": "string"
       },
+      "decision_contract_version": {
+       "type": [
+        "integer",
+        "null"
+       ]
+      },
+      "manifest_only": {
+       "type": "boolean"
+      },
       "profile_sha256": {
        "type": "string"
       },
@@ -1430,6 +1488,24 @@
       },
       "rationale": {
        "type": "string"
+      },
+      "registry_sha256": {
+       "type": [
+        "string",
+        "null"
+       ]
+      },
+      "registry_version": {
+       "type": [
+        "integer",
+        "null"
+       ]
+      },
+      "round": {
+       "type": [
+        "string",
+        "null"
+       ]
       },
       "verdict": {
        "enum": [
@@ -1444,11 +1520,16 @@
      },
      "required": [
       "question_id",
+      "round",
+      "manifest_only",
       "verdict",
       "rationale",
+      "profile_sha256",
+      "decision_contract_version",
+      "registry_version",
+      "registry_sha256",
       "adjudicated_by",
-      "adjudicated_at",
-      "profile_sha256"
+      "adjudicated_at"
      ],
      "type": [
       "object",
@@ -1472,7 +1553,8 @@
     "verdict",
     "verdict_stale",
     "operational_not_applicable",
-    "not_applicable_state"
+    "not_applicable_state",
+    "adjudication_card"
    ],
    "title": "question detail",
    "type": "object"

@@ -177,3 +177,25 @@ def test_schema_file_covers_every_declared_route():
     assert document["additionalProperties"] is False
     assert document["required"] == sorted(ROUTES)
     assert document["$schema"] == "https://json-schema.org/draft/2020-12/schema"
+
+
+def test_a_signed_verdict_keeps_the_contract(workspace):
+    """Review of S5: a real `adjudicate` row carries eleven fields. Listing six under
+    `additionalProperties: false` made the first signed verdict fail the contract."""
+    from claimstone import synthesize
+    _projects_dir, _store_dir, project, store = workspace
+    question = next(q for q in project.questions if q.kind != "operational")
+    stored = synthesize.latest_profiles(store, round_name="r1")[question.id]
+    synthesize.adjudicate(store, question.id, project=project, round_name="r1",
+                          verdict="UNANSWERED_IN_LITERATURE", rationale="r" * 130,
+                          by="a person", profile_sha256=stored["profile_sha256"])
+    with _served(workspace) as (_httpd, base, store_):
+        flow_id = next(iter(flows.flows(store_)))
+        status, _headers, payload = _get_json(
+            base + f"/api/v1/projects/{PROJECT}/flows/{flow_id}/questions/{question.id}")
+    assert status == 200
+    assert payload["verdict"]["verdict"] == "UNANSWERED_IN_LITERATURE"
+    schema = ROUTES["/projects/{p}/{sel}/questions/{qid}"]
+    assert validate(payload, schema) == []
+    # Signed and current: nothing left to sign on this question.
+    assert payload["adjudication_card"] is None

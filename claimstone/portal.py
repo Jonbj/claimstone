@@ -561,12 +561,8 @@ def _render_lineage(page: dict[str, Any]) -> str:
     return "".join(out)
 
 
-def _failure_display(failure_class: Any) -> str:
-    """F19: a stored class name asserts an inference the UI must not repeat as a fact."""
-    text = str(failure_class or "")
-    if text == "PAYWALL_403":
-        return "HTTP 403 (access refused) [PAYWALL_403]"
-    return text
+# F19: one implementation, in portal_state, for every view and the export.
+_failure_display = portal_state.failure_display
 
 
 def _render_dossier(page: dict[str, Any]) -> str:

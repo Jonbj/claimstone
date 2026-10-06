@@ -331,6 +331,13 @@ Changes to `compose.yaml`. Keep every existing comment and service. Add:
     networks: [portal]
     read_only: true
     tmpfs: [/tmp]
+    # Measured 2026-10-06 (S5 review): the index's 10 parallel summaries over the real store
+    # peak at 1024 MB RSS in one api process, 31.8 s in all. 2 GB leaves room without letting
+    # it compete with GROBID's 6 GB on a 14 GB node.
+    deploy:
+      resources:
+        limits:
+          memory: 2g
     cap_drop: [ALL]
     security_opt: ["no-new-privileges:true"]
     healthcheck:

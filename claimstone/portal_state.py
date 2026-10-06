@@ -320,27 +320,9 @@ def inbox_cards(project: Project, store: Store, selector: scope.Selector,
                 None,
                 "see docs/GUIDE.md, stage 5; review is not round-scoped and builds work for "
                 "the whole project (review F7)"))
-        if profile.get("provisional") or profile.get("state") == evidence.NOT_APPLICABLE:
-            continue
-        if row["verdict"] and not row["stale"]:
-            continue
-        reason = ("no verdict recorded" if not row["verdict"]
-                  else "verdict stale: the evidence moved under the signature")
-        round_flag = f" --round {selector.round}" if selector.round else ""
-        manifest_flag = " --manifest-only" if selector.manifest_only else ""
-        if row.get("stored_profile_stale"):
-            # `adjudicate` signs the *stored* profile and refuses when it differs from current
-            # evidence (synthesize.adjudicate → StaleProfile). The next valid action is a rebuild
-            # and a fresh reading, not a signature against a hash the engine will refuse.
-            command = f"claimstone synthesize {project.root}{round_flag}{manifest_flag}"
-            reason += "; the stored profile differs from current evidence"
-            note = "rebuild the profile, read it again, then sign against the new hash"
-        else:
-            command = (f"claimstone adjudicate {project.root} {question_id}{round_flag}"
-                       f"{manifest_flag} --profile-sha256 {profile.get('profile_sha256')}"
-                       f" --verdict <ONE_OF_FIVE> --rationale-file <file> --by <name>")
-            note = SIGN_NOTE
-        cards.append(Card("ADJUDICATION", scope_label, question_id, reason, command, note))
+        card = adjudication_card(project, selector, row, scope_label)
+        if card is not None:
+            cards.append(card)
 
     scoped_keys = set(scoped_candidates)
     for ledger, label in ((SCREENING_LEDGER, "screening"), (IDENTITY_LEDGER, "identity")):
@@ -358,6 +340,45 @@ def inbox_cards(project: Project, store: Store, selector: scope.Selector,
         cards.append(Card("ADVISORY", scope_label, label, cause, None, ADVISORY_NOTE))
 
     return sort_cards(cards)
+
+
+
+def adjudication_card(project: Project, selector: scope.Selector, row: dict[str, Any],
+                      scope_label: str) -> Card | None:
+    """The one place the next signing action is decided, for the inbox and the question page.
+
+    None when nothing can be signed: an inadmissible round, a provisional or operational
+    profile, or a verdict that is recorded and current. A stale *stored* profile gets
+    `synthesize` first, because `adjudicate` refuses it (StaleProfile). A view that built this
+    command itself would drift from these rules — the S5 question page did exactly that.
+    """
+    from claimstone import evidence
+
+    if row.get("unavailable"):
+        return None
+    profile = row["profile"]
+    question_id = str(profile.get("question_id"))
+    if profile.get("provisional") or profile.get("state") == evidence.NOT_APPLICABLE:
+        return None
+    if row["verdict"] and not row["stale"]:
+        return None
+    reason = ("no verdict recorded" if not row["verdict"]
+              else "verdict stale: the evidence moved under the signature")
+    round_flag = f" --round {selector.round}" if selector.round else ""
+    manifest_flag = " --manifest-only" if selector.manifest_only else ""
+    if row.get("stored_profile_stale"):
+        # `adjudicate` signs the *stored* profile and refuses when it differs from current
+        # evidence (synthesize.adjudicate → StaleProfile). The next valid action is a rebuild
+        # and a fresh reading, not a signature against a hash the engine will refuse.
+        command = f"claimstone synthesize {project.root}{round_flag}{manifest_flag}"
+        reason += "; the stored profile differs from current evidence"
+        note = "rebuild the profile, read it again, then sign against the new hash"
+    else:
+        command = (f"claimstone adjudicate {project.root} {question_id}{round_flag}"
+                   f"{manifest_flag} --profile-sha256 {profile.get('profile_sha256')}"
+                   f" --verdict <ONE_OF_FIVE> --rationale-file <file> --by <name>")
+        note = SIGN_NOTE
+    return Card("ADJUDICATION", scope_label, question_id, reason, command, note)
 
 
 def floor_panel(admitted: dict[str, Any] | None) -> dict[str, Any] | None:
@@ -641,6 +662,8 @@ def question_detail(project: Project, store: Store, selector: scope.Selector,
     except (synthesize.NotAdmissible, RegistryDrift, LedgerCorrupt):
         rows = []
     row = next((r for r in rows if str(r["profile"].get("question_id")) == question_id), None)
+    card = (adjudication_card(project, selector, row, selector_label(selector))
+            if row is not None else None)
     profile = (row or {}).get("profile") or {}
     question = next(q for q in project.questions if q.id == question_id)
     return {
@@ -666,6 +689,8 @@ def question_detail(project: Project, store: Store, selector: scope.Selector,
         "results": profile.get("results") or [],
         "verdict": (row or {}).get("verdict"),
         "verdict_stale": bool((row or {}).get("stale")),
+        # The same card the inbox shows, decided on the server: the page renders it verbatim.
+        "adjudication_card": None if card is None else dataclasses.asdict(card),
         "operational_not_applicable": question.kind == "operational",
         "not_applicable_state": evidence.NOT_APPLICABLE if question.kind == "operational" else None,
     }

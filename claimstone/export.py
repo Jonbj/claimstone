@@ -45,12 +45,8 @@ def _dump(payload: Any) -> bytes:
                       default=str).encode("utf-8")
 
 
-def _failure_display(failure_class: Any) -> str:
-    """F19: the stored code beside a display text that asserts no paywall inference."""
-    text = str(failure_class or "")
-    if text == "PAYWALL_403":
-        return "HTTP 403 (access refused) [PAYWALL_403]"
-    return text
+# F19: one implementation, in portal_state, for every view and the export.
+_failure_display = portal_state.failure_display
 
 
 def snapshot(store: Store) -> tuple[list[dict[str, Any]], list[str]]:

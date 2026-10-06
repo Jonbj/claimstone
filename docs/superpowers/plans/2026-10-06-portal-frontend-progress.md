@@ -322,3 +322,21 @@ fixture legitimately carries `claims: 0` (a real zero) and an empty `direction_c
 and rule 1 forbids a zero only for an *unknown* — the fixture cannot test the null
 path, so the test builds the smallest rows that do.
 NOT DONE:
+
+### Review of S5 (Claude Code, between S5 and S6)
+- The question page built its own `adjudicate` command from the live profile hash. That
+  reintroduced I3: it proposed signatures `adjudicate` refuses, on provisional profiles and on
+  stale stored ones, and it printed a fake `<workspace>/` path.
+  - `portal_state.adjudication_card` is now the single decision, used by the inbox and by
+    `question_detail` (new field `adjudication_card`).
+  - The page renders that card verbatim.
+  - Test: `test_question_page_card_is_the_inbox_card`.
+- The verdict-row schema listed 6 of the 11 fields of an `adjudications.jsonl` row under
+  `additionalProperties: false`, so the first real signature would have failed the contract.
+  All 11 fields are now declared. Test: `test_a_signed_verdict_keeps_the_contract` signs on a tmp
+  workspace and validates.
+- `failure_display` had three copies (`portal_state`, `portal`, `export`); there is now one.
+- Measured on the real store, read-only: the index's 10 parallel summaries take 31.8 s, with a
+  peak of 1024 MB RSS in the api process; the first summary arrives in 0.6 s. Spec §5 now sets
+  `memory: 2g` on `api` for S6.
+Checks: `pytest -q` 1213 passed, 7 skipped; web 0 errors, 36 tests passed, build + check-csp ok.

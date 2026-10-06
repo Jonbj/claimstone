@@ -325,6 +325,23 @@ export interface Overview {
   unavailable: string;
 }
 export interface QuestionDetail {
+  adjudication_card: {
+    category:
+      | "INTEGRITY"
+      | "PROTOCOL"
+      | "ACQUISITION"
+      | "CLASSIFICATION"
+      | "NORMALIZE"
+      | "EXTRACT"
+      | "REVIEW"
+      | "ADJUDICATION"
+      | "ADVISORY";
+    cause: string;
+    command: string | null;
+    note: string;
+    scope: string;
+    subject: string;
+  } | null;
   api_version: 1;
   id: string;
   kind: string;
@@ -371,9 +388,14 @@ export interface QuestionDetail {
   verdict: {
     adjudicated_at: string;
     adjudicated_by: string;
+    decision_contract_version: number | null;
+    manifest_only: boolean;
     profile_sha256: string;
     question_id: string;
     rationale: string;
+    registry_sha256: string | null;
+    registry_version: number | null;
+    round: string | null;
     verdict: "SUPPORTED" | "CONTRADICTED" | "CONTESTED_IN_LITERATURE" | "UNANSWERED_IN_LITERATURE" | "NEVER_ASKED";
   } | null;
   verdict_stale: boolean;

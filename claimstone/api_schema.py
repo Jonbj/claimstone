@@ -399,23 +399,35 @@ QUESTION_DETAIL = _payload("question detail", {
     # when — `adjudicate` is the only verdict-producing call and its row is the evidence.
     "verdict": {
         "type": ["object", "null"],
-        "required": ["question_id", "verdict", "rationale", "adjudicated_by",
-                     "adjudicated_at", "profile_sha256"],
+        # Every field of an adjudications.jsonl row (docs/contracts/profiles.md). Measured: a real
+        # signature carries all eleven, and listing six under additionalProperties: false made
+        # the first signed verdict fail the contract.
+        "required": ["question_id", "round", "manifest_only", "verdict", "rationale",
+                     "profile_sha256", "decision_contract_version", "registry_version",
+                     "registry_sha256", "adjudicated_by", "adjudicated_at"],
         "properties": {
             "question_id": _STR,
+            "round": _STR_OR_NULL,
+            "manifest_only": _BOOL,
             "verdict": {"type": "string", "enum": list(VERDICTS)},
             "rationale": _STR,
+            "profile_sha256": _STR,
+            "decision_contract_version": {"type": ["integer", "null"]},
+            "registry_version": {"type": ["integer", "null"]},
+            "registry_sha256": _STR_OR_NULL,
             "adjudicated_by": _STR,
             "adjudicated_at": _STR,
-            "profile_sha256": _STR,
         },
         "additionalProperties": False,
     },
     "verdict_stale": _BOOL,
+    # The next signing action, decided once on the server (the inbox's ADJUDICATION card), or
+    # null when nothing can be signed. The page renders it verbatim and never builds one.
+    "adjudication_card": {**_CARD, "type": ["object", "null"]},
     "operational_not_applicable": _BOOL,
     "not_applicable_state": _STR_OR_NULL,
 }, ["project", "selector", "id", "kind", "text", "profile", "profile_fields", "results",
-    "verdict", "verdict_stale", "operational_not_applicable", "not_applicable_state"])
+    "verdict", "verdict_stale", "operational_not_applicable", "not_applicable_state", "adjudication_card"])
 
 LINEAGE = _payload("lineage", {
     "project": _STR,

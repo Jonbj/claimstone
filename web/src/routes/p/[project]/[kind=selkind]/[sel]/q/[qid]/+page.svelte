@@ -38,17 +38,10 @@
   );
   const fields = $derived(detail?.profile_fields ?? null);
 
-  // The adjudicate command, exactly as the inbox card carries it: placeholders only,
-  // never a runnable button (§4.2 rule 4). The profile hash is the one `adjudicate`
-  // will accept; absent means the profile is not built yet and there is nothing to sign.
-  const adjudicateCommand = $derived.by(() => {
-    if (!detail || !fields?.profile_sha256) return null;
-    const round = detail.selector.round ? ` --round ${detail.selector.round}` : "";
-    const manifest = detail.selector.manifest_only ? " --manifest-only" : "";
-    return `claimstone adjudicate <workspace>/${project} ${detail.id}${round}${manifest}`
-      + ` --profile-sha256 ${fields.profile_sha256}`
-      + " --verdict <ONE_OF_FIVE> --rationale-file <file> --by <name>";
-  });
+  // The next signing action comes from the server (`adjudication_card`, the inbox's own
+  // ADJUDICATION card): building it here once proposed a signature `adjudicate` refuses —
+  // on a provisional profile, or a stale stored one. Null means nothing can be signed now.
+  const card = $derived(detail?.adjudication_card ?? null);
 </script>
 
 {#if error}
@@ -133,9 +126,9 @@
     {:else}
       <p class="chip dashed">— no verdict recorded</p>
     {/if}
-    {#if adjudicateCommand}
-      <CommandBlock command={adjudicateCommand}
-                    note="a person reads the profile and signs; an agent does not" />
+    {#if card}
+      <p class="note">{card.cause}</p>
+      {#if card.command}<CommandBlock command={card.command} note={card.note} />{/if}
     {/if}
   </section>
 {/if}
