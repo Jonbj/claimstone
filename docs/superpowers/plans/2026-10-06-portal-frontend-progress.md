@@ -10,7 +10,7 @@ One step per session; markers below are the authority for "what is next".
 | S2 `claimstone/api.py` + tests A1–A7 | DONE |
 | S3 schema, validator, fixtures | DONE |
 | S4 scaffold `web/` | DONE |
-| S5 routes and components | IN PROGRESS |
+| S5 routes and components | DONE |
 | S6 Dockerfile, compose services, `portal.sh` | TODO |
 | S7 parity check, D83, docs, instrument registration | TODO |
 
@@ -266,5 +266,59 @@ Checks: `svelte-check` 0 errors 0 warnings; vitest 23 passed; build + check-csp 
       `p/[project]/[kind=selkind]/[sel]` (overview), the question/claim/source routes, `inbox`
       (grouped by project then category, operator category filter only), `admin`; 3 s poll on
       project-scoped pages with visibility check (§4.2 rule 8)
-- [ ] S5.5 web checks green (`npm run check && npm test && npm run build`) and full Python
+- [x] S5.5 web checks green (`npm run check && npm test && npm run build`) and full Python
       checks green (`pytest -q`, `validate --all-projects`, `check_instrument_versions.py`)
+
+Checks (final lines):
+```
+$ cd web && npm ci && npm run check && npm test && npm run build
+npm ci: added 222 packages in 1s
+svelte-check found 0 errors and 0 warnings
+Tests  36 passed (36)
+✔ done
+check-csp: ok (1 inline script(s), hashed)
+$ .venv/bin/pytest -q
+1211 passed, 7 skipped in 37.00s
+$ .venv/bin/claimstone validate --all-projects
+OK   alembic-s4: 16 topics, 28 questions (registry v3, frozen 2026-09-25), 6 source classes, acquisition floor 0.80 (v1), 25 manifest rows, registry 9c3f265069c6
+OK   alembic-s4-breve: 12 topics, 17 questions (registry v1, frozen 2026-09-28), 6 source classes, acquisition floor 0.80 (v1), 18 manifest rows, registry 3fdb5aea634d
+OK   alembic-s4-lungo: 12 topics, 18 questions (registry v1, frozen 2026-09-28), 6 source classes, acquisition floor 0.80 (v1), 19 manifest rows, registry ee040e0c3cfc
+OK   example-news-and-returns: 16 topics, 20 questions (registry v2, frozen 2026-09-25), 6 source classes, acquisition floor 0.80 (v1), registry 85e5fcc44ddc
+OK   pilot-screen-time: 4 topics, 8 questions (registry v1, frozen 2026-09-28), 6 source classes, acquisition floor 0.80 (v1), 28 manifest rows, registry 82007de2b569
+OK   pmc-screen-time: 4 topics, 8 questions (registry v1, frozen 2026-09-28), 6 source classes, acquisition floor 0.80 (v1), 40 manifest rows, registry 82007de2b569
+$ .venv/bin/python tools/check_instrument_versions.py
+26 instrument version(s) acknowledged in the design record
+```
+Acceptance, measured: `claimstone api` on a `build_workspace` tmp workspace answered
+200 with `api_version: 1` on every route the new pages fetch (projects, integrity,
+activity?limit=50, poll, flow summary/overview/inbox, unbound r2 summary, unbound `-`
+overview, admin), so every route's fetch path is live, not just type-checked.
+Decisions (spec silent): (1) S5.1 was forced: the committed schema promised
+`question_detail`'s `verdict` as `_VERDICT_OR_NULL`, but `portal_state.question_detail`
+returns the recorded adjudication row (a dict) — measured by adjudicating Q01 on a tmp
+workspace: `{"verdict": "NEVER_ASKED", "adjudicated_by": "tester", …}`. The existing
+tests passed only because the fixture workspace has no adjudication. The schema now
+declares the row (object with `question_id`, `verdict`, `rationale`, `adjudicated_by`,
+`adjudicated_at`, `profile_sha256`), which is also what the HTML portal renders —
+without it the SPA could not show who signed and when. `failure_display` (§4.2 rule 5,
+F19) was likewise absent from the API: `portal_state.failure_display` now renders the
+stored class once, and every attempt row in `lineage`/`source_dossier` carries it; the
+UI renders it verbatim. (2) `MatrixRow`/`InboxCard`/`FloorPanelData` stay as component
+types (not generated ones) because `Overview`'s nested fields are `[k: string]:
+unknown` in the generated types — the components declare the shape they actually read.
+(3) The inbox route fetches every selector's `/inbox` (there is no cross-selector inbox
+route in §3.2) and groups by project then `CATEGORY_ORDER`, server order inside each
+group; the operator's category `select` is the only filter (rule 6) — a `<select>` with
+no submit, not a form. (4) The question page rebuilds the adjudicate command from the
+profile hash (placeholders only, `CommandBlock` shows it); when no profile exists
+there is nothing to sign and no command is shown. (5) The 3 s poll (`lib/poll.ts`) skips
+fetching while the tab is hidden and refetches only the current view's data (rule 8);
+`p/[project]` refetches integrity+index+activity, the selector pages their own payload.
+(6) `q/` and `claim/`/`source/` pages use one `+page.svelte` each with no `[kind]`
+branching — `api.ts`'s `selectorPath` already routes `f`/`u`.
+Deviations: F2's test uses one synthetic row (`claims: null`, `direction_count:
+{"SUPPORTS": 2}`) for the null-dash and direction-count assertions: the committed
+fixture legitimately carries `claims: 0` (a real zero) and an empty `direction_count`,
+and rule 1 forbids a zero only for an *unknown* — the fixture cannot test the null
+path, so the test builds the smallest rows that do.
+NOT DONE:
