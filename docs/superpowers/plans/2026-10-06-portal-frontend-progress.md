@@ -7,7 +7,7 @@ One step per session; markers below are the authority for "what is next".
 | step | marker |
 |---|---|
 | S1 shared transport base class out of `claimstone/portal.py` | DONE |
-| S2 `claimstone/api.py` + tests A1–A7 | TODO |
+| S2 `claimstone/api.py` + tests A1–A7 | IN PROGRESS |
 | S3 schema, validator, fixtures | TODO |
 | S4 scaffold `web/` | TODO |
 | S5 routes and components | TODO |
@@ -51,3 +51,10 @@ $ .venv/bin/pytest tests/test_portal.py -q
 Decisions (spec silent): base module named `claimstone/transport.py`; CSP becomes a `csp` class attribute so `api.py` can carry its stricter policy (§3.1) without copying `_send`; `make_server`/`serve` stay in `portal.py` — the spec's S1 is the handler base, and `api.py` (S2) gets its own server factory; `portal.py` keeps `check_registry_drift` imported because `_inbox_data` uses it directly
 Deviations: none. Note, measured: the session's first baseline run printed `1191 passed, 7 skipped`; every later full run prints `1192 passed, 7 skipped`. The cause is not this step: a concurrent session's commit `456c332` ("Record L02 metadata batch and route missing abstracts to fallback", 2026-10-06 10:49) landed between the baseline run and the S1 work and adds exactly one test to `tests/test_preview_source_selection_queue.py` (+31 lines, 1 new test function). `pytest --collect-only` node ids are byte-identical (1199) with the pre-S1 files restored and at HEAD, so the S1 change itself adds no test
 NOT DONE:
+
+### S2 — IN PROGRESS
+- [ ] S2.2 `claimstone/api.py`: `API_VERSION = 1`, `_Handler(BaseHandler)` with the §3.2 routes (selector paths `flows/{flow_id}` and `unbound/{slug}`), the §3.3 error envelope, the strict CSP, `make_server`/`serve`
+- [ ] S2.3 the `claimstone api` CLI command (`--projects-dir/--store/--host/--port/--allow-host`, non-loopback `host_warning` as `portal`)
+- [ ] S2.4 `tests/test_api.py`: A1, A3–A7 (A2 lands with the schema in S3, which the steps table name it for)
+- [ ] S2.5 full checks green (`pytest -q`, `validate --all-projects`, `check_instrument_versions.py`); `claimstone api` answers every route on a tmp workspace
+
