@@ -4,6 +4,7 @@ import AdminPage from "@/pages/AdminPage";
 import IndexPage from "@/pages/IndexPage";
 import InboxPage from "@/pages/InboxPage";
 import NotFoundPage from "@/pages/NotFoundPage";
+import ProjectPage from "@/pages/ProjectPage";
 import SelectorPlaceholderPage from "@/pages/SelectorPlaceholderPage";
 
 // §8.2: client-side routing with `createBrowserRouter`; nginx `try_files … /index.html`.
@@ -17,6 +18,7 @@ const router = createBrowserRouter([
       { index: true, element: <IndexPage /> },
       { path: "inbox", element: <InboxPage /> },
       { path: "admin", element: <AdminPage /> },
+      { path: "p/:project", element: <ProjectPage /> },
       { path: "p/:project/f/:sel", element: <SelectorPlaceholderPage /> },
       { path: "p/:project/u/:sel", element: <SelectorPlaceholderPage /> },
       { path: "*", element: <NotFoundPage /> },
