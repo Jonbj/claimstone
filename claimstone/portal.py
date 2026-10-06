@@ -1,11 +1,11 @@
-"""Transport and rendering for the read-only, multi-project research portal (spec §4).
+"""Routing and HTML rendering for the read-only, multi-project research portal (spec §4).
 
-GET is the only verb, every response carries `no-store` and a `default-src 'none'` CSP, path
-parameters are looked up in ledgers and never used as paths, and there is no code path that
-writes anything: read-only is structural here, exactly as it is in `dashboard.py`. One server
-serves every project under `--projects-dir` with stores under `--store`; each request reloads
-the project (F9 — a long-running server must not serve a stale registry) and rechecks registry
-drift without recording, rendering `ConfigError` and `RegistryDrift` as named states.
+The wire rules — GET only, the security headers, the Host/Origin defences with `--allow-host`
+and lookup-never-path parameters — live in `claimstone.transport.BaseHandler`, shared with
+`claimstone.api` (2026-10-06 design §3.1). One server serves every project under
+`--projects-dir` with stores under `--store`; each request reloads the project (F9 — a
+long-running server must not serve a stale registry) and rechecks registry drift without
+recording, rendering `ConfigError` and `RegistryDrift` as named states.
 """
 
 from __future__ import annotations
@@ -14,25 +14,21 @@ import dataclasses
 import json
 import os
 import pathlib
-import re
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from http.server import ThreadingHTTPServer
 from typing import Any
 from urllib.parse import parse_qs, unquote, urlparse
 
 from claimstone import dashboard, flows, portal_state, round_state, scope
-from claimstone.config import (ConfigError, RegistryDrift, check_registry_drift,
-                               discover_projects, load_project)
+from claimstone.config import (ConfigError, check_registry_drift, discover_projects,
+                               load_project)
 from claimstone.store import Store
+from claimstone.transport import LOOPBACK_HOSTS, BaseHandler
 
 from claimstone.dashboard import _STYLE, _chip, _esc, _frac
-
-FLOW_ID = re.compile(r"^[0-9a-f]{64}$")
 
 CSP = ("default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; "
        "connect-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'; "
        "frame-ancestors 'none'")
-
-LOOPBACK_HOSTS = frozenset({"127.0.0.1", "localhost", "::1"})
 
 BOUND_AFTER_DATA = ("bound after data existed: rows written before binding are not verified "
                     "against this protocol")
@@ -615,123 +611,10 @@ def _render_dossier(page: dict[str, Any]) -> str:
         f'<section><h2>claims by question</h2><div class="m">{claims}</div></section>')
 
 
-class _Handler(BaseHTTPRequestHandler):
-    """GET only, and everything a GET answers is derived, never written."""
+class _Handler(BaseHandler):
+    """The portal's HTML routing and rendering on the shared transport base (spec §3.1)."""
 
-    projects_dir: pathlib.Path
-    store_dir: pathlib.Path
-    allowed_hosts: frozenset[str]
-    allowed_authorities: frozenset[str] = frozenset()
-    bind_port: int
-    code_revision: str | None
-    code_dirty: bool | None
-
-    def log_message(self, fmt: str, *args: Any) -> None:  # quiet by default
-        pass
-
-    # --- plumbing -------------------------------------------------------------
-
-    def _send(self, body: bytes, code: int, content_type: str) -> None:
-        self.send_response(code)
-        self.send_header("Content-Type", content_type)
-        self.send_header("Content-Length", str(len(body)))
-        self.send_header("Cache-Control", "no-store")
-        self.send_header("X-Content-Type-Options", "nosniff")
-        self.send_header("Referrer-Policy", "no-referrer")
-        self.send_header("Content-Security-Policy", CSP)
-        self.end_headers()
-        if self.command != "HEAD":
-            self.wfile.write(body)
-
-    def _plain(self, code: int, text: str) -> None:
-        self._send((text + "\n").encode("utf-8"), code, "text/plain; charset=utf-8")
-
-    def _html(self, text: str) -> None:
-        self._send(text.encode("utf-8"), 200, "text/html; charset=utf-8")
-
-    def _json(self, payload: Any) -> None:
-        body = json.dumps(payload, ensure_ascii=False, indent=1, default=str).encode("utf-8")
-        self._send(body, 200, "application/json; charset=utf-8")
-
-    @staticmethod
-    def _split_host(header: str) -> tuple[str, str | None]:
-        """(name, port) of a Host value: `name`, `name:port`, `[v6]` or `[v6]:port`."""
-        if header.startswith("["):
-            if "]" not in header:
-                return "", None
-            name, rest = header[1:header.index("]")], header[header.index("]") + 1:]
-            return name, (rest[1:] if rest.startswith(":") else None)
-        if ":" in header:
-            name, port = header.rsplit(":", 1)
-            return name, port
-        return header, None
-
-    def _authority_ok(self, authority: str) -> bool:
-        """An authority this server answers for: a loopback name on the bound port, or an
-        explicitly allowed `name[:port]` (`--allow-host`, for a reverse proxy in front)."""
-        if authority.lower() in self.allowed_authorities:
-            return True
-        name, port = self._split_host(authority)
-        if name.lower() not in self.allowed_hosts:
-            return False
-        return port is None or (port.isdigit() and int(port) == self.bind_port)
-
-    def _host_ok(self) -> bool:
-        """The DNS-rebinding defence: only the names this bind answers for (spec §4.3)."""
-        return self._authority_ok(self.headers.get("Host", ""))
-
-    def _origin_ok(self) -> bool:
-        origin = self.headers.get("Origin")
-        if origin is None:
-            return True
-        for scheme in ("http://", "https://"):
-            if origin.startswith(scheme):
-                return self._authority_ok(origin[len(scheme):].rstrip("/"))
-        return False
-
-    def _refuse(self) -> None:
-        body = b"405: not a routed GET\n"
-        self.send_response(405)
-        self.send_header("Allow", "GET")
-        self.send_header("Content-Type", "text/plain; charset=utf-8")
-        self.send_header("Content-Length", str(len(body)))
-        self.send_header("Cache-Control", "no-store")
-        self.send_header("X-Content-Type-Options", "nosniff")
-        self.send_header("Referrer-Policy", "no-referrer")
-        self.send_header("Content-Security-Policy", CSP)
-        self.end_headers()
-        if self.command != "HEAD":
-            self.wfile.write(body)
-
-    do_POST = do_PUT = do_DELETE = do_PATCH = do_HEAD = do_OPTIONS = _refuse
-
-    def __getattr__(self, name: str) -> Any:
-        if name.startswith("do_"):
-            return self._refuse
-        raise AttributeError(name)
-
-    # --- lookups: parameters are looked up, never used as paths ---------------
-
-    def _project_root(self, name: str) -> pathlib.Path:
-        for root in discover_projects(self.projects_dir):
-            if root.name == name:
-                return root
-        raise portal_state.NotFound(f"unknown project: {name}")
-
-    def _loaded(self, name: str) -> tuple[Any, Store, pathlib.Path]:
-        root = self._project_root(name)
-        store = Store(root.name, base=self.store_dir)
-        project = load_project(root)  # per request, never cached (F9)
-        check_registry_drift(project, store, record=False)
-        return project, store, root
-
-    def _flow(self, store: Store, flow_id: str) -> dict[str, Any]:
-        if not FLOW_ID.match(flow_id):
-            raise portal_state.NotFound(f"not a flow id: {flow_id}")
-        row = flows.flows(store).get(flow_id)
-        if row is None:
-            raise portal_state.NotFound(f"unknown flow: {flow_id}")
-        return row
+    csp = CSP
 
     # --- routing ----------------------------------------------------------------
 
