@@ -573,7 +573,7 @@ Checks: `npm ci` added 304; typecheck clean; vitest 31 passed; build + check-csp
       ConfigError / registry drift / integrity_error surfaced per project; unbound rows
       carry the "legacy: protocol not verified" badge; placeholder routes so the rows'
       deep links resolve before R4 (`p/:project/f/:sel`, `p/:project/u/:sel`, catch-all)
-- [ ] R3.2 `InboxCards` component (ported) and the inbox page: `/projects` then every
+- [x] R3.2 `InboxCards` component (ported) and the inbox page: `/projects` then every
       selector's `/inbox` lazily and in parallel, grouped project → category, server
       order inside each group; the operator's category filter is the only filter, a
       selection control, not a form (§4.2 rules 4, 6)
