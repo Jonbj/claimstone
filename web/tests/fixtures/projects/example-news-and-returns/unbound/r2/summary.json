@@ -1,0 +1,19 @@
+{
+ "api_version": 1,
+ "floor_status": "INSUFFICIENT_ACQUISITION",
+ "flow_id": null,
+ "inbox_counts": {
+  "ACQUISITION": 2
+ },
+ "project": "example-news-and-returns",
+ "selector": {
+  "manifest_only": false,
+  "round": "r2"
+ },
+ "selector_label": "round r2",
+ "verdicts": {
+  "adjudicated": 0,
+  "awaiting_adjudication": 0,
+  "stale": 0
+ }
+}

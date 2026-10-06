@@ -1,0 +1,33 @@
+{
+ "api_version": 1,
+ "id": "Q02",
+ "kind": "effect",
+ "not_applicable_state": null,
+ "operational_not_applicable": false,
+ "profile": {},
+ "profile_fields": {
+  "awaiting_review": 0,
+  "blocking": [],
+  "coverage": {},
+  "direction_count": {},
+  "direction_count_note": "a count, not a strength",
+  "extraction": {},
+  "gate_rejected": {},
+  "linkage": null,
+  "profile_sha256": null,
+  "provisional": null,
+  "reviewed_not_usable": {},
+  "state": null,
+  "stored_profile_stale": false,
+  "unavailable": ""
+ },
+ "project": "example-news-and-returns",
+ "results": [],
+ "selector": {
+  "manifest_only": false,
+  "round": "r2"
+ },
+ "text": "The sentiment or event content of news carries information about future returns beyond what prices already reflect.",
+ "verdict": null,
+ "verdict_stale": false
+}

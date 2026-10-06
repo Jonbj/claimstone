@@ -1,0 +1,106 @@
+{
+ "activity": [
+  {
+   "ledger": "profiles.jsonl",
+   "row": {
+    "provisional": false,
+    "question_id": "Q01",
+    "state": "NO_VERIFIED_CLAIM"
+   },
+   "stage": "synthesize",
+   "when": "2026-10-06T00:00:00+00:00"
+  },
+  {
+   "ledger": "profiles.jsonl",
+   "row": {
+    "provisional": true,
+    "question_id": "Q02",
+    "state": "NO_VERIFIED_CLAIM"
+   },
+   "stage": "synthesize",
+   "when": "2026-10-06T00:00:00+00:00"
+  },
+  {
+   "ledger": "profiles.jsonl",
+   "row": {
+    "provisional": false,
+    "question_id": "Q03",
+    "state": "NO_VERIFIED_CLAIM"
+   },
+   "stage": "synthesize",
+   "when": "2026-10-06T00:00:00+00:00"
+  },
+  {
+   "ledger": "profiles.jsonl",
+   "row": {
+    "provisional": false,
+    "question_id": "Q04",
+    "state": "NO_VERIFIED_CLAIM"
+   },
+   "stage": "synthesize",
+   "when": "2026-10-06T00:00:00+00:00"
+  },
+  {
+   "ledger": "profiles.jsonl",
+   "row": {
+    "provisional": false,
+    "question_id": "Q05",
+    "state": "NO_VERIFIED_CLAIM"
+   },
+   "stage": "synthesize",
+   "when": "2026-10-06T00:00:00+00:00"
+  },
+  {
+   "ledger": "profiles.jsonl",
+   "row": {
+    "provisional": false,
+    "question_id": "Q06",
+    "state": "NO_VERIFIED_CLAIM"
+   },
+   "stage": "synthesize",
+   "when": "2026-10-06T00:00:00+00:00"
+  },
+  {
+   "ledger": "profiles.jsonl",
+   "row": {
+    "provisional": false,
+    "question_id": "Q07",
+    "state": "NO_VERIFIED_CLAIM"
+   },
+   "stage": "synthesize",
+   "when": "2026-10-06T00:00:00+00:00"
+  },
+  {
+   "ledger": "profiles.jsonl",
+   "row": {
+    "provisional": false,
+    "question_id": "Q08",
+    "state": "NO_VERIFIED_CLAIM"
+   },
+   "stage": "synthesize",
+   "when": "2026-10-06T00:00:00+00:00"
+  },
+  {
+   "ledger": "profiles.jsonl",
+   "row": {
+    "provisional": false,
+    "question_id": "Q09",
+    "state": "NO_VERIFIED_CLAIM"
+   },
+   "stage": "synthesize",
+   "when": "2026-10-06T00:00:00+00:00"
+  },
+  {
+   "ledger": "profiles.jsonl",
+   "row": {
+    "provisional": false,
+    "question_id": "Q10",
+    "state": "NO_VERIFIED_CLAIM"
+   },
+   "stage": "synthesize",
+   "when": "2026-10-06T00:00:00+00:00"
+  }
+ ],
+ "api_version": 1,
+ "project": "example-news-and-returns"
+}

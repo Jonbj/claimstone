@@ -1,0 +1,165 @@
+{
+ "api_version": 1,
+ "cards": [
+  {
+   "category": "REVIEW",
+   "cause": "2 claim(s) awaiting review",
+   "command": null,
+   "note": "see docs/GUIDE.md, stage 5; review is not round-scoped and builds work for the whole project (review F7)",
+   "scope": "flow 0df548e37436",
+   "subject": "Q02"
+  },
+  {
+   "category": "ADJUDICATION",
+   "cause": "no verdict recorded",
+   "command": "claimstone adjudicate <workspace>/example-news-and-returns Q01 --round r1 --profile-sha256 e6ec062e844c2d79daaf7af791650fce5954eb2c609f61d131f2d52944352b15 --verdict <ONE_OF_FIVE> --rationale-file <file> --by <name>",
+   "note": "a person reads the profile and signs; an agent does not",
+   "scope": "flow 0df548e37436",
+   "subject": "Q01"
+  },
+  {
+   "category": "ADJUDICATION",
+   "cause": "no verdict recorded",
+   "command": "claimstone adjudicate <workspace>/example-news-and-returns Q03 --round r1 --profile-sha256 37bb8e1a7b5685e7f949dfac9b6919fca01229d8e93a0aff44d814851e4269a7 --verdict <ONE_OF_FIVE> --rationale-file <file> --by <name>",
+   "note": "a person reads the profile and signs; an agent does not",
+   "scope": "flow 0df548e37436",
+   "subject": "Q03"
+  },
+  {
+   "category": "ADJUDICATION",
+   "cause": "no verdict recorded",
+   "command": "claimstone adjudicate <workspace>/example-news-and-returns Q04 --round r1 --profile-sha256 06be0864a3ebcffc83d1e8f0595952a50264c6f818b048dd348bbe6887b6b501 --verdict <ONE_OF_FIVE> --rationale-file <file> --by <name>",
+   "note": "a person reads the profile and signs; an agent does not",
+   "scope": "flow 0df548e37436",
+   "subject": "Q04"
+  },
+  {
+   "category": "ADJUDICATION",
+   "cause": "no verdict recorded",
+   "command": "claimstone adjudicate <workspace>/example-news-and-returns Q05 --round r1 --profile-sha256 3e8533b14a139299950a02f5804cf7513d1a412699549d8b3fcad0051ec487a6 --verdict <ONE_OF_FIVE> --rationale-file <file> --by <name>",
+   "note": "a person reads the profile and signs; an agent does not",
+   "scope": "flow 0df548e37436",
+   "subject": "Q05"
+  },
+  {
+   "category": "ADJUDICATION",
+   "cause": "no verdict recorded",
+   "command": "claimstone adjudicate <workspace>/example-news-and-returns Q06 --round r1 --profile-sha256 48941cd08f1aa72b4a42762a8531b6d2021a3fa2efc03c107f02c8e53d11fb21 --verdict <ONE_OF_FIVE> --rationale-file <file> --by <name>",
+   "note": "a person reads the profile and signs; an agent does not",
+   "scope": "flow 0df548e37436",
+   "subject": "Q06"
+  },
+  {
+   "category": "ADJUDICATION",
+   "cause": "no verdict recorded",
+   "command": "claimstone adjudicate <workspace>/example-news-and-returns Q07 --round r1 --profile-sha256 44219d381822d5821d5e5ad6d1671d58d97148f5900412c9d52da4dca6204f5f --verdict <ONE_OF_FIVE> --rationale-file <file> --by <name>",
+   "note": "a person reads the profile and signs; an agent does not",
+   "scope": "flow 0df548e37436",
+   "subject": "Q07"
+  },
+  {
+   "category": "ADJUDICATION",
+   "cause": "no verdict recorded",
+   "command": "claimstone adjudicate <workspace>/example-news-and-returns Q08 --round r1 --profile-sha256 3083a9859453a0a31eb1f67ce11890a6cbcff86e1279b7480d8a06f8771bde69 --verdict <ONE_OF_FIVE> --rationale-file <file> --by <name>",
+   "note": "a person reads the profile and signs; an agent does not",
+   "scope": "flow 0df548e37436",
+   "subject": "Q08"
+  },
+  {
+   "category": "ADJUDICATION",
+   "cause": "no verdict recorded",
+   "command": "claimstone adjudicate <workspace>/example-news-and-returns Q09 --round r1 --profile-sha256 711d6aa87a265747f4e247f99de3bb64b0385d3c12338a136858297672b1fdb8 --verdict <ONE_OF_FIVE> --rationale-file <file> --by <name>",
+   "note": "a person reads the profile and signs; an agent does not",
+   "scope": "flow 0df548e37436",
+   "subject": "Q09"
+  },
+  {
+   "category": "ADJUDICATION",
+   "cause": "no verdict recorded",
+   "command": "claimstone adjudicate <workspace>/example-news-and-returns Q10 --round r1 --profile-sha256 0128ec0d8e7677fa9554f70ee348a59b8608b2cfa55a64ea5622c43320e7c000 --verdict <ONE_OF_FIVE> --rationale-file <file> --by <name>",
+   "note": "a person reads the profile and signs; an agent does not",
+   "scope": "flow 0df548e37436",
+   "subject": "Q10"
+  },
+  {
+   "category": "ADJUDICATION",
+   "cause": "no verdict recorded",
+   "command": "claimstone adjudicate <workspace>/example-news-and-returns Q11 --round r1 --profile-sha256 fa2dcc3e0671a753f332d74495fb19260cce5d3284144424de60b4011ed286ff --verdict <ONE_OF_FIVE> --rationale-file <file> --by <name>",
+   "note": "a person reads the profile and signs; an agent does not",
+   "scope": "flow 0df548e37436",
+   "subject": "Q11"
+  },
+  {
+   "category": "ADJUDICATION",
+   "cause": "no verdict recorded",
+   "command": "claimstone adjudicate <workspace>/example-news-and-returns Q12 --round r1 --profile-sha256 a5fad361b2f11c891a742e75c80820997ff8acd52db0021e7d2405ca168fd599 --verdict <ONE_OF_FIVE> --rationale-file <file> --by <name>",
+   "note": "a person reads the profile and signs; an agent does not",
+   "scope": "flow 0df548e37436",
+   "subject": "Q12"
+  },
+  {
+   "category": "ADJUDICATION",
+   "cause": "no verdict recorded",
+   "command": "claimstone adjudicate <workspace>/example-news-and-returns Q13 --round r1 --profile-sha256 a90e803bc115a63fb10f97cc4b3a1aa8076c8148ee55583c6d14d8a15312b7e2 --verdict <ONE_OF_FIVE> --rationale-file <file> --by <name>",
+   "note": "a person reads the profile and signs; an agent does not",
+   "scope": "flow 0df548e37436",
+   "subject": "Q13"
+  },
+  {
+   "category": "ADJUDICATION",
+   "cause": "no verdict recorded",
+   "command": "claimstone adjudicate <workspace>/example-news-and-returns Q14 --round r1 --profile-sha256 bfc283554120eedb4b8cad8f137a2041fcc5427423d8f50d34f97b90e366bd54 --verdict <ONE_OF_FIVE> --rationale-file <file> --by <name>",
+   "note": "a person reads the profile and signs; an agent does not",
+   "scope": "flow 0df548e37436",
+   "subject": "Q14"
+  },
+  {
+   "category": "ADJUDICATION",
+   "cause": "no verdict recorded",
+   "command": "claimstone adjudicate <workspace>/example-news-and-returns Q15 --round r1 --profile-sha256 99e704912f0a3ac748f57263dc4da3ef30b18b6ec48830be4bc9cb05676640d8 --verdict <ONE_OF_FIVE> --rationale-file <file> --by <name>",
+   "note": "a person reads the profile and signs; an agent does not",
+   "scope": "flow 0df548e37436",
+   "subject": "Q15"
+  },
+  {
+   "category": "ADJUDICATION",
+   "cause": "no verdict recorded",
+   "command": "claimstone adjudicate <workspace>/example-news-and-returns Q16 --round r1 --profile-sha256 44cb16833f63df68f2bf39006ae07e26a0847068d36628da04d9f6a7fbb7cb1b --verdict <ONE_OF_FIVE> --rationale-file <file> --by <name>",
+   "note": "a person reads the profile and signs; an agent does not",
+   "scope": "flow 0df548e37436",
+   "subject": "Q16"
+  },
+  {
+   "category": "ADJUDICATION",
+   "cause": "no verdict recorded",
+   "command": "claimstone adjudicate <workspace>/example-news-and-returns Q17 --round r1 --profile-sha256 c7b1361a1bc93abdfb2f06a32e22a939f722f88a4b977c9e9894e0f01a0f1cd0 --verdict <ONE_OF_FIVE> --rationale-file <file> --by <name>",
+   "note": "a person reads the profile and signs; an agent does not",
+   "scope": "flow 0df548e37436",
+   "subject": "Q17"
+  },
+  {
+   "category": "ADJUDICATION",
+   "cause": "no verdict recorded",
+   "command": "claimstone adjudicate <workspace>/example-news-and-returns Q18 --round r1 --profile-sha256 73b367b2bc7feaa947972a1d49e91ff346076346bd72b4da43be76aa5a93ed4b --verdict <ONE_OF_FIVE> --rationale-file <file> --by <name>",
+   "note": "a person reads the profile and signs; an agent does not",
+   "scope": "flow 0df548e37436",
+   "subject": "Q18"
+  },
+  {
+   "category": "ADJUDICATION",
+   "cause": "no verdict recorded",
+   "command": "claimstone adjudicate <workspace>/example-news-and-returns Q19 --round r1 --profile-sha256 7f8768fd09b9d6309e3ebf5059b7ad91c9931726e9e485d03f9b812360c845b0 --verdict <ONE_OF_FIVE> --rationale-file <file> --by <name>",
+   "note": "a person reads the profile and signs; an agent does not",
+   "scope": "flow 0df548e37436",
+   "subject": "Q19"
+  },
+  {
+   "category": "ADJUDICATION",
+   "cause": "no verdict recorded",
+   "command": "claimstone adjudicate <workspace>/example-news-and-returns Q20 --round r1 --profile-sha256 1898f820dd76b8bd5519f2954b8f79b9ec8f6e25f06f4b69caeabc8f4354d758 --verdict <ONE_OF_FIVE> --rationale-file <file> --by <name>",
+   "note": "a person reads the profile and signs; an agent does not",
+   "scope": "flow 0df548e37436",
+   "subject": "Q20"
+  }
+ ]
+}

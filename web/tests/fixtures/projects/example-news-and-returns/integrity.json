@@ -1,0 +1,63 @@
+{
+ "api_version": 1,
+ "code": {
+  "dirty": null,
+  "grobid_image": "lfoppiano/grobid:0.8.1",
+  "revision": null
+ },
+ "config": {
+  "error": null,
+  "state": "OK"
+ },
+ "instruments": [],
+ "invalid_flows": [],
+ "ledger_repairs": 0,
+ "ledgers": {
+  "acquisitions.jsonl": {
+   "error": null,
+   "rows": 3,
+   "torn_tail": false
+  },
+  "candidates.jsonl": {
+   "error": null,
+   "rows": 4,
+   "torn_tail": false
+  },
+  "chunks.jsonl": {
+   "error": null,
+   "rows": 2,
+   "torn_tail": false
+  },
+  "claims.jsonl": {
+   "error": null,
+   "rows": 3,
+   "torn_tail": false
+  },
+  "documents.jsonl": {
+   "error": null,
+   "rows": 2,
+   "torn_tail": false
+  },
+  "flows.jsonl": {
+   "error": null,
+   "rows": 1,
+   "torn_tail": false
+  },
+  "profiles.jsonl": {
+   "error": null,
+   "rows": 20,
+   "torn_tail": false
+  },
+  "registry.jsonl": {
+   "error": null,
+   "rows": 1,
+   "torn_tail": false
+  }
+ },
+ "orphans": 0,
+ "project": "example-news-and-returns",
+ "registry": {
+  "error": null,
+  "state": "OK"
+ }
+}

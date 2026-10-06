@@ -1,0 +1,1749 @@
+{
+ "activity": [
+  {
+   "ledger": "profiles.jsonl",
+   "row": {
+    "provisional": false,
+    "question_id": "Q01",
+    "state": "NO_VERIFIED_CLAIM"
+   },
+   "stage": "synthesize",
+   "when": "2026-10-06T00:00:00+00:00"
+  },
+  {
+   "ledger": "profiles.jsonl",
+   "row": {
+    "provisional": true,
+    "question_id": "Q02",
+    "state": "NO_VERIFIED_CLAIM"
+   },
+   "stage": "synthesize",
+   "when": "2026-10-06T00:00:00+00:00"
+  },
+  {
+   "ledger": "profiles.jsonl",
+   "row": {
+    "provisional": false,
+    "question_id": "Q03",
+    "state": "NO_VERIFIED_CLAIM"
+   },
+   "stage": "synthesize",
+   "when": "2026-10-06T00:00:00+00:00"
+  },
+  {
+   "ledger": "profiles.jsonl",
+   "row": {
+    "provisional": false,
+    "question_id": "Q04",
+    "state": "NO_VERIFIED_CLAIM"
+   },
+   "stage": "synthesize",
+   "when": "2026-10-06T00:00:00+00:00"
+  },
+  {
+   "ledger": "profiles.jsonl",
+   "row": {
+    "provisional": false,
+    "question_id": "Q05",
+    "state": "NO_VERIFIED_CLAIM"
+   },
+   "stage": "synthesize",
+   "when": "2026-10-06T00:00:00+00:00"
+  },
+  {
+   "ledger": "profiles.jsonl",
+   "row": {
+    "provisional": false,
+    "question_id": "Q06",
+    "state": "NO_VERIFIED_CLAIM"
+   },
+   "stage": "synthesize",
+   "when": "2026-10-06T00:00:00+00:00"
+  },
+  {
+   "ledger": "profiles.jsonl",
+   "row": {
+    "provisional": false,
+    "question_id": "Q07",
+    "state": "NO_VERIFIED_CLAIM"
+   },
+   "stage": "synthesize",
+   "when": "2026-10-06T00:00:00+00:00"
+  },
+  {
+   "ledger": "profiles.jsonl",
+   "row": {
+    "provisional": false,
+    "question_id": "Q08",
+    "state": "NO_VERIFIED_CLAIM"
+   },
+   "stage": "synthesize",
+   "when": "2026-10-06T00:00:00+00:00"
+  },
+  {
+   "ledger": "profiles.jsonl",
+   "row": {
+    "provisional": false,
+    "question_id": "Q09",
+    "state": "NO_VERIFIED_CLAIM"
+   },
+   "stage": "synthesize",
+   "when": "2026-10-06T00:00:00+00:00"
+  },
+  {
+   "ledger": "profiles.jsonl",
+   "row": {
+    "provisional": false,
+    "question_id": "Q10",
+    "state": "NO_VERIFIED_CLAIM"
+   },
+   "stage": "synthesize",
+   "when": "2026-10-06T00:00:00+00:00"
+  },
+  {
+   "ledger": "profiles.jsonl",
+   "row": {
+    "provisional": false,
+    "question_id": "Q11",
+    "state": "NO_VERIFIED_CLAIM"
+   },
+   "stage": "synthesize",
+   "when": "2026-10-06T00:00:00+00:00"
+  },
+  {
+   "ledger": "profiles.jsonl",
+   "row": {
+    "provisional": false,
+    "question_id": "Q12",
+    "state": "NO_VERIFIED_CLAIM"
+   },
+   "stage": "synthesize",
+   "when": "2026-10-06T00:00:00+00:00"
+  },
+  {
+   "ledger": "profiles.jsonl",
+   "row": {
+    "provisional": false,
+    "question_id": "Q13",
+    "state": "NO_VERIFIED_CLAIM"
+   },
+   "stage": "synthesize",
+   "when": "2026-10-06T00:00:00+00:00"
+  },
+  {
+   "ledger": "profiles.jsonl",
+   "row": {
+    "provisional": false,
+    "question_id": "Q14",
+    "state": "NO_VERIFIED_CLAIM"
+   },
+   "stage": "synthesize",
+   "when": "2026-10-06T00:00:00+00:00"
+  },
+  {
+   "ledger": "profiles.jsonl",
+   "row": {
+    "provisional": false,
+    "question_id": "Q15",
+    "state": "NO_VERIFIED_CLAIM"
+   },
+   "stage": "synthesize",
+   "when": "2026-10-06T00:00:00+00:00"
+  },
+  {
+   "ledger": "profiles.jsonl",
+   "row": {
+    "provisional": false,
+    "question_id": "Q16",
+    "state": "NO_VERIFIED_CLAIM"
+   },
+   "stage": "synthesize",
+   "when": "2026-10-06T00:00:00+00:00"
+  },
+  {
+   "ledger": "profiles.jsonl",
+   "row": {
+    "provisional": false,
+    "question_id": "Q17",
+    "state": "NO_VERIFIED_CLAIM"
+   },
+   "stage": "synthesize",
+   "when": "2026-10-06T00:00:00+00:00"
+  },
+  {
+   "ledger": "profiles.jsonl",
+   "row": {
+    "provisional": false,
+    "question_id": "Q18",
+    "state": "NO_VERIFIED_CLAIM"
+   },
+   "stage": "synthesize",
+   "when": "2026-10-06T00:00:00+00:00"
+  },
+  {
+   "ledger": "profiles.jsonl",
+   "row": {
+    "provisional": false,
+    "question_id": "Q19",
+    "state": "NO_VERIFIED_CLAIM"
+   },
+   "stage": "synthesize",
+   "when": "2026-10-06T00:00:00+00:00"
+  },
+  {
+   "ledger": "profiles.jsonl",
+   "row": {
+    "provisional": false,
+    "question_id": "Q20",
+    "state": "NO_VERIFIED_CLAIM"
+   },
+   "stage": "synthesize",
+   "when": "2026-10-06T00:00:00+00:00"
+  },
+  {
+   "ledger": "claims.jsonl",
+   "row": {
+    "backend": "b",
+    "claim_id": "c2",
+    "model": "m",
+    "question_id": "Q02",
+    "source_id": "S02"
+   },
+   "stage": "extract",
+   "when": "2026-10-05T10:00:01+00:00"
+  },
+  {
+   "ledger": "claims.jsonl",
+   "row": {
+    "backend": "b",
+    "claim_id": "c1",
+    "model": "m",
+    "question_id": "Q02",
+    "source_id": "S01"
+   },
+   "stage": "extract",
+   "when": "2026-10-05T10:00:00+00:00"
+  },
+  {
+   "ledger": "chunks.jsonl",
+   "row": {
+    "source_id": "S01"
+   },
+   "stage": "normalize",
+   "when": "2026-10-01T12:00:01+00:00"
+  },
+  {
+   "ledger": "chunks.jsonl",
+   "row": {
+    "source_id": "S02"
+   },
+   "stage": "normalize",
+   "when": "2026-10-01T12:00:01+00:00"
+  },
+  {
+   "ledger": "documents.jsonl",
+   "row": {
+    "source_id": "S01"
+   },
+   "stage": "normalize",
+   "when": "2026-10-01T12:00:00+00:00"
+  },
+  {
+   "ledger": "documents.jsonl",
+   "row": {
+    "source_id": "S02"
+   },
+   "stage": "normalize",
+   "when": "2026-10-01T12:00:00+00:00"
+  },
+  {
+   "ledger": "acquisitions.jsonl",
+   "row": {
+    "acquired": true,
+    "candidate_key": "r1-a",
+    "licence": "cc-by",
+    "source_id": "S01"
+   },
+   "stage": "acquire",
+   "when": "2026-10-01T11:00:00+00:00"
+  },
+  {
+   "ledger": "acquisitions.jsonl",
+   "row": {
+    "acquired": true,
+    "candidate_key": "r1-b",
+    "licence": "cc-by",
+    "source_id": "S02"
+   },
+   "stage": "acquire",
+   "when": "2026-10-01T11:00:00+00:00"
+  },
+  {
+   "ledger": "candidates.jsonl",
+   "row": {
+    "candidate_key": "r1-a",
+    "source_id": "S01"
+   },
+   "stage": "discover",
+   "when": "2026-10-01T10:00:00+00:00"
+  },
+  {
+   "ledger": "candidates.jsonl",
+   "row": {
+    "candidate_key": "r1-b",
+    "source_id": "S02"
+   },
+   "stage": "discover",
+   "when": "2026-10-01T10:00:00+00:00"
+  }
+ ],
+ "api_version": 1,
+ "binding_state": {
+  "bound_after_data": true,
+  "differences": [],
+  "state": "CURRENT"
+ },
+ "errors": [],
+ "floor_panel": {
+  "by_class": {
+   "ACA": {
+    "awaiting_normalize": 0,
+    "basis": "confirmed",
+    "basis_count": 2,
+    "floor": 0.8,
+    "found": 2,
+    "meets_floor": true,
+    "needed": 0
+   }
+  },
+  "disclosure": "Admission currently reads document confirmations and ledger repairs across the whole project (review F1). A round with no normalized documents may show the confirmed basis because another round has documents.",
+  "overall": {
+   "basis": "confirmed",
+   "basis_count": 2,
+   "blocking": [],
+   "final": true,
+   "floor": 0.8,
+   "floor_set_at": "2026-09-22",
+   "floor_version": 1,
+   "found": 2,
+   "rate": 1.0,
+   "status": "OK"
+  },
+  "sentences": []
+ },
+ "flow": {
+  "binding": {
+   "derived_from": null,
+   "population_sha256": null,
+   "project": "example-news-and-returns",
+   "protocol_sha256": "ada469a7deeb793673727c77b9077b71d7a7626c1710d783f680d603ad5b8761",
+   "registry_sha256": "85e5fcc44ddca1d69fbe385b5181e97467fbb0cf82f8d08fd26d33adc0402fce",
+   "registry_version": 2,
+   "relation": null,
+   "selector": {
+    "manifest_only": false,
+    "round": "r1"
+   }
+  },
+  "bound_after_data": true,
+  "candidates_at_binding": 2,
+  "code_dirty": null,
+  "code_revision": null,
+  "created_at": "2026-10-06T00:00:00+00:00",
+  "created_by": "fixture",
+  "event": "created",
+  "flow_id": "0df548e3743689e1a0dd099da697aee4842e8a573f1225a8da13fec128a248cd",
+  "flow_version": 1,
+  "input_files": {
+   "manifest.tsv": null,
+   "questions.yaml": "24142fc60ee12a8008dac6f7308599290ea37f69cd0745c39862a01db097b23d",
+   "sources.yaml": "fa7b8996657fb3a7efc66f1f75e8601250365806d22f1761275911dbc8dd3c0c",
+   "topics.yaml": "5377d6e792e958868b65addf0a3d3978b345e9a7393968e7015abbb0fdd451da"
+  },
+  "title": "round one"
+ },
+ "inbox": [
+  {
+   "category": "REVIEW",
+   "cause": "2 claim(s) awaiting review",
+   "command": null,
+   "note": "see docs/GUIDE.md, stage 5; review is not round-scoped and builds work for the whole project (review F7)",
+   "scope": "flow 0df548e37436",
+   "subject": "Q02"
+  },
+  {
+   "category": "ADJUDICATION",
+   "cause": "no verdict recorded",
+   "command": "claimstone adjudicate <workspace>/example-news-and-returns Q01 --round r1 --profile-sha256 e6ec062e844c2d79daaf7af791650fce5954eb2c609f61d131f2d52944352b15 --verdict <ONE_OF_FIVE> --rationale-file <file> --by <name>",
+   "note": "a person reads the profile and signs; an agent does not",
+   "scope": "flow 0df548e37436",
+   "subject": "Q01"
+  },
+  {
+   "category": "ADJUDICATION",
+   "cause": "no verdict recorded",
+   "command": "claimstone adjudicate <workspace>/example-news-and-returns Q03 --round r1 --profile-sha256 37bb8e1a7b5685e7f949dfac9b6919fca01229d8e93a0aff44d814851e4269a7 --verdict <ONE_OF_FIVE> --rationale-file <file> --by <name>",
+   "note": "a person reads the profile and signs; an agent does not",
+   "scope": "flow 0df548e37436",
+   "subject": "Q03"
+  },
+  {
+   "category": "ADJUDICATION",
+   "cause": "no verdict recorded",
+   "command": "claimstone adjudicate <workspace>/example-news-and-returns Q04 --round r1 --profile-sha256 06be0864a3ebcffc83d1e8f0595952a50264c6f818b048dd348bbe6887b6b501 --verdict <ONE_OF_FIVE> --rationale-file <file> --by <name>",
+   "note": "a person reads the profile and signs; an agent does not",
+   "scope": "flow 0df548e37436",
+   "subject": "Q04"
+  },
+  {
+   "category": "ADJUDICATION",
+   "cause": "no verdict recorded",
+   "command": "claimstone adjudicate <workspace>/example-news-and-returns Q05 --round r1 --profile-sha256 3e8533b14a139299950a02f5804cf7513d1a412699549d8b3fcad0051ec487a6 --verdict <ONE_OF_FIVE> --rationale-file <file> --by <name>",
+   "note": "a person reads the profile and signs; an agent does not",
+   "scope": "flow 0df548e37436",
+   "subject": "Q05"
+  },
+  {
+   "category": "ADJUDICATION",
+   "cause": "no verdict recorded",
+   "command": "claimstone adjudicate <workspace>/example-news-and-returns Q06 --round r1 --profile-sha256 48941cd08f1aa72b4a42762a8531b6d2021a3fa2efc03c107f02c8e53d11fb21 --verdict <ONE_OF_FIVE> --rationale-file <file> --by <name>",
+   "note": "a person reads the profile and signs; an agent does not",
+   "scope": "flow 0df548e37436",
+   "subject": "Q06"
+  },
+  {
+   "category": "ADJUDICATION",
+   "cause": "no verdict recorded",
+   "command": "claimstone adjudicate <workspace>/example-news-and-returns Q07 --round r1 --profile-sha256 44219d381822d5821d5e5ad6d1671d58d97148f5900412c9d52da4dca6204f5f --verdict <ONE_OF_FIVE> --rationale-file <file> --by <name>",
+   "note": "a person reads the profile and signs; an agent does not",
+   "scope": "flow 0df548e37436",
+   "subject": "Q07"
+  },
+  {
+   "category": "ADJUDICATION",
+   "cause": "no verdict recorded",
+   "command": "claimstone adjudicate <workspace>/example-news-and-returns Q08 --round r1 --profile-sha256 3083a9859453a0a31eb1f67ce11890a6cbcff86e1279b7480d8a06f8771bde69 --verdict <ONE_OF_FIVE> --rationale-file <file> --by <name>",
+   "note": "a person reads the profile and signs; an agent does not",
+   "scope": "flow 0df548e37436",
+   "subject": "Q08"
+  },
+  {
+   "category": "ADJUDICATION",
+   "cause": "no verdict recorded",
+   "command": "claimstone adjudicate <workspace>/example-news-and-returns Q09 --round r1 --profile-sha256 711d6aa87a265747f4e247f99de3bb64b0385d3c12338a136858297672b1fdb8 --verdict <ONE_OF_FIVE> --rationale-file <file> --by <name>",
+   "note": "a person reads the profile and signs; an agent does not",
+   "scope": "flow 0df548e37436",
+   "subject": "Q09"
+  },
+  {
+   "category": "ADJUDICATION",
+   "cause": "no verdict recorded",
+   "command": "claimstone adjudicate <workspace>/example-news-and-returns Q10 --round r1 --profile-sha256 0128ec0d8e7677fa9554f70ee348a59b8608b2cfa55a64ea5622c43320e7c000 --verdict <ONE_OF_FIVE> --rationale-file <file> --by <name>",
+   "note": "a person reads the profile and signs; an agent does not",
+   "scope": "flow 0df548e37436",
+   "subject": "Q10"
+  },
+  {
+   "category": "ADJUDICATION",
+   "cause": "no verdict recorded",
+   "command": "claimstone adjudicate <workspace>/example-news-and-returns Q11 --round r1 --profile-sha256 fa2dcc3e0671a753f332d74495fb19260cce5d3284144424de60b4011ed286ff --verdict <ONE_OF_FIVE> --rationale-file <file> --by <name>",
+   "note": "a person reads the profile and signs; an agent does not",
+   "scope": "flow 0df548e37436",
+   "subject": "Q11"
+  },
+  {
+   "category": "ADJUDICATION",
+   "cause": "no verdict recorded",
+   "command": "claimstone adjudicate <workspace>/example-news-and-returns Q12 --round r1 --profile-sha256 a5fad361b2f11c891a742e75c80820997ff8acd52db0021e7d2405ca168fd599 --verdict <ONE_OF_FIVE> --rationale-file <file> --by <name>",
+   "note": "a person reads the profile and signs; an agent does not",
+   "scope": "flow 0df548e37436",
+   "subject": "Q12"
+  },
+  {
+   "category": "ADJUDICATION",
+   "cause": "no verdict recorded",
+   "command": "claimstone adjudicate <workspace>/example-news-and-returns Q13 --round r1 --profile-sha256 a90e803bc115a63fb10f97cc4b3a1aa8076c8148ee55583c6d14d8a15312b7e2 --verdict <ONE_OF_FIVE> --rationale-file <file> --by <name>",
+   "note": "a person reads the profile and signs; an agent does not",
+   "scope": "flow 0df548e37436",
+   "subject": "Q13"
+  },
+  {
+   "category": "ADJUDICATION",
+   "cause": "no verdict recorded",
+   "command": "claimstone adjudicate <workspace>/example-news-and-returns Q14 --round r1 --profile-sha256 bfc283554120eedb4b8cad8f137a2041fcc5427423d8f50d34f97b90e366bd54 --verdict <ONE_OF_FIVE> --rationale-file <file> --by <name>",
+   "note": "a person reads the profile and signs; an agent does not",
+   "scope": "flow 0df548e37436",
+   "subject": "Q14"
+  },
+  {
+   "category": "ADJUDICATION",
+   "cause": "no verdict recorded",
+   "command": "claimstone adjudicate <workspace>/example-news-and-returns Q15 --round r1 --profile-sha256 99e704912f0a3ac748f57263dc4da3ef30b18b6ec48830be4bc9cb05676640d8 --verdict <ONE_OF_FIVE> --rationale-file <file> --by <name>",
+   "note": "a person reads the profile and signs; an agent does not",
+   "scope": "flow 0df548e37436",
+   "subject": "Q15"
+  },
+  {
+   "category": "ADJUDICATION",
+   "cause": "no verdict recorded",
+   "command": "claimstone adjudicate <workspace>/example-news-and-returns Q16 --round r1 --profile-sha256 44cb16833f63df68f2bf39006ae07e26a0847068d36628da04d9f6a7fbb7cb1b --verdict <ONE_OF_FIVE> --rationale-file <file> --by <name>",
+   "note": "a person reads the profile and signs; an agent does not",
+   "scope": "flow 0df548e37436",
+   "subject": "Q16"
+  },
+  {
+   "category": "ADJUDICATION",
+   "cause": "no verdict recorded",
+   "command": "claimstone adjudicate <workspace>/example-news-and-returns Q17 --round r1 --profile-sha256 c7b1361a1bc93abdfb2f06a32e22a939f722f88a4b977c9e9894e0f01a0f1cd0 --verdict <ONE_OF_FIVE> --rationale-file <file> --by <name>",
+   "note": "a person reads the profile and signs; an agent does not",
+   "scope": "flow 0df548e37436",
+   "subject": "Q17"
+  },
+  {
+   "category": "ADJUDICATION",
+   "cause": "no verdict recorded",
+   "command": "claimstone adjudicate <workspace>/example-news-and-returns Q18 --round r1 --profile-sha256 73b367b2bc7feaa947972a1d49e91ff346076346bd72b4da43be76aa5a93ed4b --verdict <ONE_OF_FIVE> --rationale-file <file> --by <name>",
+   "note": "a person reads the profile and signs; an agent does not",
+   "scope": "flow 0df548e37436",
+   "subject": "Q18"
+  },
+  {
+   "category": "ADJUDICATION",
+   "cause": "no verdict recorded",
+   "command": "claimstone adjudicate <workspace>/example-news-and-returns Q19 --round r1 --profile-sha256 7f8768fd09b9d6309e3ebf5059b7ad91c9931726e9e485d03f9b812360c845b0 --verdict <ONE_OF_FIVE> --rationale-file <file> --by <name>",
+   "note": "a person reads the profile and signs; an agent does not",
+   "scope": "flow 0df548e37436",
+   "subject": "Q19"
+  },
+  {
+   "category": "ADJUDICATION",
+   "cause": "no verdict recorded",
+   "command": "claimstone adjudicate <workspace>/example-news-and-returns Q20 --round r1 --profile-sha256 1898f820dd76b8bd5519f2954b8f79b9ec8f6e25f06f4b69caeabc8f4354d758 --verdict <ONE_OF_FIVE> --rationale-file <file> --by <name>",
+   "note": "a person reads the profile and signs; an agent does not",
+   "scope": "flow 0df548e37436",
+   "subject": "Q20"
+  }
+ ],
+ "legacy": false,
+ "project": "example-news-and-returns",
+ "questions": {
+  "project": "example-news-and-returns",
+  "round": "r1",
+  "rows": [
+   {
+    "awaiting_review": 0,
+    "blocking": [],
+    "claims": 0,
+    "claims_by_class": {},
+    "coverage": {
+     "examined": 2,
+     "sources": 0
+    },
+    "direction_count": {},
+    "direction_count_note": "a count, not a strength",
+    "extraction": {
+     "expected": 2,
+     "unanswered": 0,
+     "unchunked_sources": 0,
+     "unharvested": 0,
+     "unregated": 0
+    },
+    "gate_rejected": {},
+    "gate_rejected_total": 0,
+    "id": "Q01",
+    "kind": "premise",
+    "note": null,
+    "operational_not_applicable": false,
+    "profile_sha256": "e6ec062e844c2d79daaf7af791650fce5954eb2c609f61d131f2d52944352b15",
+    "provisional": false,
+    "state": "NO_VERIFIED_CLAIM",
+    "stored_profile_stale": false,
+    "text": "A future return is neither semantic ground truth about a news item nor proof that the news caused it.",
+    "unavailable": "",
+    "verdict": null,
+    "verdict_stale": false
+   },
+   {
+    "awaiting_review": 2,
+    "blocking": [
+     "awaiting_review"
+    ],
+    "claims": 2,
+    "claims_by_class": {
+     "ACA": 2
+    },
+    "coverage": {
+     "examined": 2,
+     "sources": 0
+    },
+    "direction_count": {},
+    "direction_count_note": "a count, not a strength",
+    "extraction": {
+     "expected": 2,
+     "unanswered": 0,
+     "unchunked_sources": 0,
+     "unharvested": 0,
+     "unregated": 0
+    },
+    "gate_rejected": {},
+    "gate_rejected_total": 0,
+    "id": "Q02",
+    "kind": "effect",
+    "note": null,
+    "operational_not_applicable": false,
+    "profile_sha256": "7056ff48a8e45f615aadc993d51035ac4add9a7686d5190f3fee1703f759f9c5",
+    "provisional": true,
+    "state": "NO_VERIFIED_CLAIM",
+    "stored_profile_stale": false,
+    "text": "The sentiment or event content of news carries information about future returns beyond what prices already reflect.",
+    "unavailable": "",
+    "verdict": null,
+    "verdict_stale": false
+   },
+   {
+    "awaiting_review": 0,
+    "blocking": [],
+    "claims": 0,
+    "claims_by_class": {},
+    "coverage": {
+     "examined": 2,
+     "sources": 0
+    },
+    "direction_count": {},
+    "direction_count_note": "a count, not a strength",
+    "extraction": {
+     "expected": 2,
+     "unanswered": 0,
+     "unchunked_sources": 0,
+     "unharvested": 0,
+     "unregated": 0
+    },
+    "gate_rejected": {},
+    "gate_rejected_total": 0,
+    "id": "Q03",
+    "kind": "effect",
+    "note": null,
+    "operational_not_applicable": false,
+    "profile_sha256": "37bb8e1a7b5685e7f949dfac9b6919fca01229d8e93a0aff44d814851e4269a7",
+    "provisional": false,
+    "state": "NO_VERIFIED_CLAIM",
+    "stored_profile_stale": false,
+    "text": "Positive and negative news are incorporated at different speeds and persist for different lengths of time.",
+    "unavailable": "",
+    "verdict": null,
+    "verdict_stale": false
+   },
+   {
+    "awaiting_review": 0,
+    "blocking": [],
+    "claims": 0,
+    "claims_by_class": {},
+    "coverage": {
+     "examined": 2,
+     "sources": 0
+    },
+    "direction_count": {},
+    "direction_count_note": "a count, not a strength",
+    "extraction": {
+     "expected": 2,
+     "unanswered": 0,
+     "unchunked_sources": 0,
+     "unharvested": 0,
+     "unregated": 0
+    },
+    "gate_rejected": {},
+    "gate_rejected_total": 0,
+    "id": "Q04",
+    "kind": "method",
+    "note": null,
+    "operational_not_applicable": false,
+    "profile_sha256": "06be0864a3ebcffc83d1e8f0595952a50264c6f818b048dd348bbe6887b6b501",
+    "provisional": false,
+    "state": "NO_VERIFIED_CLAIM",
+    "stored_profile_stale": false,
+    "text": "The information event, rather than the individual article, is the appropriate unit of inference.",
+    "unavailable": "",
+    "verdict": null,
+    "verdict_stale": false
+   },
+   {
+    "awaiting_review": 0,
+    "blocking": [],
+    "claims": 0,
+    "claims_by_class": {},
+    "coverage": {
+     "examined": 2,
+     "sources": 0
+    },
+    "direction_count": {},
+    "direction_count_note": "a count, not a strength",
+    "extraction": {
+     "expected": 2,
+     "unanswered": 0,
+     "unchunked_sources": 0,
+     "unharvested": 0,
+     "unregated": 0
+    },
+    "gate_rejected": {},
+    "gate_rejected_total": 0,
+    "id": "Q05",
+    "kind": "heterogeneity",
+    "note": null,
+    "operational_not_applicable": false,
+    "profile_sha256": "3e8533b14a139299950a02f5804cf7513d1a412699549d8b3fcad0051ec487a6",
+    "provisional": false,
+    "state": "NO_VERIFIED_CLAIM",
+    "stored_profile_stale": false,
+    "text": "Novelty and staleness of a news item change the size of the price reaction.",
+    "unavailable": "",
+    "verdict": null,
+    "verdict_stale": false
+   },
+   {
+    "awaiting_review": 0,
+    "blocking": [],
+    "claims": 0,
+    "claims_by_class": {},
+    "coverage": {
+     "examined": 2,
+     "sources": 0
+    },
+    "direction_count": {},
+    "direction_count_note": "a count, not a strength",
+    "extraction": {
+     "expected": 2,
+     "unanswered": 0,
+     "unchunked_sources": 0,
+     "unharvested": 0,
+     "unregated": 0
+    },
+    "gate_rejected": {},
+    "gate_rejected_total": 0,
+    "id": "Q06",
+    "kind": "method",
+    "note": null,
+    "operational_not_applicable": false,
+    "profile_sha256": "48941cd08f1aa72b4a42762a8531b6d2021a3fa2efc03c107f02c8e53d11fb21",
+    "provisional": false,
+    "state": "NO_VERIFIED_CLAIM",
+    "stored_profile_stale": false,
+    "text": "Market- and sector-adjusted abnormal return is a better outcome than raw return for this question.",
+    "unavailable": "",
+    "verdict": null,
+    "verdict_stale": false
+   },
+   {
+    "awaiting_review": 0,
+    "blocking": [],
+    "claims": 0,
+    "claims_by_class": {},
+    "coverage": {
+     "examined": 2,
+     "sources": 0
+    },
+    "direction_count": {},
+    "direction_count_note": "a count, not a strength",
+    "extraction": {
+     "expected": 2,
+     "unanswered": 0,
+     "unchunked_sources": 0,
+     "unharvested": 0,
+     "unregated": 0
+    },
+    "gate_rejected": {},
+    "gate_rejected_total": 0,
+    "id": "Q07",
+    "kind": "method",
+    "note": null,
+    "operational_not_applicable": false,
+    "profile_sha256": "44219d381822d5821d5e5ad6d1671d58d97148f5900412c9d52da4dca6204f5f",
+    "provisional": false,
+    "state": "NO_VERIFIED_CLAIM",
+    "stored_profile_stale": false,
+    "text": "Issuer-specific, sector-level and macro news require different outcomes and different statistical units.",
+    "unavailable": "",
+    "verdict": null,
+    "verdict_stale": false
+   },
+   {
+    "awaiting_review": 0,
+    "blocking": [],
+    "claims": 0,
+    "claims_by_class": {},
+    "coverage": {
+     "examined": 2,
+     "sources": 0
+    },
+    "direction_count": {},
+    "direction_count_note": "a count, not a strength",
+    "extraction": {
+     "expected": 2,
+     "unanswered": 0,
+     "unchunked_sources": 0,
+     "unharvested": 0,
+     "unregated": 0
+    },
+    "gate_rejected": {},
+    "gate_rejected_total": 0,
+    "id": "Q08",
+    "kind": "method",
+    "note": null,
+    "operational_not_applicable": false,
+    "profile_sha256": "3083a9859453a0a31eb1f67ce11890a6cbcff86e1279b7480d8a06f8771bde69",
+    "provisional": false,
+    "state": "NO_VERIFIED_CLAIM",
+    "stored_profile_stale": false,
+    "text": "Matched no-news and neutral-news observations are distinct and complementary controls.",
+    "unavailable": "",
+    "verdict": null,
+    "verdict_stale": false
+   },
+   {
+    "awaiting_review": 0,
+    "blocking": [],
+    "claims": 0,
+    "claims_by_class": {},
+    "coverage": {
+     "examined": 2,
+     "sources": 0
+    },
+    "direction_count": {},
+    "direction_count_note": "a count, not a strength",
+    "extraction": {
+     "expected": 2,
+     "unanswered": 0,
+     "unchunked_sources": 0,
+     "unharvested": 0,
+     "unregated": 0
+    },
+    "gate_rejected": {},
+    "gate_rejected_total": 0,
+    "id": "Q09",
+    "kind": "method",
+    "note": null,
+    "operational_not_applicable": false,
+    "profile_sha256": "711d6aa87a265747f4e247f99de3bb64b0385d3c12338a136858297672b1fdb8",
+    "provisional": false,
+    "state": "NO_VERIFIED_CLAIM",
+    "stored_profile_stale": false,
+    "text": "The first observable and executable timestamp, not the nominal publication time, determines what was tradable.",
+    "unavailable": "",
+    "verdict": null,
+    "verdict_stale": false
+   },
+   {
+    "awaiting_review": 0,
+    "blocking": [],
+    "claims": 0,
+    "claims_by_class": {},
+    "coverage": {
+     "examined": 2,
+     "sources": 0
+    },
+    "direction_count": {},
+    "direction_count_note": "a count, not a strength",
+    "extraction": {
+     "expected": 2,
+     "unanswered": 0,
+     "unchunked_sources": 0,
+     "unharvested": 0,
+     "unregated": 0
+    },
+    "gate_rejected": {},
+    "gate_rejected_total": 0,
+    "id": "Q10",
+    "kind": "heterogeneity",
+    "note": null,
+    "operational_not_applicable": false,
+    "profile_sha256": "0128ec0d8e7677fa9554f70ee348a59b8608b2cfa55a64ea5622c43320e7c000",
+    "provisional": false,
+    "state": "NO_VERIFIED_CLAIM",
+    "stored_profile_stale": false,
+    "text": "The effect varies materially by event type, and post-earnings drift does not transfer to generic news.",
+    "unavailable": "",
+    "verdict": null,
+    "verdict_stale": false
+   },
+   {
+    "awaiting_review": 0,
+    "blocking": [],
+    "claims": 0,
+    "claims_by_class": {},
+    "coverage": {
+     "examined": 2,
+     "sources": 0
+    },
+    "direction_count": {},
+    "direction_count_note": "a count, not a strength",
+    "extraction": {
+     "expected": 2,
+     "unanswered": 0,
+     "unchunked_sources": 0,
+     "unharvested": 0,
+     "unregated": 0
+    },
+    "gate_rejected": {},
+    "gate_rejected_total": 0,
+    "id": "Q11",
+    "kind": "effect",
+    "note": null,
+    "operational_not_applicable": false,
+    "profile_sha256": "fa2dcc3e0671a753f332d74495fb19260cce5d3284144424de60b4011ed286ff",
+    "provisional": false,
+    "state": "NO_VERIFIED_CLAIM",
+    "stored_profile_stale": false,
+    "text": "A contextual or language-model measure of news adds information over a simple lexical baseline.",
+    "unavailable": "",
+    "verdict": null,
+    "verdict_stale": false
+   },
+   {
+    "awaiting_review": 0,
+    "blocking": [],
+    "claims": 0,
+    "claims_by_class": {},
+    "coverage": {
+     "examined": 2,
+     "sources": 0
+    },
+    "direction_count": {},
+    "direction_count_note": "a count, not a strength",
+    "extraction": {
+     "expected": 2,
+     "unanswered": 0,
+     "unchunked_sources": 0,
+     "unharvested": 0,
+     "unregated": 0
+    },
+    "gate_rejected": {},
+    "gate_rejected_total": 0,
+    "id": "Q12",
+    "kind": "heterogeneity",
+    "note": null,
+    "operational_not_applicable": false,
+    "profile_sha256": "a5fad361b2f11c891a742e75c80820997ff8acd52db0021e7d2405ca168fd599",
+    "provisional": false,
+    "state": "NO_VERIFIED_CLAIM",
+    "stored_profile_stale": false,
+    "text": "Attention, firm size, liquidity and the information environment moderate underreaction.",
+    "unavailable": "",
+    "verdict": null,
+    "verdict_stale": false
+   },
+   {
+    "awaiting_review": 0,
+    "blocking": [],
+    "claims": 0,
+    "claims_by_class": {},
+    "coverage": {
+     "examined": 2,
+     "sources": 0
+    },
+    "direction_count": {},
+    "direction_count_note": "a count, not a strength",
+    "extraction": {
+     "expected": 2,
+     "unanswered": 0,
+     "unchunked_sources": 0,
+     "unharvested": 0,
+     "unregated": 0
+    },
+    "gate_rejected": {},
+    "gate_rejected_total": 0,
+    "id": "Q13",
+    "kind": "effect",
+    "note": null,
+    "operational_not_applicable": false,
+    "profile_sha256": "a90e803bc115a63fb10f97cc4b3a1aa8076c8148ee55583c6d14d8a15312b7e2",
+    "provisional": false,
+    "state": "NO_VERIFIED_CLAIM",
+    "stored_profile_stale": false,
+    "text": "The effect survives realistic transaction costs, spreads and price impact at a plausible trading size.",
+    "unavailable": "",
+    "verdict": null,
+    "verdict_stale": false
+   },
+   {
+    "awaiting_review": 0,
+    "blocking": [],
+    "claims": 0,
+    "claims_by_class": {},
+    "coverage": {
+     "examined": 2,
+     "sources": 0
+    },
+    "direction_count": {},
+    "direction_count_note": "a count, not a strength",
+    "extraction": {
+     "expected": 2,
+     "unanswered": 0,
+     "unchunked_sources": 0,
+     "unharvested": 0,
+     "unregated": 0
+    },
+    "gate_rejected": {},
+    "gate_rejected_total": 0,
+    "id": "Q14",
+    "kind": "method",
+    "note": null,
+    "operational_not_applicable": false,
+    "profile_sha256": "bfc283554120eedb4b8cad8f137a2041fcc5427423d8f50d34f97b90e366bd54",
+    "provisional": false,
+    "state": "NO_VERIFIED_CLAIM",
+    "stored_profile_stale": false,
+    "text": "The effect survives correction for multiple testing at the significance bar the field now expects.",
+    "unavailable": "",
+    "verdict": null,
+    "verdict_stale": false
+   },
+   {
+    "awaiting_review": 0,
+    "blocking": [],
+    "claims": 0,
+    "claims_by_class": {},
+    "coverage": {
+     "examined": 2,
+     "sources": 0
+    },
+    "direction_count": {},
+    "direction_count_note": "a count, not a strength",
+    "extraction": {
+     "expected": 2,
+     "unanswered": 0,
+     "unchunked_sources": 0,
+     "unharvested": 0,
+     "unregated": 0
+    },
+    "gate_rejected": {},
+    "gate_rejected_total": 0,
+    "id": "Q15",
+    "kind": "effect",
+    "note": null,
+    "operational_not_applicable": false,
+    "profile_sha256": "99e704912f0a3ac748f57263dc4da3ef30b18b6ec48830be4bc9cb05676640d8",
+    "provisional": false,
+    "state": "NO_VERIFIED_CLAIM",
+    "stored_profile_stale": false,
+    "text": "The effect persists after the publication that reported it, rather than decaying once it is known.",
+    "unavailable": "",
+    "verdict": null,
+    "verdict_stale": false
+   },
+   {
+    "awaiting_review": 0,
+    "blocking": [],
+    "claims": 0,
+    "claims_by_class": {},
+    "coverage": {
+     "examined": 2,
+     "sources": 0
+    },
+    "direction_count": {},
+    "direction_count_note": "a count, not a strength",
+    "extraction": {
+     "expected": 2,
+     "unanswered": 0,
+     "unchunked_sources": 0,
+     "unharvested": 0,
+     "unregated": 0
+    },
+    "gate_rejected": {},
+    "gate_rejected_total": 0,
+    "id": "Q16",
+    "kind": "method",
+    "note": null,
+    "operational_not_applicable": false,
+    "profile_sha256": "44cb16833f63df68f2bf39006ae07e26a0847068d36628da04d9f6a7fbb7cb1b",
+    "provisional": false,
+    "state": "NO_VERIFIED_CLAIM",
+    "stored_profile_stale": false,
+    "text": "The reported relationship is causally identified rather than merely predictive in sample.",
+    "unavailable": "",
+    "verdict": null,
+    "verdict_stale": false
+   },
+   {
+    "awaiting_review": 0,
+    "blocking": [],
+    "claims": 0,
+    "claims_by_class": {},
+    "coverage": {
+     "examined": 2,
+     "sources": 0
+    },
+    "direction_count": {},
+    "direction_count_note": "a count, not a strength",
+    "extraction": {
+     "expected": 2,
+     "unanswered": 0,
+     "unchunked_sources": 0,
+     "unharvested": 0,
+     "unregated": 0
+    },
+    "gate_rejected": {},
+    "gate_rejected_total": 0,
+    "id": "Q17",
+    "kind": "heterogeneity",
+    "note": null,
+    "operational_not_applicable": false,
+    "profile_sha256": "c7b1361a1bc93abdfb2f06a32e22a939f722f88a4b977c9e9894e0f01a0f1cd0",
+    "provisional": false,
+    "state": "NO_VERIFIED_CLAIM",
+    "stored_profile_stale": false,
+    "text": "A stated economic mechanism predicts where the effect should and should not appear, and that prediction holds.",
+    "unavailable": "",
+    "verdict": null,
+    "verdict_stale": false
+   },
+   {
+    "awaiting_review": 0,
+    "blocking": [],
+    "claims": 0,
+    "claims_by_class": {},
+    "coverage": {
+     "examined": 2,
+     "sources": 0
+    },
+    "direction_count": {},
+    "direction_count_note": "a count, not a strength",
+    "extraction": {
+     "expected": 2,
+     "unanswered": 0,
+     "unchunked_sources": 0,
+     "unharvested": 0,
+     "unregated": 0
+    },
+    "gate_rejected": {},
+    "gate_rejected_total": 0,
+    "id": "Q18",
+    "kind": "method",
+    "note": null,
+    "operational_not_applicable": false,
+    "profile_sha256": "73b367b2bc7feaa947972a1d49e91ff346076346bd72b4da43be76aa5a93ed4b",
+    "provisional": false,
+    "state": "NO_VERIFIED_CLAIM",
+    "stored_profile_stale": false,
+    "text": "Inference accounts for overlapping event windows and cross-sectional dependence rather than assuming independence.",
+    "unavailable": "",
+    "verdict": null,
+    "verdict_stale": false
+   },
+   {
+    "awaiting_review": 0,
+    "blocking": [],
+    "claims": 0,
+    "claims_by_class": {},
+    "coverage": {
+     "examined": 2,
+     "sources": 0
+    },
+    "direction_count": {},
+    "direction_count_note": "a count, not a strength",
+    "extraction": {
+     "expected": 2,
+     "unanswered": 0,
+     "unchunked_sources": 0,
+     "unharvested": 0,
+     "unregated": 0
+    },
+    "gate_rejected": {},
+    "gate_rejected_total": 0,
+    "id": "Q19",
+    "kind": "effect",
+    "note": null,
+    "operational_not_applicable": false,
+    "profile_sha256": "7f8768fd09b9d6309e3ebf5059b7ad91c9931726e9e485d03f9b812360c845b0",
+    "provisional": false,
+    "state": "NO_VERIFIED_CLAIM",
+    "stored_profile_stale": false,
+    "text": "Measured latency between publication and market reaction is short enough to matter for an executable rule.",
+    "unavailable": "",
+    "verdict": null,
+    "verdict_stale": false
+   },
+   {
+    "awaiting_review": 0,
+    "blocking": [],
+    "claims": 0,
+    "claims_by_class": {},
+    "coverage": {
+     "examined": 2,
+     "sources": 0
+    },
+    "direction_count": {},
+    "direction_count_note": "a count, not a strength",
+    "extraction": {
+     "expected": 2,
+     "unanswered": 0,
+     "unchunked_sources": 0,
+     "unharvested": 0,
+     "unregated": 0
+    },
+    "gate_rejected": {},
+    "gate_rejected_total": 0,
+    "id": "Q20",
+    "kind": "effect",
+    "note": null,
+    "operational_not_applicable": false,
+    "profile_sha256": "1898f820dd76b8bd5519f2954b8f79b9ec8f6e25f06f4b69caeabc8f4354d758",
+    "provisional": false,
+    "state": "NO_VERIFIED_CLAIM",
+    "stored_profile_stale": false,
+    "text": "Abnormal volume or price movement before publication indicates the information was already partly incorporated.",
+    "unavailable": "",
+    "verdict": null,
+    "verdict_stale": false
+   }
+  ]
+ },
+ "selector": {
+  "manifest_only": false,
+  "round": "r1"
+ },
+ "selector_label": "round r1",
+ "state": {
+  "errors": [],
+  "floor": {
+   "basis": "confirmed",
+   "blocking": [],
+   "confirmed": 2,
+   "failures_by_class": {},
+   "failures_by_host": {},
+   "final": true,
+   "floor": 0.8,
+   "floor_set_at": "2026-09-22",
+   "floor_version": 1,
+   "found": 2,
+   "obtained": 2,
+   "rate": 1.0,
+   "status": "OK"
+  },
+  "project": "example-news-and-returns",
+  "questions": [
+   {
+    "blocking": [],
+    "claims": 0,
+    "claims_by_class": {},
+    "coverage_examined": 2,
+    "coverage_sources": 0,
+    "extraction": {
+     "expected": 2,
+     "unanswered": 0,
+     "unchunked_sources": 0,
+     "unharvested": 0,
+     "unregated": 0
+    },
+    "id": "Q01",
+    "kind": "premise",
+    "profile_sha256": "e6ec062e844c2d79daaf7af791650fce5954eb2c609f61d131f2d52944352b15",
+    "provisional": false,
+    "state": "NO_VERIFIED_CLAIM",
+    "text": "A future return is neither semantic ground truth about a news item nor proof that the news caused it.",
+    "verdict": null,
+    "verdict_stale": false
+   },
+   {
+    "blocking": [
+     "awaiting_review"
+    ],
+    "claims": 2,
+    "claims_by_class": {
+     "ACA": 2
+    },
+    "coverage_examined": 2,
+    "coverage_sources": 0,
+    "extraction": {
+     "expected": 2,
+     "unanswered": 0,
+     "unchunked_sources": 0,
+     "unharvested": 0,
+     "unregated": 0
+    },
+    "id": "Q02",
+    "kind": "effect",
+    "profile_sha256": "7056ff48a8e45f615aadc993d51035ac4add9a7686d5190f3fee1703f759f9c5",
+    "provisional": true,
+    "state": "NO_VERIFIED_CLAIM",
+    "text": "The sentiment or event content of news carries information about future returns beyond what prices already reflect.",
+    "verdict": null,
+    "verdict_stale": false
+   },
+   {
+    "blocking": [],
+    "claims": 0,
+    "claims_by_class": {},
+    "coverage_examined": 2,
+    "coverage_sources": 0,
+    "extraction": {
+     "expected": 2,
+     "unanswered": 0,
+     "unchunked_sources": 0,
+     "unharvested": 0,
+     "unregated": 0
+    },
+    "id": "Q03",
+    "kind": "effect",
+    "profile_sha256": "37bb8e1a7b5685e7f949dfac9b6919fca01229d8e93a0aff44d814851e4269a7",
+    "provisional": false,
+    "state": "NO_VERIFIED_CLAIM",
+    "text": "Positive and negative news are incorporated at different speeds and persist for different lengths of time.",
+    "verdict": null,
+    "verdict_stale": false
+   },
+   {
+    "blocking": [],
+    "claims": 0,
+    "claims_by_class": {},
+    "coverage_examined": 2,
+    "coverage_sources": 0,
+    "extraction": {
+     "expected": 2,
+     "unanswered": 0,
+     "unchunked_sources": 0,
+     "unharvested": 0,
+     "unregated": 0
+    },
+    "id": "Q04",
+    "kind": "method",
+    "profile_sha256": "06be0864a3ebcffc83d1e8f0595952a50264c6f818b048dd348bbe6887b6b501",
+    "provisional": false,
+    "state": "NO_VERIFIED_CLAIM",
+    "text": "The information event, rather than the individual article, is the appropriate unit of inference.",
+    "verdict": null,
+    "verdict_stale": false
+   },
+   {
+    "blocking": [],
+    "claims": 0,
+    "claims_by_class": {},
+    "coverage_examined": 2,
+    "coverage_sources": 0,
+    "extraction": {
+     "expected": 2,
+     "unanswered": 0,
+     "unchunked_sources": 0,
+     "unharvested": 0,
+     "unregated": 0
+    },
+    "id": "Q05",
+    "kind": "heterogeneity",
+    "profile_sha256": "3e8533b14a139299950a02f5804cf7513d1a412699549d8b3fcad0051ec487a6",
+    "provisional": false,
+    "state": "NO_VERIFIED_CLAIM",
+    "text": "Novelty and staleness of a news item change the size of the price reaction.",
+    "verdict": null,
+    "verdict_stale": false
+   },
+   {
+    "blocking": [],
+    "claims": 0,
+    "claims_by_class": {},
+    "coverage_examined": 2,
+    "coverage_sources": 0,
+    "extraction": {
+     "expected": 2,
+     "unanswered": 0,
+     "unchunked_sources": 0,
+     "unharvested": 0,
+     "unregated": 0
+    },
+    "id": "Q06",
+    "kind": "method",
+    "profile_sha256": "48941cd08f1aa72b4a42762a8531b6d2021a3fa2efc03c107f02c8e53d11fb21",
+    "provisional": false,
+    "state": "NO_VERIFIED_CLAIM",
+    "text": "Market- and sector-adjusted abnormal return is a better outcome than raw return for this question.",
+    "verdict": null,
+    "verdict_stale": false
+   },
+   {
+    "blocking": [],
+    "claims": 0,
+    "claims_by_class": {},
+    "coverage_examined": 2,
+    "coverage_sources": 0,
+    "extraction": {
+     "expected": 2,
+     "unanswered": 0,
+     "unchunked_sources": 0,
+     "unharvested": 0,
+     "unregated": 0
+    },
+    "id": "Q07",
+    "kind": "method",
+    "profile_sha256": "44219d381822d5821d5e5ad6d1671d58d97148f5900412c9d52da4dca6204f5f",
+    "provisional": false,
+    "state": "NO_VERIFIED_CLAIM",
+    "text": "Issuer-specific, sector-level and macro news require different outcomes and different statistical units.",
+    "verdict": null,
+    "verdict_stale": false
+   },
+   {
+    "blocking": [],
+    "claims": 0,
+    "claims_by_class": {},
+    "coverage_examined": 2,
+    "coverage_sources": 0,
+    "extraction": {
+     "expected": 2,
+     "unanswered": 0,
+     "unchunked_sources": 0,
+     "unharvested": 0,
+     "unregated": 0
+    },
+    "id": "Q08",
+    "kind": "method",
+    "profile_sha256": "3083a9859453a0a31eb1f67ce11890a6cbcff86e1279b7480d8a06f8771bde69",
+    "provisional": false,
+    "state": "NO_VERIFIED_CLAIM",
+    "text": "Matched no-news and neutral-news observations are distinct and complementary controls.",
+    "verdict": null,
+    "verdict_stale": false
+   },
+   {
+    "blocking": [],
+    "claims": 0,
+    "claims_by_class": {},
+    "coverage_examined": 2,
+    "coverage_sources": 0,
+    "extraction": {
+     "expected": 2,
+     "unanswered": 0,
+     "unchunked_sources": 0,
+     "unharvested": 0,
+     "unregated": 0
+    },
+    "id": "Q09",
+    "kind": "method",
+    "profile_sha256": "711d6aa87a265747f4e247f99de3bb64b0385d3c12338a136858297672b1fdb8",
+    "provisional": false,
+    "state": "NO_VERIFIED_CLAIM",
+    "text": "The first observable and executable timestamp, not the nominal publication time, determines what was tradable.",
+    "verdict": null,
+    "verdict_stale": false
+   },
+   {
+    "blocking": [],
+    "claims": 0,
+    "claims_by_class": {},
+    "coverage_examined": 2,
+    "coverage_sources": 0,
+    "extraction": {
+     "expected": 2,
+     "unanswered": 0,
+     "unchunked_sources": 0,
+     "unharvested": 0,
+     "unregated": 0
+    },
+    "id": "Q10",
+    "kind": "heterogeneity",
+    "profile_sha256": "0128ec0d8e7677fa9554f70ee348a59b8608b2cfa55a64ea5622c43320e7c000",
+    "provisional": false,
+    "state": "NO_VERIFIED_CLAIM",
+    "text": "The effect varies materially by event type, and post-earnings drift does not transfer to generic news.",
+    "verdict": null,
+    "verdict_stale": false
+   },
+   {
+    "blocking": [],
+    "claims": 0,
+    "claims_by_class": {},
+    "coverage_examined": 2,
+    "coverage_sources": 0,
+    "extraction": {
+     "expected": 2,
+     "unanswered": 0,
+     "unchunked_sources": 0,
+     "unharvested": 0,
+     "unregated": 0
+    },
+    "id": "Q11",
+    "kind": "effect",
+    "profile_sha256": "fa2dcc3e0671a753f332d74495fb19260cce5d3284144424de60b4011ed286ff",
+    "provisional": false,
+    "state": "NO_VERIFIED_CLAIM",
+    "text": "A contextual or language-model measure of news adds information over a simple lexical baseline.",
+    "verdict": null,
+    "verdict_stale": false
+   },
+   {
+    "blocking": [],
+    "claims": 0,
+    "claims_by_class": {},
+    "coverage_examined": 2,
+    "coverage_sources": 0,
+    "extraction": {
+     "expected": 2,
+     "unanswered": 0,
+     "unchunked_sources": 0,
+     "unharvested": 0,
+     "unregated": 0
+    },
+    "id": "Q12",
+    "kind": "heterogeneity",
+    "profile_sha256": "a5fad361b2f11c891a742e75c80820997ff8acd52db0021e7d2405ca168fd599",
+    "provisional": false,
+    "state": "NO_VERIFIED_CLAIM",
+    "text": "Attention, firm size, liquidity and the information environment moderate underreaction.",
+    "verdict": null,
+    "verdict_stale": false
+   },
+   {
+    "blocking": [],
+    "claims": 0,
+    "claims_by_class": {},
+    "coverage_examined": 2,
+    "coverage_sources": 0,
+    "extraction": {
+     "expected": 2,
+     "unanswered": 0,
+     "unchunked_sources": 0,
+     "unharvested": 0,
+     "unregated": 0
+    },
+    "id": "Q13",
+    "kind": "effect",
+    "profile_sha256": "a90e803bc115a63fb10f97cc4b3a1aa8076c8148ee55583c6d14d8a15312b7e2",
+    "provisional": false,
+    "state": "NO_VERIFIED_CLAIM",
+    "text": "The effect survives realistic transaction costs, spreads and price impact at a plausible trading size.",
+    "verdict": null,
+    "verdict_stale": false
+   },
+   {
+    "blocking": [],
+    "claims": 0,
+    "claims_by_class": {},
+    "coverage_examined": 2,
+    "coverage_sources": 0,
+    "extraction": {
+     "expected": 2,
+     "unanswered": 0,
+     "unchunked_sources": 0,
+     "unharvested": 0,
+     "unregated": 0
+    },
+    "id": "Q14",
+    "kind": "method",
+    "profile_sha256": "bfc283554120eedb4b8cad8f137a2041fcc5427423d8f50d34f97b90e366bd54",
+    "provisional": false,
+    "state": "NO_VERIFIED_CLAIM",
+    "text": "The effect survives correction for multiple testing at the significance bar the field now expects.",
+    "verdict": null,
+    "verdict_stale": false
+   },
+   {
+    "blocking": [],
+    "claims": 0,
+    "claims_by_class": {},
+    "coverage_examined": 2,
+    "coverage_sources": 0,
+    "extraction": {
+     "expected": 2,
+     "unanswered": 0,
+     "unchunked_sources": 0,
+     "unharvested": 0,
+     "unregated": 0
+    },
+    "id": "Q15",
+    "kind": "effect",
+    "profile_sha256": "99e704912f0a3ac748f57263dc4da3ef30b18b6ec48830be4bc9cb05676640d8",
+    "provisional": false,
+    "state": "NO_VERIFIED_CLAIM",
+    "text": "The effect persists after the publication that reported it, rather than decaying once it is known.",
+    "verdict": null,
+    "verdict_stale": false
+   },
+   {
+    "blocking": [],
+    "claims": 0,
+    "claims_by_class": {},
+    "coverage_examined": 2,
+    "coverage_sources": 0,
+    "extraction": {
+     "expected": 2,
+     "unanswered": 0,
+     "unchunked_sources": 0,
+     "unharvested": 0,
+     "unregated": 0
+    },
+    "id": "Q16",
+    "kind": "method",
+    "profile_sha256": "44cb16833f63df68f2bf39006ae07e26a0847068d36628da04d9f6a7fbb7cb1b",
+    "provisional": false,
+    "state": "NO_VERIFIED_CLAIM",
+    "text": "The reported relationship is causally identified rather than merely predictive in sample.",
+    "verdict": null,
+    "verdict_stale": false
+   },
+   {
+    "blocking": [],
+    "claims": 0,
+    "claims_by_class": {},
+    "coverage_examined": 2,
+    "coverage_sources": 0,
+    "extraction": {
+     "expected": 2,
+     "unanswered": 0,
+     "unchunked_sources": 0,
+     "unharvested": 0,
+     "unregated": 0
+    },
+    "id": "Q17",
+    "kind": "heterogeneity",
+    "profile_sha256": "c7b1361a1bc93abdfb2f06a32e22a939f722f88a4b977c9e9894e0f01a0f1cd0",
+    "provisional": false,
+    "state": "NO_VERIFIED_CLAIM",
+    "text": "A stated economic mechanism predicts where the effect should and should not appear, and that prediction holds.",
+    "verdict": null,
+    "verdict_stale": false
+   },
+   {
+    "blocking": [],
+    "claims": 0,
+    "claims_by_class": {},
+    "coverage_examined": 2,
+    "coverage_sources": 0,
+    "extraction": {
+     "expected": 2,
+     "unanswered": 0,
+     "unchunked_sources": 0,
+     "unharvested": 0,
+     "unregated": 0
+    },
+    "id": "Q18",
+    "kind": "method",
+    "profile_sha256": "73b367b2bc7feaa947972a1d49e91ff346076346bd72b4da43be76aa5a93ed4b",
+    "provisional": false,
+    "state": "NO_VERIFIED_CLAIM",
+    "text": "Inference accounts for overlapping event windows and cross-sectional dependence rather than assuming independence.",
+    "verdict": null,
+    "verdict_stale": false
+   },
+   {
+    "blocking": [],
+    "claims": 0,
+    "claims_by_class": {},
+    "coverage_examined": 2,
+    "coverage_sources": 0,
+    "extraction": {
+     "expected": 2,
+     "unanswered": 0,
+     "unchunked_sources": 0,
+     "unharvested": 0,
+     "unregated": 0
+    },
+    "id": "Q19",
+    "kind": "effect",
+    "profile_sha256": "7f8768fd09b9d6309e3ebf5059b7ad91c9931726e9e485d03f9b812360c845b0",
+    "provisional": false,
+    "state": "NO_VERIFIED_CLAIM",
+    "text": "Measured latency between publication and market reaction is short enough to matter for an executable rule.",
+    "verdict": null,
+    "verdict_stale": false
+   },
+   {
+    "blocking": [],
+    "claims": 0,
+    "claims_by_class": {},
+    "coverage_examined": 2,
+    "coverage_sources": 0,
+    "extraction": {
+     "expected": 2,
+     "unanswered": 0,
+     "unchunked_sources": 0,
+     "unharvested": 0,
+     "unregated": 0
+    },
+    "id": "Q20",
+    "kind": "effect",
+    "profile_sha256": "1898f820dd76b8bd5519f2954b8f79b9ec8f6e25f06f4b69caeabc8f4354d758",
+    "provisional": false,
+    "state": "NO_VERIFIED_CLAIM",
+    "text": "Abnormal volume or price movement before publication indicates the information was already partly incorporated.",
+    "verdict": null,
+    "verdict_stale": false
+   }
+  ],
+  "rejections_by_reason": {},
+  "round": "r1",
+  "stages": [
+   {
+    "detail": "single channel (keyword): completeness not estimable",
+    "implemented": true,
+    "inputs": null,
+    "last_write": "2026-10-01T10:00:00+00:00",
+    "name": "discover",
+    "outputs": 2,
+    "progress": null,
+    "rejected": null
+   },
+   {
+    "detail": null,
+    "implemented": true,
+    "inputs": 2,
+    "last_write": "2026-10-01T11:00:00+00:00",
+    "name": "acquire",
+    "outputs": 2,
+    "progress": {
+     "done": 2,
+     "label": "confirmed of candidates found",
+     "total": 2
+    },
+    "rejected": 0
+   },
+   {
+    "detail": null,
+    "implemented": true,
+    "inputs": 2,
+    "last_write": "2026-10-01T12:00:01+00:00",
+    "name": "normalize",
+    "outputs": 2,
+    "progress": null,
+    "rejected": 0
+   },
+   {
+    "detail": null,
+    "implemented": true,
+    "inputs": 2,
+    "last_write": "2026-10-05T10:00:01+00:00",
+    "name": "extract",
+    "outputs": 2,
+    "progress": {
+     "done": 40,
+     "label": "readings answered of expected",
+     "total": 40
+    },
+    "rejected": null
+   },
+   {
+    "detail": null,
+    "implemented": true,
+    "inputs": 2,
+    "last_write": null,
+    "name": "review",
+    "outputs": null,
+    "progress": {
+     "done": 0,
+     "label": "annotations reviewed of accepted",
+     "total": 2
+    },
+    "rejected": null
+   },
+   {
+    "detail": null,
+    "implemented": true,
+    "inputs": 20,
+    "last_write": "2026-10-06T00:00:00+00:00",
+    "name": "synthesize",
+    "outputs": 20,
+    "progress": null,
+    "rejected": null
+   }
+  ],
+  "unavailable": "",
+  "verdicts_recorded": 0,
+  "verdicts_stale": 0
+ },
+ "unavailable": ""
+}

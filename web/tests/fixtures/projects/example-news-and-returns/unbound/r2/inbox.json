@@ -1,0 +1,21 @@
+{
+ "api_version": 1,
+ "cards": [
+  {
+   "category": "ACQUISITION",
+   "cause": "acquisition failed: NOT_ATTEMPTED",
+   "command": "claimstone acquire <workspace>/example-news-and-returns --round r2 --dry-run",
+   "note": "network requests: preview with --dry-run, then run without it only with the operator's authorization for the sweep (AGENTS.md)",
+   "scope": "legacy round r2",
+   "subject": "S03"
+  },
+  {
+   "category": "ACQUISITION",
+   "cause": "HTTP 403 — access refused (stored as PAYWALL_403; not proof of a paywall or of a purchasable copy)",
+   "command": "claimstone acquire <workspace>/example-news-and-returns --round r2 --retry-class PAYWALL_403 --campaign <campaign-name>",
+   "note": "terminal: retry only in a named campaign the operator authorizes (AGENTS.md)",
+   "scope": "legacy round r2",
+   "subject": "r2-w"
+  }
+ ]
+}

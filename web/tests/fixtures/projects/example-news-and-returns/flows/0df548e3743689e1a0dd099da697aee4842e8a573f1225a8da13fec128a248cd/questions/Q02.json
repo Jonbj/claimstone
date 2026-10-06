@@ -1,0 +1,100 @@
+{
+ "api_version": 1,
+ "id": "Q02",
+ "kind": "effect",
+ "not_applicable_state": null,
+ "operational_not_applicable": false,
+ "profile": {
+  "acquisition": {
+   "basis": "confirmed",
+   "blocking": [],
+   "confirmed": 2,
+   "final": true,
+   "floor": 0.8,
+   "floor_set_at": "2026-09-22",
+   "floor_version": 1,
+   "found": 2,
+   "obtained": 2,
+   "rate": 1.0
+  },
+  "awaiting_review": 2,
+  "blocking": [
+   "awaiting_review"
+  ],
+  "by_class": {
+   "against": {},
+   "for": {}
+  },
+  "claim_gate_version": 4,
+  "coverage": {
+   "examined": 2,
+   "sources": 0
+  },
+  "decision_contract_version": 1,
+  "direction_count": {},
+  "evidence_sha256": "7d81e82f3f28d3209d8b42811a4a7b0a295a9e52d2860f417e97c4871e7b73b0",
+  "extraction": {
+   "expected": 2,
+   "unanswered": 0,
+   "unchunked_sources": 0,
+   "unharvested": 0,
+   "unregated": 0
+  },
+  "gate_rejected": {},
+  "kind": "effect",
+  "linkage": "unestablished",
+  "manifest_only": false,
+  "population": [
+   "S01",
+   "S02"
+  ],
+  "profile_sha256": "7056ff48a8e45f615aadc993d51035ac4add9a7686d5190f3fee1703f759f9c5",
+  "profile_version": 5,
+  "provisional": true,
+  "question_id": "Q02",
+  "registry_sha256": "85e5fcc44ddca1d69fbe385b5181e97467fbb0cf82f8d08fd26d33adc0402fce",
+  "registry_version": 2,
+  "results": [],
+  "reviewed_not_usable": {},
+  "round": "r1",
+  "sample_labels": [],
+  "sources": [],
+  "state": "NO_VERIFIED_CLAIM"
+ },
+ "profile_fields": {
+  "awaiting_review": 2,
+  "blocking": [
+   "awaiting_review"
+  ],
+  "coverage": {
+   "examined": 2,
+   "sources": 0
+  },
+  "direction_count": {},
+  "direction_count_note": "a count, not a strength",
+  "extraction": {
+   "expected": 2,
+   "unanswered": 0,
+   "unchunked_sources": 0,
+   "unharvested": 0,
+   "unregated": 0
+  },
+  "gate_rejected": {},
+  "linkage": "unestablished",
+  "profile_sha256": "7056ff48a8e45f615aadc993d51035ac4add9a7686d5190f3fee1703f759f9c5",
+  "provisional": true,
+  "reviewed_not_usable": {},
+  "state": "NO_VERIFIED_CLAIM",
+  "stored_profile_stale": false,
+  "unavailable": ""
+ },
+ "project": "example-news-and-returns",
+ "results": [],
+ "selector": {
+  "manifest_only": false,
+  "round": "r1"
+ },
+ "text": "The sentiment or event content of news carries information about future returns beyond what prices already reflect.",
+ "verdict": null,
+ "verdict_stale": false
+}

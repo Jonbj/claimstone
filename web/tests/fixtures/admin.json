@@ -1,0 +1,53 @@
+{
+ "api_version": 1,
+ "backends": {
+  "available": [
+   "claude-cli",
+   "codex-cli",
+   "llamacpp",
+   "ollama-cloud",
+   "opencode-cli"
+  ],
+  "configured": [
+   "claude-cli",
+   "codex-cli",
+   "llamacpp",
+   "ollama-cloud",
+   "opencode-cli"
+  ]
+ },
+ "backends_note": "configured names; not health-checked. A health probe would be a request and is never a side effect of GET.",
+ "credentials": {
+  "CLAIMSTONE_CONTACT_EMAIL": false,
+  "OLLAMA_API_KEY": false,
+  "OPENALEX_API_KEY": false
+ },
+ "instruments": {
+  "admission_version": 2,
+  "annotation_version": 2,
+  "audit_version": 2,
+  "candidate_key_version": 2,
+  "chunk_version": 2,
+  "claim_gate_version": 4,
+  "discovery_version": 3,
+  "export_version": 1,
+  "fetch_version": 3,
+  "flow_version": 1,
+  "gate_version": 5,
+  "html_parser_version": 2,
+  "identity_relation_version": 2,
+  "image": "lfoppiano/grobid:0.8.1",
+  "jats_parser_version": 2,
+  "model_report_version": 2,
+  "population_version": 1,
+  "profile_version": 5,
+  "result_judge_version": 2,
+  "reuse_version": 1,
+  "review_version": 2,
+  "scope_version": 1,
+  "screening_version": 3,
+  "source_selection_import_version": 2,
+  "source_selection_version": 1
+ },
+ "key_rotation_note": "Key rotation is done by editing `.env` outside the portal. Containers read `.env` when `./claimstone.sh` starts them."
+}

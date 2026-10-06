@@ -1,0 +1,44 @@
+{
+ "api_version": 1,
+ "projects": [
+  {
+   "config": "OK",
+   "config_error": null,
+   "flows": [
+    {
+     "binding_state": "CURRENT",
+     "bound_after_data": true,
+     "flow_id": "0df548e3743689e1a0dd099da697aee4842e8a573f1225a8da13fec128a248cd",
+     "selector": {
+      "manifest_only": false,
+      "round": "r1"
+     },
+     "selector_label": "round r1",
+     "title": "round one"
+    }
+   ],
+   "name": "example-news-and-returns",
+   "registry_drift": null,
+   "registry_sha256": "85e5fcc44ddc",
+   "registry_version": 2,
+   "unbound_selectors": [
+    {
+     "label": "whole store",
+     "selector": {
+      "manifest_only": false,
+      "round": null
+     },
+     "slug": "-"
+    },
+    {
+     "label": "round r2",
+     "selector": {
+      "manifest_only": false,
+      "round": "r2"
+     },
+     "slug": "r2"
+    }
+   ]
+  }
+ ]
+}

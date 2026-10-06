@@ -1,0 +1,82 @@
+{
+ "api_version": 1,
+ "claim_id": "c1",
+ "project": "example-news-and-returns",
+ "selector": {
+  "manifest_only": false,
+  "round": "r1"
+ },
+ "source_id": "S01",
+ "steps": {
+  "acquisition": {
+   "acquired": true,
+   "attempts": [
+    {
+     "failure_class": null,
+     "fetch_version": 3,
+     "http_status": 200,
+     "url": "https://example.org/S01.pdf"
+    }
+   ],
+   "campaign": "routine",
+   "candidate_key": "r1-a",
+   "fetched_at": "2026-10-01T11:00:00+00:00",
+   "licence": "cc-by",
+   "oa_status": "gold",
+   "provenance": "unpaywall",
+   "sha256": "s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01",
+   "source_id": "S01",
+   "stored_path": "raw/s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01s01.pdf",
+   "url": "https://example.org/S01.pdf"
+  },
+  "acquisition_candidate_key": "r1-a",
+  "candidate": {
+   "candidate_key": "r1-a",
+   "channel": "keyword",
+   "discovered_at": "2026-10-01T10:00:00+00:00",
+   "round": "r1",
+   "source_class": "ACA",
+   "source_id": "S01",
+   "title": "Study one",
+   "url": "https://example.org/S01.pdf"
+  },
+  "chunk": {
+   "chunk_id": "S01#c1",
+   "evidence_quote": "news tone has an effect",
+   "generation_sha256": "gen-S01",
+   "quote_found": true,
+   "text": "news tone has an effect on returns",
+   "text_sha256": null
+  },
+  "claim": {
+   "backend": "b",
+   "call_id": null,
+   "claim": "News tone has an effect.",
+   "claim_gate_version": 4,
+   "evidence_quote": "news tone has an effect",
+   "gate_revision": 1,
+   "harness_version": "t/1",
+   "model": "m",
+   "question_id": "Q02",
+   "source_class": "ACA",
+   "stance": "SUPPORTS"
+  },
+  "document": {
+   "body_chars": 5000,
+   "built_at": "2026-10-01T12:00:00+00:00",
+   "chunk_ids": [
+    "S01#c1"
+   ],
+   "chunks": 1,
+   "format": "html",
+   "fulltext_confirmed": true,
+   "generation_sha256": "gen-S01",
+   "html_parser_version": 2,
+   "jats_parser_version": null,
+   "references": 12,
+   "source_id": "S01"
+  },
+  "document_pdf_instrument": null,
+  "review": null
+ }
+}

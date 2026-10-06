@@ -1,0 +1,63 @@
+{
+ "acquisitions": [
+  {
+   "acquired": false,
+   "attempts": [
+    {
+     "failure_class": "PAYWALL_403",
+     "fetch_version": 3,
+     "http_status": 403,
+     "url": "https://example.org/locked.pdf"
+    }
+   ],
+   "campaign": "routine",
+   "candidate_key": "r2-w",
+   "failure_class": "PAYWALL_403",
+   "fetched_at": "2026-10-02T11:00:00+00:00",
+   "http_status": 403,
+   "url": "https://example.org/locked.pdf"
+  }
+ ],
+ "active_chunks": 0,
+ "advisory": {
+  "source_identity.jsonl": [],
+  "source_screening.jsonl": []
+ },
+ "advisory_note": "AI_PROVISIONAL: advisory only; changes no admission, denominator or reference (D79–D81)",
+ "api_version": 1,
+ "candidate": {
+  "candidate_key": "r2-w",
+  "channel": "citation",
+  "discovered_at": "2026-10-02T10:00:01+00:00",
+  "round": "r2",
+  "source_class": "ACA",
+  "title": "Refused work",
+  "url": "https://example.org/locked.pdf"
+ },
+ "candidate_key": "r2-w",
+ "claims_by_question": {},
+ "counted_acquisition": {
+  "acquired": false,
+  "attempts": [
+   {
+    "failure_class": "PAYWALL_403",
+    "fetch_version": 3,
+    "http_status": 403,
+    "url": "https://example.org/locked.pdf"
+   }
+  ],
+  "campaign": "routine",
+  "candidate_key": "r2-w",
+  "failure_class": "PAYWALL_403",
+  "fetched_at": "2026-10-02T11:00:00+00:00",
+  "http_status": 403,
+  "url": "https://example.org/locked.pdf"
+ },
+ "document": null,
+ "project": "example-news-and-returns",
+ "selector": {
+  "manifest_only": false,
+  "round": "r2"
+ },
+ "source_id": "r2-w"
+}

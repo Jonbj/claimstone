@@ -1,0 +1,20 @@
+{
+ "api_version": 1,
+ "floor_status": "OK",
+ "flow_id": "0df548e3743689e1a0dd099da697aee4842e8a573f1225a8da13fec128a248cd",
+ "inbox_counts": {
+  "ADJUDICATION": 19,
+  "REVIEW": 1
+ },
+ "project": "example-news-and-returns",
+ "selector": {
+  "manifest_only": false,
+  "round": "r1"
+ },
+ "selector_label": "round r1",
+ "verdicts": {
+  "adjudicated": 0,
+  "awaiting_adjudication": 19,
+  "stale": 0
+ }
+}

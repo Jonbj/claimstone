@@ -1,0 +1,41 @@
+{
+ "api_version": 1,
+ "claim_id": "c9",
+ "project": "example-news-and-returns",
+ "selector": {
+  "manifest_only": false,
+  "round": "r2"
+ },
+ "source_id": "S03",
+ "steps": {
+  "acquisition": null,
+  "acquisition_candidate_key": "r2-a",
+  "candidate": {
+   "candidate_key": "r2-a",
+   "channel": "citation",
+   "discovered_at": "2026-10-02T10:00:00+00:00",
+   "round": "r2",
+   "source_class": "ACA",
+   "source_id": "S03",
+   "title": "Study three",
+   "url": "https://example.org/S03.pdf"
+  },
+  "chunk": null,
+  "claim": {
+   "backend": null,
+   "call_id": null,
+   "claim": "A claim from the other round.",
+   "claim_gate_version": 4,
+   "evidence_quote": "belongs to r2",
+   "gate_revision": 1,
+   "harness_version": null,
+   "model": null,
+   "question_id": "Q02",
+   "source_class": "ACA",
+   "stance": "SUPPORTS"
+  },
+  "document": null,
+  "document_pdf_instrument": null,
+  "review": null
+ }
+}

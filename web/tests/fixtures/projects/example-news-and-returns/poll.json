@@ -1,0 +1,44 @@
+{
+ "api_version": 1,
+ "ledgers": {
+  "acquisitions.jsonl": {
+   "mtime": "2026-10-06T00:00:00+00:00",
+   "rows": 3
+  },
+  "adjudications.jsonl": {
+   "mtime": null,
+   "rows": null
+  },
+  "candidates.jsonl": {
+   "mtime": "2026-10-06T00:00:00+00:00",
+   "rows": 4
+  },
+  "chunks.jsonl": {
+   "mtime": "2026-10-06T00:00:00+00:00",
+   "rows": 2
+  },
+  "claims.jsonl": {
+   "mtime": "2026-10-06T00:00:00+00:00",
+   "rows": 3
+  },
+  "documents.jsonl": {
+   "mtime": "2026-10-06T00:00:00+00:00",
+   "rows": 2
+  },
+  "profiles.jsonl": {
+   "mtime": "2026-10-06T00:00:00+00:00",
+   "rows": 20
+  },
+  "rejections.jsonl": {
+   "mtime": null,
+   "rows": null
+  },
+  "reviews.jsonl": {
+   "mtime": null,
+   "rows": null
+  }
+ },
+ "pid_note": "inference from mtime, not liveness",
+ "project": "example-news-and-returns",
+ "running": []
+}

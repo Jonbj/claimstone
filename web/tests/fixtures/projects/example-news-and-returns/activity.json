@@ -1,0 +1,340 @@
+{
+ "activity": [
+  {
+   "ledger": "profiles.jsonl",
+   "row": {
+    "provisional": false,
+    "question_id": "Q01",
+    "state": "NO_VERIFIED_CLAIM"
+   },
+   "stage": "synthesize",
+   "when": "2026-10-06T00:00:00+00:00"
+  },
+  {
+   "ledger": "profiles.jsonl",
+   "row": {
+    "provisional": true,
+    "question_id": "Q02",
+    "state": "NO_VERIFIED_CLAIM"
+   },
+   "stage": "synthesize",
+   "when": "2026-10-06T00:00:00+00:00"
+  },
+  {
+   "ledger": "profiles.jsonl",
+   "row": {
+    "provisional": false,
+    "question_id": "Q03",
+    "state": "NO_VERIFIED_CLAIM"
+   },
+   "stage": "synthesize",
+   "when": "2026-10-06T00:00:00+00:00"
+  },
+  {
+   "ledger": "profiles.jsonl",
+   "row": {
+    "provisional": false,
+    "question_id": "Q04",
+    "state": "NO_VERIFIED_CLAIM"
+   },
+   "stage": "synthesize",
+   "when": "2026-10-06T00:00:00+00:00"
+  },
+  {
+   "ledger": "profiles.jsonl",
+   "row": {
+    "provisional": false,
+    "question_id": "Q05",
+    "state": "NO_VERIFIED_CLAIM"
+   },
+   "stage": "synthesize",
+   "when": "2026-10-06T00:00:00+00:00"
+  },
+  {
+   "ledger": "profiles.jsonl",
+   "row": {
+    "provisional": false,
+    "question_id": "Q06",
+    "state": "NO_VERIFIED_CLAIM"
+   },
+   "stage": "synthesize",
+   "when": "2026-10-06T00:00:00+00:00"
+  },
+  {
+   "ledger": "profiles.jsonl",
+   "row": {
+    "provisional": false,
+    "question_id": "Q07",
+    "state": "NO_VERIFIED_CLAIM"
+   },
+   "stage": "synthesize",
+   "when": "2026-10-06T00:00:00+00:00"
+  },
+  {
+   "ledger": "profiles.jsonl",
+   "row": {
+    "provisional": false,
+    "question_id": "Q08",
+    "state": "NO_VERIFIED_CLAIM"
+   },
+   "stage": "synthesize",
+   "when": "2026-10-06T00:00:00+00:00"
+  },
+  {
+   "ledger": "profiles.jsonl",
+   "row": {
+    "provisional": false,
+    "question_id": "Q09",
+    "state": "NO_VERIFIED_CLAIM"
+   },
+   "stage": "synthesize",
+   "when": "2026-10-06T00:00:00+00:00"
+  },
+  {
+   "ledger": "profiles.jsonl",
+   "row": {
+    "provisional": false,
+    "question_id": "Q10",
+    "state": "NO_VERIFIED_CLAIM"
+   },
+   "stage": "synthesize",
+   "when": "2026-10-06T00:00:00+00:00"
+  },
+  {
+   "ledger": "profiles.jsonl",
+   "row": {
+    "provisional": false,
+    "question_id": "Q11",
+    "state": "NO_VERIFIED_CLAIM"
+   },
+   "stage": "synthesize",
+   "when": "2026-10-06T00:00:00+00:00"
+  },
+  {
+   "ledger": "profiles.jsonl",
+   "row": {
+    "provisional": false,
+    "question_id": "Q12",
+    "state": "NO_VERIFIED_CLAIM"
+   },
+   "stage": "synthesize",
+   "when": "2026-10-06T00:00:00+00:00"
+  },
+  {
+   "ledger": "profiles.jsonl",
+   "row": {
+    "provisional": false,
+    "question_id": "Q13",
+    "state": "NO_VERIFIED_CLAIM"
+   },
+   "stage": "synthesize",
+   "when": "2026-10-06T00:00:00+00:00"
+  },
+  {
+   "ledger": "profiles.jsonl",
+   "row": {
+    "provisional": false,
+    "question_id": "Q14",
+    "state": "NO_VERIFIED_CLAIM"
+   },
+   "stage": "synthesize",
+   "when": "2026-10-06T00:00:00+00:00"
+  },
+  {
+   "ledger": "profiles.jsonl",
+   "row": {
+    "provisional": false,
+    "question_id": "Q15",
+    "state": "NO_VERIFIED_CLAIM"
+   },
+   "stage": "synthesize",
+   "when": "2026-10-06T00:00:00+00:00"
+  },
+  {
+   "ledger": "profiles.jsonl",
+   "row": {
+    "provisional": false,
+    "question_id": "Q16",
+    "state": "NO_VERIFIED_CLAIM"
+   },
+   "stage": "synthesize",
+   "when": "2026-10-06T00:00:00+00:00"
+  },
+  {
+   "ledger": "profiles.jsonl",
+   "row": {
+    "provisional": false,
+    "question_id": "Q17",
+    "state": "NO_VERIFIED_CLAIM"
+   },
+   "stage": "synthesize",
+   "when": "2026-10-06T00:00:00+00:00"
+  },
+  {
+   "ledger": "profiles.jsonl",
+   "row": {
+    "provisional": false,
+    "question_id": "Q18",
+    "state": "NO_VERIFIED_CLAIM"
+   },
+   "stage": "synthesize",
+   "when": "2026-10-06T00:00:00+00:00"
+  },
+  {
+   "ledger": "profiles.jsonl",
+   "row": {
+    "provisional": false,
+    "question_id": "Q19",
+    "state": "NO_VERIFIED_CLAIM"
+   },
+   "stage": "synthesize",
+   "when": "2026-10-06T00:00:00+00:00"
+  },
+  {
+   "ledger": "profiles.jsonl",
+   "row": {
+    "provisional": false,
+    "question_id": "Q20",
+    "state": "NO_VERIFIED_CLAIM"
+   },
+   "stage": "synthesize",
+   "when": "2026-10-06T00:00:00+00:00"
+  },
+  {
+   "ledger": "claims.jsonl",
+   "row": {
+    "backend": "b",
+    "claim_id": "c2",
+    "model": "m",
+    "question_id": "Q02",
+    "source_id": "S02"
+   },
+   "stage": "extract",
+   "when": "2026-10-05T10:00:01+00:00"
+  },
+  {
+   "ledger": "claims.jsonl",
+   "row": {
+    "backend": "b",
+    "claim_id": "c1",
+    "model": "m",
+    "question_id": "Q02",
+    "source_id": "S01"
+   },
+   "stage": "extract",
+   "when": "2026-10-05T10:00:00+00:00"
+  },
+  {
+   "ledger": "claims.jsonl",
+   "row": {
+    "claim_id": "c9",
+    "question_id": "Q02",
+    "source_id": "S03"
+   },
+   "stage": "extract",
+   "when": "2026-10-02T12:00:00+00:00"
+  },
+  {
+   "ledger": "acquisitions.jsonl",
+   "row": {
+    "acquired": false,
+    "candidate_key": "r2-w",
+    "failure_class": "PAYWALL_403",
+    "http_status": 403
+   },
+   "stage": "acquire",
+   "when": "2026-10-02T11:00:00+00:00"
+  },
+  {
+   "ledger": "candidates.jsonl",
+   "row": {
+    "candidate_key": "r2-w"
+   },
+   "stage": "discover",
+   "when": "2026-10-02T10:00:01+00:00"
+  },
+  {
+   "ledger": "candidates.jsonl",
+   "row": {
+    "candidate_key": "r2-a",
+    "source_id": "S03"
+   },
+   "stage": "discover",
+   "when": "2026-10-02T10:00:00+00:00"
+  },
+  {
+   "ledger": "chunks.jsonl",
+   "row": {
+    "source_id": "S01"
+   },
+   "stage": "normalize",
+   "when": "2026-10-01T12:00:01+00:00"
+  },
+  {
+   "ledger": "chunks.jsonl",
+   "row": {
+    "source_id": "S02"
+   },
+   "stage": "normalize",
+   "when": "2026-10-01T12:00:01+00:00"
+  },
+  {
+   "ledger": "documents.jsonl",
+   "row": {
+    "source_id": "S01"
+   },
+   "stage": "normalize",
+   "when": "2026-10-01T12:00:00+00:00"
+  },
+  {
+   "ledger": "documents.jsonl",
+   "row": {
+    "source_id": "S02"
+   },
+   "stage": "normalize",
+   "when": "2026-10-01T12:00:00+00:00"
+  },
+  {
+   "ledger": "acquisitions.jsonl",
+   "row": {
+    "acquired": true,
+    "candidate_key": "r1-a",
+    "licence": "cc-by",
+    "source_id": "S01"
+   },
+   "stage": "acquire",
+   "when": "2026-10-01T11:00:00+00:00"
+  },
+  {
+   "ledger": "acquisitions.jsonl",
+   "row": {
+    "acquired": true,
+    "candidate_key": "r1-b",
+    "licence": "cc-by",
+    "source_id": "S02"
+   },
+   "stage": "acquire",
+   "when": "2026-10-01T11:00:00+00:00"
+  },
+  {
+   "ledger": "candidates.jsonl",
+   "row": {
+    "candidate_key": "r1-a",
+    "source_id": "S01"
+   },
+   "stage": "discover",
+   "when": "2026-10-01T10:00:00+00:00"
+  },
+  {
+   "ledger": "candidates.jsonl",
+   "row": {
+    "candidate_key": "r1-b",
+    "source_id": "S02"
+   },
+   "stage": "discover",
+   "when": "2026-10-01T10:00:00+00:00"
+  }
+ ],
+ "api_version": 1,
+ "project": "example-news-and-returns"
+}
