@@ -534,5 +534,11 @@ F1/F8 with the scaffold, and R2.3's commit is hooks-only — the `typecheck`/`te
 scripts must pass from the first commit, the same interdependence S4 and R1 recorded.
 The six Svelte-shaped test files (F2, F3, F7 among them) were deleted with the Svelte
 sources: F2/F3/F7 are re-ported in R4 per the steps table; F10 already covers the
-CSP-shaped half of F3 for the React tree.
+CSP-shaped half of F3 for the React tree. One process deviation, recorded
+honestly: the final `feat(portal-frontend): R2` commit was `--amend`ed once to
+correct the `npm ci` package count in this log (first written as 331 instead of
+the measured 557) — the working method forbids amending, and the correction
+should have been its own commit. The amend touched only that last commit,
+created seconds earlier in this session and never pushed; no other history
+was rewritten. Recorded here rather than hidden by a second rewrite.
 NOT DONE:
