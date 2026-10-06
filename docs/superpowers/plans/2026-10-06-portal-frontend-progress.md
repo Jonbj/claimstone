@@ -676,7 +676,7 @@ Checks: typecheck clean; vitest 33 passed; build + check-csp ok; `pytest -q` 122
 - [x] R4.3 the flow overview page (binding badge, errors/unavailable, KPI row, tracker, questions
       table + rejections side card with the next action, floor panel per class, inbox, activity,
       3 s poll); `SelectorPlaceholderPage` deleted, routes wired
-- [ ] R4.4 question, claim lineage and source dossier pages (shadcn cards/tables, the six lineage
+- [x] R4.4 question, claim lineage and source dossier pages (shadcn cards/tables, the six lineage
       steps as a vertical list, rose callout for `quote_found: false`, the quote marked inside the
       chunk text, the adjudication card verbatim, 3 s poll)
 - [ ] R4.5 vitest F3 (writes-nothing source scan) and F7 (`InboxCards` server order) re-ported

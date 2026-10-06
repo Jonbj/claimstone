@@ -1,15 +1,18 @@
 import { createBrowserRouter, RouterProvider } from "react-router";
 import Shell from "@/components/Shell";
 import AdminPage from "@/pages/AdminPage";
+import ClaimPage from "@/pages/ClaimPage";
 import FlowOverviewPage from "@/pages/FlowOverviewPage";
 import IndexPage from "@/pages/IndexPage";
 import InboxPage from "@/pages/InboxPage";
 import NotFoundPage from "@/pages/NotFoundPage";
 import ProjectPage from "@/pages/ProjectPage";
+import QuestionPage from "@/pages/QuestionPage";
+import SourcePage from "@/pages/SourcePage";
 
 // §8.2: client-side routing with `createBrowserRouter`; nginx `try_files … /index.html`.
-// The selector overview is R4's deliverable; `f`/`u` are a prop so the page never
-// guesses the kind. The question/claim/source routes land with their pages below.
+// `f`/`u` are a prop so no page ever guesses the selector kind; the question, claim and
+// source routes repeat the pair so `api.selectorPath` is the only place that builds paths.
 const router = createBrowserRouter([
   {
     path: "/",
@@ -21,6 +24,12 @@ const router = createBrowserRouter([
       { path: "p/:project", element: <ProjectPage /> },
       { path: "p/:project/f/:sel", element: <FlowOverviewPage kind="f" /> },
       { path: "p/:project/u/:sel", element: <FlowOverviewPage kind="u" /> },
+      { path: "p/:project/f/:sel/q/:qid", element: <QuestionPage kind="f" /> },
+      { path: "p/:project/u/:sel/q/:qid", element: <QuestionPage kind="u" /> },
+      { path: "p/:project/f/:sel/claim/:cid", element: <ClaimPage kind="f" /> },
+      { path: "p/:project/u/:sel/claim/:cid", element: <ClaimPage kind="u" /> },
+      { path: "p/:project/f/:sel/source/:key", element: <SourcePage kind="f" /> },
+      { path: "p/:project/u/:sel/source/:key", element: <SourcePage kind="u" /> },
       { path: "*", element: <NotFoundPage /> },
     ],
   },
