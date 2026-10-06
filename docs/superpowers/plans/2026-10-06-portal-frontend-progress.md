@@ -679,7 +679,7 @@ Checks: typecheck clean; vitest 33 passed; build + check-csp ok; `pytest -q` 122
 - [x] R4.4 question, claim lineage and source dossier pages (shadcn cards/tables, the six lineage
       steps as a vertical list, rose callout for `quote_found: false`, the quote marked inside the
       chunk text, the adjudication card verbatim, 3 s poll)
-- [ ] R4.5 vitest F3 (writes-nothing source scan) and F7 (`InboxCards` server order) re-ported
+- [x] R4.5 vitest F3 (writes-nothing source scan) and F7 (`InboxCards` server order) re-ported
 - [ ] R4.6 acceptance: web checks from a clean install, full Python checks, `npm run build &&
       npx vite preview` with every page opened against `claimstone api` on a tmp workspace, and
       "0 CSP violations" recorded here; step marked DONE
