@@ -481,7 +481,7 @@ vitest 36 passed; build + check-csp ok.
       rev <12>`, theme toggle per §8.3) and the base components `Chip`, `Fraction`, `Pending`,
       `ErrorState`, `CommandBlock` (ported behaviour, §4.2 rules 1, 3, 4, 5, 7); minimal pages so
       every shell tab resolves (full pages are R3/R4)
-- [ ] R2.5 port vitest F1, F4, F5, F6, F8 to React Testing Library; add F10 (§8.5 source scan);
+- [x] R2.5 port vitest F1, F4, F5, F6, F8 to React Testing Library; add F10 (§8.5 source scan);
       `npm ci && npm run typecheck && npm test && npm run build` green from a clean install
 - [ ] R2.6 full Python checks green (`pytest -q`, `validate --all-projects`,
       `check_instrument_versions.py`) — `web/tests/fixtures/` untouched
