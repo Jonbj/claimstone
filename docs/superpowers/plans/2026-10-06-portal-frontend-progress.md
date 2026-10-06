@@ -54,7 +54,7 @@ NOT DONE:
 
 ### S2 — IN PROGRESS
 - [x] S2.2 `claimstone/api.py`: `API_VERSION = 1`, `_Handler(BaseHandler)` with the §3.2 routes (selector paths `flows/{flow_id}` and `unbound/{slug}`), the §3.3 error envelope, the strict CSP, `make_server`/`serve`
-- [ ] S2.3 the `claimstone api` CLI command (`--projects-dir/--store/--host/--port/--allow-host`, non-loopback `host_warning` as `portal`)
+- [x] S2.3 the `claimstone api` CLI command (`--projects-dir/--store/--host/--port/--allow-host`, non-loopback `host_warning` as `portal`)
 - [ ] S2.4 `tests/test_api.py`: A1, A3–A7 (A2 lands with the schema in S3, which the steps table name it for)
 - [ ] S2.5 full checks green (`pytest -q`, `validate --all-projects`, `check_instrument_versions.py`); `claimstone api` answers every route on a tmp workspace
 

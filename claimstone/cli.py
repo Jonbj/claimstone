@@ -1074,6 +1074,18 @@ def _portal(args: argparse.Namespace) -> int:
     return 0
 
 
+def _api(args: argparse.Namespace) -> int:
+    from claimstone import api, dashboard
+
+    warning = dashboard.host_warning(args.host)
+    if warning:
+        # §10, as with portal and serve: an explicit non-loopback bind proceeds with the warning.
+        print(f"warning: {warning}", file=sys.stderr)
+    api.serve(args.projects_dir, args.store, host=args.host, port=args.port,
+              allow_hosts=tuple(args.allow_host))
+    return 0
+
+
 def _export(args: argparse.Namespace) -> int:
     import pathlib
 
@@ -1317,6 +1329,20 @@ def build_parser() -> argparse.ArgumentParser:
                                  "reverse proxy in front forwards; repeatable. Loopback names on "
                                  "the bound port are always allowed")
     portal_cmd.set_defaults(func=_portal)
+
+    api_cmd = sub.add_parser("api", help="the read-only JSON API the portal frontend fetches")
+    api_cmd.add_argument("--projects-dir", default="projects",
+                         help="every project under this directory is served")
+    api_cmd.add_argument("--store", default="store", help="where generated data lives")
+    api_cmd.add_argument("--host", default="127.0.0.1",
+                         help="loopback only by default; a non-loopback bind prints the "
+                              "privacy warning and proceeds because you asked")
+    api_cmd.add_argument("--port", type=int, default=8788)
+    api_cmd.add_argument("--allow-host", action="append", default=[], metavar="NAME[:PORT]",
+                         help="an extra Host/Origin authority to answer for, e.g. the name a "
+                              "reverse proxy in front forwards; repeatable. Loopback names on "
+                              "the bound port are always allowed")
+    api_cmd.set_defaults(func=_api)
 
     export_cmd = sub.add_parser("export", help="freeze one flow's ledgers into a verifiable snapshot")
     export_cmd.add_argument("project", help="path to a project directory")
