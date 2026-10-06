@@ -17,7 +17,7 @@ ledger; it does not write production acquisition or document rows.
 | `candidate_key`, `source_class`, `campaign` | acquisition context when applicable |
 | `event` | redirect, robots, transport, blocked, response or validated_response |
 | `url`, `request_url`, `redirect_chain` | outcome destination, original URL and destinations actually visited |
-| `fetch_version` | transport/check instrument; currently 2 |
+| `fetch_version` | transport/check instrument; currently 3 |
 | `ok`, `http_status`, `failure_class`, `detail` | explicit outcome; blocked destinations may have no HTTP status |
 | `content_type`, `bytes`, `elapsed_s` | available response metadata |
 | `raw_sha256`, `raw_path` | available body stored under requests/raw, content-addressed |

@@ -1,6 +1,8 @@
 # Research portal: protocol-bound flows and human intake
 
 **Status:** design proposal for Claude Code review; no portal implementation is claimed.
+Corrected by `2026-10-06-research-portal-review.md`; phases P0–P2b specified in
+`2026-10-06-research-portal-implementation-spec.md`.
 **Date:** 2026-10-06. **Input:** operator's requested portal, repository contracts, and an independent GPT-6-astra architecture review. No network request or model experiment was part of this design.
 
 ## Purpose and boundary

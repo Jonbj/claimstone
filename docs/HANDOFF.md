@@ -9,6 +9,23 @@ what order.
 
 ## Where the work stands
 
+2026-10-06 research portal, phases P0–P2b implemented: the canonical selector
+(`claimstone/scope.py`) now scopes every per-round figure in `round_state` (claims, reviews,
+chunks and the stage's own confirmation count no longer leak across rounds, review F1/F3;
+admission itself still reads confirmations and repairs project-wide, disclosed and unchanged), a
+damaged ledger surfaces as
+a named error with its figures withheld instead of zero (F2), `claimstone flow` binds a round
+selector to digests of the protocol it runs under (`flows.jsonl`, `docs/contracts/flows.md`),
+`claimstone portal` serves every project read-only on loopback (GET only, Host/Origin checked,
+D82), and `claimstone export` / `export-verify` freeze one flow's ledgers at a byte prefix and
+verify by prefix plus recomputation (`docs/contracts/exports.md`). The same day an
+implementation review (`docs/superpowers/specs/2026-10-06-research-portal-implementation-review.md`)
+fixed the findings it reproduced. The main one: Q04's current profile, recorded under the whole-store
+selector, was invisible in the portal and is now at `/p/pmc-screen-time/legacy/-/`. Test count as
+printed by pytest after the review: **1191 passed, 7 skipped**. No ledger under `store/` was rewritten, no network request
+and no model call happened; the only live-store interaction was read-only (page-time
+measurement in D82).
+
 2026-10-06 guided L02 continuation: a private, offline batch read two held PDFs against
 the frozen v2 media/newswire exposure rule. `ACA001` is a strong direct candidate with
 verified held bytes and a previously evidenced same-work DOI relation; `ACA012` has

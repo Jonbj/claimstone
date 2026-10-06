@@ -3590,3 +3590,74 @@ provenance. A test batch with two abstract cases and one later PDF override
 appended one replacement, zero identity rows and zero on rerun; a stale map
 failed. The old version-1 plan still previews 20 observed keys and zero new
 rows. These tests establish ledger behavior, not AI screening accuracy.
+
+## D82 — A read-only multi-flow portal over scoped reads (2026-10-06)
+
+The dashboard spec (`2026-09-22-dashboard-design.md`) said "no multi-project
+view. One `serve` per project" (§13). This decision supersedes that clause for
+the portal: `claimstone portal` serves every project under `--projects-dir`
+over one loopback server. §1 and §8 rule 7 still hold — the portal is
+read-only, GET is its only verb, no button starts work — and any mutating
+route requires a later decision. The review that constrained this is
+`2026-10-06-research-portal-review.md` (findings F1–F22); the implementation
+spec is `2026-10-06-research-portal-implementation-spec.md`.
+
+What the portal stands on is P0's scope work, because a multi-round project
+made the dashboard's figures wrong before it: `round_state` counted claims,
+reviews, chunks and confirmations across every round under a round-named
+selector (F1), discover's selector disagreed with admission's `or "routine"`
+variant (F3), and a damaged ledger rendered as zero acquired (F2). The
+canonical selector now lives in `claimstone/scope.py`
+(**scope_version 1**); the scope defects are demonstrated by
+`test_round_state_claims_do_not_leak_between_rounds`,
+`test_round_state_review_and_chunks_scoped`,
+`test_scoped_activity_and_last_write_exclude_other_round`,
+`test_round_less_candidate_is_not_routine` and
+`test_corrupt_acquisitions_is_an_error_not_zero` in `tests/test_scope.py` and
+`tests/test_round_state.py`.
+
+A round's protocol is bound by a flow ledger
+(`docs/contracts/flows.md`, **flow_version 1**): `flow_id` hashes the binding
+alone, the binding is compared against the live project and never supplies a
+value to a computation (F4), and drift is a named state. Exports
+(`docs/contracts/exports.md`, **export_version 1**) freeze every ledger at its
+last newline and verify by prefix plus recomputation, because no stage writer
+shares the flows lock (F5).
+
+`admissibility` still reads document confirmations and `ledger_repairs`
+project-wide. That is disclosed in the portal's floor panel and in every
+export's report, and deliberately **not** changed here: scoping it is an
+`admission_version` decision that needs its own measured entry.
+
+Measured page time for `/p/pmc-screen-time/legacy/pmc-oa-v1/` on this machine, one GET against
+loopback with `curl -s -o /dev/null -w '%{time_total}'`. The first implementation took **15.43 s**
+(repeat runs: 15.38 s and 15.66 s). The 2026-10-06 implementation review
+(`2026-10-06-research-portal-implementation-review.md`) found the reason was not "re-read from disk
+on every request". Under `cProfile` one flow page ran:
+
+- `synthesize.verdicts` five times;
+- `round_state.state` three times;
+- `claim_records.current` sixteen times.
+
+After the review, one `portal_state.compute` per selector per request shares those readings with
+every panel, and `round_state.state` accepts the request's own `verdicts` result through
+`precomputed_verdicts`. The same page now takes **3.89–4.05 s**. That is the identical computation
+on the identical ledgers, so it is not a cache, and nothing outlives the request.
+
+The index and `/inbox` compute every selector of every project, and take **28.9 s** and **29.1 s**
+against the real store. That cost is known and recorded, not hidden. A per-project API that the
+page loads lazily is the remedy (frontend design, 2026-10-06).
+
+The same review found that `pmc-screen-time`'s current profiles, Q04 included, are recorded under
+the **whole-store** selector (`round: null`). The first portal listed only candidate rounds, so it
+never showed the one profile awaiting a person. `/p/<project>/legacy/-/` now shows it, together with
+its adjudication card. That card carries the hash in `HANDOFF.md`
+(`9340389c9aac29b77e901c20e27434d211fe9e7825a68d99995d8c6fa5b20fdd`).
+
+Explicitly not built, each blocked by a named finding: intake, offers and
+purchase decisions (F14, the operator's policy on operator-supplied copies),
+jobs and subprocess execution (F11, code identity), locking across stage
+writers (F5), a persistent per-host failure budget (F6), a non-global-address
+URL guard on every redirect hop (F15), and authenticated signing (F16, a
+`decision_contract_version` bump). P3 and P4 in the implementation spec's §10
+are the reviewed specs those need.
