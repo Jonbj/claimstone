@@ -6,7 +6,9 @@
     <meta name="robots" content="noindex, nofollow" />
     %sveltekit.head%
   </head>
-  <body data-sveltekit-preload-data="hover">
-    <div style="display: contents">%sveltekit.body%</div>
+  <!-- No hover preloading: a summary or overview costs seconds of server computation, and
+         hovering a link must not start one. No inline style attribute: the CSP forbids it. -->
+  <body data-sveltekit-preload-data="off">
+    <div class="app-root">%sveltekit.body%</div>
   </body>
 </html>

@@ -272,9 +272,13 @@ web/
   - `location /api/ { proxy_pass http://api:8788; proxy_set_header Host api:8788;
     proxy_set_header Origin ""; proxy_read_timeout 120s; }`
   - headers on every response:
-    - `Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self';
-      img-src 'self' data:; connect-src 'self'; font-src 'self'; base-uri 'none';
-      form-action 'none'; frame-ancestors 'none'`
+    - `Content-Security-Policy: frame-ancestors 'none'` **only**. The script, style, connect and
+      other directives live in the `<meta>` CSP that SvelteKit writes into `index.html`
+      (`kit.csp`, mode `hash`, in `svelte.config.js`). The SPA's bootstrap is an inline
+      `<script>`, and only that meta policy carries its sha256. A header with `script-src 'self'`
+      would be enforced as well and would block it, leaving a blank page; the S4 review found
+      this in the build output. `npm run build` runs `scripts/check-csp.mjs`, which fails if the
+      meta CSP is missing, allows `'unsafe-inline'` or omits the hash.
     - `X-Content-Type-Options nosniff`
     - `Referrer-Policy no-referrer`
     - `Cache-Control no-store` for `index.html` only (hashed assets may be cached)

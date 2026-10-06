@@ -24,9 +24,11 @@
     border-color: #2e7d32;
     color: #2e7d32;
   }
+  /* Blue, not red, as in the dashboard: concluding against a question is a successful
+     outcome, not a failure, and red would say otherwise. */
   .v-contradicted {
-    border-color: #c62828;
-    color: #c62828;
+    border-color: #0277bd;
+    color: #0277bd;
   }
   .v-contested {
     border-color: #ef6c00;
@@ -46,23 +48,23 @@
   .v-unknown {
     color: var(--muted);
   }
-  :root[data-theme="dark"] .v-supported {
+  :global(:root[data-theme="dark"]) .v-supported {
     color: #81c784;
     border-color: #81c784;
   }
-  :root[data-theme="dark"] .v-contradicted {
-    color: #ef9a9a;
-    border-color: #ef9a9a;
+  :global(:root[data-theme="dark"]) .v-contradicted {
+    color: #81d4fa;
+    border-color: #81d4fa;
   }
-  :root[data-theme="dark"] .v-contested {
+  :global(:root[data-theme="dark"]) .v-contested {
     color: #ffcc80;
     border-color: #ffcc80;
   }
-  :root[data-theme="dark"] .v-unanswered {
+  :global(:root[data-theme="dark"]) .v-unanswered {
     color: #bcaaa4;
     border-color: #bcaaa4;
   }
-  :root[data-theme="dark"] .v-never-asked {
+  :global(:root[data-theme="dark"]) .v-never-asked {
     color: #90a4ae;
     border-color: #90a4ae;
   }

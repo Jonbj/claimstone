@@ -35,7 +35,16 @@ type Payload = { api_version: number; error?: { code: string; message: string } 
 
 async function get<T extends Payload>(path: string): Promise<T> {
   const response = await fetch(`${PREFIX}${path}`, { method: "GET" });
-  const body = (await response.json()) as T;
+  let body: T;
+  try {
+    body = (await response.json()) as T;
+  } catch {
+    // A proxy error page or a dead API is not an envelope: name it, never render it as data.
+    throw new Error(`HTTP ${response.status}: the API did not answer with JSON`);
+  }
+  if (!response.ok && !body?.error) {
+    throw new Error(`HTTP ${response.status}: an error without the API's envelope`);
+  }
   if (body?.error) {
     throw new ApiError(body.error.code as ApiErrorPayload["error"]["code"],
                        body.error.message);

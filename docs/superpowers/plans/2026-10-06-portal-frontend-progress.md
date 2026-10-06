@@ -223,3 +223,25 @@ is forbidden by the working method. The first `wip(S4.1)` commit carries the sca
 `api.ts`/`vocabulary.ts`/`api-types.ts` plus the components and tests; the `docs:` commit
 before it carries the plan. No check was skipped.
 NOT DONE:
+
+### Review of S4 (Claude Code, between S4 and S5)
+- The built `index.html` carried an inline bootstrap `<script>` and an inline `style` attribute.
+  The nginx CSP planned in §4.3 (`script-src 'self'`) would have blocked them, leaving a blank
+  page in Docker. Fixes:
+  - `kit.csp` (mode `hash`) writes a meta CSP that carries the script's sha256;
+  - `scripts/check-csp.mjs` runs after every build and fails on a missing hash or on
+    `'unsafe-inline'`;
+  - the inline style moved to `.app-root`;
+  - §4.3 now says nginx sends `frame-ancestors 'none'` only.
+- CONTRADICTED was red. It is now blue, as in the dashboard: concluding against a question is a
+  successful outcome. The dark-theme chip selectors are now `:global(:root[...])`, because
+  scoped `:root` never matched.
+- The breadcrumb was keyed by segment text (two equal segments would have collided); it is now
+  keyed by index.
+- The header's meta fetch bypassed the typed client; it now uses `api.meta()`.
+- `api.get` maps a non-JSON or envelope-less error response to a named `Error` instead of a
+  `SyntaxError`.
+- Hover preloading is off, so hovering must not start a seconds-long server computation.
+- `@types/node` is pinned exactly.
+Checks: `svelte-check` 0 errors 0 warnings; vitest 23 passed; build + check-csp ok;
+`pytest -q` 1211 passed, 7 skipped.

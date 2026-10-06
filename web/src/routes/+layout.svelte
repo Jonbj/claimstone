@@ -2,6 +2,7 @@
   import { page } from "$app/state";
   import "../app.css";
   import ThemeToggle from "$lib/components/ThemeToggle.svelte";
+  import { api } from "$lib/api";
 
   let { children } = $props();
 
@@ -11,8 +12,8 @@
 
   // The header shows the API's code identity: one GET, rendered verbatim (§4.2 rule 5).
   $effect(() => {
-    fetch("/api/v1/meta")
-      .then((r) => r.json())
+    api
+      .meta()
       .then((meta) => {
         revision = meta.code?.revision ?? null;
         revisionDirty = meta.code?.dirty ?? null;
@@ -36,7 +37,7 @@
 <header class="portal-header">
   <nav class="crumbs" aria-label="Breadcrumb">
     <a href="/">portal</a>
-    {#each crumbSegments as segment (segment)}
+    {#each crumbSegments as segment, index (index)}
       <span class="crumb-sep" aria-hidden="true">/</span>
       <span class="crumb-current">{segment}</span>
     {/each}

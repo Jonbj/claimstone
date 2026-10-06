@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "vite dev",
-    "build": "vite build",
+    "build": "vite build && node scripts/check-csp.mjs",
     "preview": "vite preview",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
@@ -20,7 +20,7 @@
     "@sveltejs/kit": "2.20.0",
     "@sveltejs/vite-plugin-svelte": "5.1.0",
     "@testing-library/svelte": "5.4.2",
-    "@types/node": "^22.15.32",
+    "@types/node": "22.15.32",
     "jsdom": "26.1.0",
     "json-schema-to-typescript": "15.0.4",
     "svelte": "5.33.2",
