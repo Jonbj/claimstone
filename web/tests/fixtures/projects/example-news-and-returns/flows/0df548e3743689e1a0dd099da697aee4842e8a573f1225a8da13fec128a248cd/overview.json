@@ -529,9 +529,10 @@
  "question_state_counts": {
   "awaiting_a_person": 0,
   "historical": 0,
-  "no_verified_claim": 20,
+  "no_profile": 0,
+  "no_verified_claim": 19,
   "not_applicable": 0,
-  "provisional": 0,
+  "provisional": 1,
   "signed": 0,
   "stale": 0
  },

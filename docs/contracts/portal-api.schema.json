@@ -1012,6 +1012,9 @@
       "historical": {
        "type": "integer"
       },
+      "no_profile": {
+       "type": "integer"
+      },
       "no_verified_claim": {
        "type": "integer"
       },
@@ -1035,7 +1038,8 @@
       "provisional",
       "no_verified_claim",
       "not_applicable",
-      "historical"
+      "historical",
+      "no_profile"
      ],
      "type": "object"
     },
@@ -1248,7 +1252,7 @@
          "confirmed",
          "awaiting_normalize",
          "not_a_document",
-         "refused",
+         "not_obtained",
          "not_attempted",
          "unclassified"
         ],

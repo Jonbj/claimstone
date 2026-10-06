@@ -447,3 +447,19 @@ NOT DONE:
 - [ ] R1.5 full checks green (`pytest -q`, `validate --all-projects`,
       `check_instrument_versions.py`) and web checks green (`npm run check && npm test && npm
       run build`)
+
+### Review of R1 (Claude Code, between R1 and R2)
+- **Rejected:** "a question without a profile counts as `awaiting_a_person`". With no profile
+  there is nothing to sign: the r2 and whole-store fixtures reported 20 of 20 questions awaiting a
+  person. A new state, `no_profile`, now counts them.
+- **Rejected:** "NO_VERIFIED_CLAIM before provisional". An unfinished reading that has found
+  nothing *yet* is not a finding. `provisional` now ranks first, and r1 shows the 1 provisional
+  question the first version hid under NO_VERIFIED_CLAIM.
+- **Renamed:** tracker state `refused` → `not_obtained`. A timeout or an exhausted host budget is
+  not a refusal. The tooltip is `not obtained: <class>`, and the F19 text is kept for 403.
+- Spec §8.3, schema, fixtures and `api-types.ts` regenerated; test
+  `test_a_round_without_profiles_awaits_no_person` added.
+- **Endorsed:** `source_tracker` raising `LedgerCorrupt`, and a failed row without a class shown
+  as `not_attempted`.
+Checks: `pytest -q` 1220 passed, 7 skipped; `validate` exit 0; 26 instruments; svelte-check 0/0;
+vitest 36 passed; build + check-csp ok.

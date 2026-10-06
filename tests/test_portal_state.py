@@ -490,12 +490,14 @@ def test_question_state_counts_sum_to_the_registry_size(workspace):
 
 
 def test_question_state_counts_use_the_matrixs_own_rules():
-    """R1: the count for one row is the matrix's verdict cell — operational first, then the
-    recorded verdict with its staleness, then NO_VERIFIED_CLAIM, then the historical and
-    provisional annotations, and the fresh unsigned profile waits for a person."""
+    """R1 (as corrected by its review): operational first, then the recorded verdict with its
+    staleness, then a question with no profile, then historical, then provisional BEFORE
+    NO_VERIFIED_CLAIM — an unfinished reading is not a finding — and only a final unsigned
+    profile waits for a person."""
     def row(**over):
         base = {"operational_not_applicable": False, "verdict": None, "verdict_stale": False,
-                "state": None, "unavailable": "", "provisional": False}
+                "state": None, "unavailable": "", "provisional": False,
+                "profile_sha256": "f" * 64}
         base.update(over)
         return base
 
@@ -504,12 +506,25 @@ def test_question_state_counts_use_the_matrixs_own_rules():
         row(verdict="SUPPORTED"),
         row(verdict="SUPPORTED", verdict_stale=True),
         row(state="NO_VERIFIED_CLAIM", provisional=True),
+        row(state="NO_VERIFIED_CLAIM"),
         row(unavailable="insufficient acquisition"),
         row(provisional=True),
+        row(profile_sha256=None),
         row(),
     ]})
-    assert counts == {"signed": 1, "stale": 1, "awaiting_a_person": 1, "provisional": 1,
-                      "no_verified_claim": 1, "not_applicable": 1, "historical": 1}
+    assert counts == {"signed": 1, "stale": 1, "awaiting_a_person": 1, "provisional": 2,
+                      "no_verified_claim": 1, "not_applicable": 1, "historical": 1,
+                      "no_profile": 1}
+
+
+def test_a_round_without_profiles_awaits_no_person(workspace):
+    """Review of R1: r2 has no synthesized profile, so nothing is awaiting a signature — the
+    first version reported all 20 questions as awaiting a person."""
+    _projects_dir, _store_dir, project, store = workspace
+    counts = portal_state.flow_overview(project, store, scope.Selector("r2"))[
+        "question_state_counts"]
+    assert counts["awaiting_a_person"] == 0
+    assert counts["no_profile"] == len(project.questions)
 
 
 def test_source_tracker_follows_the_scoped_candidate_order(workspace):
@@ -530,7 +545,7 @@ def test_source_tracker_states_and_the_403_tooltip(workspace):
     flow_row = next(iter(flows.flows(store).values()))
     legacy = portal_state.flow_overview(project, store, scope.Selector("r2"), None)
     tracker = {entry["candidate_key"]: entry for entry in legacy["source_tracker"]}
-    assert tracker["r2-w"]["state"] == "refused"
+    assert tracker["r2-w"]["state"] == "not_obtained"
     assert tracker["r2-w"]["tooltip"] == portal_state.PAYWALL_TEXT
     assert "not proof of a paywall" in tracker["r2-w"]["tooltip"]
     assert tracker["r2-a"]["state"] == "not_attempted"

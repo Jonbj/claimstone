@@ -469,7 +469,7 @@ the real page shows API values only.
   a light shadow, as in Tremor's card. Light theme first; the dark theme uses Tailwind's `dark:`
   classes, toggled with a `data-theme` attribute.
 - **Accent:** blue-500. **CONTRADICTED is blue, never red** (D82 / dashboard). Amber means below
-  floor or provisional. Rose means refused or failed acquisition. Dashed grey borders mark
+  floor or provisional. Rose means an acquisition that was not obtained. Dashed grey borders mark
   `NO_VERIFIED_CLAIM` and `LITERATURE_VERDICT_NOT_APPLICABLE`.
 - **Flow overview:** top to bottom:
   1. title and the binding badge;
@@ -502,11 +502,13 @@ schema update; never derive meaning on the client. Two fields are missing today,
 them:
 
 - `question_state_counts` on the overview: a count per displayed state, computed with the same
-  rules the matrix uses. States: `signed`, `stale`, `awaiting_a_person`, `provisional`,
-  `no_verified_claim`, `not_applicable`, `historical`.
+  rules the matrix uses. States: `signed`, `stale`, `awaiting_a_person`, `provisional`, `no_profile`,
+  `no_verified_claim`, `not_applicable`, `historical`. Precedence: operational, stale, signed,
+  no profile, historical, provisional, then `no_verified_claim`. An unfinished reading is never
+  shown as "nothing found", and a question with no profile is never shown as awaiting a person.
 - `source_tracker` on the overview: a list in server order. Each entry carries `candidate_key`,
   `source_id`, `source_class`, `state` (`confirmed` | `awaiting_normalize` | `not_a_document` |
-  `refused` | `not_attempted` | `unclassified`) and `tooltip`. The tooltip is display-ready, and a
+  `not_obtained` | `not_attempted` | `unclassified`) and `tooltip`. The tooltip is display-ready, and a
   403 uses the F19 text.
 
 The design board's "harvests by day" spark area has **no backing field** and is dropped. It is not
@@ -536,6 +538,6 @@ headers and recording **zero CSP violations** in the browser console.
 
 | id | asserts |
 |---|---|
-| F9 | `Tracker` renders one block per `source_tracker` entry, in server order, with the server tooltip verbatim; a `refused` 403 entry's tooltip contains "not proof of a paywall" |
+| F9 | `Tracker` renders one block per `source_tracker` entry, in server order, with the server tooltip verbatim; a `not_obtained` 403 entry's tooltip contains "not proof of a paywall" |
 | F10 | source scan of `src/` (comments stripped): no `dangerouslySetInnerHTML`, no `<style`, no `components/ui/chart`, no non-GET `fetch`, no `<form` |
 | F11 | `DonutChart` and `BarList` are fed only from `question_state_counts` and `rejections_by_reason`; the overview component has no client-side counting over question rows (scan for `.filter(`/`.reduce(` over `questions.rows` in the overview file) |

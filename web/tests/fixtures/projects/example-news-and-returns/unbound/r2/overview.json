@@ -95,8 +95,9 @@
  "legacy": true,
  "project": "example-news-and-returns",
  "question_state_counts": {
-  "awaiting_a_person": 20,
+  "awaiting_a_person": 0,
   "historical": 0,
+  "no_profile": 20,
   "no_verified_claim": 0,
   "not_applicable": 0,
   "provisional": 0,
@@ -668,7 +669,7 @@
    "candidate_key": "r2-w",
    "source_class": "ACA",
    "source_id": null,
-   "state": "refused",
+   "state": "not_obtained",
    "tooltip": "HTTP 403 — access refused (stored as PAYWALL_403; not proof of a paywall or of a purchasable copy)"
   }
  ],

@@ -43,10 +43,10 @@ ERROR_CODES = ("BAD_REQUEST", "NOT_FOUND", "CONFIG_ERROR", "REGISTRY_DRIFT", "LE
 
 # portal_state.QUESTION_STATES, §8.3: the overview's DonutChart counts, decided server-side.
 QUESTION_STATES = ("signed", "stale", "awaiting_a_person", "provisional", "no_verified_claim",
-                   "not_applicable", "historical")
+                   "not_applicable", "historical", "no_profile")
 
 # portal_state.TRACKER_STATES, §8.3: one per scoped candidate on the overview's Tracker.
-TRACKER_STATES = ("confirmed", "awaiting_normalize", "not_a_document", "refused",
+TRACKER_STATES = ("confirmed", "awaiting_normalize", "not_a_document", "not_obtained",
                   "not_attempted", "unclassified")
 
 _STR = {"type": "string"}

@@ -624,14 +624,17 @@ def question_matrix(project: Project, store: Store, selector: scope.Selector,
     return {"rows": rows, "round": selector.round, "project": project.name}
 
 
-# §8.3: the seven displayed question states of the React overview's DonutChart. Counted with
-# the matrix's own precedence — the verdict cell first (the operational branch, then the
-# recorded verdict with its staleness, then the engine's own NO_VERIFIED_CLAIM), then the two
-# annotations that can carry an unsigned row (historical before provisional, as
-# `synthesize.verdicts`'s awaiting count excludes an unavailable round before it inspects
-# provisional), and the residual is the fresh profile that waits for a person.
+# §8.3: the displayed question states of the React overview's DonutChart. Precedence, and why:
+# operational first (it receives no verdict at all); then a recorded verdict, stale or current;
+# then `no_profile` — nothing has been synthesized, so there is nothing to sign and nothing found;
+# then `historical` (the round is now inadmissible); then `provisional` BEFORE
+# `no_verified_claim`, because an unfinished reading that has found nothing *yet* is not a finding
+# that nothing exists — collapsing the two is the error this project exists to prevent; and only a
+# final, admissible, unsigned profile waits for a person. (Implementation review of R1: the first
+# version counted questions without a profile as awaiting a person — 20 of 20 on a round with no
+# profiles — and ranked NO_VERIFIED_CLAIM above provisional.)
 QUESTION_STATES = ("signed", "stale", "awaiting_a_person", "provisional", "no_verified_claim",
-                   "not_applicable", "historical")
+                   "not_applicable", "historical", "no_profile")
 
 
 def question_state_counts(matrix: dict[str, Any]) -> dict[str, int]:
@@ -648,12 +651,14 @@ def question_state_counts(matrix: dict[str, Any]) -> dict[str, int]:
             state = "stale"
         elif row.get("verdict"):
             state = "signed"
-        elif row.get("state") == evidence.NO_VERIFIED_CLAIM:
-            state = "no_verified_claim"
+        elif not row.get("profile_sha256"):
+            state = "no_profile"
         elif row.get("unavailable"):
             state = "historical"
         elif row.get("provisional"):
             state = "provisional"
+        elif row.get("state") == evidence.NO_VERIFIED_CLAIM:
+            state = "no_verified_claim"
         else:
             state = "awaiting_a_person"
         counts[state] += 1
@@ -663,7 +668,7 @@ def question_state_counts(matrix: dict[str, Any]) -> dict[str, int]:
 # §8.3: one tracker state per scoped candidate — `admissibility.rate`'s own branches, the same
 # words its five-state accounting uses, so the Tracker can never split a population the floor
 # panel judges.
-TRACKER_STATES = ("confirmed", "awaiting_normalize", "not_a_document", "refused",
+TRACKER_STATES = ("confirmed", "awaiting_normalize", "not_a_document", "not_obtained",
                   "not_attempted", "unclassified")
 
 
@@ -683,7 +688,7 @@ def _tracker_tooltip(state: str, row: Mapping[str, Any] | None) -> str:
         return "acquire refused it: the candidate carries no source class"
     if (row or {}).get("failure_class") == "PAYWALL_403":
         return PAYWALL_TEXT
-    return failure_display((row or {}).get("failure_class"))
+    return f"not obtained: {failure_display((row or {}).get('failure_class'))}"
 
 
 def source_tracker(project: Project, store: Store, selector: scope.Selector,
@@ -726,7 +731,9 @@ def source_tracker(project: Project, store: Store, selector: scope.Selector,
             if failure == "UNCLASSIFIED":
                 state = "unclassified"
             elif failure:
-                state = "refused"
+                # Not "refused": a timeout or an exhausted host budget is not the host refusing,
+                # and the stored class alone says what happened (in the tooltip, F19).
+                state = "not_obtained"
             else:
                 state = "not_attempted"
         entries.append({

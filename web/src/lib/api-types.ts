@@ -260,6 +260,7 @@ export interface Overview {
   question_state_counts: {
     awaiting_a_person: number;
     historical: number;
+    no_profile: number;
     no_verified_claim: number;
     not_applicable: number;
     provisional: number;
@@ -315,7 +316,7 @@ export interface Overview {
     candidate_key: string;
     source_class: string;
     source_id: string | null;
-    state: "confirmed" | "awaiting_normalize" | "not_a_document" | "refused" | "not_attempted" | "unclassified";
+    state: "confirmed" | "awaiting_normalize" | "not_a_document" | "not_obtained" | "not_attempted" | "unclassified";
     tooltip: string;
   }[];
   state: {
