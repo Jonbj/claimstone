@@ -1,7 +1,11 @@
 # Research portal: separate frontend and container packaging
 
 **Status:** evaluation plus implementation spec. Nothing in this document is implemented.
-**Decision (2026-10-06):** option E, TypeScript + SvelteKit static. The operator delegated the choice;
+**Decision (2026-10-06), superseded the same day:** option E, TypeScript + SvelteKit static.
+**Current decision:** React + shadcn/ui + Tremor. After seeing the same page rendered by each kit, the
+operator chose the one whose dashboard components (tracker, category bar, bar list, donut) show the
+most. §8 holds the binding revision. Where §8 and §4.1, §4.3 or §4.4 differ, §8 wins. §4.2 still
+applies in full. The operator delegated the choice;
 it is reversible because §3 and §5 do not depend on it. Implementation is delegated step by step
 through `2026-10-06-portal-frontend-glm-prompt.md`, one step per session, with a commit per sub-task.
 **Date:** 2026-10-06.
@@ -378,7 +382,7 @@ Also:
   `CLAIMSTONE_CODE_REVISION="$(git rev-parse HEAD)$(git diff --quiet || echo -dirty)"`, then runs
   `docker compose --profile portal up -d --build --wait` and prints the URL. `./portal.sh down` stops
   it.
-- `.dockerignore`: add `web/node_modules/` and `web/build/`. `projects/` is already excluded from
+- `.dockerignore`: add `web/node_modules/`, `web/build/` and `web/dist/`. `projects/` is already excluded from
   the images by never being copied; add `projects/*/` to the ignore list too, so the build context
   never carries real instances.
 - GROBID stays out of the `portal` profile. The portal reads what normalize already wrote.
@@ -419,3 +423,119 @@ It must state:
 stay P3/P4 and are blocked by the findings listed in the design review. The frontend architecture is
 chosen so that they *can* be added later as POST routes with CSRF tokens behind nginx. None is added
 now.
+
+
+---
+
+## 8. Revision (2026-10-06): React + shadcn/ui + Tremor
+
+### 8.1 Why, and what it costs
+
+The operator compared six renderings of the same flow page. Three were visual directions and three
+were component kits. The comparison was a private design canvas; the chosen board is committed as
+`docs/design/portal/flow-overview-react-tremor.html`. The rendering is decided by the **kit**:
+shadcn-svelte and shadcn/ui look the same. Tremor adds dashboard components that no other kit
+offers ready-made, and the operator chose it on the strength of that rendering. The cost is a
+rewrite of the S4–S5 frontend. The API (§3), the schema, the fixtures, the transport and the CSP
+lesson all stay.
+
+### 8.2 Stack (replaces §4.1's framework lines)
+
+| part | choice | notes |
+|---|---|---|
+| build | Vite 6, `web/dist/` | a static SPA, with no Node server in production (the §1.2 reason still holds) |
+| UI | React 19, TypeScript `strict` | function components and hooks only |
+| routing | `react-router` 7, `createBrowserRouter` | client-side; nginx `try_files … /index.html` |
+| styling | Tailwind CSS v4 via `@tailwindcss/vite` | CSS is generated at build time |
+| components | **shadcn/ui**, copied in with its CLI into `web/src/components/ui/` | `button`, `badge`, `card`, `table`, `tabs`, `select`, `separator`, `tooltip`. Copied code, not a runtime package |
+| dashboard | **Tremor Raw** (copy-paste, Apache-2.0) into `web/src/components/tremor/` | `Tracker`, `CategoryBar`, `BarList`, `DonutChart`, `ProgressBar`. **Not** the `@tremor/react` npm package. Record the Tremor source version and licence in `web/src/components/tremor/README.md` |
+| charts | `recharts` (Tremor's dependency), pinned exactly | used only through the Tremor components |
+| icons | `lucide-react` | shadcn's default |
+| fonts | `@fontsource-variable/geist`, `@fontsource-variable/geist-mono` | bundled. No Google Fonts link at runtime (§4.2 rule 9) |
+| data | the existing `api.ts` and `api-types.ts`, ported unchanged; a small `useApi(fetcher, deps)` hook and `usePoll` | no React Query: polling is the only cache-like behaviour, and it already exists |
+| tests | vitest + `@testing-library/react` + jsdom | F1–F8 ported, plus F9–F11 below |
+
+Every dependency is pinned exactly, `package-lock.json` is committed, and `.npmrc` keeps
+`ignore-scripts=true`.
+
+### 8.3 Visual specification
+
+The reference is `docs/design/portal/flow-overview-react-tremor.html`. It has illustrative values;
+the real page shows API values only.
+
+- **Shell:** a white top bar with the product name, tabs (Projects · Flows · Inbox ·
+  Administration) and, on the right, `read-only · rev <12 chars>`. The content sits on `gray-50`
+  with a max width of 1360 px. Cards are white, with an 8 px radius, a 1 px `gray-200` outline and
+  a light shadow, as in Tremor's card. Light theme first; the dark theme uses Tailwind's `dark:`
+  classes, toggled with a `data-theme` attribute.
+- **Accent:** blue-500. **CONTRADICTED is blue, never red** (D82 / dashboard). Amber means below
+  floor or provisional. Rose means refused or failed acquisition. Dashed grey borders mark
+  `NO_VERIFIED_CLAIM` and `LITERATURE_VERDICT_NOT_APPLICABLE`.
+- **Flow overview:** top to bottom:
+  1. title and the binding badge;
+  2. four KPI cards:
+     - acquisition rate, with a `CategoryBar` and a marker at the floor;
+     - accepted annotations, with the rejected count;
+     - reviewed of accepted, with a `ProgressBar`;
+     - a `DonutChart` of question states;
+  3. a **source `Tracker`**: one block per candidate, in server order, with the server-provided
+     state and its tooltip text;
+  4. a row with the **questions table** (per-class counts → total, a mini bar of direction counts
+     labelled with the counts, status badge) and a side card with a **`BarList` of rejections by
+     reason** plus the next action;
+  5. the floor panel per class (a `CategoryBar` with marker for each class, then the deficit
+     sentences verbatim);
+  6. the inbox cards;
+  7. activity.
+- **Index:** one card per project. Its flows and unbound selectors are rows, each filling in from
+  its `/summary` (floor badge, verdict counts, inbox counts) and showing a skeleton while pending.
+  Unbound rows carry the "legacy: protocol not verified" badge.
+- **Question, claim (lineage), source (dossier):**
+  - shadcn cards and tables;
+  - the lineage is a vertical list of the six steps;
+  - `quote_found: false` is a rose callout;
+  - the quote is highlighted inside the chunk text.
+
+**No chart without a field.** Every chart or number must be backed by a field the API returns. If a
+figure the design shows is missing, add it **server-side**, in `portal_state`, with a test and a
+schema update; never derive meaning on the client. Two fields are missing today, and step R1 adds
+them:
+
+- `question_state_counts` on the overview: a count per displayed state, computed with the same
+  rules the matrix uses. States: `signed`, `stale`, `awaiting_a_person`, `provisional`,
+  `no_verified_claim`, `not_applicable`, `historical`.
+- `source_tracker` on the overview: a list in server order. Each entry carries `candidate_key`,
+  `source_id`, `source_class`, `state` (`confirmed` | `awaiting_normalize` | `not_a_document` |
+  `refused` | `not_attempted` | `unclassified`) and `tooltip`. The tooltip is display-ready, and a
+  403 uses the F19 text.
+
+The design board's "harvests by day" spark area has **no backing field** and is dropped. It is not
+to be invented.
+
+### 8.4 CSP (replaces §4.3's CSP lines)
+
+A Vite build has no inline script: `index.html` loads `/assets/*.js` as a module. The CSP can
+therefore be a plain **header**, sent by nginx in production and by `vite preview` (via
+`preview.headers` in `vite.config.ts`) during checks:
+
+`default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self';
+connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`
+
+`scripts/check-csp.mjs` becomes: fail if `dist/index.html` contains an inline `<script>` or a
+`style=` attribute. React's `style` prop (used by Radix and Recharts) goes through the CSSOM, which
+`style-src 'self'` allows. A runtime-injected `<style>` element would be blocked. So:
+
+- no `dangerouslySetInnerHTML`;
+- no shadcn `chart` component (its `ChartStyle` injects a `<style>`);
+- no toast library that injects styles.
+
+Test F10 enforces this. Acceptance includes opening the built app under `vite preview` with these
+headers and recording **zero CSP violations** in the browser console.
+
+### 8.5 Added tests (beyond the ported F1–F8)
+
+| id | asserts |
+|---|---|
+| F9 | `Tracker` renders one block per `source_tracker` entry, in server order, with the server tooltip verbatim; a `refused` 403 entry's tooltip contains "not proof of a paywall" |
+| F10 | source scan of `src/` (comments stripped): no `dangerouslySetInnerHTML`, no `<style`, no `components/ui/chart`, no non-GET `fetch`, no `<form` |
+| F11 | `DonutChart` and `BarList` are fed only from `question_state_counts` and `rejections_by_reason`; the overview component has no client-side counting over question rows (scan for `.filter(`/`.reduce(` over `questions.rows` in the overview file) |

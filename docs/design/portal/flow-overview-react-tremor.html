@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>React + Tremor — flow overview</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=Geist+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#f9fafb}
+a{color:#2563eb;text-decoration:none}a:hover{color:#1d4ed8}
+</style>
+</helmet>
+<div style="min-height: 1560px; background: #f9fafb; color: #111827; font-family: 'Geist', system-ui, sans-serif; font-size: 14px; line-height: 1.5">
+
+  <header style="background: #ffffff; border-bottom: 1px solid #e5e7eb; padding: 0 32px; display: flex; flex-wrap: wrap; align-items: center; gap: 28px; min-height: 60px">
+    <span style="font-weight: 700; font-size: 16px">Claimstone</span>
+    <nav style="display: flex; flex-wrap: wrap; gap: 20px; align-self: stretch">
+      <a href="#" style="color: #6b7280; display: flex; align-items: center">Projects</a>
+      <a href="#" style="color: #2563eb; display: flex; align-items: center; border-bottom: 2px solid #2563eb; font-weight: 500">Flows</a>
+      <a href="#" style="color: #6b7280; display: flex; align-items: center">Inbox</a>
+      <a href="#" style="color: #6b7280; display: flex; align-items: center">Administration</a>
+    </nav>
+    <span style="margin-left: auto; font-family: 'Geist Mono', monospace; font-size: 12px; color: #6b7280">read-only · rev 93d592d</span>
+  </header>
+
+  <main style="max-width: 1360px; margin: 0 auto; padding: 28px 32px 48px; display: flex; flex-direction: column; gap: 24px">
+    <div>
+      <h1 style="margin: 0; font-size: 22px; font-weight: 600">Round r1</h1>
+      <p style="margin: 2px 0 0; color: #6b7280">example-news-and-returns · protocol 0df548e3 · binding current</p>
+    </div>
+
+    <section style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px">
+      <div style="background: #ffffff; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,.05); outline: 1px solid #e5e7eb; padding: 20px">
+        <div style="display: flex; justify-content: space-between; align-items: center"><span style="font-size: 14px; color: #6b7280">Acquisition rate</span><span style="font-size: 12px; font-weight: 500; background: #fff7ed; color: #c2410c; border-radius: 6px; padding: 1px 8px">below floor</span></div>
+        <div style="font-size: 30px; font-weight: 600; margin-top: 4px">0.797</div>
+        <div style="position: relative; display: flex; gap: 2px; margin-top: 12px; height: 8px">
+          <div style="flex: 0 0 79.7%; background: #f59e0b; border-radius: 4px 0 0 4px"></div><div style="flex: 1; background: #e5e7eb; border-radius: 0 4px 4px 0"></div>
+          <div style="position: absolute; left: 80%; top: -5px; width: 3px; height: 18px; border-radius: 2px; background: #111827"></div>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: 12px; color: #6b7280; margin-top: 6px"><span>51 / 64 confirmed</span><span>floor 0.80</span></div>
+      </div>
+      <div style="background: #ffffff; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,.05); outline: 1px solid #e5e7eb; padding: 20px">
+        <span style="font-size: 14px; color: #6b7280">Annotations accepted</span>
+        <div style="font-size: 30px; font-weight: 600; margin-top: 4px">412</div>
+        <svg width="100%" height="44" viewBox="0 0 220 44" preserveAspectRatio="none" aria-hidden="true"><path d="M0 40 L30 36 L60 30 L90 28 L120 18 L150 14 L180 9 L220 6 L220 44 L0 44 Z" fill="#dbeafe"></path><path d="M0 40 L30 36 L60 30 L90 28 L120 18 L150 14 L180 9 L220 6" fill="none" stroke="#3b82f6" stroke-width="2"></path></svg>
+        <div style="font-size: 12px; color: #6b7280">harvests by day · 96 rejected</div>
+      </div>
+      <div style="background: #ffffff; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,.05); outline: 1px solid #e5e7eb; padding: 20px">
+        <span style="font-size: 14px; color: #6b7280">Independently reviewed</span>
+        <div style="font-size: 30px; font-weight: 600; margin-top: 4px">380 <span style="font-size: 16px; color: #9ca3af">/ 412</span></div>
+        <div style="display: flex; height: 8px; gap: 2px; margin-top: 14px"><div style="flex: 0 0 61%; background: #3b82f6; border-radius: 4px 0 0 4px"></div><div style="flex: 0 0 23%; background: #f59e0b"></div><div style="flex: 0 0 8%; background: #a855f7"></div><div style="flex: 1; background: #e5e7eb; border-radius: 0 4px 4px 0"></div></div>
+        <div style="display: flex; flex-wrap: wrap; gap: 10px; font-size: 12px; color: #6b7280; margin-top: 6px"><span><b style="color: #3b82f6">■</b> supported 251</span><span><b style="color: #f59e0b">■</b> overstated 95</span><span><b style="color: #a855f7">■</b> n/a 34</span></div>
+      </div>
+      <div style="background: #ffffff; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,.05); outline: 1px solid #e5e7eb; padding: 20px; display: flex; gap: 16px; align-items: center">
+        <div style="width: 84px; height: 84px; border-radius: 50%; background: conic-gradient(#3b82f6 0 12.5%, #6366f1 12.5% 25%, #f59e0b 25% 62.5%, #d1d5db 62.5% 100%); display: grid; place-items: center; flex: none"><div style="width: 58px; height: 58px; border-radius: 50%; background: #ffffff; display: grid; place-items: center; font-weight: 600">8</div></div>
+        <div style="font-size: 12px; color: #4b5563; display: flex; flex-direction: column; gap: 3px"><span style="font-size: 14px; color: #6b7280">Questions</span><span><b style="color: #3b82f6">●</b> signed 1</span><span><b style="color: #6366f1">●</b> awaiting a person 1</span><span><b style="color: #f59e0b">●</b> provisional 3</span><span><b style="color: #9ca3af">●</b> no verified claim 3</span></div>
+      </div>
+    </section>
+
+    <section style="background: #ffffff; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,.05); outline: 1px solid #e5e7eb; padding: 20px">
+      <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px"><h2 style="margin: 0; font-size: 16px; font-weight: 600">Sources in this round</h2><span style="font-size: 12px; color: #6b7280">one block per candidate, server order</span></div>
+      <div style="display: flex; gap: 3px; margin-top: 14px; height: 32px">
+        <div style="flex: 1; background: #10b981; border-radius: 3px"></div><div style="flex: 1; background: #10b981; border-radius: 3px"></div><div style="flex: 1; background: #10b981; border-radius: 3px"></div><div style="flex: 1; background: #10b981; border-radius: 3px"></div><div style="flex: 1; background: #10b981; border-radius: 3px"></div><div style="flex: 1; background: #f43f5e; border-radius: 3px"></div><div style="flex: 1; background: #10b981; border-radius: 3px"></div><div style="flex: 1; background: #10b981; border-radius: 3px"></div><div style="flex: 1; background: #10b981; border-radius: 3px"></div><div style="flex: 1; background: #fbbf24; border-radius: 3px"></div><div style="flex: 1; background: #10b981; border-radius: 3px"></div><div style="flex: 1; background: #10b981; border-radius: 3px"></div><div style="flex: 1; background: #10b981; border-radius: 3px"></div><div style="flex: 1; background: #10b981; border-radius: 3px"></div><div style="flex: 1; background: #f43f5e; border-radius: 3px"></div><div style="flex: 1; background: #10b981; border-radius: 3px"></div><div style="flex: 1; background: #10b981; border-radius: 3px"></div><div style="flex: 1; background: #d1d5db; border-radius: 3px"></div><div style="flex: 1; background: #10b981; border-radius: 3px"></div><div style="flex: 1; background: #10b981; border-radius: 3px"></div><div style="flex: 1; background: #10b981; border-radius: 3px"></div><div style="flex: 1; background: #10b981; border-radius: 3px"></div><div style="flex: 1; background: #fbbf24; border-radius: 3px"></div><div style="flex: 1; background: #10b981; border-radius: 3px"></div><div style="flex: 1; background: #10b981; border-radius: 3px"></div><div style="flex: 1; background: #10b981; border-radius: 3px"></div><div style="flex: 1; background: #f43f5e; border-radius: 3px"></div><div style="flex: 1; background: #10b981; border-radius: 3px"></div><div style="flex: 1; background: #10b981; border-radius: 3px"></div><div style="flex: 1; background: #10b981; border-radius: 3px"></div><div style="flex: 1; background: #d1d5db; border-radius: 3px"></div><div style="flex: 1; background: #10b981; border-radius: 3px"></div>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: #6b7280; margin-top: 8px"><span><b style="color: #10b981">■</b> confirmed</span><span><b style="color: #fbbf24">■</b> obtained, not a document</span><span><b style="color: #f43f5e">■</b> refused (e.g. HTTP 403 — not proof of a paywall)</span><span><b style="color: #9ca3af">■</b> not attempted</span><span>showing 32 of 64</span></div>
+    </section>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 20px">
+      <section style="flex: 3 1 560px; min-width: 0; background: #ffffff; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,.05); outline: 1px solid #e5e7eb; padding: 20px; overflow-x: auto">
+        <h2 style="margin: 0 0 12px; font-size: 16px; font-weight: 600">Questions</h2>
+        <table style="width: 100%; min-width: 620px; border-collapse: collapse; font-size: 14px">
+          <thead><tr style="text-align: left; color: #374151; border-bottom: 1px solid #e5e7eb"><th style="padding: 8px 8px 8px 0; font-weight: 600">ID</th><th style="font-weight: 600">Question</th><th style="font-weight: 600">Per class → total</th><th style="font-weight: 600">Direction (count)</th><th style="font-weight: 600">Status</th></tr></thead>
+          <tbody style="color: #4b5563">
+            <tr style="border-bottom: 1px solid #f3f4f6"><td style="padding: 12px 8px 12px 0; font-family: 'Geist Mono', monospace; color: #111827">Q02</td><td>Sentiment beyond prices</td><td style="font-family: 'Geist Mono', monospace; font-size: 13px">ACA 41 · WP 12 → 53</td><td><div style="display: flex; height: 6px; width: 120px; gap: 1px"><div style="flex: 11; background: #3b82f6"></div><div style="flex: 3; background: #0ea5e9"></div><div style="flex: 2; background: #d1d5db"></div></div><span style="font-size: 12px">11 · 3 · 2</span></td><td><span style="font-size: 12px; font-weight: 500; background: #eef2ff; color: #4338ca; border-radius: 6px; padding: 2px 8px; outline: 1px solid #c7d2fe">Awaiting a person</span></td></tr>
+            <tr style="border-bottom: 1px solid #f3f4f6"><td style="padding: 12px 8px 12px 0; font-family: 'Geist Mono', monospace; color: #111827">Q03</td><td>Asymmetric speed</td><td style="font-family: 'Geist Mono', monospace; font-size: 13px">ACA 9 · WP 0 → 9</td><td><div style="display: flex; height: 6px; width: 120px; gap: 1px"><div style="flex: 2; background: #3b82f6"></div><div style="flex: 2; background: #0ea5e9"></div></div><span style="font-size: 12px">2 · 2</span></td><td><span style="font-size: 12px; font-weight: 500; background: #fffbeb; color: #b45309; border-radius: 6px; padding: 2px 8px; outline: 1px solid #fde68a">Provisional</span></td></tr>
+            <tr style="border-bottom: 1px solid #f3f4f6"><td style="padding: 12px 8px 12px 0; font-family: 'Geist Mono', monospace; color: #111827">Q04</td><td>Event as the unit</td><td style="font-family: 'Geist Mono', monospace; font-size: 13px">— → 0</td><td style="color: #9ca3af">—</td><td><span style="font-size: 12px; font-weight: 500; border: 1px dashed #9ca3af; color: #4b5563; border-radius: 6px; padding: 1px 8px">No verified claim</span></td></tr>
+            <tr><td style="padding: 12px 8px 12px 0; font-family: 'Geist Mono', monospace; color: #111827">Q05</td><td>Novelty and reaction size</td><td style="font-family: 'Geist Mono', monospace; font-size: 13px">ACA 14 · WP 3 → 17</td><td><div style="display: flex; height: 6px; width: 120px; gap: 1px"><div style="flex: 5; background: #3b82f6"></div><div style="flex: 4; background: #0ea5e9"></div></div><span style="font-size: 12px">5 · 4</span></td><td><span style="font-size: 12px; font-weight: 500; background: #eff6ff; color: #1d4ed8; border-radius: 6px; padding: 2px 8px; outline: 1px solid #bfdbfe">Contradicted · signed</span></td></tr>
+          </tbody>
+        </table>
+      </section>
+      <section style="flex: 2 1 360px; background: #ffffff; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,.05); outline: 1px solid #e5e7eb; padding: 20px">
+        <h2 style="margin: 0; font-size: 16px; font-weight: 600">Rejected by the gate</h2>
+        <p style="margin: 2px 0 14px; font-size: 13px; color: #6b7280">Current, by reason — the denominator</p>
+        <div style="display: flex; flex-direction: column; gap: 8px; font-size: 14px">
+          <div style="display: flex; gap: 12px; align-items: center"><div style="flex: 1; position: relative; height: 32px"><div style="width: 100%; height: 32px; background: #dbeafe; border-radius: 4px"></div><span style="position: absolute; left: 10px; top: 6px">number not in quote</span></div><span style="width: 32px; text-align: right">48</span></div>
+          <div style="display: flex; gap: 12px; align-items: center"><div style="flex: 1; position: relative; height: 32px"><div style="width: 54%; height: 32px; background: #dbeafe; border-radius: 4px"></div><span style="position: absolute; left: 10px; top: 6px">quote not found</span></div><span style="width: 32px; text-align: right">26</span></div>
+          <div style="display: flex; gap: 12px; align-items: center"><div style="flex: 1; position: relative; height: 32px"><div style="width: 29%; height: 32px; background: #dbeafe; border-radius: 4px"></div><span style="position: absolute; left: 10px; top: 6px">wrong kind</span></div><span style="width: 32px; text-align: right">14</span></div>
+          <div style="display: flex; gap: 12px; align-items: center"><div style="flex: 1; position: relative; height: 32px"><div style="width: 17%; height: 32px; background: #dbeafe; border-radius: 4px"></div><span style="position: absolute; left: 10px; top: 6px">secondhand claim</span></div><span style="width: 32px; text-align: right">8</span></div>
+        </div>
+        <div style="border-top: 1px solid #f3f4f6; margin-top: 18px; padding-top: 14px">
+          <div style="font-weight: 600; font-size: 14px">Next: sign Q02</div>
+          <div style="display: flex; gap: 8px; margin-top: 8px; align-items: center"><code style="flex: 1; min-width: 0; font-family: 'Geist Mono', monospace; font-size: 12px; background: #f9fafb; outline: 1px solid #e5e7eb; border-radius: 6px; padding: 8px 10px; overflow-x: auto; white-space: pre">claimstone adjudicate … Q02 --verdict &lt;ONE_OF_FIVE&gt;</code><button type="button" style="font-family: inherit; font-size: 13px; font-weight: 500; background: #3b82f6; color: #ffffff; border: 0; border-radius: 6px; padding: 0 14px; min-height: 36px">Copy</button></div>
+        </div>
+      </section>
+    </div>
+    <p style="margin: 0; font-size: 12px; color: #9ca3af">Illustrative values. Tremor adds the tracker, category bars, bar list, donut and spark area to shadcn/ui.</p>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1560}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

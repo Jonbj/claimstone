@@ -12,7 +12,10 @@ that an interruption loses at most one small sub-task. Follow it exactly.
 
 The specification is `docs/superpowers/specs/2026-10-06-portal-frontend-docker-design.md`. It is the
 authority. Read the sections your step names, plus §1.3 and §4.2, which always apply. The framework
-decision is made: **TypeScript + SvelteKit with `adapter-static`**.
+decision is made, and it was **revised**: **React + shadcn/ui + Tremor Raw, built with Vite**
+(spec §8, which overrides §4.1, §4.3 and §4.4 wherever they differ). S4 and S5 were built with
+SvelteKit and are superseded by R2–R4. The visual reference is
+`docs/design/portal/flow-overview-react-tremor.html`.
 
 ## Start of every session (in this order)
 
@@ -61,7 +64,11 @@ branch.
 | **S3** | `claimstone/api_schema.py`, `tools/build_portal_api_schema.py` and the committed `docs/contracts/portal-api.schema.json`. The minimal stdlib validator and test A2 (§3.4). `tools/build_portal_fixtures.py` and the committed `web/tests/fixtures/*.json`, plus currency tests. | checks pass |
 | **S4** | Scaffold `web/` (§4.1): exact pinned versions, committed `package-lock.json`, configs, `gen:types` and the generated `api-types.ts`, `api.ts`, `vocabulary.ts`, base components (`Chip`, `Fraction`, `Pending`, `ErrorState`, `CommandBlock`), layout, and vitest F1, F4, F5, F6 and F8 (§4.4). | web checks pass; checks pass |
 | **S5** | Every route and remaining component of §4.1, following every rule in §4.2. That includes the lazy index with per-selector summaries and 3 s polling. Vitest F2, F3 and F7. | web checks pass; checks pass |
-| **S6** | `web/Dockerfile` and `web/nginx.conf` (§4.3); the `api` and `web` services and the `portal` network in `compose.yaml` (§5), keeping every existing comment and service; `Dockerfile` args and env; `portal.sh`; `.dockerignore`. Pin base images by digest. | every acceptance command of §7 step 4, with output recorded in the log; `./portal.sh down` afterwards |
+| **R1** | Server fields for the React design (§8.3): `question_state_counts` and `source_tracker` on the overview, computed in `claimstone/portal_state.py` with the matrix's own rules (one `compute()`, no extra pass over the ledgers). Update `api_schema.py`, regenerate the schema and fixtures, and add Python tests: counts sum to the registry size; tracker order equals the scoped candidate order; a 403 entry's tooltip is the F19 text; unbound and flow selectors both carry the fields. | checks pass |
+| **R2** | Replace the SvelteKit scaffold with React (§8.2): delete the Svelte sources and config, scaffold Vite + React + TS strict + react-router + Tailwind v4, run the shadcn CLI for the listed components, copy the Tremor Raw components with their README/licence, add the bundled Geist fonts, port `api.ts` / `api-types.ts` / `vocabulary.ts` unchanged, add `useApi` / `usePoll`, the shell (top bar, tabs, rev, theme), the base components (Chip, Fraction, Pending, ErrorState, CommandBlock), the new `check-csp.mjs` (§8.4), the CSP header in `preview.headers`, and port tests F1, F4, F5, F6 and F8 plus F10. | web checks pass (`npm ci && npm run typecheck && npm test && npm run build`); checks pass |
+| **R3** | Pages, part 1: index (lazy per-selector summaries, skeletons), project page (integrity, flows, unbound selectors, activity), inbox (server order, category filter only), admin. | web checks pass; checks pass |
+| **R4** | Pages, part 2, following §8.3 and every rule of §4.2: flow overview (KPI cards, `CategoryBar` floor, `DonutChart` from `question_state_counts`, `Tracker` from `source_tracker`, questions table, `BarList`, floor per class, inbox, activity, 3 s polling), question, claim lineage, source dossier. Port F2, F3 and F7; add F9 and F11. Then run `npm run build && npx vite preview`, open each page against `claimstone api` on a **tmp** workspace, and record "0 CSP violations" (or the violations, and fix them) in the log. | web checks pass; checks pass; zero CSP violations recorded |
+| **S6** | `web/Dockerfile` (build output is `web/dist/`) and `web/nginx.conf` (§4.3, with the CSP **header** of §8.4); the `api` and `web` services and the `portal` network in `compose.yaml` (§5), keeping every existing comment and service; `Dockerfile` args and env; `portal.sh`; `.dockerignore`. Pin base images by digest. | every acceptance command of §7 step 4, with output recorded in the log; `./portal.sh down` afterwards |
 | **S7** | Parity check (§7 step 5) between `claimstone portal` and the SPA, on a tmp store built from test fixtures. D83 (§6) in `docs/DESIGN_DECISIONS.md`; register `("claimstone/api.py", "API_VERSION", "portal_api_version")`; update `docs/README.md`, `AGENTS.md` (Node only builds the frontend) and a dated `HANDOFF.md` paragraph. | checks pass; `check_instrument_versions.py` counts one more instrument |
 
 ## Checks
@@ -74,9 +81,9 @@ Always run:
 .venv/bin/python tools/check_instrument_versions.py
 ```
 
-**Web checks**, from S4 on: `cd web && npm ci && npm run check && npm test && npm run build`. After
-the first `npm ci`, plain `npm run check && npm test && npm run build` is enough unless dependencies
-changed.
+**Web checks**, from R2 on: `cd web && npm ci && npm run typecheck && npm test && npm run build`.
+After the first `npm ci`, plain `npm run typecheck && npm test && npm run build` is enough unless
+dependencies changed. (S4–S5 used `npm run check`, the SvelteKit equivalent.)
 
 ## Hard constraints. These override any instinct to be helpful.
 
