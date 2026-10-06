@@ -50,6 +50,11 @@ INSTRUMENTS = (
     ("claimstone/population.py", "POPULATION_VERSION", "population_version"),
     ("claimstone/acquire.py", "REUSE_VERSION", "reuse_version"),
     ("claimstone/ids.py", "CANDIDATE_KEY_VERSION", "candidate_key_version"),
+    # The portal's own instruments: the selector predicate every scoped read shares, the flow
+    # ledger's shape, and the export's. Each is registered so a bump is recorded, not silent.
+    ("claimstone/scope.py", "SCOPE_VERSION", "scope_version"),
+    ("claimstone/flows.py", "FLOW_VERSION", "flow_version"),
+    ("claimstone/export.py", "EXPORT_VERSION", "export_version"),
 )
 
 # The parser is an instrument too, and a string rather than a number. Measured: lfoppiano/grobid
@@ -78,21 +83,23 @@ def declared_string(path: pathlib.Path, constant: str) -> str | None:
     return found.group(1) if found else None
 
 
-def main() -> int:
+def check() -> list[str]:
+    """Every acknowledgement problem, as lines. An empty list means the record is current.
+
+    Split out of `main` so the portal's integrity panel can run the same check read-only;
+    `main` keeps its exit codes and output exactly as before.
+    """
     if not RECORD.exists():
-        print(f"missing {RECORD.relative_to(ROOT)}")
-        return 1
+        return [f"missing {RECORD.relative_to(ROOT)}"]
     record = RECORD.read_text(encoding="utf-8")
 
     problems: list[str] = []
-    checked = 0
     for relative, constant, phrase in INSTRUMENTS:
         version = declared(ROOT / relative, constant)
         if version is None:
             # The module does not exist yet, or does not declare it. Both are fine; this script
             # reminds, it does not require a stage to be built.
             continue
-        checked += 1
         if not re.search(rf"{phrase}\D{{0,40}}{version}\b", record, re.I):
             problems.append(
                 f"{relative} declares {constant} = {version}, and "
@@ -105,7 +112,6 @@ def main() -> int:
         image = declared_string(ROOT / relative, constant)
         if image is None:
             continue
-        checked += 1
         if image not in record:
             problems.append(
                 f"{relative} declares {constant} = {image!r}, and "
@@ -121,18 +127,29 @@ def main() -> int:
                 "compose.yaml pins no image digest. A tag can be re-pushed under the same name, so a "
                 "figure measured with one build is not comparable to one measured with another."
             )
-        else:
-            checked += 1
-            if found.group(1) not in record:
-                problems.append(
-                    f"compose.yaml pins {found.group(1)} and docs/DESIGN_DECISIONS.md never names it. "
-                    f"An instrument the record does not name is one nobody can tell you changed."
-                )
+        elif found.group(1) not in record:
+            problems.append(
+                f"compose.yaml pins {found.group(1)} and docs/DESIGN_DECISIONS.md never names it. "
+                f"An instrument the record does not name is one nobody can tell you changed."
+            )
+    return problems
 
-    for problem in problems:
-        print(f"error: {problem}")
+
+def main() -> int:
+    problems = check()
     if problems:
+        for problem in problems:
+            print(f"error: {problem}")
         return 1
+    checked = 0
+    for relative, constant, phrase in INSTRUMENTS:
+        if declared(ROOT / relative, constant) is not None:
+            checked += 1
+    for _relative, _constant in PARSERS:
+        checked += 1
+    compose = ROOT / "compose.yaml"
+    if compose.exists() and DIGEST.search(compose.read_text(encoding="utf-8")):
+        checked += 1
     print(f"{checked} instrument version(s) acknowledged in the design record")
     return 0
 

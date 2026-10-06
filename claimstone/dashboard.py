@@ -202,6 +202,17 @@ def _spine_row(q: round_state.QuestionRow) -> str:
 def render_page(state: round_state.RoundState, cheap: dict[str, Any],
                 activity_rows: list[dict[str, Any]] | None = None) -> str:
     """One self-contained HTML document. Values are escaped; fractions carry denominators."""
+    # Damage is named at the top, before any figure: the reader meets "withheld" first and never
+    # mistakes an absent number for a zero one (review F2).
+    integrity = ""
+    if state.errors:
+        chips = "".join(_chip(error, "bad") for error in state.errors)
+        integrity = (
+            '<section><h2>ledger integrity</h2>'
+            f'<div class="strip">{chips}</div>'
+            '<p class="note">Figures that depend on a damaged ledger are withheld, not zero.</p>'
+            "</section>"
+        )
     floor = state.floor or {}
     floor_line = ""
     if floor:
@@ -258,6 +269,7 @@ def render_page(state: round_state.RoundState, cheap: dict[str, Any],
       <button id="tgl" title="light/dark (legible in both, spec §11)">◐</button>
     </header>
     <main>
+    {integrity}
     {unavailable}
     <section><h2>the pipeline</h2><div class="strip">{strip}{floor_line}</div>
     <p class="note">discover never carries a percentage: how much relevant work exists is unknown.
@@ -336,15 +348,36 @@ class _Handler(BaseHTTPRequestHandler):
         if self.command != "HEAD":
             self.wfile.write(body)
 
+    def _fail(self, exc: Exception) -> None:
+        """An unexpected error is a named 500, never a page of zeros over unreadable ledgers.
+
+        The class name only, without message or traceback: the page is read on a loopback
+        screen, and the diagnosis belongs in the log the operator controls (review F2).
+        """
+        body = f"500: {type(exc).__name__}\n".encode("utf-8")
+        self.send_response(500)
+        self.send_header("Content-Type", "text/plain; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        if self.command != "HEAD":
+            self.wfile.write(body)
+
     def do_GET(self) -> None:  # noqa: N802 - http.server's naming
+        from claimstone import scope
+
         route = urlparse(self.path)
         query = parse_qs(route.query)
         try:
             if route.path == "/":
                 rs = round_state.state(self.project, self.store, round_name=self.round_name,
                                        manifest_only=self.manifest_only)
+                # A scoped page must not show another round's rows, not even in the activity
+                # log (review F1); the whole-store default keeps today's behaviour exactly.
+                selector = (scope.Selector(self.round_name, self.manifest_only)
+                            if (self.round_name or self.manifest_only) else None)
                 self._html(render_page(rs, round_state.cheap_state(self.store),
-                                       round_state.activity(self.store, 50)))
+                                       round_state.activity(self.store, 50, selector)))
             elif route.path == "/api/state":
                 self._json(round_state.cheap_state(self.store))
             elif route.path == "/api/round":
@@ -367,6 +400,8 @@ class _Handler(BaseHTTPRequestHandler):
                 self._refuse()
         except BrokenPipeError:
             pass
+        except Exception as exc:  # noqa: BLE001 - a refusal to render, named, never zeros
+            self._fail(exc)
 
     def do_POST(self) -> None:  # noqa: N802
         self._refuse()

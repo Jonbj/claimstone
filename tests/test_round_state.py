@@ -269,3 +269,162 @@ def test_cheap_state_absent_ledger_is_not_zero(tmp_path):
     assert cheap["ledgers"]["profiles.jsonl"]["mtime"] is None
     # The running inference says what it is: mtime, not liveness.
     assert "inference" in cheap["pid_note"]
+
+
+# --- P0, spec §2.4: one selector, honest errors -------------------------------------------
+
+
+@pytest.fixture()
+def two_rounds(project, tmp_path) -> Store:
+    """r1: S01/S02, one claim. r2: S03 with a document, two chunks, two claims, a rejection,
+    a review — everything a figure might leak across the round boundary from."""
+    store = Store("fixture", base=tmp_path)
+    _write(store, "candidates.jsonl", [
+        {"candidate_key": "r1-a", "source_id": "S01", "round": "r1", "channel": "keyword",
+         "source_class": "ACA", "discovered_at": "2026-10-01T10:00:00+00:00"},
+        {"candidate_key": "r1-b", "source_id": "S02", "round": "r1", "channel": "keyword",
+         "source_class": "ACA", "discovered_at": "2026-10-01T10:00:01+00:00"},
+        {"candidate_key": "r2-a", "source_id": "S03", "round": "r2", "channel": "citation",
+         "source_class": "ACA", "discovered_at": "2026-10-02T10:00:00+00:00"},
+    ])
+    _write(store, "acquisitions.jsonl", [
+        {"candidate_key": "r2-a", "source_id": "S03", "acquired": True, "sha256": "0" * 64,
+         "url": "https://example.org/s03.pdf", "fetched_at": "2026-10-02T11:00:00+00:00"},
+    ])
+    _write(store, "documents.jsonl", [
+        {"source_id": "S03", "fulltext_confirmed": True, "generation_sha256": "g1",
+         "chunks": 2, "chunk_ids": ["ch1", "ch2"], "built_at": "2026-10-02T12:00:00+00:00"},
+    ])
+    _write(store, "chunks.jsonl", [
+        {"chunk_id": "ch1", "source_id": "S03", "generation_sha256": "g1", "text": "body one",
+         "built_at": "2026-10-02T12:00:01+00:00"},
+        {"chunk_id": "ch2", "source_id": "S03", "generation_sha256": "g1", "text": "body two",
+         "built_at": "2026-10-02T12:00:02+00:00"},
+    ])
+    _write(store, "claims.jsonl", [
+        {"claim_id": "c0", "question_id": "Q02", "source_id": "S01", "source_class": "ACA",
+         "harvested_at": "2026-10-01T11:00:00+00:00", "gate_revision": 1},
+        {"claim_id": "c1", "question_id": "Q01", "source_id": "S03", "source_class": "ACA",
+         "chunk_id": "ch1", "harvested_at": "2026-10-03T10:00:00+00:00", "gate_revision": 1},
+        {"claim_id": "c2", "question_id": "Q01", "source_id": "S03", "source_class": "ACA",
+         "chunk_id": "ch2", "harvested_at": "2026-10-03T10:00:01+00:00", "gate_revision": 1},
+    ])
+    _write(store, "rejections.jsonl", [
+        {"claim_id": "c3", "source_id": "S03", "chunk_id": "ch1",
+         "failure": "NUMBER_NOT_IN_QUOTE",
+         "gate_revision": 1, "harvested_at": "2026-10-03T11:00:00+00:00"},
+    ])
+    _write(store, "reviews.jsonl", [
+        {"claim_id": "c1", "verdict": "SUPPORTED", "reason": "reads correctly",
+         "review_version": 2, "reviewed_at": "2026-10-04T10:00:00+00:00"},
+    ])
+    return store
+
+
+def _stage(rs, name):
+    return next(s for s in rs.stages if s.name == name)
+
+
+def test_round_state_claims_do_not_leak_between_rounds(project, two_rounds):
+    """T2: extract outputs, rejections_by_reason and every QuestionRow.claims count one round only."""
+    r1 = round_state.state(project, two_rounds, round_name="r1")
+    extract1 = _stage(r1, "extract")
+    assert extract1.outputs == 1                       # c0 alone; c1/c2 belong to r2
+    assert extract1.rejected is None                   # no r1 rejection rows at all
+    assert r1.rejections_by_reason == {}
+    spine1 = {q.id: q for q in r1.questions}
+    assert spine1["Q02"].claims == 1
+    assert spine1["Q01"].claims == 0
+    assert spine1["Q02"].claims_by_class == {"ACA": 1}
+
+    r2 = round_state.state(project, two_rounds, round_name="r2")
+    extract2 = _stage(r2, "extract")
+    assert extract2.outputs == 2                       # c1 and c2, never c0
+    assert extract2.rejected == 1                      # c3
+    assert r2.rejections_by_reason == {"NUMBER_NOT_IN_QUOTE": 1}
+    spine2 = {q.id: q for q in r2.questions}
+    assert spine2["Q01"].claims == 2
+    assert spine2["Q02"].claims == 0
+
+
+def test_round_state_review_and_chunks_scoped(project, two_rounds):
+    """T3: the review progress denominator and the extract inputs count the selected round only."""
+    r2 = round_state.state(project, two_rounds, round_name="r2")
+    review2 = _stage(r2, "review")
+    assert review2.inputs == 2                         # r2's two claims
+    assert review2.outputs == 1                        # the c1 review
+    assert review2.progress.total == 2
+    assert _stage(r2, "extract").inputs == 2           # r2's two chunks
+
+    r1 = round_state.state(project, two_rounds, round_name="r1")
+    review1 = _stage(r1, "review")
+    assert review1.inputs == 1                         # c0 alone
+    assert review1.outputs is None                     # no r1 review rows exist
+    assert review1.progress.total == 1
+    # r1 wrote no chunks: zero is countable, and `or None` keeps the honest rendering (§4).
+    assert _stage(r1, "extract").inputs is None
+
+
+def test_scoped_activity_and_last_write_exclude_other_round(project, two_rounds):
+    """T4: scoped activity carries no other round's rows, and a stage the selector never wrote
+    has no last write — even though another round wrote that ledger."""
+    from claimstone.scope import Selector
+
+    rows = round_state.activity(two_rounds, 50, Selector("r1"))
+    assert rows, "r1 wrote candidates and a claim; its own rows must appear"
+    for row in rows:
+        assert row["row"].get("source_id") != "S03"
+        assert row["row"].get("candidate_key") != "r2-a"
+        assert row["ledger"] != "documents.jsonl" and row["ledger"] != "chunks.jsonl"
+
+    r1 = round_state.state(project, two_rounds, round_name="r1")
+    assert _stage(r1, "normalize").last_write is None   # r2 alone wrote documents/chunks
+    assert _stage(r1, "review").last_write is None      # the one review belongs to r2's claim
+    assert _stage(r1, "extract").last_write is not None  # c0 is r1's, with its own timestamp
+    # Whole store keeps the mtime behaviour: the same stage now sees r2's write.
+    whole = round_state.state(project, two_rounds)
+    assert _stage(whole, "normalize").last_write is not None
+
+
+def test_whole_store_state_unchanged(project, two_rounds):
+    """T5: round_name=None keeps today's numbers — the concrete ones this fixture implies."""
+    rs = round_state.state(project, two_rounds)
+    assert _stage(rs, "discover").outputs == 3
+    assert _stage(rs, "extract").outputs == 3            # c0, c1, c2 — every round's claims
+    assert _stage(rs, "extract").rejected == 1
+    assert _stage(rs, "extract").inputs == 2             # both chunks, no round asked
+    assert _stage(rs, "review").inputs == 3
+    assert _stage(rs, "review").outputs == 1
+    assert rs.rejections_by_reason == {"NUMBER_NOT_IN_QUOTE": 1}
+    spine = {q.id: q for q in rs.questions}
+    assert spine["Q01"].claims == 2
+    assert spine["Q02"].claims == 1
+    assert rs.errors == ()
+
+
+def test_corrupt_acquisitions_is_an_error_not_zero(project, tmp_path):
+    """T7: interior damage in acquisitions.jsonl is named in errors and withholds the figures."""
+    store = Store("fixture", base=tmp_path)
+    _write(store, "candidates.jsonl", [
+        {"candidate_key": "k1", "source_id": "S01", "round": "r1", "channel": "keyword",
+         "source_class": "ACA"},
+    ])
+    _write(store, "acquisitions.jsonl", [
+        {"candidate_key": "k1", "source_id": "S01", "acquired": True,
+         "fetched_at": "2026-10-01T11:00:00+00:00"},
+    ])
+    # Interior damage, not a torn tail: a complete line of non-JSON between two valid rows.
+    with store.path("acquisitions.jsonl").open("a", encoding="utf-8") as handle:
+        handle.write("{bad\n")
+    _write(store, "acquisitions.jsonl", [
+        {"candidate_key": "k1", "source_id": "S01", "acquired": False},
+    ])
+
+    rs = round_state.state(project, store)
+    assert any(error.startswith("LEDGER_CORRUPT") for error in rs.errors)
+    acquire = _stage(rs, "acquire")
+    normalize = _stage(rs, "normalize")
+    assert acquire.outputs is None and acquire.inputs is None       # withheld, not zero
+    assert normalize.outputs is None and normalize.inputs is None
+    assert acquire.detail == "ledger damaged: figures withheld"
+    assert rs.floor is None                                          # no figure over damage

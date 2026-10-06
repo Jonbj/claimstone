@@ -948,6 +948,167 @@ def _serve(args: argparse.Namespace) -> int:
     return 0
 
 
+def _flow_open(args: argparse.Namespace) -> tuple["Project", "Store"]:
+    """The store without `_checked_store`'s recording: flow reads never write, and a drift is a
+    state the command reports, not a crash (spec §3.6)."""
+    from claimstone.store import Store
+
+    project = load_project(args.project)
+    return project, Store(project.name, base=args.store)
+
+
+def _flow_create(args: argparse.Namespace) -> int:
+    from claimstone import flows, scope
+
+    project, store = _flow_open(args)
+    try:
+        row, created = flows.create(
+            project, store, selector=scope.Selector(args.round, args.manifest),
+            title=args.title, derived_from=args.derived_from, relation=args.relation)
+    except ValueError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+    print(f"{'created' if created else 'exists'} {row['flow_id']}")
+    if row.get("bound_after_data"):
+        print("warning: bound after data existed: rows written before binding are not "
+              "verified against this protocol")
+    return 0
+
+
+def _flow_list(args: argparse.Namespace) -> int:
+    import json as _json
+
+    from claimstone import flows
+    from claimstone.config import RegistryDrift, check_registry_drift
+
+    project, store = _flow_open(args)
+    drift = None
+    try:
+        check_registry_drift(project, store, record=False)
+    except RegistryDrift as exc:
+        drift = str(exc)
+    rows = flows.flows(store)
+    listed = []
+    for flow_id, row in sorted(rows.items()):
+        state = flows.binding_state(project, store, row)
+        selector = (row.get("binding") or {}).get("selector") or {}
+        listed.append({
+            "flow_id": flow_id,
+            "selector": selector,
+            "title": row.get("title"),
+            "binding_state": state["state"],
+            "differences": state["differences"],
+            "bound_after_data": bool(row.get("bound_after_data")),
+        })
+    legacy = [selector.round for selector in flows.legacy_selectors(store, rows.values())]
+
+    if args.json:
+        print(_json.dumps({"flows": listed, "legacy_selectors": legacy,
+                           "registry_drift": drift}, indent=1, ensure_ascii=False, default=str))
+        return 0
+    if drift:
+        print(f"registry drift: {drift}")
+    for entry in listed:
+        selector = entry["selector"]
+        name = selector.get("round") or "(whole store)"
+        flag = " manifest-only" if selector.get("manifest_only") else ""
+        title = f"  {entry['title']}" if entry["title"] else ""
+        print(f"{entry['flow_id'][:12]}  {name}{flag}  {entry['binding_state']}{title}")
+        if entry["differences"]:
+            print(f"    differs in: {', '.join(entry['differences'])}")
+    for name in legacy:
+        print(f"legacy {name}: protocol not verified")
+    return 0
+
+
+def _flow_check(args: argparse.Namespace) -> int:
+    from claimstone import flows
+    from claimstone.config import RegistryDrift, check_registry_drift
+
+    project, store = _flow_open(args)
+    row = flows.flows(store).get(args.flow_id)
+    if row is None:
+        print(f"unknown flow id: {args.flow_id}", file=sys.stderr)
+        return 2
+    drift = None
+    try:
+        check_registry_drift(project, store, record=False)
+    except RegistryDrift as exc:
+        drift = str(exc)
+    state = flows.binding_state(project, store, row)
+    print(state["state"])
+    if state["differences"]:
+        print(f"  differs in: {', '.join(state['differences'])}")
+    if drift:
+        print(f"  registry drift: {drift}")
+    if state["bound_after_data"]:
+        print("  bound after data existed: rows written before binding are not verified "
+              "against this protocol")
+    return 0 if state["state"] == "CURRENT" and drift is None else 4
+
+
+def _flow_title(args: argparse.Namespace) -> int:
+    import getpass
+
+    from claimstone import flows
+
+    project, store = _flow_open(args)
+    try:
+        flows.set_title(store, args.flow_id, args.title,
+                        by=args.by or getpass.getuser())
+    except ValueError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+    print(f"title set on {args.flow_id[:12]}")
+    return 0
+
+
+def _portal(args: argparse.Namespace) -> int:
+    from claimstone import dashboard, portal
+
+    warning = dashboard.host_warning(args.host)
+    if warning:
+        print(f"warning: {warning}", file=sys.stderr)
+    portal.serve(args.projects_dir, args.store, host=args.host, port=args.port,
+                 allow_hosts=tuple(args.allow_host))
+    return 0
+
+
+def _export(args: argparse.Namespace) -> int:
+    import pathlib
+
+    from claimstone import export as export_mod
+    from claimstone.store import Store
+
+    project = load_project(args.project)
+    store = Store(project.name, base=args.store)
+    try:
+        directory, created = export_mod.export(project, store, args.flow_id)
+    except (ValueError, ConfigError) as exc:  # ConfigError includes RegistryDrift
+        print(str(exc), file=sys.stderr)
+        return 2
+    print(f"{'created' if created else 'exists'} {directory.name}")
+    print(str(pathlib.Path(directory).relative_to(store.root)) if str(directory).startswith(
+        str(store.root)) else str(directory))
+    return 0
+
+
+def _export_verify(args: argparse.Namespace) -> int:
+    import pathlib
+
+    from claimstone import export as export_mod
+
+    problems = export_mod.verify(pathlib.Path(args.dir), args.projects_dir)
+    for problem in problems:
+        print(problem)
+    if not problems:
+        print("verified: prefixes unchanged and outputs recompute identically")
+    return 0 if not problems else 5
+
+
+
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="claimstone", description="Topics in, verdicts out.")
     parser.add_argument("--version", action="version", version=f"claimstone {__version__}")
@@ -1109,6 +1270,66 @@ def build_parser() -> argparse.ArgumentParser:
                                  help="one declared round; default every candidate held")
             command.add_argument("--manifest-only", action="store_true",
                                  help="the operator's reading list alone, as synthesize judges it")
+
+    flow = sub.add_parser("flow", help="bind round selectors to the protocol digests they ran under")
+    flow_sub = flow.add_subparsers(dest="flow_command", required=True)
+    flow_create = flow_sub.add_parser("create", help="bind one selector to the protocol now")
+    flow_create.add_argument("project", help="path to a project directory")
+    flow_create.add_argument("--store", default="store", help="where generated data lives")
+    flow_create.add_argument("--title", required=True, help="display name; metadata only")
+    flow_create.add_argument("--round", default=None,
+                             help="the round this flow is; default the whole store")
+    flow_create.add_argument("--manifest", action="store_true",
+                             help="the operator's reading list alone")
+    flow_create.add_argument("--derived-from", default=None,
+                             help="an existing flow id this one replaces or extends")
+    flow_create.add_argument("--relation", choices=("supersedes", "derived_from"), default=None,
+                             help="how --derived-from relates to this flow")
+    flow_create.set_defaults(func=_flow_create)
+    flow_list = flow_sub.add_parser("list", help="every flow and its binding state; then legacies")
+    flow_list.add_argument("project", help="path to a project directory")
+    flow_list.add_argument("--store", default="store", help="where generated data lives")
+    flow_list.add_argument("--json", action="store_true")
+    flow_list.set_defaults(func=_flow_list)
+    flow_check = flow_sub.add_parser("check", help="one flow against the live protocol")
+    flow_check.add_argument("project", help="path to a project directory")
+    flow_check.add_argument("flow_id", help="the 64-hex flow id")
+    flow_check.add_argument("--store", default="store", help="where generated data lives")
+    flow_check.set_defaults(func=_flow_check)
+    flow_title = flow_sub.add_parser("title", help="rename a flow; metadata only")
+    flow_title.add_argument("project", help="path to a project directory")
+    flow_title.add_argument("flow_id", help="the 64-hex flow id")
+    flow_title.add_argument("--store", default="store", help="where generated data lives")
+    flow_title.add_argument("--title", required=True, help="the new display name")
+    flow_title.add_argument("--by", default=None, help="who renamed it; default this user")
+    flow_title.set_defaults(func=_flow_title)
+
+    portal_cmd = sub.add_parser("portal", help="the read-only multi-project research portal")
+    portal_cmd.add_argument("--projects-dir", default="projects",
+                            help="every project under this directory is served")
+    portal_cmd.add_argument("--store", default="store", help="where generated data lives")
+    portal_cmd.add_argument("--host", default="127.0.0.1",
+                            help="loopback only by default; a non-loopback bind prints the "
+                                 "privacy warning and proceeds because you asked")
+    portal_cmd.add_argument("--port", type=int, default=8788)
+    portal_cmd.add_argument("--allow-host", action="append", default=[], metavar="NAME[:PORT]",
+                            help="an extra Host/Origin authority to answer for, e.g. the name a "
+                                 "reverse proxy in front forwards; repeatable. Loopback names on "
+                                 "the bound port are always allowed")
+    portal_cmd.set_defaults(func=_portal)
+
+    export_cmd = sub.add_parser("export", help="freeze one flow's ledgers into a verifiable snapshot")
+    export_cmd.add_argument("project", help="path to a project directory")
+    export_cmd.add_argument("flow_id", help="the 64-hex flow id to export")
+    export_cmd.add_argument("--store", default="store", help="where generated data lives")
+    export_cmd.set_defaults(func=_export)
+
+    export_verify = sub.add_parser("export-verify",
+                                   help="check an export against the live ledgers and project")
+    export_verify.add_argument("dir", help="the export directory (its manifest.json)")
+    export_verify.add_argument("--projects-dir", default="projects",
+                               help="where the project lives; needed to recompute outputs")
+    export_verify.set_defaults(func=_export_verify)
 
     for name, handler, help_text in (
         ("model-run", _model_run, "drain a lane's queue on a named backend"),

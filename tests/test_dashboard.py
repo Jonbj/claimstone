@@ -6,6 +6,7 @@ The HTTP layer is tested for routing, the 405, the torn tail and the loopback ru
 
 from __future__ import annotations
 
+import html
 import json
 import threading
 import urllib.error
@@ -263,3 +264,23 @@ def test_activity_limit_is_clamped_over_http_not_trusted(project, tmp_path):
         assert len(nonsense) == 50                             # unparsable falls back to the default
         _, page = _get(base + "/")
         assert page.count('<div class="r">') == 50             # the page shows its own 50 of 600
+
+
+def test_dashboard_renders_integrity_section(project, tmp_path):
+    """T9 (P0 spec §2.4): a state carrying errors opens with "ledger integrity", the errors
+    escaped, and the sentence that separates withheld from zero."""
+    from claimstone import round_state
+
+    store = Store("fixture", base=tmp_path)
+    store.append("acquisitions.jsonl", {"candidate_key": "k1"})
+    with store.path("acquisitions.jsonl").open("a", encoding="utf-8") as handle:
+        handle.write("{bad\n")
+    store.append("acquisitions.jsonl", {"candidate_key": "k2"})
+    rs = round_state.state(project, store)
+    assert rs.errors, "the fixture must damage the ledger before the page is asked to say so"
+    page = dashboard.render_page(rs, round_state.cheap_state(store), [])
+    assert "ledger integrity" in page
+    assert "Figures that depend on a damaged ledger are withheld, not zero." in page
+    # The error text arrives escaped: nothing a ledger line carried reaches the page as markup.
+    escaped = html.escape(next(e for e in rs.errors), quote=True)
+    assert escaped in page

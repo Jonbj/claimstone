@@ -7,18 +7,15 @@ from __future__ import annotations
 
 from typing import Any
 
-from . import chunk_sets, admissibility, claim_records, claimgate, evidence, extract, model_call, review
+from . import chunk_sets, admissibility, claim_records, claimgate, evidence, extract, model_call, review, scope
 from .config import Project
 from .store import Store
 
 
 def population(store: Store, *, round_name: str | None, manifest_only: bool) -> set[str]:
-    return {
-        str(row.get('source_id') or key)
-        for key, row in store.latest_by('candidates.jsonl', 'candidate_key').items()
-        if (round_name is None or row.get('round') == round_name)
-        and (not manifest_only or row.get('source_id'))
-    }
+    # The one predicate, in the one place (claimstone/scope.py): a second copy here is how the
+    # profile's population and the portal's population would come to disagree.
+    return scope.source_ids(store, scope.Selector(round_name, manifest_only))
 
 
 def collect(project: Project, store: Store, *, round_name: str | None,
