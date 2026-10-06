@@ -567,7 +567,7 @@ Checks: `npm ci` added 304; typecheck clean; vitest 31 passed; build + check-csp
 `pytest -q` 1220 passed, 7 skipped.
 
 ### R3 — IN PROGRESS
-- [ ] R3.1 index page (§8.3): one Card per project; flows and unbound selectors as rows,
+- [x] R3.1 index page (§8.3): one Card per project; flows and unbound selectors as rows,
       each row fetching its own `/summary` lazily and in parallel (skeleton while
       pending, floor badge — amber below floor, verdict and inbox counts, never a zero);
       ConfigError / registry drift / integrity_error surfaced per project; unbound rows
