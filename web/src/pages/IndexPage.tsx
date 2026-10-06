@@ -11,7 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useApi } from "@/hooks/useApi";
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import type { Projects, Summary } from "@/lib/api-types";
 import { cn } from "@/lib/utils";
 
@@ -126,8 +126,11 @@ function SelectorRow({
       {summary.pending ? (
         <SummarySkeleton />
       ) : summary.error ? (
-        <span className="text-xs text-muted-foreground" title={summary.error.message}>
-          summary unavailable
+        // The error's code and message on screen, never a generic "unavailable" with the
+        // reason hidden in a tooltip: LEDGER_CORRUPT names the ledger and line (review of R3).
+        <span className="flex flex-wrap items-baseline gap-2 text-xs" role="alert">
+          <Chip text={summary.error instanceof ApiError ? summary.error.code : "UNREACHABLE"} />
+          <span className="text-muted-foreground">{summary.error.message}</span>
         </span>
       ) : summary.data ? (
         <>

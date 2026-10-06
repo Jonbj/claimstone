@@ -646,3 +646,20 @@ that R2 recorded with reasons. Recorded here for the operator/review, not acted 
 re-pinning is a dependency decision, not a pages step's.
 Deviations: none — one commit per sub-task held throughout.
 NOT DONE:
+
+### Review of R3 (Claude Code, between R3 and R4)
+- An API error on an index row became "summary unavailable", and on an inbox selector "inbox
+  unreadable", with the code and message hidden in a tooltip or dropped. A `LEDGER_CORRUPT` that
+  names its ledger and line is exactly what the operator must see. Both now show the error's code
+  as a chip, followed by its message.
+- Inbox groups were ordered by when each project's answers arrived, so the order changed between
+  loads. The groups map is now seeded in the API's project order (§4.2 rule 6).
+- Test `tests/r3review.test.tsx` covers both. Without the fix, the order test fails, because the
+  mock delays the first project.
+- **Rule for R4:** every `useApi` error renders `ErrorState`, or a chip with the code plus the
+  message; never a generic word.
+- Endorsed: the skeleton as the named pending state, the amber badge only for non-OK words, the
+  render-time category filter, and recording the dev-only `npm audit` warnings without
+  re-pinning.
+Checks: typecheck clean; vitest 33 passed; build + check-csp ok; `pytest -q` 1220 passed,
+7 skipped.

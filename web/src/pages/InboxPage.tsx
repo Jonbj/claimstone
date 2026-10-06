@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 
 // The inbox (§4.1): every project's cards, fetched lazily and in parallel per selector,
 // grouped by project then category. Within a group the server order is preserved
@@ -56,7 +56,11 @@ export default function InboxPage() {
       .then(async (index) => {
         // Cards accumulate as each selector's inbox answers: per project in parallel,
         // per selector in the server's order. The grouping below is order-preserving.
-        const byProject = new Map<string, Map<string, InboxCard[]>>();
+        // Seeded in the API's project order, so groups render in server order (§4.2 rule 6)
+        // and not in the order the per-selector answers happen to arrive (review of R3).
+        const byProject = new Map<string, Map<string, InboxCard[]>>(
+          index.projects.map((project) => [project.name, new Map<string, InboxCard[]>()]),
+        );
         const add = (project: string, card: InboxCard) => {
           const perCategory = byProject.get(project) ?? new Map<string, InboxCard[]>();
           const cards = perCategory.get(card.category) ?? [];
@@ -100,13 +104,17 @@ export default function InboxPage() {
                 const inbox = await api.inbox(project.name, ref.kind, ref.sel);
                 if (!alive) return;
                 for (const card of inbox.cards) add(project.name, card);
-              } catch {
+              } catch (cause: unknown) {
                 // A selector whose inbox cannot be read keeps its place: the absence
-                // is named, not zeroed (§4.2 rule 1).
+                // is named, not zeroed (§4.2 rule 1), with the error's own code and message
+                // — a LEDGER_CORRUPT names its ledger and line (review of R3).
                 if (!alive) return;
+                const code = cause instanceof ApiError ? cause.code : "UNREACHABLE";
+                const message = cause instanceof Error ? cause.message : String(cause);
                 add(
                   project.name,
-                  unreadableCard(project.name, "inbox unreadable for this selector"),
+                  unreadableCard(`${ref.kind === "f" ? "flow" : "legacy"} ${ref.sel.slice(0, 12)}`,
+                                 `${code}: ${message}`),
                 );
               }
               flush();
