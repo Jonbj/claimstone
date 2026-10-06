@@ -8,7 +8,7 @@ One step per session; markers below are the authority for "what is next".
 |---|---|
 | S1 shared transport base class out of `claimstone/portal.py` | DONE |
 | S2 `claimstone/api.py` + tests A1–A7 | DONE |
-| S3 schema, validator, fixtures | IN PROGRESS |
+| S3 schema, validator, fixtures | DONE |
 | S4 scaffold `web/` | TODO |
 | S5 routes and components | TODO |
 | S6 Dockerfile, compose services, `portal.sh` | TODO |
@@ -102,11 +102,51 @@ three `alembic-*` projects since the S1-era baseline — another concurrent sess
 `tests/test_api.py`)
 NOT DONE:
 
-### S3 — IN PROGRESS
+### S3 — DONE
 - [x] S3.1 `claimstone/api_schema.py` (hand-declared per-route schemas, draft 2020-12, `additionalProperties: false` at each payload top level, verdict vocabulary and error codes as enums) + `tools/build_portal_api_schema.py` + committed `docs/contracts/portal-api.schema.json`
 - [x] S3.2 `tests/test_api_contract.py`: minimal stdlib validator (`type`, `required`, `properties`, `enum`, `items`, `additionalProperties`) + A2 — every route payload validates; committed schema equals the regenerated one
 - [x] S3.3 `tools/build_portal_fixtures.py` (deterministic `build_workspace` build: sanitized flow/profile rows, scrubbed env for `admin_state`, workspace path normalized to `<workspace>`) + committed `web/tests/fixtures/*.json`
 - [x] S3.4 `tests/test_portal_fixtures.py`: committed fixtures equal the regenerated ones
-- [ ] S3.5 full checks green (`pytest -q`, `validate --all-projects`, `check_instrument_versions.py`)
+- [x] S3.5 full checks green (`pytest -q`, `validate --all-projects`, `check_instrument_versions.py`)
+
+Checks (final lines):
+```
+$ .venv/bin/pytest -q
+1209 passed, 7 skipped in 36.13s
+$ .venv/bin/claimstone validate --all-projects
+OK   alembic-s4: 16 topics, 28 questions (registry v3, frozen 2026-09-25), 6 source classes, acquisition floor 0.80 (v1), 25 manifest rows, registry 9c3f265069c6
+OK   alembic-s4-breve: 12 topics, 17 questions (registry v1, frozen 2026-09-28), 6 source classes, acquisition floor 0.80 (v1), 18 manifest rows, registry 3fdb5aea634d
+OK   alembic-s4-lungo: 12 topics, 18 questions (registry v1, frozen 2026-09-28), 6 source classes, acquisition floor 0.80 (v1), 19 manifest rows, registry ee040e0c3cfc
+OK   example-news-and-returns: 16 topics, 20 questions (registry v2, frozen 2026-09-25), 6 source classes, acquisition floor 0.80 (v1), registry 85e5fcc44ddc
+OK   pilot-screen-time: 4 topics, 8 questions (registry v1, frozen 2026-09-28), 6 source classes, acquisition floor 0.80 (v1), 28 manifest rows, registry 82007de2b569
+OK   pmc-screen-time: 4 topics, 8 questions (registry v1, frozen 2026-09-28), 6 source classes, acquisition floor 0.80 (v1), 40 manifest rows, registry 82007de2b569
+$ .venv/bin/python tools/check_instrument_versions.py
+26 instrument version(s) acknowledged in the design record
+$ .venv/bin/pytest tests/test_api_contract.py tests/test_portal_fixtures.py -q
+9 passed in 10.41s
+$ .venv/bin/python tools/build_portal_fixtures.py
+wrote 20 fixture(s) under web/tests/fixtures/ (146279 bytes)
+```
+Acceptance, measured: two independent runs of `tools/build_portal_fixtures.py` produce
+byte-identical `web/tests/fixtures/` trees (`diff -r` clean), so the currency test's
+byte-for-byte comparison is sound. The 20 files mirror the route paths (flow id in the
+directory name, `activity?limit=10` as `activity.limit-10.json`).
+Decisions (spec silent): the tool serves every route through `claimstone api` in-process
+on a port-0 bind — the same wire the frontend fetches, and the route list is
+`tests.test_api._routes` so fixtures cannot drift from tests A1/A2; determinism is pinned
+with `FIXED_STAMP = "2026-10-06T00:00:00+00:00"` on flow rows (`created_at`, plus
+`created_by: "fixture"`), profile rows (`built_at`), every ledger file's mtime (which fixes
+`poll` and the unscoped `activity`'s mtime fallback and empties `running`), and the
+server's `started_at`; `profile_sha256` is untouched because the digest excludes
+`built_at` (`evidence._digest`); the scrubbed env covers the three credential names,
+`CLAIMSTONE_CODE_REVISION` and `CLAIMSTONE_ROOT`, so `admin` carries presence booleans
+independent of any machine's secrets and `meta`'s code identity reads the tmp workspace
+(`revision: null`); the workspace path inside command strings is normalized to
+`<workspace>` (only `projects_dir`; no payload carries an absolute store path); `admin`'s
+`backends.available` reflects this machine's installed backends — the fixture is current,
+not portable, and the currency test regenerates on the same machine; no error-envelope
+fixtures: §4.4 names the portal_state payload functions, the §3.3 texts are fixed module
+constants, and F5 can define its samples inline when S4 builds them
+Deviations: none
 NOT DONE:
 
