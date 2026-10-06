@@ -477,7 +477,7 @@ vitest 36 passed; build + check-csp ok.
       bundled Geist + Geist Mono via `@fontsource-variable/*`
 - [x] R2.3 port `api.ts`, `api-types.ts`, `vocabulary.ts` unchanged into `src/lib/`; add the
       `useApi(fetcher, deps)` and `usePoll` hooks (§8.2 data row, §4.2 rule 8)
-- [ ] R2.4 the shell (white top bar, tabs Projects · Flows · Inbox · Administration, `read-only ·
+- [x] R2.4 the shell (white top bar, tabs Projects · Flows · Inbox · Administration, `read-only ·
       rev <12>`, theme toggle per §8.3) and the base components `Chip`, `Fraction`, `Pending`,
       `ErrorState`, `CommandBlock` (ported behaviour, §4.2 rules 1, 3, 4, 5, 7); minimal pages so
       every shell tab resolves (full pages are R3/R4)

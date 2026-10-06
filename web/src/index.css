@@ -137,3 +137,106 @@
     @apply font-sans;
     }
 }
+/* Ported base components (§4.2 rules 1, 3, 5, 7): the class names come from
+   vocabulary.ts, which never invents words. CONTRADICTED is blue, never red:
+   concluding against a question is a successful outcome (D82 / §8.3). */
+@layer components {
+  .chip {
+    display: inline-block;
+    border-radius: 0.5rem;
+    border: 1px solid var(--border);
+    background: var(--muted);
+    padding: 0.05rem 0.45rem;
+    font-size: 0.75rem;
+    white-space: nowrap;
+  }
+  .chip.dashed {
+    border-style: dashed;
+  }
+  .v-supported { color: #2e7d32; border-color: #2e7d32; }
+  .v-contradicted { color: #0277bd; border-color: #0277bd; }
+  .v-contested { color: #ef6c00; border-color: #ef6c00; }
+  .v-unanswered { color: #6d4c41; border-color: #6d4c41; }
+  .v-never-asked { color: #455a64; border-color: #455a64; }
+  .v-engine, .v-unknown { color: var(--muted-foreground); }
+  [data-theme="dark"] .v-supported { color: #81c784; border-color: #81c784; }
+  [data-theme="dark"] .v-contradicted { color: #81d4fa; border-color: #81d4fa; }
+  [data-theme="dark"] .v-contested { color: #ffcc80; border-color: #ffcc80; }
+  [data-theme="dark"] .v-unanswered { color: #bcaaa4; border-color: #bcaaa4; }
+  [data-theme="dark"] .v-never-asked { color: #90a4ae; border-color: #90a4ae; }
+
+  .fraction {
+    font-variant-numeric: tabular-nums;
+  }
+  .fraction.unknown {
+    color: var(--muted-foreground);
+    cursor: help;
+  }
+  .fraction .denominator {
+    color: var(--muted-foreground);
+  }
+
+  .pending {
+    color: #8a6d00;
+    font-style: italic;
+    font-size: 0.8rem;
+  }
+  [data-theme="dark"] .pending {
+    color: #d4b106;
+  }
+
+  .error {
+    border: 1px solid var(--destructive);
+    border-radius: 0.5rem;
+    margin: 0.5rem 0;
+    padding: 0.5rem 0.75rem;
+  }
+  .error .code {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--destructive);
+  }
+  .error .context {
+    color: var(--muted-foreground);
+    margin-left: 0.5rem;
+    font-size: 0.8rem;
+  }
+  .error .message {
+    margin: 0.25rem 0 0;
+    white-space: pre-wrap;
+  }
+
+  .command-block {
+    margin: 0.5rem 0;
+  }
+  .command-block .row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+  }
+  .command-block code {
+    display: block;
+    flex: 1;
+    background: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: 0.4rem;
+    padding: 0.4rem 0.6rem;
+    overflow-x: auto;
+    white-space: pre;
+    font-size: 0.8rem;
+  }
+  .command-block button {
+    border: 1px solid var(--border);
+    border-radius: 0.4rem;
+    background: var(--card);
+    color: inherit;
+    padding: 0.3rem 0.7rem;
+    font-size: 0.8rem;
+  }
+  .command-block .note {
+    color: var(--muted-foreground);
+    font-size: 0.8rem;
+    margin: 0 0 0.25rem;
+  }
+}
