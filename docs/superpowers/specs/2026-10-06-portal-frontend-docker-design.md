@@ -3,7 +3,7 @@
 **Status:** evaluation plus implementation spec. Nothing in this document is implemented.
 **Decision (2026-10-06):** option E, TypeScript + SvelteKit static. The operator delegated the choice;
 it is reversible because §3 and §5 do not depend on it. Implementation is delegated step by step
-through `2026-10-06-portal-frontend-glm-prompt.md`.
+through `2026-10-06-portal-frontend-glm-prompt.md`, one step per session, with a commit per sub-task.
 **Date:** 2026-10-06.
 **Asked by the operator:** stop generating the portal's HTML from Python, choose a real frontend
 language, and package everything in Docker Compose: a backend API container, a frontend container,
