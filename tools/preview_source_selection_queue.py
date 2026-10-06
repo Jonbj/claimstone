@@ -53,7 +53,9 @@ def build(store: Store, inventory_path: Path, metadata_queue_path: Path,
             linked.setdefault(left, []).append(right)
             linked.setdefault(right, []).append(left)
     documents = store.latest_by("documents.jsonl", "source_id")
-    recorded_abstracts = {row["candidate_key"]: row for row in store.read("screening_metadata.jsonl")
+    metadata_rows = list(store.read("screening_metadata.jsonl"))
+    latest_metadata = {row["candidate_key"]: row for row in metadata_rows}
+    recorded_abstracts = {row["candidate_key"]: row for row in metadata_rows
                           if row.get("status") == "ABSTRACT_AVAILABLE" and row.get("abstract")}
     tasks = []
     for row in inventory:
@@ -81,6 +83,13 @@ def build(store: Store, inventory_path: Path, metadata_queue_path: Path,
             reason = "recorded_abstract_needs_validation"
             next_action = "recheck_retained_metadata_bytes_then_screen_offline"
             tier = 0
+        elif key in latest_metadata:
+            status = latest_metadata[key].get("status")
+            reason = ("missing_abstract_needs_alternative_authority" if status == "NO_ABSTRACT"
+                      else "metadata_outcome_needs_review")
+            next_action = ("plan_bounded_alternative_provider_lookup" if status == "NO_ABSTRACT"
+                           else "inspect_recorded_outcome_before_any_retry")
+            tier = 2
         elif has_cached_metadata:
             reason = "cached_metadata_needs_authoritative_abstract"
             next_action = "verify_or_fetch_authoritative_abstract"

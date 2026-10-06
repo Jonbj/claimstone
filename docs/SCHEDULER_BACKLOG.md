@@ -204,6 +204,15 @@ for retained abstracts before requesting them again. Five abstract payloads were
 reconstructed and identity-checked offline in this continuation. A possible
 version relation is insufficient for this reuse rule; it remains an identity task.
 
+The authorized ten-lookup continuation returned ten HTTP 200 responses, three
+abstracts and seven `NO_ABSTRACT` outcomes. The queue now routes the seven to
+an alternative-authority plan instead of scheduling the same lookup again.
+Recorded lookup failures require inspection before retry; a later failed lookup
+does not erase an already retained abstract. The regression fixture in
+`tests/test_preview_source_selection_queue.py` covers all three cases. A frozen
+seven-key Crossref fallback is prepared separately; provider changes require
+their own authorized campaign rather than silently extending the first one.
+
 D72 adds a measured resume requirement: a malformed model answer is a terminal unanswered case,
 not a reason to abandon all independent cases or retry the same call invisibly. The scheduler
 should finish the remaining frozen work, preserve the failed bytes, and report the missing
