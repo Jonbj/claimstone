@@ -1,0 +1,32 @@
+{
+  "name": "claimstone-portal-web",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "vite dev",
+    "build": "vite build",
+    "preview": "vite preview",
+    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+    "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+    "test": "vitest run",
+    "gen:types": "json2ts ../docs/contracts/portal-api.schema.json > src/lib/api-types.ts"
+  },
+  "devDependencies": {
+    "@sveltejs/adapter-static": "3.0.8",
+    "@sveltejs/kit": "2.20.0",
+    "@sveltejs/vite-plugin-svelte": "5.1.0",
+    "@testing-library/svelte": "5.4.2",
+    "@types/node": "^22.15.32",
+    "jsdom": "26.1.0",
+    "json-schema-to-typescript": "15.0.4",
+    "svelte": "5.33.2",
+    "svelte-check": "4.2.2",
+    "typescript": "5.8.3",
+    "vite": "6.3.5",
+    "vitest": "3.2.3"
+  }
+}
