@@ -663,3 +663,23 @@ NOT DONE:
   re-pinning.
 Checks: typecheck clean; vitest 33 passed; build + check-csp ok; `pytest -q` 1220 passed,
 7 skipped.
+
+### R4 — IN PROGRESS
+- [ ] R4.1 `QuestionMatrix` React component (§8.3 questions table: registry order, per-class
+      counts → total, direction mini bar labelled with the counts plus the note, status badges
+      with the §4.2 rules 1/2/3/5); vitest F2 re-ported
+- [ ] R4.2 overview building blocks: `SourceTracker` (Tremor `Tracker`, one block per
+      `source_tracker` entry in server order, tooltip verbatim, state legend), the four KPI cards
+      (acquisition rate + `CategoryBar` with floor marker, accepted annotations + rejected count,
+      reviewed of accepted + `ProgressBar`, `DonutChart` from `question_state_counts`), the
+      `BarList` of `rejections_by_reason`, and the per-class floor panel; vitest F9 and F11 added
+- [ ] R4.3 the flow overview page (binding badge, errors/unavailable, KPI row, tracker, questions
+      table + rejections side card with the next action, floor panel per class, inbox, activity,
+      3 s poll); `SelectorPlaceholderPage` deleted, routes wired
+- [ ] R4.4 question, claim lineage and source dossier pages (shadcn cards/tables, the six lineage
+      steps as a vertical list, rose callout for `quote_found: false`, the quote marked inside the
+      chunk text, the adjudication card verbatim, 3 s poll)
+- [ ] R4.5 vitest F3 (writes-nothing source scan) and F7 (`InboxCards` server order) re-ported
+- [ ] R4.6 acceptance: web checks from a clean install, full Python checks, `npm run build &&
+      npx vite preview` with every page opened against `claimstone api` on a tmp workspace, and
+      "0 CSP violations" recorded here; step marked DONE
