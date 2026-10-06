@@ -257,6 +257,15 @@ export interface Overview {
   }[];
   legacy: boolean;
   project: string;
+  question_state_counts: {
+    awaiting_a_person: number;
+    historical: number;
+    no_verified_claim: number;
+    not_applicable: number;
+    provisional: number;
+    signed: number;
+    stale: number;
+  };
   questions: {
     project: string;
     round: string | null;
@@ -302,6 +311,13 @@ export interface Overview {
     round: string | null;
   };
   selector_label: string;
+  source_tracker: {
+    candidate_key: string;
+    source_class: string;
+    source_id: string | null;
+    state: "confirmed" | "awaiting_normalize" | "not_a_document" | "refused" | "not_attempted" | "unclassified";
+    tooltip: string;
+  }[];
   state: {
     errors: string[];
     floor: {

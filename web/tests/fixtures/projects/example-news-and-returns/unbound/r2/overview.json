@@ -94,6 +94,15 @@
  ],
  "legacy": true,
  "project": "example-news-and-returns",
+ "question_state_counts": {
+  "awaiting_a_person": 20,
+  "historical": 0,
+  "no_verified_claim": 0,
+  "not_applicable": 0,
+  "provisional": 0,
+  "signed": 0,
+  "stale": 0
+ },
  "questions": {
   "project": "example-news-and-returns",
   "round": "r2",
@@ -647,6 +656,22 @@
   "round": "r2"
  },
  "selector_label": "round r2",
+ "source_tracker": [
+  {
+   "candidate_key": "r2-a",
+   "source_class": "ACA",
+   "source_id": "S03",
+   "state": "not_attempted",
+   "tooltip": "no acquisition attempt recorded"
+  },
+  {
+   "candidate_key": "r2-w",
+   "source_class": "ACA",
+   "source_id": null,
+   "state": "refused",
+   "tooltip": "HTTP 403 — access refused (stored as PAYWALL_403; not proof of a paywall or of a purchasable copy)"
+  }
+ ],
  "state": {
   "errors": [],
   "floor": {

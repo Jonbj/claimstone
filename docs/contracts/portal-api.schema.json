@@ -1003,6 +1003,42 @@
     "project": {
      "type": "string"
     },
+    "question_state_counts": {
+     "additionalProperties": false,
+     "properties": {
+      "awaiting_a_person": {
+       "type": "integer"
+      },
+      "historical": {
+       "type": "integer"
+      },
+      "no_verified_claim": {
+       "type": "integer"
+      },
+      "not_applicable": {
+       "type": "integer"
+      },
+      "provisional": {
+       "type": "integer"
+      },
+      "signed": {
+       "type": "integer"
+      },
+      "stale": {
+       "type": "integer"
+      }
+     },
+     "required": [
+      "signed",
+      "stale",
+      "awaiting_a_person",
+      "provisional",
+      "no_verified_claim",
+      "not_applicable",
+      "historical"
+     ],
+     "type": "object"
+    },
     "questions": {
      "additionalProperties": false,
      "properties": {
@@ -1191,6 +1227,48 @@
     "selector_label": {
      "type": "string"
     },
+    "source_tracker": {
+     "items": {
+      "additionalProperties": false,
+      "properties": {
+       "candidate_key": {
+        "type": "string"
+       },
+       "source_class": {
+        "type": "string"
+       },
+       "source_id": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "state": {
+        "enum": [
+         "confirmed",
+         "awaiting_normalize",
+         "not_a_document",
+         "refused",
+         "not_attempted",
+         "unclassified"
+        ],
+        "type": "string"
+       },
+       "tooltip": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "candidate_key",
+       "source_id",
+       "source_class",
+       "state",
+       "tooltip"
+      ],
+      "type": "object"
+     },
+     "type": "array"
+    },
     "state": {
      "additionalProperties": false,
      "properties": {
@@ -1269,6 +1347,8 @@
     "state",
     "floor_panel",
     "questions",
+    "question_state_counts",
+    "source_tracker",
     "inbox",
     "activity",
     "unavailable",

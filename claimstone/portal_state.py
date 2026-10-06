@@ -624,6 +624,121 @@ def question_matrix(project: Project, store: Store, selector: scope.Selector,
     return {"rows": rows, "round": selector.round, "project": project.name}
 
 
+# §8.3: the seven displayed question states of the React overview's DonutChart. Counted with
+# the matrix's own precedence — the verdict cell first (the operational branch, then the
+# recorded verdict with its staleness, then the engine's own NO_VERIFIED_CLAIM), then the two
+# annotations that can carry an unsigned row (historical before provisional, as
+# `synthesize.verdicts`'s awaiting count excludes an unavailable round before it inspects
+# provisional), and the residual is the fresh profile that waits for a person.
+QUESTION_STATES = ("signed", "stale", "awaiting_a_person", "provisional", "no_verified_claim",
+                   "not_applicable", "historical")
+
+
+def question_state_counts(matrix: dict[str, Any]) -> dict[str, int]:
+    """§8.3: one count per displayed state, over the matrix rows the same page already built —
+    no ledger read of its own, so the donut can never disagree with the table it sits beside
+    (and the client counts nothing, F11)."""
+    from claimstone import evidence
+
+    counts = dict.fromkeys(QUESTION_STATES, 0)
+    for row in matrix["rows"]:
+        if row.get("operational_not_applicable"):
+            state = "not_applicable"
+        elif row.get("verdict") and row.get("verdict_stale"):
+            state = "stale"
+        elif row.get("verdict"):
+            state = "signed"
+        elif row.get("state") == evidence.NO_VERIFIED_CLAIM:
+            state = "no_verified_claim"
+        elif row.get("unavailable"):
+            state = "historical"
+        elif row.get("provisional"):
+            state = "provisional"
+        else:
+            state = "awaiting_a_person"
+        counts[state] += 1
+    return counts
+
+
+# §8.3: one tracker state per scoped candidate — `admissibility.rate`'s own branches, the same
+# words its five-state accounting uses, so the Tracker can never split a population the floor
+# panel judges.
+TRACKER_STATES = ("confirmed", "awaiting_normalize", "not_a_document", "refused",
+                  "not_attempted", "unclassified")
+
+
+def _tracker_tooltip(state: str, row: Mapping[str, Any] | None) -> str:
+    """The Tracker tooltip, decided server-side and rendered verbatim (§4.2 rule 5). A refusal
+    follows F19 — the stored class asserts an inference the reader must not repeat as a fact,
+    and an HTTP 403 in particular is not proof of a paywall."""
+    if state == "confirmed":
+        return "obtained and confirmed as a document by normalize"
+    if state == "awaiting_normalize":
+        return "obtained; normalize has not confirmed a document yet"
+    if state == "not_a_document":
+        return "obtained, but normalize rejected it: not a document"
+    if state == "not_attempted":
+        return "no acquisition attempt recorded"
+    if state == "unclassified":
+        return "acquire refused it: the candidate carries no source class"
+    if (row or {}).get("failure_class") == "PAYWALL_403":
+        return PAYWALL_TEXT
+    return failure_display((row or {}).get("failure_class"))
+
+
+def source_tracker(project: Project, store: Store, selector: scope.Selector,
+                   computed: Computed | None = None) -> list[dict[str, Any]]:
+    """§8.3: one Tracker entry per scoped candidate, in scoped candidate order, each with its
+    state and a display-ready tooltip — the client derives nothing (F11).
+
+    The states are read off the one `compute()` the page already ran: `collapse`'s per-key rows
+    arrive in `computed`, so the acquisitions ledger is not walked twice, and the branches are
+    `admissibility.rate`'s own (acquired → confirmed / awaiting / not-a-document by
+    `documents.jsonl`; else the recorded failure class, UNCLASSIFIED named as itself). A
+    damaged acquisitions ledger raises — the API's LEDGER_CORRUPT envelope is the single error
+    channel (the S2-era decision); a tracker built without the collapse rows would call every
+    refused source "not attempted", which is worse than no tracker.
+    """
+    from claimstone import admissibility
+
+    if computed is None:
+        computed = compute(project, store, selector)
+    if computed.collapsed is None:
+        # `compute` swallowed the damage it found there; name it again rather than guess states.
+        raise LedgerCorrupt("acquisitions ledger unreadable: the tracker cannot be built")
+    candidates = scope.candidates(store, selector)
+    confirmed_rows = admissibility.confirmations(store)
+    entries: list[dict[str, Any]] = []
+    for key, candidate in candidates.items():
+        row = computed.collapsed.get(key)
+        if row is not None and row.get("acquired"):
+            held = confirmed_rows.get(str(row.get("source_id") or key))
+            if held is None:
+                state = "awaiting_normalize"
+            elif held.get("fulltext_confirmed"):
+                state = "confirmed"
+            else:
+                state = "not_a_document"
+        else:
+            # `rate`'s own word for an unclassed failed row is NOT_ATTEMPTED (its failures
+            # histogram), so the tracker never invents a refusal the ledger did not name.
+            failure = str((row or {}).get("failure_class") or "")
+            if failure == "UNCLASSIFIED":
+                state = "unclassified"
+            elif failure:
+                state = "refused"
+            else:
+                state = "not_attempted"
+        entries.append({
+            "candidate_key": str(key),
+            "source_id": candidate.get("source_id"),
+            "source_class": str(candidate.get("source_class") or "UNCLASSIFIED"),
+            "state": state,
+            "tooltip": _tracker_tooltip(state, row),
+        })
+    return entries
+
+
 def flow_overview(project: Project, store: Store, selector: scope.Selector,
                   flow_row: dict[str, Any] | None = None) -> dict[str, Any]:
     """Everything the flow page shows: binding banner, scoped stage strip, floor panel,
@@ -631,6 +746,7 @@ def flow_overview(project: Project, store: Store, selector: scope.Selector,
     computed = compute(project, store, selector)
     rs = computed.rs
     binding = flows.binding_state(project, store, flow_row) if flow_row is not None else None
+    matrix = question_matrix(project, store, selector, computed)
     return {
         "project": project.name,
         "selector": selector.as_dict(),
@@ -640,7 +756,9 @@ def flow_overview(project: Project, store: Store, selector: scope.Selector,
         "binding_state": binding,
         "state": rs.as_dict(),
         "floor_panel": floor_panel(computed.admitted),
-        "questions": question_matrix(project, store, selector, computed),
+        "questions": matrix,
+        "question_state_counts": question_state_counts(matrix),
+        "source_tracker": source_tracker(project, store, selector, computed),
         "inbox": [dataclasses.asdict(card)
                   for card in inbox_cards(project, store, selector, flow_row, computed)],
         "activity": round_state.activity(store, 50, selector),

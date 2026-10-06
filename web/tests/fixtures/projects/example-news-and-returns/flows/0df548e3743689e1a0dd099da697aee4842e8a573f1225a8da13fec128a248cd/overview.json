@@ -526,6 +526,15 @@
  ],
  "legacy": false,
  "project": "example-news-and-returns",
+ "question_state_counts": {
+  "awaiting_a_person": 0,
+  "historical": 0,
+  "no_verified_claim": 20,
+  "not_applicable": 0,
+  "provisional": 0,
+  "signed": 0,
+  "stale": 0
+ },
  "questions": {
   "project": "example-news-and-returns",
   "round": "r1",
@@ -1201,6 +1210,22 @@
   "round": "r1"
  },
  "selector_label": "round r1",
+ "source_tracker": [
+  {
+   "candidate_key": "r1-a",
+   "source_class": "ACA",
+   "source_id": "S01",
+   "state": "confirmed",
+   "tooltip": "obtained and confirmed as a document by normalize"
+  },
+  {
+   "candidate_key": "r1-b",
+   "source_class": "ACA",
+   "source_id": "S02",
+   "state": "confirmed",
+   "tooltip": "obtained and confirmed as a document by normalize"
+  }
+ ],
  "state": {
   "errors": [],
   "floor": {

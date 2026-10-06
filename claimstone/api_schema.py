@@ -41,6 +41,14 @@ BINDING_STATES = ("CURRENT", "REGISTRY_DRIFTED", "PROTOCOL_DRIFTED", "POPULATION
 ERROR_CODES = ("BAD_REQUEST", "NOT_FOUND", "CONFIG_ERROR", "REGISTRY_DRIFT", "LEDGER_CORRUPT",
                "MISDIRECTED", "CROSS_ORIGIN", "INTERNAL")
 
+# portal_state.QUESTION_STATES, §8.3: the overview's DonutChart counts, decided server-side.
+QUESTION_STATES = ("signed", "stale", "awaiting_a_person", "provisional", "no_verified_claim",
+                   "not_applicable", "historical")
+
+# portal_state.TRACKER_STATES, §8.3: one per scoped candidate on the overview's Tracker.
+TRACKER_STATES = ("confirmed", "awaiting_normalize", "not_a_document", "refused",
+                  "not_attempted", "unclassified")
+
 _STR = {"type": "string"}
 _STR_OR_NULL = {"type": ["string", "null"]}
 _INT = {"type": "integer"}
@@ -352,12 +360,36 @@ OVERVIEW = _payload("overview", {
                        "round": _STR_OR_NULL, "project": _STR},
         "additionalProperties": False,
     },
+    # §8.3: both are decided server-side so the client never derives meaning (F11). A damaged
+    # ledger fails the route with the LEDGER_CORRUPT envelope before either field is built.
+    "question_state_counts": {
+        "type": "object",
+        "required": list(QUESTION_STATES),
+        "properties": {state: _INT for state in QUESTION_STATES},
+        "additionalProperties": False,
+    },
+    "source_tracker": {
+        "type": "array",
+        "items": {
+            "type": "object",
+            "required": ["candidate_key", "source_id", "source_class", "state", "tooltip"],
+            "properties": {
+                "candidate_key": _STR,
+                "source_id": _STR_OR_NULL,
+                "source_class": _STR,
+                "state": {"type": "string", "enum": list(TRACKER_STATES)},
+                "tooltip": _STR,
+            },
+            "additionalProperties": False,
+        },
+    },
     "inbox": {"type": "array", "items": _CARD},
     "activity": {"type": "array", "items": _ACTIVITY_ROW},
     "unavailable": _STR,
     "errors": {"type": "array", "items": _STR},
 }, ["project", "selector", "selector_label", "flow", "legacy", "binding_state", "state",
-    "floor_panel", "questions", "inbox", "activity", "unavailable", "errors"])
+    "floor_panel", "questions", "question_state_counts", "source_tracker", "inbox", "activity",
+    "unavailable", "errors"])
 
 INBOX = _payload("inbox", {
     "cards": {"type": "array", "items": _CARD},
