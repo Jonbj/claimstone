@@ -673,7 +673,7 @@ Checks: typecheck clean; vitest 33 passed; build + check-csp ok; `pytest -q` 122
       (acquisition rate + `CategoryBar` with floor marker, accepted annotations + rejected count,
       reviewed of accepted + `ProgressBar`, `DonutChart` from `question_state_counts`), the
       `BarList` of `rejections_by_reason`, and the per-class floor panel; vitest F9 and F11 added
-- [ ] R4.3 the flow overview page (binding badge, errors/unavailable, KPI row, tracker, questions
+- [x] R4.3 the flow overview page (binding badge, errors/unavailable, KPI row, tracker, questions
       table + rejections side card with the next action, floor panel per class, inbox, activity,
       3 s poll); `SelectorPlaceholderPage` deleted, routes wired
 - [ ] R4.4 question, claim lineage and source dossier pages (shadcn cards/tables, the six lineage
