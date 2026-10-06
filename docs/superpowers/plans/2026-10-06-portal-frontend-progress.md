@@ -728,3 +728,26 @@ check-csp ok; `pytest -q` in the shared tree: 1 failed (external, see (4)), 1222
 7 skipped; in the pristine extraction of the R4 commit: 1128 passed, 13 skipped, parity
 green; `validate --all-projects` OK ×5; `check_instrument_versions.py` 26
 acknowledged; 17/17 pages, 0 console lines, **0 CSP violations**.
+
+### Review of R4 (Claude Code, before S6)
+- Checked on the real `pmc-screen-time` store, read-only, through `vite preview` with the
+  production CSP header: 0.93 floor, 37/40, 1721 accepted, 42 reviewed, and the tracker showing
+  37/1/2 states. Q04's adjudication card carries the HANDOFF hash `9340389c…`.
+- **Defect:** the questions table headed seven provisional rows with `NO_VERIFIED_CLAIM`
+  ("nothing found") while the donut beside it counted them as provisional, and it showed Q04,
+  the one profile awaiting a person, as a bare "— no verdict". This is the same error R1's review
+  fixed in the counts. Each matrix row now carries `display_state`, from
+  `portal_state.question_display_state`, the function the donut counts with. The cell shows that
+  word first, and `engine: NO_VERIFIED_CLAIM` smaller when the reading is unfinished. Verified on
+  the real store: Q01–Q03 and Q05–Q08 provisional, Q04 awaiting_a_person.
+- Tests:
+  - F2 updated: a no-profile row shows `no_profile`; a provisional NVC row is headed
+    `provisional`.
+  - New Python test `test_table_and_donut_share_one_displayed_state`.
+- The side card's "Next:" picked the first inbox card, which reads as a recommendation. It is now
+  titled "First open item, in server order".
+- Endorsed: R4's components, the F9/F11 tests, and the CSP acceptance method (console capture
+  proven with a deliberately blocked script).
+- Noted, not a defect: a parallel session's uncommitted `SOURCE_SELECTION_IMPORT_VERSION` bump
+  makes `admin.json` differ from regeneration in the shared tree. Fixtures were regenerated here
+  against the committed code path; the bump is that session's to commit.

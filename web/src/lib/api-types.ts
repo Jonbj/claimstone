@@ -285,6 +285,15 @@ export interface Overview {
         [k: string]: unknown;
       };
       direction_count_note: string;
+      display_state:
+        | "signed"
+        | "stale"
+        | "awaiting_a_person"
+        | "provisional"
+        | "no_verified_claim"
+        | "not_applicable"
+        | "historical"
+        | "no_profile";
       extraction: {
         [k: string]: unknown;
       } | null;

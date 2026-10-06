@@ -551,6 +551,7 @@
     },
     "direction_count": {},
     "direction_count_note": "a count, not a strength",
+    "display_state": "no_verified_claim",
     "extraction": {
      "expected": 2,
      "unanswered": 0,
@@ -588,6 +589,7 @@
     },
     "direction_count": {},
     "direction_count_note": "a count, not a strength",
+    "display_state": "provisional",
     "extraction": {
      "expected": 2,
      "unanswered": 0,
@@ -621,6 +623,7 @@
     },
     "direction_count": {},
     "direction_count_note": "a count, not a strength",
+    "display_state": "no_verified_claim",
     "extraction": {
      "expected": 2,
      "unanswered": 0,
@@ -654,6 +657,7 @@
     },
     "direction_count": {},
     "direction_count_note": "a count, not a strength",
+    "display_state": "no_verified_claim",
     "extraction": {
      "expected": 2,
      "unanswered": 0,
@@ -687,6 +691,7 @@
     },
     "direction_count": {},
     "direction_count_note": "a count, not a strength",
+    "display_state": "no_verified_claim",
     "extraction": {
      "expected": 2,
      "unanswered": 0,
@@ -720,6 +725,7 @@
     },
     "direction_count": {},
     "direction_count_note": "a count, not a strength",
+    "display_state": "no_verified_claim",
     "extraction": {
      "expected": 2,
      "unanswered": 0,
@@ -753,6 +759,7 @@
     },
     "direction_count": {},
     "direction_count_note": "a count, not a strength",
+    "display_state": "no_verified_claim",
     "extraction": {
      "expected": 2,
      "unanswered": 0,
@@ -786,6 +793,7 @@
     },
     "direction_count": {},
     "direction_count_note": "a count, not a strength",
+    "display_state": "no_verified_claim",
     "extraction": {
      "expected": 2,
      "unanswered": 0,
@@ -819,6 +827,7 @@
     },
     "direction_count": {},
     "direction_count_note": "a count, not a strength",
+    "display_state": "no_verified_claim",
     "extraction": {
      "expected": 2,
      "unanswered": 0,
@@ -852,6 +861,7 @@
     },
     "direction_count": {},
     "direction_count_note": "a count, not a strength",
+    "display_state": "no_verified_claim",
     "extraction": {
      "expected": 2,
      "unanswered": 0,
@@ -885,6 +895,7 @@
     },
     "direction_count": {},
     "direction_count_note": "a count, not a strength",
+    "display_state": "no_verified_claim",
     "extraction": {
      "expected": 2,
      "unanswered": 0,
@@ -918,6 +929,7 @@
     },
     "direction_count": {},
     "direction_count_note": "a count, not a strength",
+    "display_state": "no_verified_claim",
     "extraction": {
      "expected": 2,
      "unanswered": 0,
@@ -951,6 +963,7 @@
     },
     "direction_count": {},
     "direction_count_note": "a count, not a strength",
+    "display_state": "no_verified_claim",
     "extraction": {
      "expected": 2,
      "unanswered": 0,
@@ -984,6 +997,7 @@
     },
     "direction_count": {},
     "direction_count_note": "a count, not a strength",
+    "display_state": "no_verified_claim",
     "extraction": {
      "expected": 2,
      "unanswered": 0,
@@ -1017,6 +1031,7 @@
     },
     "direction_count": {},
     "direction_count_note": "a count, not a strength",
+    "display_state": "no_verified_claim",
     "extraction": {
      "expected": 2,
      "unanswered": 0,
@@ -1050,6 +1065,7 @@
     },
     "direction_count": {},
     "direction_count_note": "a count, not a strength",
+    "display_state": "no_verified_claim",
     "extraction": {
      "expected": 2,
      "unanswered": 0,
@@ -1083,6 +1099,7 @@
     },
     "direction_count": {},
     "direction_count_note": "a count, not a strength",
+    "display_state": "no_verified_claim",
     "extraction": {
      "expected": 2,
      "unanswered": 0,
@@ -1116,6 +1133,7 @@
     },
     "direction_count": {},
     "direction_count_note": "a count, not a strength",
+    "display_state": "no_verified_claim",
     "extraction": {
      "expected": 2,
      "unanswered": 0,
@@ -1149,6 +1167,7 @@
     },
     "direction_count": {},
     "direction_count_note": "a count, not a strength",
+    "display_state": "no_verified_claim",
     "extraction": {
      "expected": 2,
      "unanswered": 0,
@@ -1182,6 +1201,7 @@
     },
     "direction_count": {},
     "direction_count_note": "a count, not a strength",
+    "display_state": "no_verified_claim",
     "extraction": {
      "expected": 2,
      "unanswered": 0,

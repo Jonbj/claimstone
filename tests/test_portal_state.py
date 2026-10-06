@@ -582,3 +582,16 @@ def test_source_tracker_raises_on_a_damaged_acquisitions_ledger(workspace):
     assert computed.collapsed is None
     with pytest.raises(LedgerCorrupt):
         portal_state.source_tracker(project, store, scope.Selector("r1"), computed)
+
+
+def test_table_and_donut_share_one_displayed_state(workspace):
+    """Review of R4: each matrix row carries `display_state`, and the donut's counts are exactly
+    the tally of those words — the table cell and the donut can never disagree."""
+    _projects_dir, _store_dir, project, store = workspace
+    flow_row = next(iter(flows.flows(store).values()))
+    for selector, row in ((scope.Selector("r1"), flow_row), (scope.Selector("r2"), None)):
+        overview = portal_state.flow_overview(project, store, selector, row)
+        tally = dict.fromkeys(portal_state.QUESTION_STATES, 0)
+        for matrix_row in overview["questions"]["rows"]:
+            tally[matrix_row["display_state"]] += 1
+        assert tally == overview["question_state_counts"]

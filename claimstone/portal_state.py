@@ -621,6 +621,7 @@ def question_matrix(project: Project, store: Store, selector: scope.Selector,
             "note": (None if question.state != evidence.NOT_APPLICABLE else
                      "kind operational: no verdict, never a sixth state"),
         })
+        rows[-1]["display_state"] = question_display_state(rows[-1])
     return {"rows": rows, "round": selector.round, "project": project.name}
 
 
@@ -637,31 +638,37 @@ QUESTION_STATES = ("signed", "stale", "awaiting_a_person", "provisional", "no_ve
                    "not_applicable", "historical", "no_profile")
 
 
+def question_display_state(row: Mapping[str, Any]) -> str:
+    """The one displayed state of a matrix row, with the precedence documented above. The
+    table's status cell and the donut both read it, so they can never disagree (review of R4:
+    the table showed NO_VERIFIED_CLAIM for seven provisional rows the donut counted as
+    provisional, and showed the one profile awaiting a person as a bare "no verdict")."""
+    from claimstone import evidence
+
+    if row.get("operational_not_applicable"):
+        return "not_applicable"
+    if row.get("verdict") and row.get("verdict_stale"):
+        return "stale"
+    if row.get("verdict"):
+        return "signed"
+    if not row.get("profile_sha256"):
+        return "no_profile"
+    if row.get("unavailable"):
+        return "historical"
+    if row.get("provisional"):
+        return "provisional"
+    if row.get("state") == evidence.NO_VERIFIED_CLAIM:
+        return "no_verified_claim"
+    return "awaiting_a_person"
+
+
 def question_state_counts(matrix: dict[str, Any]) -> dict[str, int]:
     """§8.3: one count per displayed state, over the matrix rows the same page already built —
     no ledger read of its own, so the donut can never disagree with the table it sits beside
     (and the client counts nothing, F11)."""
-    from claimstone import evidence
-
     counts = dict.fromkeys(QUESTION_STATES, 0)
     for row in matrix["rows"]:
-        if row.get("operational_not_applicable"):
-            state = "not_applicable"
-        elif row.get("verdict") and row.get("verdict_stale"):
-            state = "stale"
-        elif row.get("verdict"):
-            state = "signed"
-        elif not row.get("profile_sha256"):
-            state = "no_profile"
-        elif row.get("unavailable"):
-            state = "historical"
-        elif row.get("provisional"):
-            state = "provisional"
-        elif row.get("state") == evidence.NO_VERIFIED_CLAIM:
-            state = "no_verified_claim"
-        else:
-            state = "awaiting_a_person"
-        counts[state] += 1
+        counts[question_display_state(row)] += 1
     return counts
 
 

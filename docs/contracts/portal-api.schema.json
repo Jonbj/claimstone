@@ -1108,6 +1108,19 @@
          "direction_count_note": {
           "type": "string"
          },
+         "display_state": {
+          "enum": [
+           "signed",
+           "stale",
+           "awaiting_a_person",
+           "provisional",
+           "no_verified_claim",
+           "not_applicable",
+           "historical",
+           "no_profile"
+          ],
+          "type": "string"
+         },
          "extraction": {
           "type": [
            "object",
@@ -1195,7 +1208,8 @@
          "unavailable",
          "stored_profile_stale",
          "operational_not_applicable",
-         "note"
+         "note",
+         "display_state"
         ],
         "type": "object"
        },

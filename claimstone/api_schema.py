@@ -115,8 +115,10 @@ _QUESTION_ROW = {
                  "direction_count", "direction_count_note", "gate_rejected_total",
                  "gate_rejected", "awaiting_review", "state", "provisional", "blocking",
                  "verdict", "verdict_stale", "profile_sha256", "extraction", "unavailable",
-                 "stored_profile_stale", "operational_not_applicable", "note"],
+                 "stored_profile_stale", "operational_not_applicable", "note", "display_state"],
     "properties": {
+        # The row's one displayed state, the same word the overview's donut counts (§8.3).
+        "display_state": {"type": "string", "enum": list(QUESTION_STATES)},
         "id": _STR,
         "kind": _STR,
         "text": _STR,

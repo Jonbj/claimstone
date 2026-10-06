@@ -100,14 +100,26 @@ export default function QuestionMatrix({
                       <Chip text={row.verdict} />
                       {row.verdict_stale ? <Chip text="stale" /> : null}
                     </>
-                  ) : row.state === "NO_VERIFIED_CLAIM" ? (
-                    <Chip text="NO_VERIFIED_CLAIM" />
-                  ) : row.state ? (
-                    <Chip text={row.state} />
                   ) : (
-                    <span className="chip dashed" title="not knowable">
-                      — no verdict
-                    </span>
+                    // The server's display_state first — the word the donut counts — so a
+                    // provisional row is never headed NO_VERIFIED_CLAIM ("nothing found")
+                    // while its reading is unfinished (review of R4). When the display state
+                    // *is* no_verified_claim, the engine's own word is shown, dashed.
+                    <>
+                      <Chip
+                        text={
+                          row.display_state === "no_verified_claim"
+                            ? "NO_VERIFIED_CLAIM"
+                            : row.display_state
+                        }
+                      />
+                      {row.state === "NO_VERIFIED_CLAIM" &&
+                      row.display_state !== "no_verified_claim" ? (
+                        <span className="ml-1 text-xs text-muted-foreground">
+                          engine: NO_VERIFIED_CLAIM
+                        </span>
+                      ) : null}
+                    </>
                   )}
                   {row.provisional ? (
                     <>

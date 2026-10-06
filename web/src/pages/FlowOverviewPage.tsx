@@ -150,7 +150,7 @@ export default function FlowOverviewPage({ kind }: { kind: "f" | "u" }) {
           <div className="mt-4 border-t pt-3.5">
             {next ? (
               <>
-                <div className="text-sm font-semibold">Next: {next.subject}</div>
+                <div className="text-sm font-semibold">First open item, in server order: {next.subject}</div>
                 <p className="mb-2 mt-1 text-xs text-muted-foreground">{next.cause}</p>
                 {next.command ? <CommandBlock command={next.command} note={next.note} /> : null}
               </>

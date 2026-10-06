@@ -79,13 +79,29 @@ describe("F2: QuestionMatrix — per class before the total", () => {
     expect(chip.textContent).toBe("NO_VERIFIED_CLAIM");
   });
 
-  it("renders the rows with no state as no-verdict dashes", () => {
+  it("renders rows without a profile as no_profile, never as awaiting a person", () => {
+    // Review of R4: the cell shows the server's display_state, the word the donut counts.
     const unboundRows = unboundOverview.questions.rows as unknown as MatrixRow[];
     const { container } = render(
       <MemoryRouter>
         <QuestionMatrix rows={unboundRows} />
       </MemoryRouter>,
     );
-    expect(container.textContent).toContain("— no verdict");
+    expect(container.textContent).toContain("no_profile");
+    expect(container.textContent).not.toContain("awaiting_a_person");
+  });
+
+  it("heads a provisional NO_VERIFIED_CLAIM row with provisional, never with the engine word", () => {
+    // Review of R4: an unfinished reading is not a finding that nothing exists.
+    const row = { ...withoutClaims, provisional: true, state: "NO_VERIFIED_CLAIM",
+                  display_state: "provisional", blocking: ["awaiting_review"] } as MatrixRow;
+    const { container } = render(
+      <MemoryRouter>
+        <QuestionMatrix rows={[row]} />
+      </MemoryRouter>,
+    );
+    const first = container.querySelector(".chip")!;
+    expect(first.textContent).toBe("provisional");
+    expect(container.textContent).toContain("engine: NO_VERIFIED_CLAIM");
   });
 });
