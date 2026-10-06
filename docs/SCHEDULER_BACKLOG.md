@@ -5,6 +5,12 @@ Manual calibration/debug remains the operator's chosen mode. Scientific rules re
 CLAUDE.md and the measured decisions D10, D39, D48, D54 and D65–D67; this document does not
 change a floor, registry, population, scientific instrument or model assignment.
 
+The first implementation slice (D86) is `claimstone scheduler-preview`: a
+read-only flow-scoped next-work view. It reuses the portal's inbox semantics,
+flags an empty new round, protocol drift and integrity problems, and performs
+no operation. The proposed append-only execution contract is in
+`docs/contracts/scheduler_operations.md`; no worker or periodic timer exists.
+
 ## Workflow to automate
 
 The 2026-10-06 repository expansion exposes a round boundary the scheduler

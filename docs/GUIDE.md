@@ -1,5 +1,10 @@
 # A round, end to end
 
+For a bound research flow, `claimstone scheduler-preview PROJECT FLOW_ID`
+prints an offline, read-only proposal of next work. It does not authorize or
+start a stage. It names protocol/integrity blockers and keeps an empty new
+round distinct from a closed candidate cohort (D86).
+
 What each stage does, what it writes, and what the numbers mean. *In italiano: [GUIDE.it.md](GUIDE.it.md).*
 
 Worked against the round that closed on 2026-09-28 — `pmc-screen-time`, 40 sources — so every figure here is

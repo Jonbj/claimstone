@@ -3792,3 +3792,31 @@ direct candidates and six uncertain, zero admitted, and an open cohort.
 These measurements do not establish a population acquisition rate or a
 scientific result. The private readout is
 `audits/source-selection/l02-v2/repository-copy-check-2026-10-06/readout-201241852336d5c697a07d7631b5257959048864038ce4c4bf8bb587d02acb94.json`.
+
+## D86 — Begin scheduler work with a read-only flow preview (2026-10-06)
+
+`scheduler_preview_version 1` derives one flow's proposed next work from the
+same `portal_state.inbox_cards` and `round_state` readings as the portal. It
+does not invent a second rule for admission, readiness or signing. The command
+is `claimstone scheduler-preview PROJECT FLOW_ID [--store DIR]`. It reads
+without recording registry state, creates no operation or network request, and
+marks every proposal as unauthorized. Protocol drift, registry drift, damaged
+ledgers, torn tails and a flow bound after data existed are explicit blockers.
+
+Measured against the existing L02 university-repository flow
+`ec6025eff94d39c25429eccc072decdeda5c2aa3ae59330abed12cb42e987700`,
+the preview finds zero candidates in the new round and proposes discovery or
+controlled intake. It says `EMPTY_NOT_A_CLOSED_COHORT` and withholds a floor
+evaluation, even though the admission engine's raw zero-candidate object
+reports `final: true` with a null rate. That raw flag does not establish cohort
+closure or a scientific result. Tests in `tests/test_scheduler_preview.py` cover no writes,
+cross-round candidate isolation, late binding, damaged acquisitions and
+protocol drift. The schema is versioned because this is an operator-visible
+interpretation of the next action.
+
+The next implementation boundary is the append-only operation contract in
+`docs/contracts/scheduler_operations.md`. It defines plan, authorization,
+unit and lease events before an executor can use them. Execution still needs
+the project-wide writer lock, persistent host budget, redirect guard and
+round-scoped stage builders named in P3/P4. This entry does not authorize any
+campaign or model spending.

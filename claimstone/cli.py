@@ -957,6 +957,24 @@ def _flow_open(args: argparse.Namespace) -> tuple["Project", "Store"]:
     return project, Store(project.name, base=args.store)
 
 
+def _scheduler_preview(args: argparse.Namespace) -> int:
+    import json
+
+    from claimstone import scheduler_preview
+    from claimstone.store import LedgerCorrupt
+
+    project, store = _flow_open(args)
+    try:
+        result = scheduler_preview.preview(project, store, args.flow_id)
+    except (ValueError, LedgerCorrupt) as exc:
+        # Preserve a nonzero exit on a damaged ledger or unknown flow. No command
+        # can treat an omitted preview as an empty, executable plan.
+        print(f"scheduler preview refused: {exc}", file=sys.stderr)
+        return 2
+    print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
+    return 0
+
+
 def _flow_create(args: argparse.Namespace) -> int:
     from claimstone import flows, scope
 
@@ -1315,6 +1333,13 @@ def build_parser() -> argparse.ArgumentParser:
     flow_title.add_argument("--title", required=True, help="the new display name")
     flow_title.add_argument("--by", default=None, help="who renamed it; default this user")
     flow_title.set_defaults(func=_flow_title)
+
+    scheduler_cmd = sub.add_parser(
+        "scheduler-preview", help="read-only next-work preview for one bound flow")
+    scheduler_cmd.add_argument("project", help="path to a project directory")
+    scheduler_cmd.add_argument("flow_id", help="the 64-hex flow id")
+    scheduler_cmd.add_argument("--store", default="store", help="where generated data lives")
+    scheduler_cmd.set_defaults(func=_scheduler_preview)
 
     portal_cmd = sub.add_parser("portal", help="the read-only multi-project research portal")
     portal_cmd.add_argument("--projects-dir", default="projects",

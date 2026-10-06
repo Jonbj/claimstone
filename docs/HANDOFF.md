@@ -9,6 +9,15 @@ what order.
 
 ## Where the work stands
 
+2026-10-06 scheduler first slice (D86): `claimstone scheduler-preview PROJECT
+FLOW_ID` is an offline, read-only next-work view over a bound flow. On the new
+L02 repository flow it reports zero candidates and proposes bounded discovery
+or controlled intake; it cannot close the cohort or authorize execution.
+The operation event and resume design is in
+`docs/contracts/scheduler_operations.md`. A worker still requires the shared
+writer lock, persistent host budget, redirect guard and round-scoped stage
+builders before it can run.
+
 2026-10-06 portal frontend and containers (D84): the portal now has a React + shadcn/ui + Tremor
 frontend (`web/`) over the read-only JSON API `claimstone api`. `./portal.sh` starts both in
 containers, at http://127.0.0.1:8788/; stop them with `./portal.sh down`. The API mounts the
