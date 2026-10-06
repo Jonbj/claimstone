@@ -10,7 +10,11 @@ One step per session; markers below are the authority for "what is next".
 | S2 `claimstone/api.py` + tests A1–A7 | DONE |
 | S3 schema, validator, fixtures | DONE |
 | S4 scaffold `web/` | DONE |
-| S5 routes and components | DONE |
+| S5 routes and components | DONE (SvelteKit; superseded by R2–R4) |
+| R1 server fields for the React design (`question_state_counts`, `source_tracker`) | TODO |
+| R2 React scaffold replaces the SvelteKit scaffold | TODO |
+| R3 pages, part 1 (index, project, inbox, admin) | TODO |
+| R4 pages, part 2 (flow overview, question, lineage, dossier) + CSP preview check | TODO |
 | S6 Dockerfile, compose services, `portal.sh` | TODO |
 | S7 parity check, D83, docs, instrument registration | TODO |
 
@@ -246,7 +250,8 @@ NOT DONE:
 Checks: `svelte-check` 0 errors 0 warnings; vitest 23 passed; build + check-csp ok;
 `pytest -q` 1211 passed, 7 skipped.
 
-### S5 — IN PROGRESS
+### S5 — DONE (the table marker was already DONE; the section header had been left IN PROGRESS
+by an oversight — every sub-task was ticked and the checks recorded. Corrected in the R1 session.)
 - [x] S5.1 `claimstone/api_schema.py` + `claimstone/portal_state.py`: `question_detail`'s `verdict`
       field returns the recorded adjudication row (a dict with `verdict`, `adjudicated_by`,
       `adjudicated_at`, `rationale`, `profile_sha256`, …), as the HTML portal already renders —
@@ -340,3 +345,23 @@ NOT DONE:
   peak of 1024 MB RSS in the api process; the first summary arrives in 0.6 s. Spec §5 now sets
   `memory: 2g` on `api` for S6.
 Checks: `pytest -q` 1213 passed, 7 skipped; web 0 errors, 36 tests passed, build + check-csp ok.
+
+### R1 — IN PROGRESS
+- [ ] R1.1 `question_state_counts` in `claimstone/portal_state.py`: the seven displayed states
+      (`signed`, `stale`, `awaiting_a_person`, `provisional`, `no_verified_claim`,
+      `not_applicable`, `historical`) counted over the matrix rows with the matrix's own
+      precedence (one `compute()`, no ledger read of its own); added to `flow_overview`'s payload
+- [ ] R1.2 `source_tracker` in `claimstone/portal_state.py`: one entry per scoped candidate, in
+      scoped candidate order, with `candidate_key`, `source_id`, `source_class`, `state`
+      (admissibility's own branches: `confirmed` | `awaiting_normalize` | `not_a_document` |
+      `refused` | `not_attempted` | `unclassified`) and a display-ready `tooltip` (a 403 carries
+      the F19 text, `PAYWALL_TEXT`); added to `flow_overview`'s payload
+- [ ] R1.3 schema: `api_schema.py` OVERVIEW gains both fields (the two vocabularies as enums);
+      regenerate `docs/contracts/portal-api.schema.json`, the fixtures
+      (`tools/build_portal_fixtures.py`) and `web/src/lib/api-types.ts` so F8 stays green
+- [ ] R1.4 Python tests: counts sum to the registry size; tracker order equals the scoped
+      candidate order; a 403 entry's tooltip is the F19 text; unbound and flow selectors both
+      carry the fields; `flow_overview` still runs one `compute()`
+- [ ] R1.5 full checks green (`pytest -q`, `validate --all-projects`,
+      `check_instrument_versions.py`) and web checks green (`npm run check && npm test && npm
+      run build`)
