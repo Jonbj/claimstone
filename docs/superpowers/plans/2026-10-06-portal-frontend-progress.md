@@ -11,7 +11,7 @@ One step per session; markers below are the authority for "what is next".
 | S3 schema, validator, fixtures | DONE |
 | S4 scaffold `web/` | DONE |
 | S5 routes and components | DONE (SvelteKit; superseded by R2–R4) |
-| R1 server fields for the React design (`question_state_counts`, `source_tracker`) | TODO |
+| R1 server fields for the React design (`question_state_counts`, `source_tracker`) | DONE |
 | R2 React scaffold replaces the SvelteKit scaffold | TODO |
 | R3 pages, part 1 (index, project, inbox, admin) | TODO |
 | R4 pages, part 2 (flow overview, question, lineage, dossier) + CSP preview check | TODO |
