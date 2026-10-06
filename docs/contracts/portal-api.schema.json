@@ -1,0 +1,1617 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "additionalProperties": false,
+ "properties": {
+  "/admin": {
+   "$schema": "https://json-schema.org/draft/2020-12/schema",
+   "additionalProperties": false,
+   "properties": {
+    "api_version": {
+     "enum": [
+      1
+     ],
+     "type": "integer"
+    },
+    "backends": {
+     "additionalProperties": false,
+     "properties": {
+      "available": {
+       "items": {
+        "type": "string"
+       },
+       "type": "array"
+      },
+      "configured": {
+       "items": {
+        "type": "string"
+       },
+       "type": "array"
+      }
+     },
+     "required": [
+      "configured",
+      "available"
+     ],
+     "type": "object"
+    },
+    "backends_note": {
+     "type": "string"
+    },
+    "credentials": {
+     "additionalProperties": {
+      "type": "boolean"
+     },
+     "type": "object"
+    },
+    "instruments": {
+     "additionalProperties": {
+      "type": [
+       "integer",
+       "string"
+      ]
+     },
+     "type": "object"
+    },
+    "key_rotation_note": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "api_version",
+    "credentials",
+    "backends",
+    "backends_note",
+    "instruments",
+    "key_rotation_note"
+   ],
+   "title": "admin",
+   "type": "object"
+  },
+  "/error": {
+   "$schema": "https://json-schema.org/draft/2020-12/schema",
+   "additionalProperties": false,
+   "properties": {
+    "api_version": {
+     "enum": [
+      1
+     ],
+     "type": "integer"
+    },
+    "error": {
+     "additionalProperties": false,
+     "properties": {
+      "code": {
+       "enum": [
+        "NOT_FOUND",
+        "CONFIG_ERROR",
+        "REGISTRY_DRIFT",
+        "LEDGER_CORRUPT",
+        "MISDIRECTED",
+        "CROSS_ORIGIN",
+        "INTERNAL"
+       ],
+       "type": "string"
+      },
+      "message": {
+       "type": "string"
+      }
+     },
+     "required": [
+      "code",
+      "message"
+     ],
+     "type": "object"
+    }
+   },
+   "required": [
+    "api_version",
+    "error"
+   ],
+   "title": "error",
+   "type": "object"
+  },
+  "/meta": {
+   "$schema": "https://json-schema.org/draft/2020-12/schema",
+   "additionalProperties": false,
+   "properties": {
+    "api_version": {
+     "enum": [
+      1
+     ],
+     "type": "integer"
+    },
+    "code": {
+     "additionalProperties": false,
+     "properties": {
+      "dirty": {
+       "type": [
+        "boolean",
+        "null"
+       ]
+      },
+      "revision": {
+       "type": [
+        "string",
+        "null"
+       ]
+      }
+     },
+     "required": [
+      "revision",
+      "dirty"
+     ],
+     "type": "object"
+    },
+    "instruments": {
+     "additionalProperties": {
+      "type": [
+       "integer",
+       "string"
+      ]
+     },
+     "type": "object"
+    },
+    "started_at": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "api_version",
+    "code",
+    "instruments",
+    "started_at"
+   ],
+   "title": "meta",
+   "type": "object"
+  },
+  "/projects": {
+   "$schema": "https://json-schema.org/draft/2020-12/schema",
+   "additionalProperties": false,
+   "properties": {
+    "api_version": {
+     "enum": [
+      1
+     ],
+     "type": "integer"
+    },
+    "projects": {
+     "items": {
+      "properties": {
+       "config": {
+        "enum": [
+         "OK",
+         "ConfigError"
+        ],
+        "type": "string"
+       },
+       "config_error": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "flows": {
+        "items": {
+         "additionalProperties": false,
+         "properties": {
+          "binding_state": {
+           "enum": [
+            "CURRENT",
+            "REGISTRY_DRIFTED",
+            "PROTOCOL_DRIFTED",
+            "POPULATION_DRIFTED"
+           ],
+           "type": "string"
+          },
+          "bound_after_data": {
+           "type": "boolean"
+          },
+          "flow_id": {
+           "type": "string"
+          },
+          "selector": {
+           "additionalProperties": false,
+           "properties": {
+            "manifest_only": {
+             "type": "boolean"
+            },
+            "round": {
+             "type": [
+              "string",
+              "null"
+             ]
+            }
+           },
+           "required": [
+            "round",
+            "manifest_only"
+           ],
+           "type": "object"
+          },
+          "selector_label": {
+           "type": "string"
+          },
+          "title": {
+           "type": [
+            "string",
+            "null"
+           ]
+          }
+         },
+         "required": [
+          "flow_id",
+          "title",
+          "selector",
+          "selector_label",
+          "binding_state",
+          "bound_after_data"
+         ],
+         "type": "object"
+        },
+        "type": "array"
+       },
+       "name": {
+        "type": "string"
+       },
+       "registry_drift": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "registry_sha256": {
+        "type": "string"
+       },
+       "registry_version": {
+        "type": "integer"
+       },
+       "unbound_selectors": {
+        "items": {
+         "additionalProperties": false,
+         "properties": {
+          "label": {
+           "type": "string"
+          },
+          "selector": {
+           "additionalProperties": false,
+           "properties": {
+            "manifest_only": {
+             "type": "boolean"
+            },
+            "round": {
+             "type": [
+              "string",
+              "null"
+             ]
+            }
+           },
+           "required": [
+            "round",
+            "manifest_only"
+           ],
+           "type": "object"
+          },
+          "slug": {
+           "type": "string"
+          }
+         },
+         "required": [
+          "slug",
+          "label",
+          "selector"
+         ],
+         "type": "object"
+        },
+        "type": "array"
+       }
+      },
+      "required": [
+       "name",
+       "config",
+       "config_error"
+      ],
+      "type": "object"
+     },
+     "type": "array"
+    }
+   },
+   "required": [
+    "api_version",
+    "projects"
+   ],
+   "title": "projects",
+   "type": "object"
+  },
+  "/projects/{p}/activity": {
+   "$schema": "https://json-schema.org/draft/2020-12/schema",
+   "additionalProperties": false,
+   "properties": {
+    "activity": {
+     "items": {
+      "additionalProperties": false,
+      "properties": {
+       "ledger": {
+        "type": "string"
+       },
+       "row": {
+        "type": "object"
+       },
+       "stage": {
+        "type": "string"
+       },
+       "when": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "when",
+       "stage",
+       "ledger",
+       "row"
+      ],
+      "type": "object"
+     },
+     "type": "array"
+    },
+    "api_version": {
+     "enum": [
+      1
+     ],
+     "type": "integer"
+    },
+    "project": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "api_version",
+    "project",
+    "activity"
+   ],
+   "title": "activity",
+   "type": "object"
+  },
+  "/projects/{p}/integrity": {
+   "$schema": "https://json-schema.org/draft/2020-12/schema",
+   "additionalProperties": false,
+   "properties": {
+    "api_version": {
+     "enum": [
+      1
+     ],
+     "type": "integer"
+    },
+    "code": {
+     "additionalProperties": false,
+     "properties": {
+      "dirty": {
+       "type": [
+        "boolean",
+        "null"
+       ]
+      },
+      "grobid_image": {
+       "type": "string"
+      },
+      "revision": {
+       "type": [
+        "string",
+        "null"
+       ]
+      }
+     },
+     "required": [
+      "revision",
+      "dirty",
+      "grobid_image"
+     ],
+     "type": "object"
+    },
+    "config": {
+     "additionalProperties": false,
+     "properties": {
+      "error": {
+       "type": [
+        "string",
+        "null"
+       ]
+      },
+      "state": {
+       "enum": [
+        "OK",
+        "ConfigError"
+       ],
+       "type": "string"
+      }
+     },
+     "required": [
+      "state",
+      "error"
+     ],
+     "type": "object"
+    },
+    "instruments": {
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "invalid_flows": {
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "ledger_repairs": {
+     "type": "integer"
+    },
+    "ledgers": {
+     "additionalProperties": {
+      "additionalProperties": false,
+      "properties": {
+       "error": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "rows": {
+        "type": "integer"
+       },
+       "torn_tail": {
+        "type": "boolean"
+       }
+      },
+      "required": [
+       "rows",
+       "torn_tail",
+       "error"
+      ],
+      "type": "object"
+     },
+     "type": "object"
+    },
+    "orphans": {
+     "type": [
+      "integer",
+      "null"
+     ]
+    },
+    "project": {
+     "type": "string"
+    },
+    "registry": {
+     "additionalProperties": false,
+     "properties": {
+      "error": {
+       "type": [
+        "string",
+        "null"
+       ]
+      },
+      "state": {
+       "enum": [
+        "OK",
+        "RegistryDrift"
+       ],
+       "type": "string"
+      }
+     },
+     "required": [
+      "state",
+      "error"
+     ],
+     "type": "object"
+    }
+   },
+   "required": [
+    "api_version",
+    "project",
+    "config",
+    "registry",
+    "ledgers",
+    "invalid_flows",
+    "ledger_repairs",
+    "orphans",
+    "instruments",
+    "code"
+   ],
+   "title": "integrity",
+   "type": "object"
+  },
+  "/projects/{p}/poll": {
+   "$schema": "https://json-schema.org/draft/2020-12/schema",
+   "additionalProperties": false,
+   "properties": {
+    "api_version": {
+     "enum": [
+      1
+     ],
+     "type": "integer"
+    },
+    "ledgers": {
+     "additionalProperties": {
+      "additionalProperties": false,
+      "properties": {
+       "mtime": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "rows": {
+        "type": [
+         "integer",
+         "null"
+        ]
+       }
+      },
+      "required": [
+       "mtime",
+       "rows"
+      ],
+      "type": "object"
+     },
+     "type": "object"
+    },
+    "pid_note": {
+     "type": "string"
+    },
+    "project": {
+     "type": "string"
+    },
+    "running": {
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    }
+   },
+   "required": [
+    "api_version",
+    "project",
+    "ledgers",
+    "running",
+    "pid_note"
+   ],
+   "title": "poll",
+   "type": "object"
+  },
+  "/projects/{p}/{sel}/claims/{claim_id}": {
+   "$schema": "https://json-schema.org/draft/2020-12/schema",
+   "additionalProperties": false,
+   "properties": {
+    "api_version": {
+     "enum": [
+      1
+     ],
+     "type": "integer"
+    },
+    "claim_id": {
+     "type": "string"
+    },
+    "project": {
+     "type": "string"
+    },
+    "selector": {
+     "additionalProperties": false,
+     "properties": {
+      "manifest_only": {
+       "type": "boolean"
+      },
+      "round": {
+       "type": [
+        "string",
+        "null"
+       ]
+      }
+     },
+     "required": [
+      "round",
+      "manifest_only"
+     ],
+     "type": "object"
+    },
+    "source_id": {
+     "type": "string"
+    },
+    "steps": {
+     "additionalProperties": false,
+     "properties": {
+      "acquisition": {
+       "type": [
+        "object",
+        "null"
+       ]
+      },
+      "acquisition_candidate_key": {
+       "type": [
+        "string",
+        "null"
+       ]
+      },
+      "candidate": {
+       "type": [
+        "object",
+        "null"
+       ]
+      },
+      "chunk": {
+       "additionalProperties": false,
+       "properties": {
+        "chunk_id": {
+         "type": "string"
+        },
+        "evidence_quote": {
+         "type": "string"
+        },
+        "generation_sha256": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "quote_found": {
+         "type": "boolean"
+        },
+        "text": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "text_sha256": {
+         "type": [
+          "string",
+          "null"
+         ]
+        }
+       },
+       "required": [
+        "chunk_id",
+        "generation_sha256",
+        "text_sha256",
+        "text",
+        "evidence_quote",
+        "quote_found"
+       ],
+       "type": [
+        "object",
+        "null"
+       ]
+      },
+      "claim": {
+       "type": "object"
+      },
+      "document": {
+       "type": [
+        "object",
+        "null"
+       ]
+      },
+      "document_pdf_instrument": {
+       "type": [
+        "string",
+        "null"
+       ]
+      },
+      "review": {
+       "type": [
+        "object",
+        "null"
+       ]
+      }
+     },
+     "required": [
+      "claim",
+      "review",
+      "chunk",
+      "document",
+      "document_pdf_instrument",
+      "acquisition",
+      "acquisition_candidate_key",
+      "candidate"
+     ],
+     "type": "object"
+    }
+   },
+   "required": [
+    "api_version",
+    "project",
+    "selector",
+    "claim_id",
+    "source_id",
+    "steps"
+   ],
+   "title": "lineage",
+   "type": "object"
+  },
+  "/projects/{p}/{sel}/inbox": {
+   "$schema": "https://json-schema.org/draft/2020-12/schema",
+   "additionalProperties": false,
+   "properties": {
+    "api_version": {
+     "enum": [
+      1
+     ],
+     "type": "integer"
+    },
+    "cards": {
+     "items": {
+      "additionalProperties": false,
+      "properties": {
+       "category": {
+        "enum": [
+         "INTEGRITY",
+         "PROTOCOL",
+         "ACQUISITION",
+         "CLASSIFICATION",
+         "NORMALIZE",
+         "EXTRACT",
+         "REVIEW",
+         "ADJUDICATION",
+         "ADVISORY"
+        ],
+        "type": "string"
+       },
+       "cause": {
+        "type": "string"
+       },
+       "command": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "note": {
+        "type": "string"
+       },
+       "scope": {
+        "type": "string"
+       },
+       "subject": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "category",
+       "scope",
+       "subject",
+       "cause",
+       "command",
+       "note"
+      ],
+      "type": "object"
+     },
+     "type": "array"
+    }
+   },
+   "required": [
+    "api_version",
+    "cards"
+   ],
+   "title": "inbox",
+   "type": "object"
+  },
+  "/projects/{p}/{sel}/overview": {
+   "$schema": "https://json-schema.org/draft/2020-12/schema",
+   "additionalProperties": false,
+   "properties": {
+    "activity": {
+     "items": {
+      "additionalProperties": false,
+      "properties": {
+       "ledger": {
+        "type": "string"
+       },
+       "row": {
+        "type": "object"
+       },
+       "stage": {
+        "type": "string"
+       },
+       "when": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "when",
+       "stage",
+       "ledger",
+       "row"
+      ],
+      "type": "object"
+     },
+     "type": "array"
+    },
+    "api_version": {
+     "enum": [
+      1
+     ],
+     "type": "integer"
+    },
+    "binding_state": {
+     "additionalProperties": false,
+     "properties": {
+      "bound_after_data": {
+       "type": "boolean"
+      },
+      "differences": {
+       "items": {
+        "type": "string"
+       },
+       "type": "array"
+      },
+      "state": {
+       "enum": [
+        "CURRENT",
+        "REGISTRY_DRIFTED",
+        "PROTOCOL_DRIFTED",
+        "POPULATION_DRIFTED"
+       ],
+       "type": "string"
+      }
+     },
+     "required": [
+      "state",
+      "differences",
+      "bound_after_data"
+     ],
+     "type": [
+      "object",
+      "null"
+     ]
+    },
+    "errors": {
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "floor_panel": {
+     "additionalProperties": false,
+     "properties": {
+      "by_class": {
+       "type": "object"
+      },
+      "disclosure": {
+       "type": "string"
+      },
+      "overall": {
+       "type": "object"
+      },
+      "sentences": {
+       "items": {
+        "type": "string"
+       },
+       "type": "array"
+      }
+     },
+     "required": [
+      "overall",
+      "by_class",
+      "sentences",
+      "disclosure"
+     ],
+     "type": [
+      "object",
+      "null"
+     ]
+    },
+    "flow": {
+     "type": [
+      "object",
+      "null"
+     ]
+    },
+    "inbox": {
+     "items": {
+      "additionalProperties": false,
+      "properties": {
+       "category": {
+        "enum": [
+         "INTEGRITY",
+         "PROTOCOL",
+         "ACQUISITION",
+         "CLASSIFICATION",
+         "NORMALIZE",
+         "EXTRACT",
+         "REVIEW",
+         "ADJUDICATION",
+         "ADVISORY"
+        ],
+        "type": "string"
+       },
+       "cause": {
+        "type": "string"
+       },
+       "command": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "note": {
+        "type": "string"
+       },
+       "scope": {
+        "type": "string"
+       },
+       "subject": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "category",
+       "scope",
+       "subject",
+       "cause",
+       "command",
+       "note"
+      ],
+      "type": "object"
+     },
+     "type": "array"
+    },
+    "legacy": {
+     "type": "boolean"
+    },
+    "project": {
+     "type": "string"
+    },
+    "questions": {
+     "additionalProperties": false,
+     "properties": {
+      "project": {
+       "type": "string"
+      },
+      "round": {
+       "type": [
+        "string",
+        "null"
+       ]
+      },
+      "rows": {
+       "items": {
+        "additionalProperties": false,
+        "properties": {
+         "awaiting_review": {
+          "type": "integer"
+         },
+         "blocking": {
+          "items": {
+           "type": "string"
+          },
+          "type": "array"
+         },
+         "claims": {
+          "type": [
+           "integer",
+           "null"
+          ]
+         },
+         "claims_by_class": {
+          "additionalProperties": {
+           "type": "integer"
+          },
+          "type": "object"
+         },
+         "coverage": {
+          "additionalProperties": false,
+          "properties": {
+           "examined": {
+            "type": [
+             "integer",
+             "null"
+            ]
+           },
+           "sources": {
+            "type": [
+             "integer",
+             "null"
+            ]
+           }
+          },
+          "required": [
+           "sources",
+           "examined"
+          ],
+          "type": "object"
+         },
+         "direction_count": {
+          "type": "object"
+         },
+         "direction_count_note": {
+          "type": "string"
+         },
+         "extraction": {
+          "type": [
+           "object",
+           "null"
+          ]
+         },
+         "gate_rejected": {
+          "type": "object"
+         },
+         "gate_rejected_total": {
+          "type": "integer"
+         },
+         "id": {
+          "type": "string"
+         },
+         "kind": {
+          "type": "string"
+         },
+         "note": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "operational_not_applicable": {
+          "type": "boolean"
+         },
+         "profile_sha256": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "provisional": {
+          "type": "boolean"
+         },
+         "state": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "stored_profile_stale": {
+          "type": "boolean"
+         },
+         "text": {
+          "type": "string"
+         },
+         "unavailable": {
+          "type": "string"
+         },
+         "verdict": {
+          "enum": [
+           null,
+           "SUPPORTED",
+           "CONTRADICTED",
+           "CONTESTED_IN_LITERATURE",
+           "UNANSWERED_IN_LITERATURE",
+           "NEVER_ASKED"
+          ]
+         },
+         "verdict_stale": {
+          "type": "boolean"
+         }
+        },
+        "required": [
+         "id",
+         "kind",
+         "text",
+         "claims_by_class",
+         "claims",
+         "coverage",
+         "direction_count",
+         "direction_count_note",
+         "gate_rejected_total",
+         "gate_rejected",
+         "awaiting_review",
+         "state",
+         "provisional",
+         "blocking",
+         "verdict",
+         "verdict_stale",
+         "profile_sha256",
+         "extraction",
+         "unavailable",
+         "stored_profile_stale",
+         "operational_not_applicable",
+         "note"
+        ],
+        "type": "object"
+       },
+       "type": "array"
+      }
+     },
+     "required": [
+      "rows",
+      "round",
+      "project"
+     ],
+     "type": "object"
+    },
+    "selector": {
+     "additionalProperties": false,
+     "properties": {
+      "manifest_only": {
+       "type": "boolean"
+      },
+      "round": {
+       "type": [
+        "string",
+        "null"
+       ]
+      }
+     },
+     "required": [
+      "round",
+      "manifest_only"
+     ],
+     "type": "object"
+    },
+    "selector_label": {
+     "type": "string"
+    },
+    "state": {
+     "additionalProperties": false,
+     "properties": {
+      "errors": {
+       "items": {
+        "type": "string"
+       },
+       "type": "array"
+      },
+      "floor": {
+       "type": [
+        "object",
+        "null"
+       ]
+      },
+      "project": {
+       "type": "string"
+      },
+      "questions": {
+       "items": {
+        "type": "object"
+       },
+       "type": "array"
+      },
+      "rejections_by_reason": {
+       "type": "object"
+      },
+      "round": {
+       "type": [
+        "string",
+        "null"
+       ]
+      },
+      "stages": {
+       "items": {
+        "type": "object"
+       },
+       "type": "array"
+      },
+      "unavailable": {
+       "type": "string"
+      },
+      "verdicts_recorded": {
+       "type": "integer"
+      },
+      "verdicts_stale": {
+       "type": "integer"
+      }
+     },
+     "required": [
+      "project",
+      "round",
+      "stages",
+      "questions",
+      "verdicts_recorded",
+      "verdicts_stale",
+      "floor",
+      "rejections_by_reason",
+      "unavailable",
+      "errors"
+     ],
+     "type": "object"
+    },
+    "unavailable": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "api_version",
+    "project",
+    "selector",
+    "selector_label",
+    "flow",
+    "legacy",
+    "binding_state",
+    "state",
+    "floor_panel",
+    "questions",
+    "inbox",
+    "activity",
+    "unavailable",
+    "errors"
+   ],
+   "title": "overview",
+   "type": "object"
+  },
+  "/projects/{p}/{sel}/questions/{qid}": {
+   "$schema": "https://json-schema.org/draft/2020-12/schema",
+   "additionalProperties": false,
+   "properties": {
+    "api_version": {
+     "enum": [
+      1
+     ],
+     "type": "integer"
+    },
+    "id": {
+     "type": "string"
+    },
+    "kind": {
+     "type": "string"
+    },
+    "not_applicable_state": {
+     "type": [
+      "string",
+      "null"
+     ]
+    },
+    "operational_not_applicable": {
+     "type": "boolean"
+    },
+    "profile": {
+     "type": "object"
+    },
+    "profile_fields": {
+     "additionalProperties": false,
+     "properties": {
+      "awaiting_review": {
+       "type": "integer"
+      },
+      "blocking": {
+       "items": {
+        "type": "string"
+       },
+       "type": "array"
+      },
+      "coverage": {
+       "type": "object"
+      },
+      "direction_count": {
+       "type": "object"
+      },
+      "direction_count_note": {
+       "type": "string"
+      },
+      "extraction": {
+       "type": [
+        "object",
+        "null"
+       ]
+      },
+      "gate_rejected": {
+       "type": "object"
+      },
+      "linkage": {},
+      "profile_sha256": {
+       "type": [
+        "string",
+        "null"
+       ]
+      },
+      "provisional": {
+       "type": [
+        "boolean",
+        "null"
+       ]
+      },
+      "reviewed_not_usable": {
+       "type": "object"
+      },
+      "state": {
+       "type": [
+        "string",
+        "null"
+       ]
+      },
+      "stored_profile_stale": {
+       "type": "boolean"
+      },
+      "unavailable": {
+       "type": "string"
+      }
+     },
+     "required": [
+      "state",
+      "provisional",
+      "blocking",
+      "coverage",
+      "direction_count",
+      "direction_count_note",
+      "gate_rejected",
+      "reviewed_not_usable",
+      "awaiting_review",
+      "linkage",
+      "extraction",
+      "profile_sha256",
+      "stored_profile_stale",
+      "unavailable"
+     ],
+     "type": "object"
+    },
+    "project": {
+     "type": "string"
+    },
+    "results": {
+     "items": {
+      "type": "object"
+     },
+     "type": "array"
+    },
+    "selector": {
+     "additionalProperties": false,
+     "properties": {
+      "manifest_only": {
+       "type": "boolean"
+      },
+      "round": {
+       "type": [
+        "string",
+        "null"
+       ]
+      }
+     },
+     "required": [
+      "round",
+      "manifest_only"
+     ],
+     "type": "object"
+    },
+    "text": {
+     "type": "string"
+    },
+    "verdict": {
+     "enum": [
+      null,
+      "SUPPORTED",
+      "CONTRADICTED",
+      "CONTESTED_IN_LITERATURE",
+      "UNANSWERED_IN_LITERATURE",
+      "NEVER_ASKED"
+     ]
+    },
+    "verdict_stale": {
+     "type": "boolean"
+    }
+   },
+   "required": [
+    "api_version",
+    "project",
+    "selector",
+    "id",
+    "kind",
+    "text",
+    "profile",
+    "profile_fields",
+    "results",
+    "verdict",
+    "verdict_stale",
+    "operational_not_applicable",
+    "not_applicable_state"
+   ],
+   "title": "question detail",
+   "type": "object"
+  },
+  "/projects/{p}/{sel}/sources/{candidate_key}": {
+   "$schema": "https://json-schema.org/draft/2020-12/schema",
+   "additionalProperties": false,
+   "properties": {
+    "acquisitions": {
+     "items": {
+      "type": "object"
+     },
+     "type": "array"
+    },
+    "active_chunks": {
+     "type": [
+      "integer",
+      "null"
+     ]
+    },
+    "advisory": {
+     "additionalProperties": {
+      "items": {
+       "type": "object"
+      },
+      "type": "array"
+     },
+     "type": "object"
+    },
+    "advisory_note": {
+     "type": "string"
+    },
+    "api_version": {
+     "enum": [
+      1
+     ],
+     "type": "integer"
+    },
+    "candidate": {
+     "type": [
+      "object",
+      "null"
+     ]
+    },
+    "candidate_key": {
+     "type": "string"
+    },
+    "claims_by_question": {
+     "additionalProperties": {
+      "type": "integer"
+     },
+     "type": "object"
+    },
+    "counted_acquisition": {
+     "type": [
+      "object",
+      "null"
+     ]
+    },
+    "document": {
+     "type": [
+      "object",
+      "null"
+     ]
+    },
+    "project": {
+     "type": "string"
+    },
+    "selector": {
+     "additionalProperties": false,
+     "properties": {
+      "manifest_only": {
+       "type": "boolean"
+      },
+      "round": {
+       "type": [
+        "string",
+        "null"
+       ]
+      }
+     },
+     "required": [
+      "round",
+      "manifest_only"
+     ],
+     "type": "object"
+    },
+    "source_id": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "api_version",
+    "project",
+    "selector",
+    "candidate_key",
+    "source_id",
+    "candidate",
+    "acquisitions",
+    "counted_acquisition",
+    "document",
+    "active_chunks",
+    "advisory",
+    "advisory_note",
+    "claims_by_question"
+   ],
+   "title": "source dossier",
+   "type": "object"
+  },
+  "/projects/{p}/{sel}/summary": {
+   "$schema": "https://json-schema.org/draft/2020-12/schema",
+   "additionalProperties": false,
+   "properties": {
+    "api_version": {
+     "enum": [
+      1
+     ],
+     "type": "integer"
+    },
+    "floor_status": {
+     "type": [
+      "string",
+      "null"
+     ]
+    },
+    "flow_id": {
+     "type": [
+      "string",
+      "null"
+     ]
+    },
+    "inbox_counts": {
+     "additionalProperties": {
+      "type": "integer"
+     },
+     "type": "object"
+    },
+    "project": {
+     "type": "string"
+    },
+    "selector": {
+     "additionalProperties": false,
+     "properties": {
+      "manifest_only": {
+       "type": "boolean"
+      },
+      "round": {
+       "type": [
+        "string",
+        "null"
+       ]
+      }
+     },
+     "required": [
+      "round",
+      "manifest_only"
+     ],
+     "type": "object"
+    },
+    "selector_label": {
+     "type": "string"
+    },
+    "verdicts": {
+     "additionalProperties": false,
+     "properties": {
+      "adjudicated": {
+       "type": "integer"
+      },
+      "awaiting_adjudication": {
+       "type": "integer"
+      },
+      "stale": {
+       "type": "integer"
+      }
+     },
+     "required": [
+      "adjudicated",
+      "stale",
+      "awaiting_adjudication"
+     ],
+     "type": [
+      "object",
+      "null"
+     ]
+    }
+   },
+   "required": [
+    "api_version",
+    "project",
+    "flow_id",
+    "selector",
+    "selector_label",
+    "floor_status",
+    "verdicts",
+    "inbox_counts"
+   ],
+   "title": "summary",
+   "type": "object"
+  }
+ },
+ "required": [
+  "/admin",
+  "/error",
+  "/meta",
+  "/projects",
+  "/projects/{p}/activity",
+  "/projects/{p}/integrity",
+  "/projects/{p}/poll",
+  "/projects/{p}/{sel}/claims/{claim_id}",
+  "/projects/{p}/{sel}/inbox",
+  "/projects/{p}/{sel}/overview",
+  "/projects/{p}/{sel}/questions/{qid}",
+  "/projects/{p}/{sel}/sources/{candidate_key}",
+  "/projects/{p}/{sel}/summary"
+ ],
+ "title": "Claimstone portal API v1",
+ "type": "object"
+}

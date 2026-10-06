@@ -103,8 +103,8 @@ three `alembic-*` projects since the S1-era baseline — another concurrent sess
 NOT DONE:
 
 ### S3 — IN PROGRESS
-- [ ] S3.1 `claimstone/api_schema.py` (hand-declared per-route schemas, draft 2020-12, `additionalProperties: false` at each payload top level, verdict vocabulary and error codes as enums) + `tools/build_portal_api_schema.py` + committed `docs/contracts/portal-api.schema.json`
-- [ ] S3.2 `tests/test_api_contract.py`: minimal stdlib validator (`type`, `required`, `properties`, `enum`, `items`, `additionalProperties`) + A2 — every route payload validates; committed schema equals the regenerated one
+- [x] S3.1 `claimstone/api_schema.py` (hand-declared per-route schemas, draft 2020-12, `additionalProperties: false` at each payload top level, verdict vocabulary and error codes as enums) + `tools/build_portal_api_schema.py` + committed `docs/contracts/portal-api.schema.json`
+- [x] S3.2 `tests/test_api_contract.py`: minimal stdlib validator (`type`, `required`, `properties`, `enum`, `items`, `additionalProperties`) + A2 — every route payload validates; committed schema equals the regenerated one
 - [ ] S3.3 `tools/build_portal_fixtures.py` (deterministic `build_workspace` build: sanitized flow/profile rows, scrubbed env for `admin_state`, workspace path normalized to `<workspace>`) + committed `web/tests/fixtures/*.json`
 - [ ] S3.4 `tests/test_portal_fixtures.py`: committed fixtures equal the regenerated ones
 - [ ] S3.5 full checks green (`pytest -q`, `validate --all-projects`, `check_instrument_versions.py`)
