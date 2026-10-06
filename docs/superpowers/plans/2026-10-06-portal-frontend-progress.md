@@ -668,7 +668,7 @@ Checks: typecheck clean; vitest 33 passed; build + check-csp ok; `pytest -q` 122
 - [x] R4.1 `QuestionMatrix` React component (§8.3 questions table: registry order, per-class
       counts → total, direction mini bar labelled with the counts plus the note, status badges
       with the §4.2 rules 1/2/3/5); vitest F2 re-ported
-- [ ] R4.2 overview building blocks: `SourceTracker` (Tremor `Tracker`, one block per
+- [x] R4.2 overview building blocks: `SourceTracker` (Tremor `Tracker`, one block per
       `source_tracker` entry in server order, tooltip verbatim, state legend), the four KPI cards
       (acquisition rate + `CategoryBar` with floor marker, accepted annotations + rejected count,
       reviewed of accepted + `ProgressBar`, `DonutChart` from `question_state_counts`), the
