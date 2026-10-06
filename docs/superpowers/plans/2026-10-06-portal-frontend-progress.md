@@ -463,3 +463,25 @@ NOT DONE:
   as `not_attempted`.
 Checks: `pytest -q` 1220 passed, 7 skipped; `validate` exit 0; 26 instruments; svelte-check 0/0;
 vitest 36 passed; build + check-csp ok.
+
+### R2 — IN PROGRESS
+- [ ] R2.1 delete the SvelteKit sources and config; scaffold Vite 6 + React 19 + TS strict +
+      react-router 7 (`createBrowserRouter`) + Tailwind v4 (`@tailwindcss/vite`), build output
+      `dist/`, pinned devDependencies and committed `package-lock.json`; the §8.4 CSP header in
+      `preview.headers` and the new `check-csp.mjs` wired into `npm run build`;
+      `npm ci && npm run typecheck && npm run build` green
+- [ ] R2.2 shadcn/ui via its CLI (`button`, `badge`, `card`, `table`, `tabs`, `select`,
+      `separator`, `tooltip`) into `src/components/ui/`; the Tremor Raw copies (`Tracker`,
+      `CategoryBar`, `BarList`, `DonutChart`, `ProgressBar`) into `src/components/tremor/` with
+      their README/licence and source version recorded; `recharts` and `lucide-react` pinned;
+      bundled Geist + Geist Mono via `@fontsource-variable/*`
+- [ ] R2.3 port `api.ts`, `api-types.ts`, `vocabulary.ts` unchanged into `src/lib/`; add the
+      `useApi(fetcher, deps)` and `usePoll` hooks (§8.2 data row, §4.2 rule 8)
+- [ ] R2.4 the shell (white top bar, tabs Projects · Flows · Inbox · Administration, `read-only ·
+      rev <12>`, theme toggle per §8.3) and the base components `Chip`, `Fraction`, `Pending`,
+      `ErrorState`, `CommandBlock` (ported behaviour, §4.2 rules 1, 3, 4, 5, 7); minimal pages so
+      every shell tab resolves (full pages are R3/R4)
+- [ ] R2.5 port vitest F1, F4, F5, F6, F8 to React Testing Library; add F10 (§8.5 source scan);
+      `npm ci && npm run typecheck && npm test && npm run build` green from a clean install
+- [ ] R2.6 full Python checks green (`pytest -q`, `validate --all-projects`,
+      `check_instrument_versions.py`) — `web/tests/fixtures/` untouched
