@@ -665,7 +665,7 @@ Checks: typecheck clean; vitest 33 passed; build + check-csp ok; `pytest -q` 122
 7 skipped.
 
 ### R4 — IN PROGRESS
-- [ ] R4.1 `QuestionMatrix` React component (§8.3 questions table: registry order, per-class
+- [x] R4.1 `QuestionMatrix` React component (§8.3 questions table: registry order, per-class
       counts → total, direction mini bar labelled with the counts plus the note, status badges
       with the §4.2 rules 1/2/3/5); vitest F2 re-ported
 - [ ] R4.2 overview building blocks: `SourceTracker` (Tremor `Tracker`, one block per
