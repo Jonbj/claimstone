@@ -11,6 +11,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import shutil
+import os
 import pathlib
 import socket
 import threading
@@ -301,6 +303,9 @@ def test_allow_host_admits_exactly_that_authority(workspace):
 def test_every_route_answers_against_a_read_only_store(workspace):
     """A7: read-only is structural — every route answers 200 with all store files and
     directories chmod'ed read-only (modes restored in `finally`)."""
+    if os.geteuid() == 0:
+        # Permission bits do not bind root, so the test would pass without proving anything.
+        pytest.skip("read-only modes do not restrict root")
     _projects_dir, store_dir, _project, store = workspace
     changes: list[tuple[pathlib.Path, int]] = []
     try:
@@ -318,3 +323,27 @@ def test_every_route_answers_against_a_read_only_store(workspace):
     finally:
         for path, mode in reversed(changes):
             path.chmod(mode)
+
+
+def test_one_corrupt_project_does_not_empty_the_project_list(workspace, tmp_path):
+    """Review of S2: a damaged ledger in one project is that project's `integrity_error`;
+    `/projects` still answers 200 and still lists every other project."""
+    projects_dir, _store_dir, _project, store = workspace
+    shutil.copytree(projects_dir / PROJECT, projects_dir / "second-project")
+    target = store.path("flows.jsonl")
+    target.write_bytes(b"{bad interior line\n" + target.read_bytes())
+    with _served(workspace) as (_httpd, base, _store):
+        status, _headers, payload = _get_json(base + "/api/v1/projects")
+    assert status == 200
+    by_name = {entry["name"]: entry for entry in payload["projects"]}
+    assert by_name[PROJECT]["integrity_error"].startswith("LEDGER_CORRUPT")
+    assert by_name[PROJECT]["flows"] == [] and by_name[PROJECT]["unbound_selectors"] == []
+    assert by_name["second-project"]["integrity_error"] is None
+
+
+def test_malformed_limit_is_a_bad_request(workspace):
+    """Review of S2: a non-integer `limit` is the caller's error, 400 BAD_REQUEST, not 404."""
+    with _served(workspace) as (_httpd, base, _store):
+        status, payload = _error_json(base + f"/api/v1/projects/{PROJECT}/activity?limit=x")
+    assert status == 400
+    assert payload["error"]["code"] == "BAD_REQUEST"

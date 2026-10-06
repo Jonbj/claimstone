@@ -38,7 +38,7 @@ CATEGORIES = ("INTEGRITY", "PROTOCOL", "ACQUISITION", "CLASSIFICATION", "NORMALI
 BINDING_STATES = ("CURRENT", "REGISTRY_DRIFTED", "PROTOCOL_DRIFTED", "POPULATION_DRIFTED")
 
 # The §3.3 envelope codes.
-ERROR_CODES = ("NOT_FOUND", "CONFIG_ERROR", "REGISTRY_DRIFT", "LEDGER_CORRUPT",
+ERROR_CODES = ("BAD_REQUEST", "NOT_FOUND", "CONFIG_ERROR", "REGISTRY_DRIFT", "LEDGER_CORRUPT",
                "MISDIRECTED", "CROSS_ORIGIN", "INTERNAL")
 
 _STR = {"type": "string"}
@@ -192,6 +192,9 @@ PROJECTS = _payload("projects", {
                 "registry_version": _INT,
                 "registry_sha256": _STR,
                 "registry_drift": _STR_OR_NULL,
+                # A damaged ledger in this project, named here so the other projects still
+                # list: one corrupt store must not empty the whole index.
+                "integrity_error": _STR_OR_NULL,
                 "flows": {
                     "type": "array",
                     "items": {

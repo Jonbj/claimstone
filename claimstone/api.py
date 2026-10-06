@@ -37,6 +37,10 @@ CROSS_ORIGIN_TEXT = "the Origin header does not name this server"
 DEFAULT_ACTIVITY_LIMIT = 50
 
 
+class BadRequest(ValueError):
+    """A malformed query parameter: the caller's error, answered 400 BAD_REQUEST."""
+
+
 class _Handler(BaseHandler):
     """JSON routing on the shared transport base: every `/api/v1` route of §3.2."""
 
@@ -74,6 +78,8 @@ class _Handler(BaseHandler):
         except ConfigError as exc:
             # ConfigError is a named state, never a crash (F9).
             self._error(409, "CONFIG_ERROR", str(exc))
+        except BadRequest as exc:
+            self._error(400, "BAD_REQUEST", str(exc))
         except portal_state.NotFound as exc:
             self._error(404, "NOT_FOUND", str(exc))
         except LedgerCorrupt as exc:
@@ -153,8 +159,9 @@ class _Handler(BaseHandler):
         try:
             return int(raw)
         except ValueError:
-            # The envelope has no 400: a malformed parameter is reported, never defaulted.
-            raise portal_state.NotFound(f"limit must be an integer: {raw!r}") from None
+            # A malformed parameter is reported, never defaulted — and it is the caller's
+            # error (400), not a missing resource (404).
+            raise BadRequest(f"limit must be an integer: {raw!r}") from None
 
     def _selector(self, store: Store, kind: str,
                   value: str) -> tuple[scope.Selector, dict[str, Any] | None]:
@@ -189,24 +196,32 @@ class _Handler(BaseHandler):
             card["registry_version"] = project.registry_version
             card["registry_sha256"] = project.registry_sha256[:12]
             card["registry_drift"] = drift
-            flow_rows = flows.flows(store)
-            flows_out: list[dict[str, Any]] = []
-            for flow_id, row in sorted(flow_rows.items()):
-                selector = portal_state._selector_of(row, scope.Selector(None))
-                flows_out.append({
-                    "flow_id": flow_id,
-                    "title": row.get("title"),
+            card["integrity_error"] = None
+            try:
+                flow_rows = flows.flows(store)
+                flows_out: list[dict[str, Any]] = []
+                for flow_id, row in sorted(flow_rows.items()):
+                    selector = portal_state._selector_of(row, scope.Selector(None))
+                    flows_out.append({
+                        "flow_id": flow_id,
+                        "title": row.get("title"),
+                        "selector": selector.as_dict(),
+                        "selector_label": portal_state.selector_label(selector),
+                        "binding_state": flows.binding_state(project, store, row)["state"],
+                        "bound_after_data": bool(row.get("bound_after_data")),
+                    })
+                unbound = [{
+                    "slug": portal_state.selector_slug(selector),
+                    "label": portal_state.selector_label(selector),
                     "selector": selector.as_dict(),
-                    "selector_label": portal_state.selector_label(selector),
-                    "binding_state": flows.binding_state(project, store, row)["state"],
-                    "bound_after_data": bool(row.get("bound_after_data")),
-                })
+                } for selector in portal_state.unbound_selectors(store, flow_rows.values())]
+            except LedgerCorrupt as exc:
+                # One damaged store is this project's named state, never a 500 that empties the
+                # list of every other project (implementation review of S2).
+                flows_out, unbound = [], []
+                card["integrity_error"] = f"LEDGER_CORRUPT: {exc}"
             card["flows"] = flows_out
-            card["unbound_selectors"] = [{
-                "slug": portal_state.selector_slug(selector),
-                "label": portal_state.selector_label(selector),
-                "selector": selector.as_dict(),
-            } for selector in portal_state.unbound_selectors(store, flow_rows.values())]
+            card["unbound_selectors"] = unbound
             projects.append(card)
         return {"projects": projects}
 

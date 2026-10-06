@@ -150,6 +150,7 @@ a zero.
 
 | code | HTTP | when |
 |---|---|---|
+| `BAD_REQUEST` | 400 | a malformed query parameter (e.g. a non-integer `limit`) |
 | `NOT_FOUND` | 404 | unknown project, flow, slug, question, claim or source |
 | `CONFIG_ERROR` | 409 | `ConfigError` (message = the error text) |
 | `REGISTRY_DRIFT` | 409 | `RegistryDrift` (message = the error text) |

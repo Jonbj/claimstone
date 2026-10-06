@@ -17,6 +17,7 @@
      "title": "round one"
     }
    ],
+   "integrity_error": null,
    "name": "example-news-and-returns",
    "registry_drift": null,
    "registry_sha256": "85e5fcc44ddc",

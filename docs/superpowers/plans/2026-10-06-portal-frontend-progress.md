@@ -150,3 +150,13 @@ constants, and F5 can define its samples inline when S4 builds them
 Deviations: none
 NOT DONE:
 
+
+### Review of S1–S3 (Claude Code, between S3 and S4)
+- `/api/v1/projects`: a corrupt ledger in one project returned 500 for the whole list. It is now
+  that project's `integrity_error`, and the other projects still list. The schema field was added
+  and `projects.json` regenerated.
+- A malformed `limit` returned 404 `NOT_FOUND`. It is now 400 `BAD_REQUEST`, added to the error
+  envelope, the schema enum and spec §3.3.
+- A7 is skipped when run as root, because permission bits do not bind root.
+Checks: `pytest -q` → 1211 passed, 7 skipped; `validate --all-projects` exit 0; 26 instruments.
+S4 must generate its types from this schema version.

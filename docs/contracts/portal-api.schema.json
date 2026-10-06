@@ -82,6 +82,7 @@
      "properties": {
       "code": {
        "enum": [
+        "BAD_REQUEST",
         "NOT_FOUND",
         "CONFIG_ERROR",
         "REGISTRY_DRIFT",
@@ -249,6 +250,12 @@
          "type": "object"
         },
         "type": "array"
+       },
+       "integrity_error": {
+        "type": [
+         "string",
+         "null"
+        ]
        },
        "name": {
         "type": "string"
