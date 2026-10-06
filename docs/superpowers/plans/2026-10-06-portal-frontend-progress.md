@@ -29,7 +29,7 @@ $ .venv/bin/python tools/check_instrument_versions.py
 ```
 
 ### S1 — IN PROGRESS
-- [ ] S1.1 `claimstone/transport.py`: `BaseHandler` with quiet logging, the response plumbing that carries the security headers (CSP as a `csp` class attribute), the Host/Origin authority checks with `--allow-host`, the 405 verb refusals, and the lookup-never-path helpers (`_project_root`, `_loaded`, `_flow`); `FLOW_ID` and `LOOPBACK_HOSTS` move with them
+- [x] S1.1 `claimstone/transport.py`: `BaseHandler` with quiet logging, the response plumbing that carries the security headers (CSP as a `csp` class attribute), the Host/Origin authority checks with `--allow-host`, the 405 verb refusals, and the lookup-never-path helpers (`_project_root`, `_loaded`, `_flow`); `FLOW_ID` and `LOOPBACK_HOSTS` move with them
 - [ ] S1.2 `portal._Handler` subclasses `BaseHandler` and keeps only routing and rendering; `CSP` stays in `portal.py` and becomes the handler's `csp`; behaviour unchanged
 - [ ] S1.3 `portal.py` import cleanup; `tests/test_portal.py` green unchanged
 - [ ] S1.4 full checks green (`pytest -q`, `validate --all-projects`, `check_instrument_versions.py`)
