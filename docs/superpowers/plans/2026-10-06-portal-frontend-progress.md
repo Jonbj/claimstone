@@ -347,19 +347,19 @@ NOT DONE:
 Checks: `pytest -q` 1213 passed, 7 skipped; web 0 errors, 36 tests passed, build + check-csp ok.
 
 ### R1 — IN PROGRESS
-- [ ] R1.1 `question_state_counts` in `claimstone/portal_state.py`: the seven displayed states
+- [x] R1.1 `question_state_counts` in `claimstone/portal_state.py`: the seven displayed states
       (`signed`, `stale`, `awaiting_a_person`, `provisional`, `no_verified_claim`,
       `not_applicable`, `historical`) counted over the matrix rows with the matrix's own
       precedence (one `compute()`, no ledger read of its own); added to `flow_overview`'s payload
-- [ ] R1.2 `source_tracker` in `claimstone/portal_state.py`: one entry per scoped candidate, in
+- [x] R1.2 `source_tracker` in `claimstone/portal_state.py`: one entry per scoped candidate, in
       scoped candidate order, with `candidate_key`, `source_id`, `source_class`, `state`
       (admissibility's own branches: `confirmed` | `awaiting_normalize` | `not_a_document` |
       `refused` | `not_attempted` | `unclassified`) and a display-ready `tooltip` (a 403 carries
       the F19 text, `PAYWALL_TEXT`); added to `flow_overview`'s payload
-- [ ] R1.3 schema: `api_schema.py` OVERVIEW gains both fields (the two vocabularies as enums);
+- [x] R1.3 schema: `api_schema.py` OVERVIEW gains both fields (the two vocabularies as enums);
       regenerate `docs/contracts/portal-api.schema.json`, the fixtures
       (`tools/build_portal_fixtures.py`) and `web/src/lib/api-types.ts` so F8 stays green
-- [ ] R1.4 Python tests: counts sum to the registry size; tracker order equals the scoped
+- [x] R1.4 Python tests: counts sum to the registry size; tracker order equals the scoped
       candidate order; a 403 entry's tooltip is the F19 text; unbound and flow selectors both
       carry the fields; `flow_overview` still runs one `compute()`
 - [ ] R1.5 full checks green (`pytest -q`, `validate --all-projects`,

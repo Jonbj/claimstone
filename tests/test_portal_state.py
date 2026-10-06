@@ -16,7 +16,7 @@ import pytest
 
 from claimstone import claimgate, cli, extract, flows, model_call, portal_state, scope, synthesize
 from claimstone.config import load_project
-from claimstone.store import Store
+from claimstone.store import LedgerCorrupt, Store
 
 SOURCE_PROJECT = "projects/example-news-and-returns"
 
@@ -475,3 +475,95 @@ def test_question_page_card_is_the_inbox_card(workspace):
             assert card == {**expected, "scope": card["scope"]}
         else:
             assert card is None
+
+
+def test_question_state_counts_sum_to_the_registry_size(workspace):
+    """R1: every registry question lands in exactly one displayed state, on the flow selector
+    and on an unbound one — the donut's segments can never drop or double-count a question."""
+    _projects_dir, _store_dir, project, store = workspace
+    flow_row = next(iter(flows.flows(store).values()))
+    for selector, row in ((scope.Selector("r1"), flow_row), (scope.Selector("r2"), None)):
+        overview = portal_state.flow_overview(project, store, selector, row)
+        counts = overview["question_state_counts"]
+        assert set(counts) == set(portal_state.QUESTION_STATES)
+        assert sum(counts.values()) == len(project.questions)
+
+
+def test_question_state_counts_use_the_matrixs_own_rules():
+    """R1: the count for one row is the matrix's verdict cell — operational first, then the
+    recorded verdict with its staleness, then NO_VERIFIED_CLAIM, then the historical and
+    provisional annotations, and the fresh unsigned profile waits for a person."""
+    def row(**over):
+        base = {"operational_not_applicable": False, "verdict": None, "verdict_stale": False,
+                "state": None, "unavailable": "", "provisional": False}
+        base.update(over)
+        return base
+
+    counts = portal_state.question_state_counts({"rows": [
+        row(operational_not_applicable=True),
+        row(verdict="SUPPORTED"),
+        row(verdict="SUPPORTED", verdict_stale=True),
+        row(state="NO_VERIFIED_CLAIM", provisional=True),
+        row(unavailable="insufficient acquisition"),
+        row(provisional=True),
+        row(),
+    ]})
+    assert counts == {"signed": 1, "stale": 1, "awaiting_a_person": 1, "provisional": 1,
+                      "no_verified_claim": 1, "not_applicable": 1, "historical": 1}
+
+
+def test_source_tracker_follows_the_scoped_candidate_order(workspace):
+    """R1: one Tracker entry per scoped candidate, in `scope.candidates`'s own order — the
+    server order the UI must preserve."""
+    _projects_dir, _store_dir, project, store = workspace
+    flow_row = next(iter(flows.flows(store).values()))
+    for selector, row in ((scope.Selector("r1"), flow_row), (scope.Selector("r2"), None)):
+        overview = portal_state.flow_overview(project, store, selector, row)
+        assert ([entry["candidate_key"] for entry in overview["source_tracker"]]
+                == list(scope.candidates(store, selector)))
+
+
+def test_source_tracker_states_and_the_403_tooltip(workspace):
+    """R1: the tracker states are admissibility's own branches, and a 403 refusal's tooltip is
+    the F19 text — never an assertion that the host has a paywall."""
+    _projects_dir, _store_dir, project, store = workspace
+    flow_row = next(iter(flows.flows(store).values()))
+    legacy = portal_state.flow_overview(project, store, scope.Selector("r2"), None)
+    tracker = {entry["candidate_key"]: entry for entry in legacy["source_tracker"]}
+    assert tracker["r2-w"]["state"] == "refused"
+    assert tracker["r2-w"]["tooltip"] == portal_state.PAYWALL_TEXT
+    assert "not proof of a paywall" in tracker["r2-w"]["tooltip"]
+    assert tracker["r2-a"]["state"] == "not_attempted"
+    flow = portal_state.flow_overview(project, store, scope.Selector("r1"), flow_row)
+    assert all(entry["state"] == "confirmed" for entry in flow["source_tracker"])
+    assert {entry["source_class"] for entry in flow["source_tracker"]} == {"ACA"}
+
+
+def test_overview_carries_the_react_fields_on_both_selectors(workspace):
+    """R1: `question_state_counts` and `source_tracker` ride on the flow page and on the
+    unbound (legacy) page alike — §8.3's design reads them wherever the overview renders."""
+    _projects_dir, _store_dir, project, store = workspace
+    flow_row = next(iter(flows.flows(store).values()))
+    for selector, row in ((scope.Selector("r1"), flow_row), (scope.Selector("r2"), None)):
+        overview = portal_state.flow_overview(project, store, selector, row)
+        assert set(overview["question_state_counts"]) == set(portal_state.QUESTION_STATES)
+        assert overview["source_tracker"] is not None
+        for entry in overview["source_tracker"]:
+            assert set(entry) == {"candidate_key", "source_id", "source_class", "state",
+                                  "tooltip"}
+            assert entry["state"] in portal_state.TRACKER_STATES
+
+
+def test_source_tracker_raises_on_a_damaged_acquisitions_ledger(workspace):
+    """R1: `compute` swallows the damage it finds in `collapse`, so the tracker would otherwise
+    read "no collapse rows" as "nothing was attempted". It raises instead — the API's
+    LEDGER_CORRUPT envelope is the single error channel."""
+    _projects_dir, _store_dir, project, store = workspace
+    # Interior damage, not a torn final line: `Store.read` skips a torn tail by contract, and
+    # only damage before it raises.
+    with store.path("acquisitions.jsonl").open("a", encoding="utf-8") as handle:
+        handle.write('{"torn": \n{"candidate_key": "r1-a", "acquired": true}\n')
+    computed = portal_state.compute(project, store, scope.Selector("r1"))
+    assert computed.collapsed is None
+    with pytest.raises(LedgerCorrupt):
+        portal_state.source_tracker(project, store, scope.Selector("r1"), computed)
