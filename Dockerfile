@@ -11,6 +11,13 @@ FROM python:3.13-slim
 # could not read with grep — which is the property that ledger format was chosen for.
 ARG UID=1000
 ARG GID=1000
+# The code identity the portal shows: `.git` is not in the image, so the build records the revision it
+# was built from (portal.sh passes `git rev-parse HEAD`, suffixed `-dirty` for an unclean tree).
+ARG CLAIMSTONE_CODE_REVISION=unknown
+ENV CLAIMSTONE_CODE_REVISION=${CLAIMSTONE_CODE_REVISION}
+# Where `tools/` and `docs/` live, so the portal's instrument check finds them (the package itself is
+# installed into site-packages).
+ENV CLAIMSTONE_ROOT=/app
 RUN groupadd --gid "${GID}" claimstone \
  && useradd --uid "${UID}" --gid "${GID}" --create-home --shell /usr/sbin/nologin claimstone
 

@@ -63,7 +63,7 @@ framework-independent. If the operator prefers Vue or React, only §4 changes.
   Node and npm never enter the Python image.
 - **The API is not "a service per stage".** `compose.yaml` refuses an HTTP boundary between stages.
   The API is a **read model over the ledgers**, like `serve` today. Stages still run as the
-  `claimstone` CLI job and still write through files. This is recorded in D83 (§6).
+  `claimstone` CLI job and still write through files. This is recorded in D84 (§6).
 - **Read-only is structural.** The API container mounts `store/` and `projects/` **read-only**
   (`:ro`). A code path that tried to write would fail with `EROFS`, not succeed silently. This is
   stronger than the in-process guarantee and costs nothing.
@@ -389,9 +389,12 @@ Also:
 
 ---
 
-## 6. Decision entry D83 (to write in `DESIGN_DECISIONS.md`)
+## 6. Decision entry D84 (to write in `DESIGN_DECISIONS.md`)
 
-Title: `## D83 — A typed frontend over a read-only JSON API, packaged as containers (2026-10-06)`.
+This was planned as D83. D83 was taken the same day by an unrelated L02 entry, so the portal's
+decision is D84.
+
+Title: `## D84 — A typed frontend over a read-only JSON API, packaged as containers (2026-10-06)`.
 
 It must state:
 
@@ -417,7 +420,7 @@ It must state:
 | 3 | `web/` scaffold, types generation, components, routes, vitest F1–F8 | `npm ci && npm run check && npm test && npm run build` succeed |
 | 4 | `web/Dockerfile`, `nginx.conf`, compose services, `portal.sh`, Dockerfile args | `./portal.sh` brings `api` and `web` up healthy; `curl -s 127.0.0.1:8788/` serves the SPA; `curl -s 127.0.0.1:8788/api/v1/projects` returns JSON; `curl -H 'Host: evil' ...` returns 421; `docker compose exec api touch /app/store/x` fails with a read-only error |
 | 5 | Manual parity check against `claimstone portal` on a tmp copy of a store: same figures on index, flow, question, lineage and dossier | parity notes in the progress log |
-| 6 | D83, `docs/README.md` map, HANDOFF paragraph, `AGENTS.md` "what this machine needs" line for Node (frontend only) | `check_instrument_versions.py` exit 0 |
+| 6 | D84, `docs/README.md` map, HANDOFF paragraph, `AGENTS.md` "what this machine needs" line for Node (frontend only) | `check_instrument_versions.py` exit 0 |
 
 **Out of scope:** any write route, authentication, intake forms and the signing workbench. These
 stay P3/P4 and are blocked by the findings listed in the design review. The frontend architecture is

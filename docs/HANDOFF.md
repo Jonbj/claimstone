@@ -9,6 +9,15 @@ what order.
 
 ## Where the work stands
 
+2026-10-06 portal frontend and containers (D84): the portal now has a React + shadcn/ui + Tremor
+frontend (`web/`) over the read-only JSON API `claimstone api`. `./portal.sh` starts both in
+containers, at http://127.0.0.1:8788/; stop them with `./portal.sh down`. The API mounts the
+store read-only, has no internet access and holds no secret. Q04's adjudication card, with the
+hash above, is on the whole-store page `/p/pmc-screen-time/u/-/q/Q04`. Built in steps by GLM;
+each step was reviewed and corrected by Claude Code, as recorded in
+`docs/superpowers/plans/2026-10-06-portal-frontend-progress.md`. Nothing in the portal writes,
+signs or starts work.
+
 2026-10-06 research portal, phases P0–P2b implemented: the canonical selector
 (`claimstone/scope.py`) now scopes every per-round figure in `round_state` (claims, reviews,
 chunks and the stage's own confirmation count no longer leak across rounds, review F1/F3;

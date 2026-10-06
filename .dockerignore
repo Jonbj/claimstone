@@ -9,3 +9,10 @@ __pycache__/
 # Real project instances encode a consuming system's internal design and are gitignored. They are
 # bind-mounted so the image stays publishable.
 projects/alembic-s4/
+# The frontend's local install and build outputs: the web image runs its own `npm ci` and build.
+web/node_modules/
+web/dist/
+web/build/
+web/.svelte-kit/
+# Every real project instance, not only the one named above: none belongs in any image's build context.
+projects/*/

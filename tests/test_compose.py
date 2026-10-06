@@ -44,12 +44,19 @@ def test_the_digest_is_recorded_in_the_design_record():
     assert digest in record, f"{digest} is not named in docs/DESIGN_DECISIONS.md"
 
 
+def _services() -> dict:
+    import yaml
+
+    return yaml.safe_load(COMPOSE.read_text(encoding="utf-8"))["services"]
+
+
 def test_the_engine_service_is_a_job_and_not_a_service():
-    """A job with a restart policy is how a finished run becomes an infinite one."""
-    text = COMPOSE.read_text(encoding="utf-8")
-    engine = text[text.index("  claimstone:"):]
-    assert "profiles: [cli]" in engine, "the engine must not start with `compose up`"
-    assert "restart:" not in engine
+    """A job with a restart policy is how a finished run becomes an infinite one. Checked on the
+    `claimstone` service itself: the portal's `api` and `web` are long-running read models and do
+    restart (D84), which a text search over the rest of the file used to mistake for the job."""
+    engine = _services()["claimstone"]
+    assert engine.get("profiles") == ["cli"], "the engine must not start with `compose up`"
+    assert "restart" not in engine
 
 
 def test_the_store_is_a_bind_mount_and_not_a_named_volume():
@@ -71,10 +78,34 @@ def test_the_contact_address_is_required_from_the_environment():
 
 def test_the_parser_port_is_not_published():
     """Publishing 8070 would put an unauthenticated PDF parser on the LAN. The engine reaches it by
-    service name on the private network."""
+    service name on the private network. The only published port in the file is the portal's
+    `web`, and only on the host's loopback (D84)."""
     text = COMPOSE.read_text(encoding="utf-8")
     assert "8070:8070" not in text
-    assert re.search(r"^\s+ports:", text, re.M) is None
+    services = _services()
+    published = {name for name, service in services.items() if service.get("ports")}
+    assert published == {"web"}, f"published ports on {sorted(published)}"
+    for mapping in services["web"]["ports"]:
+        assert str(mapping).startswith("127.0.0.1:"), f"{mapping!r} is not loopback-only"
+
+
+def test_the_portal_api_is_read_only_isolated_and_secret_free():
+    """D84: `api` mounts the ledgers read-only, sits only on a network with no egress, publishes
+    nothing, shares the CLI job's image (one code identity, D42) and receives no secret value —
+    only the word `present` for each configured key."""
+    import yaml
+
+    document = yaml.safe_load(COMPOSE.read_text(encoding="utf-8"))
+    api = document["services"]["api"]
+    assert api.get("profiles") == ["portal"]
+    assert "ports" not in api
+    assert set(api["volumes"]) == {"./store:/app/store:ro", "./projects:/app/projects:ro"}
+    assert api.get("read_only") is True
+    assert api["networks"] == ["portal_internal"]
+    assert document["networks"]["portal_internal"].get("internal") is True
+    assert api["image"] == document["services"]["claimstone"]["image"]
+    for name in ("CLAIMSTONE_CONTACT_EMAIL", "OLLAMA_API_KEY", "OPENALEX_API_KEY"):
+        assert api["environment"][name] == "${%s:+present}" % name, name
 
 
 def test_the_store_is_never_copied_into_the_image():

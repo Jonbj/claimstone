@@ -3661,3 +3661,58 @@ writers (F5), a persistent per-host failure budget (F6), a non-global-address
 URL guard on every redirect hop (F15), and authenticated signing (F16, a
 `decision_contract_version` bump). P3 and P4 in the implementation spec's §10
 are the reviewed specs those need.
+
+## D84 — A typed React frontend over a read-only JSON API, packaged as containers (2026-10-06)
+
+The operator retired server-rendered Python HTML for the portal's new views and asked for a
+real frontend, packaged with Docker Compose. Two measurements decided the shape:
+
+- **Index time.** The stdlib portal's index and inbox take 28.9 s and 29.1 s on the real store
+  (D82), because one request computes every selector of every project. The new
+  `claimstone api` (`portal_api_version 1`) answers the project list without any `compute()`.
+  The frontend then loads each selector's summary lazily: the first one arrives in 0.6 s, and
+  all ten take 31.8 s with a peak of 1024 MB RSS in one API process.
+- **The kit, not the framework.** The same flow page was rendered six ways on a design canvas,
+  three visual directions and three component kits. shadcn-svelte and shadcn/ui render the
+  same. The operator chose **React + shadcn/ui + Tremor**, for Tremor's dashboard components
+  (tracker, category bar, bar list, donut). The chosen board is
+  `docs/design/portal/flow-overview-react-tremor.html`. The SvelteKit build of S4–S5 is
+  superseded; the API, schema, fixtures and transport were kept.
+
+What holds the invariants on screen:
+
+- **No meaning is derived in the browser.** Every chart is fed by a field the API returns. The
+  reviews of R1 and R4 found two such derivations to correct server-side:
+  `question_state_counts` and the per-row `display_state` share one function, so an unfinished
+  reading is never headed NO_VERIFIED_CLAIM, and a question without a profile is never
+  "awaiting a person". Source states read "not obtained", never "refused".
+- **The signing command comes from the server.** `adjudication_card` is decided in one place,
+  for the inbox and the question page. A client-built command once proposed signatures
+  `adjudicate` refuses.
+- **CSP.** A Vite build has no inline script, so nginx sends a strict header
+  (`script-src 'self'; style-src 'self'`). `scripts/check-csp.mjs` fails the build on an inline
+  script or style attribute, and test F10 bans injected `<style>`. Zero console violations were
+  observed on the real store behind nginx.
+- **Dependencies.** The shadcn CLI had entered `package.json`. Its stylesheet is now vendored,
+  which took the production tree from 434 to 133 packages. Tremor Raw components are copied in
+  (Apache-2.0); shadcn components are copied by its CLI run with `npx`.
+
+Packaging (`compose.yaml`, `./portal.sh`):
+
+- **`api`** runs from the same `claimstone:local` image as the stage job (D42: one code
+  identity) and records `CLAIMSTONE_CODE_REVISION` at build time. It mounts `store/` and
+  `projects/` **read-only**: a write attempt fails with "Read-only file system", verified. It
+  sits on an internal network with no egress: a request to example.org fails, verified. It
+  receives no secret: compose substitutes the word `present` for each configured key
+  (`${VAR:+present}`), which is all the administration page shows. Memory is limited to 2 GB.
+- **`web`** is nginx-unprivileged, pinned by digest like GROBID. It serves the SPA and proxies
+  `/api/` with the one Host the API allows. It answers 421 to any other Host and 403 to non-GET,
+  both verified, and it is the only published port, on `127.0.0.1`.
+- **The `web` image build re-runs the gates:** contract freshness (`api-types.ts` against the
+  committed schema), typecheck, tests, build and the CSP check.
+
+This is consistent with `compose.yaml`'s refusal of a service per stage: the API is a read model
+that writes nothing; every stage still runs as the `claimstone` CLI job and writes through files.
+Node and npm exist only in the frontend image, behind a process boundary (D7); the Python engine
+gains no dependency. `claimstone portal` and `claimstone serve` remain available. Nothing here
+writes, signs or starts work. Intake, offers, jobs and signing remain P3/P4.

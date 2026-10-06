@@ -751,3 +751,47 @@ acknowledged; 17/17 pages, 0 console lines, **0 CSP violations**.
 - Noted, not a defect: a parallel session's uncommitted `SOURCE_SELECTION_IMPORT_VERSION` bump
   makes `admin.json` differ from regeneration in the shared tree. Fixtures were regenerated here
   against the committed code path; the bump is that session's to commit.
+
+### S6 — DONE (Claude Code)
+- `web/Dockerfile`: a build stage on `node:22-alpine@sha256:0a7108bf…` that re-runs the gates
+  (api-types freshness against the committed schema, typecheck, tests, build, CSP check), then
+  a runtime stage on `nginxinc/nginx-unprivileged:1.27-alpine@sha256:65e3e85d…`.
+- `web/nginx/default.conf`, `web/nginx/security-headers.conf`: 421 for any other Host, the §8.4
+  CSP as a header, `/api/` proxied with `Host: api:8788` and a blank Origin, GET only.
+- `compose.yaml`:
+  - `api` uses the same `claimstone:local` image as the CLI job, with `store/` and `projects/`
+    mounted `:ro`, `read_only`, `cap_drop ALL`, a 2 GB limit and the internal network only;
+  - `api` receives no secret: `${VAR:+present}` passes only the word `present`;
+  - `web` is published on `127.0.0.1` only.
+- `Dockerfile` records `CLAIMSTONE_CODE_REVISION` and `CLAIMSTONE_ROOT`. `.dockerignore` excludes
+  `web/` build outputs and every real project. `portal.sh up|down`; `down` leaves GROBID running.
+- Decision (spec silent): `api` has no egress (`portal_internal` is `internal: true`) and no
+  secret values. This is stricter than the spec, at no cost to the read-only API.
+- Acceptance (`./portal.sh` on the real store):
+
+  | check | result |
+  |---|---|
+  | both containers | healthy |
+  | `/` | 200, CSP header present |
+  | `/api/v1/projects` via nginx | 6 projects |
+  | `Host: evil.example` | 421 |
+  | POST | 403 |
+  | `touch /app/store/x` in `api` | "Read-only file system" |
+  | request from `api` to example.org | URLError |
+  | key env vars in `api` | `present` |
+  | admin credentials | all true |
+  | meta revision | `8a41e68…-dirty` |
+  | instrument check inside the container | `[]` |
+  | browser on `/`, the whole-store overview and Q04 | 0 console messages; Geist fonts loaded from `'self'`; Q04 card hash shown |
+
+### S7 — DONE (Claude Code)
+- Parity was already covered: the stdlib portal and the SPA read the same `portal_state`
+  functions, and the R4 review compared them on the real store.
+- D84 written. It was planned as D83, but D83 was taken the same day by a parallel L02 entry.
+  `("claimstone/api.py", "API_VERSION", "portal_api_version")` is registered, and
+  `check_instrument_versions.py` counts 27.
+- `docs/README.md` (portal in containers, frontend development), `AGENTS.md` (Node only for
+  `web/`) and a dated `HANDOFF.md` paragraph are updated.
+- `DESIGN_DECISIONS.md` and `HANDOFF.md` carried a parallel session's uncommitted edits. Only
+  the D84 entry and the HANDOFF paragraph were staged, written onto the committed versions, so
+  that session's lines stay uncommitted for it to commit.

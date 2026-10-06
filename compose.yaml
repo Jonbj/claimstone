@@ -67,6 +67,9 @@ services:
       args:
         UID: ${UID:-1000}
         GID: ${GID:-1000}
+        CLAIMSTONE_CODE_REVISION: ${CLAIMSTONE_CODE_REVISION:-unknown}
+    # One image for the job and the portal API (D42: one code identity, never two builds that can drift).
+    image: claimstone:local
     # A job, not a service: `up` must not start it. `docker compose run --rm claimstone <command>`.
     profiles: [cli]
     depends_on:
@@ -96,6 +99,83 @@ services:
     user: "${UID:-1000}:${GID:-1000}"
     networks: [claimstone]
 
+  # The portal (D84, spec 2026-10-06-portal-frontend-docker-design.md §5 and §8). Two services behind a
+  # profile, so `up` alone still starts only GROBID: `./portal.sh` brings these up.
+  #
+  # `api` is a read model, not a stage service: it re-reads the ledgers on every request and has no code
+  # path that writes, which the read-only mounts below make structural — a write fails with EROFS instead
+  # of succeeding quietly. It sits only on an internal network: no published port, no route to the
+  # internet, and it receives no secret, only the word "present" for each configured key so the
+  # administration page can show presence (`${VAR:+present}` substitutes the word, never the value).
+  api:
+    build:
+      context: .
+      args:
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
+        CLAIMSTONE_CODE_REVISION: ${CLAIMSTONE_CODE_REVISION:-unknown}
+    image: claimstone:local
+    profiles: [portal]
+    command: ["api", "--host", "0.0.0.0", "--port", "8788", "--allow-host", "api:8788"]
+    environment:
+      CLAIMSTONE_ROOT: /app
+      PYTHONDONTWRITEBYTECODE: "1"
+      CLAIMSTONE_CONTACT_EMAIL: ${CLAIMSTONE_CONTACT_EMAIL:+present}
+      OLLAMA_API_KEY: ${OLLAMA_API_KEY:+present}
+      OPENALEX_API_KEY: ${OPENALEX_API_KEY:+present}
+    volumes:
+      - ./store:/app/store:ro
+      - ./projects:/app/projects:ro
+    user: "${UID:-1000}:${GID:-1000}"
+    networks: [portal_internal]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    # Measured 2026-10-06: the index's ten parallel summaries over the real store peak at 1024 MB RSS.
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request,sys; r=urllib.request.urlopen(urllib.request.Request('http://127.0.0.1:8788/api/v1/meta', headers={'Host': 'api:8788'}), timeout=4); sys.exit(0 if r.status == 200 else 1)"
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  # `web` is nginx serving the built SPA and proxying /api/ to `api`. It is the only published port, and
+  # only on the host's loopback.
+  web:
+    build:
+      context: .
+      dockerfile: web/Dockerfile
+    image: claimstone-web:local
+    profiles: [portal]
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${CLAIMSTONE_PORTAL_PORT:-8788}:8080"
+    networks: [portal_internal, portal_edge]
+    read_only: true
+    tmpfs: [/tmp, /var/cache/nginx]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+
 networks:
   claimstone:
+    driver: bridge
+  # No egress: `api` reaches nothing but `web`.
+  portal_internal:
+    driver: bridge
+    internal: true
+  # Only for publishing web's port on the host's loopback.
+  portal_edge:
     driver: bridge

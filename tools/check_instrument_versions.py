@@ -48,6 +48,8 @@ INSTRUMENTS = (
     ("claimstone/source_selection.py", "IDENTITY_RELATION_VERSION", "identity_relation_version"),
     ("tools/import_source_selection.py", "SOURCE_SELECTION_IMPORT_VERSION", "source_selection_import_version"),
     ("claimstone/population.py", "POPULATION_VERSION", "population_version"),
+    # The portal API's payload shape is what the operator reads: versioned like an instrument (D84).
+    ("claimstone/api.py", "API_VERSION", "portal_api_version"),
     ("claimstone/acquire.py", "REUSE_VERSION", "reuse_version"),
     ("claimstone/ids.py", "CANDIDATE_KEY_VERSION", "candidate_key_version"),
     # The portal's own instruments: the selector predicate every scoped read shares, the flow

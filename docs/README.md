@@ -13,6 +13,8 @@ Which file answers which question. *In italiano: [README.it.md](README.it.md).*
 | find automation requirements gathered during supervised use | [`SCHEDULER_BACKLOG.md`](SCHEDULER_BACKLOG.md) — pending work, not an implemented scheduler |
 | review the multi-flow research portal | [`superpowers/specs/2026-10-06-research-portal-design.md`](superpowers/specs/2026-10-06-research-portal-design.md) — proposal, corrected by its review; phases P0–P2b are implemented and specified in [`2026-10-06-research-portal-implementation-spec.md`](superpowers/specs/2026-10-06-research-portal-implementation-spec.md) |
 | serve the read-only portal over every project | `claimstone portal` — the dashboard's multi-project successor (D82); read-only, GET only, loopback by default |
+| run the portal in containers (React frontend + read-only API) | `./portal.sh` (`./portal.sh down` to stop) — D84; design and decisions in [`superpowers/specs/2026-10-06-portal-frontend-docker-design.md`](superpowers/specs/2026-10-06-portal-frontend-docker-design.md) §8; API contract [`contracts/portal-api.schema.json`](contracts/portal-api.schema.json) |
+| develop the frontend | `.venv/bin/claimstone api` and `cd web && npm run dev` (http://localhost:5173); checks: `npm run typecheck && npm test && npm run build` |
 | work on the code as an agent | [`../CLAUDE.md`](../CLAUDE.md), then [`../AGENTS.md`](../AGENTS.md) |
 | argue with an architectural choice | [`DESIGN_DECISIONS.md`](DESIGN_DECISIONS.md) — find its entry first |
 | write to a ledger, or read one | [`contracts/`](contracts/) — one file per ledger |

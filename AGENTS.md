@@ -39,6 +39,9 @@ a list.
 - **`store/`** holds fetched bytes and append-only ledgers, gitignored, and **not reproducible
   without re-fetching**. It is the record of every request this project has made. Do not delete it, and do
   not rewrite a ledger — they are append-only and `Store.read` is what makes a crash resumable.
+- **Node ≥ 22** is needed only to build or test the portal frontend under `web/` (`npm ci && npm run
+  typecheck && npm test && npm run build`). The Python engine never depends on it. `./portal.sh` builds
+  the frontend inside its own image, so running the portal needs only Docker (D84).
 - Run `.venv/bin/pytest -q` (1026 passing) and `.venv/bin/claimstone validate --all-projects` before and
   after any change.
 - `.venv/bin/python tools/check_instrument_versions.py` **must exit 0**. It refuses to pass when an
