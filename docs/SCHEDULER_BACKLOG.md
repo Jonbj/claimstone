@@ -19,6 +19,16 @@ empty, not as a completed cohort or an acquisition rate of zero. Old plans
 must remain replayable against their archived v1 policy after a dated v2
 configuration change; an unrelated class or floor change must still fail.
 
+The completed bounded copy check adds two distinct stop states. A repository
+landing can explicitly say that no file is available; record that statement
+with the retained HTML hash as `NO_REPOSITORY_FILE_DECLARED`, instead of a
+generic missing-PDF-link state or a paywall. A university discussion paper
+can share title and author with a later DOI publication while its version
+relationship remains unverified; preserve `POSSIBLE_VERSION` and inspect the
+copy before reusing its screening as evidence for the DOI. A handle resolver
+whose final host is unknown needs a separately bounded, approved route; do
+not treat its repository label as an allowed destination host.
+
 The operator supplies project files, an approved search protocol, scope and spending ceiling.
 The scheduler should advance the existing stages from their recorded state. It must show what
 finished, what remains and why it stopped, without requiring the operator to assemble commands.

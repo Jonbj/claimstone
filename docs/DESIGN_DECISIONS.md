@@ -3759,3 +3759,36 @@ that writes nothing; every stage still runs as the `claimstone` CLI job and writ
 Node and npm exist only in the frontend image, behind a process boundary (D7); the Python engine
 gains no dependency. `claimstone portal` and `claimstone serve` remain available. Nothing here
 writes, signs or starts work. Intake, offers, jobs and signing remain P3/P4.
+
+## D85 — Retain repository copy outcomes separately from population and DOI identity (2026-10-06)
+
+The operator approved and the agent ran D83's frozen two-target plan. The
+recorded campaign used three physical page/copy transfers and two robots
+transfers, within the five/four ceilings, with no source adoption. Hannover
+returned a PDF, SHA-256
+`a1ff57d0107ab97ed5dec497ec313147561ccc04460ea9b7e052358021896385`.
+Its cover identifies a November 2008 Discussion Paper No. 407 by Maik
+Schmeling. Cached DOI metadata describes a 2009 publication with matching
+title and author. This supports only `POSSIBLE_VERSION` until the publication
+relationship is independently checked. The PDF abstract uses consumer
+confidence as the exposure and forecasts aggregate country stock returns;
+its full-text L02 screening is `AI_PROVISIONAL EXCLUDE`, not a scientific
+admission decision. The targeted offline tool verifies raw bytes and quotes
+before appending one screening and one identity observation; replay wrote
+zero rows.
+
+Southampton redirected on the same approved host and returned a retained HTML
+record, SHA-256
+`4a3e4a854c17fafca39c33d835c5f2d171980be9efa020da74a73ef12da5e74b`.
+It says, “This record has no associated files available for download.” The
+campaign ledger's generic `PDF_LINK_REVIEW_REQUIRED` status is preserved;
+the separate content-addressed readout records the narrower offline finding
+`NO_REPOSITORY_FILE_DECLARED`. The cached UCD handle for that DOI has an
+unknown final host, so no request to it belongs to this campaign.
+
+The new population round still has zero candidates. The old L02 advisory
+scope now has 48 observed and 782 unobserved keys of 830, three provisional
+direct candidates and six uncertain, zero admitted, and an open cohort.
+These measurements do not establish a population acquisition rate or a
+scientific result. The private readout is
+`audits/source-selection/l02-v2/repository-copy-check-2026-10-06/readout-201241852336d5c697a07d7631b5257959048864038ce4c4bf8bb587d02acb94.json`.
