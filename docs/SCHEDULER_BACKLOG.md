@@ -212,6 +212,11 @@ does not erase an already retained abstract. The regression fixture in
 `tests/test_preview_source_selection_queue.py` covers all three cases. A frozen
 seven-key Crossref fallback is prepared separately; provider changes require
 their own authorized campaign rather than silently extending the first one.
+The operator authorized that fallback: seven HTTP 200 responses still had no
+abstract. The scheduler must mark a provider pair exhausted for these candidate
+keys and route them to lawful copy or operator-supplied text inspection. A
+successful metadata HTTP response is not an abstract, and another automatic
+request to either checked provider would add no evidence.
 
 D72 adds a measured resume requirement: a malformed model answer is a terminal unanswered case,
 not a reason to abandon all independent cases or retry the same call invisibly. The scheduler

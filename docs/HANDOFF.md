@@ -85,15 +85,20 @@ reuse, five locally recorded abstracts to validate/read, five uncertainty
 cases, 376 cached-metadata abstract tasks and 409 other metadata tasks.
 The five abstracts were reconstructed and identity-checked from their retained
 raw payloads in `l02-v2/remaining-held-abstracts-2026-10-06.json`.
-A new ten-lookup OpenAlex plan has an offline preview of ten pending,
-zero requests, SHA-256 `2709e7c4574cffb9442f358a5ae403fcf3983d71f187bffa4fed52fcfdf4bd2b`;
+A new ten-lookup OpenAlex plan had an offline preview of ten pending,
+zero requests, SHA-256 `2709e7c4574cffb9442f358a5ae403fcf3983d71f187bffa4fed52fcfdf4bd2b`.
 The operator authorized execution: all ten lookups returned HTTP 200, yielding
 three identity-checked abstracts and seven `NO_ABSTRACT` records. All retained
 payload hashes and reconstructed texts were checked offline; replay previews
 zero pending. The new unlabeled packet is
 `l02-v2/human-reference-packets/7fabec05109ec4c5971f5b3aa8f579b149a7697e87400777437c93bcb59964e9.json`.
-A seven-case Crossref fallback plan is prepared but not executed; it requires
-new authorization. Queue generation now distinguishes missing abstracts and
+A seven-case Crossref fallback was then authorized and completed. All seven
+responses were HTTP 200 but lacked abstracts; retained payload hashes and
+identity/status reconstruction agree with the recorded rows. Its preview now
+shows zero pending. Queue snapshot
+`audits/source-selection/queues/026753b6d8c1e9d425004e19cef9e84ef713aa69e7474b862ff771c6cd1a6267.json`
+routes eleven candidates checked on both OpenAlex and Crossref to copy/text
+inspection, with no repeat metadata lookup. Queue generation distinguishes missing abstracts and
 failed lookups from never-looked-up candidates and preserves an available
 abstract after a later lookup failure. No new scientific
 claim, profile, admission or verdict was produced by this continuation.
