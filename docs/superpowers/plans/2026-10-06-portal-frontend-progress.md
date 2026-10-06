@@ -259,7 +259,7 @@ Checks: `svelte-check` 0 errors 0 warnings; vitest 23 passed; build + check-csp 
       the §4.2 rules: per-class counts before the total (rule 2), server card order preserved
       (rule 6), five verdicts plus dashed engine states (rule 3), display text verbatim (rule 5);
       vitest F2, F7
-- [ ] S5.3 components `Lineage`, `SourceDossier`, `IntegrityPanel` (§4.1); vitest F3 (a source
+- [x] S5.3 components `Lineage`, `SourceDossier`, `IntegrityPanel` (§4.1); vitest F3 (a source
       scan of `src/` finds no `method:` other than GET and no `<form>`, comments stripped)
 - [ ] S5.4 routes: lazy index (`/projects` at once, then per-selector `/summary` in parallel,
       "computing…" never a zero), `p/[project]` (integrity, flows, unbound selectors, activity),
