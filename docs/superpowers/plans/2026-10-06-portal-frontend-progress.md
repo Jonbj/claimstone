@@ -711,15 +711,20 @@ R4's scope), and its uncommitted bump of `SOURCE_SELECTION_IMPORT_VERSION` 2→3
 `tools/import_source_selection.py` is the single line that makes the regeneration differ
 from the committed `admin.json`. Consequence: `pytest -q` in the shared tree reads 1 failed
 (the external fixtures-parity test), 1222 passed, 7 skipped; the suite at the R4 commit
-itself was verified green from a pristine extraction of the committed tree (`git archive`
-to /tmp, the venv's editable claimstone being byte-identical since no `claimstone/` file is
-modified): 1223 passed, 7 skipped. R4's own diff touches no Python.
+itself was verified green from a pristine extraction of the committed tree (`git archive
+HEAD` into a fresh mktemp dir; the venv's editable `claimstone` is byte-identical since no
+`claimstone/` file is modified anywhere in the tree): 1128 passed, 13 skipped — an archive
+cannot carry the gitignored real project instances, so the tests that read them skip or
+shrink there. What the extraction proves: at the R4 commit the committed fixtures equal
+the regeneration (the parity test passes) and nothing tracked fails. R4's own diff
+touches no Python.
 (5) `npm audit` on the unchanged lockfile still reads 4 advisories (1 moderate, 1 high,
 2 critical), all in devDependency paths — unchanged from R3's record, re-pinning stays a
 dependency decision, not a pages step's.
 Deviations: none in R4's scope — one commit per sub-task held; the concurrent-session
 fixture deletion and its single external test failure are recorded above.
 Checks: `npm ci` clean; typecheck clean; vitest 13 files, 54 passed; `npm run build` ✓ +
-check-csp ok; `pytest -q` 1223 passed, 7 skipped at the R4 commit (1222 + 1 external in the
-shared tree); `validate --all-projects` OK ×5; `check_instrument_versions.py` 26
+check-csp ok; `pytest -q` in the shared tree: 1 failed (external, see (4)), 1222 passed,
+7 skipped; in the pristine extraction of the R4 commit: 1128 passed, 13 skipped, parity
+green; `validate --all-projects` OK ×5; `check_instrument_versions.py` 26
 acknowledged; 17/17 pages, 0 console lines, **0 CSP violations**.
