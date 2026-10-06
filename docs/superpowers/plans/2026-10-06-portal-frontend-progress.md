@@ -10,7 +10,7 @@ One step per session; markers below are the authority for "what is next".
 | S2 `claimstone/api.py` + tests A1–A7 | DONE |
 | S3 schema, validator, fixtures | DONE |
 | S4 scaffold `web/` | DONE |
-| S5 routes and components | TODO |
+| S5 routes and components | IN PROGRESS |
 | S6 Dockerfile, compose services, `portal.sh` | TODO |
 | S7 parity check, D83, docs, instrument registration | TODO |
 
@@ -245,3 +245,26 @@ NOT DONE:
 - `@types/node` is pinned exactly.
 Checks: `svelte-check` 0 errors 0 warnings; vitest 23 passed; build + check-csp ok;
 `pytest -q` 1211 passed, 7 skipped.
+
+### S5 — IN PROGRESS
+- [ ] S5.1 `claimstone/api_schema.py` + `claimstone/portal_state.py`: `question_detail`'s `verdict`
+      field returns the recorded adjudication row (a dict with `verdict`, `adjudicated_by`,
+      `adjudicated_at`, `rationale`, `profile_sha256`, …), as the HTML portal already renders —
+      the committed schema's `_VERDICT_OR_NULL` declaration there was wrong (it promised a bare
+      word or null). Also `lineage`/`source_dossier` attempts gain a `failure_display` field
+      (§4.2 rule 5, F19: the UI renders it verbatim and never re-derives). Regenerate the
+      schema, the fixtures and `api-types.ts`; the existing tests keep passing (they pass today
+      only because the fixture workspace has no adjudication row)
+- [ ] S5.2 components `StageStrip`, `FloorPanel`, `QuestionMatrix`, `InboxCards` (§4.1) with
+      the §4.2 rules: per-class counts before the total (rule 2), server card order preserved
+      (rule 6), five verdicts plus dashed engine states (rule 3), display text verbatim (rule 5);
+      vitest F2, F7
+- [ ] S5.3 components `Lineage`, `SourceDossier`, `IntegrityPanel` (§4.1); vitest F3 (a source
+      scan of `src/` finds no `method:` other than GET and no `<form>`, comments stripped)
+- [ ] S5.4 routes: lazy index (`/projects` at once, then per-selector `/summary` in parallel,
+      "computing…" never a zero), `p/[project]` (integrity, flows, unbound selectors, activity),
+      `p/[project]/[kind=selkind]/[sel]` (overview), the question/claim/source routes, `inbox`
+      (grouped by project then category, operator category filter only), `admin`; 3 s poll on
+      project-scoped pages with visibility check (§4.2 rule 8)
+- [ ] S5.5 web checks green (`npm run check && npm test && npm run build`) and full Python
+      checks green (`pytest -q`, `validate --all-projects`, `check_instrument_versions.py`)
