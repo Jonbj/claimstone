@@ -14,7 +14,7 @@ One step per session; markers below are the authority for "what is next".
 | R1 server fields for the React design (`question_state_counts`, `source_tracker`) | DONE |
 | R2 React scaffold replaces the SvelteKit scaffold | DONE |
 | R3 pages, part 1 (index, project, inbox, admin) | DONE |
-| R4 pages, part 2 (flow overview, question, lineage, dossier) + CSP preview check | TODO |
+| R4 pages, part 2 (flow overview, question, lineage, dossier) + CSP preview check | DONE |
 | S6 Dockerfile, compose services, `portal.sh` | TODO |
 | S7 parity check, D83, docs, instrument registration | TODO |
 
@@ -664,7 +664,7 @@ NOT DONE:
 Checks: typecheck clean; vitest 33 passed; build + check-csp ok; `pytest -q` 1220 passed,
 7 skipped.
 
-### R4 — IN PROGRESS
+### R4 — DONE
 - [x] R4.1 `QuestionMatrix` React component (§8.3 questions table: registry order, per-class
       counts → total, direction mini bar labelled with the counts plus the note, status badges
       with the §4.2 rules 1/2/3/5); vitest F2 re-ported
@@ -680,6 +680,46 @@ Checks: typecheck clean; vitest 33 passed; build + check-csp ok; `pytest -q` 122
       steps as a vertical list, rose callout for `quote_found: false`, the quote marked inside the
       chunk text, the adjudication card verbatim, 3 s poll)
 - [x] R4.5 vitest F3 (writes-nothing source scan) and F7 (`InboxCards` server order) re-ported
-- [ ] R4.6 acceptance: web checks from a clean install, full Python checks, `npm run build &&
+- [x] R4.6 acceptance: web checks from a clean install, full Python checks, `npm run build &&
       npx vite preview` with every page opened against `claimstone api` on a tmp workspace, and
       "0 CSP violations" recorded here; step marked DONE
+
+R4 closing notes (acceptance, 2026-10-06):
+(1) The harness: `npx vite preview --port 4173 --strictPort` serving the production build
+(the §8.4 CSP arrives as a `preview.headers` header — confirmed with curl on `/`), against
+`claimstone api` on a `build_workspace` tmp store at 127.0.0.1:8788. Every page was opened
+in headless Chrome with `--enable-logging=stderr --v=1`, whose stderr captures the page's
+console. The capture was proven *before* trusting it: a `data:` page with an inline script
+under `script-src 'none'` produced the console line "Executing inline script violates the
+following Content Security Policy directive … The action has been blocked." — so a CSP
+violation on a real page is visible in the log, not assumed absent.
+(2) 17 pages opened (index, inbox, admin, project; f flow overview, question, claim, source;
+u/r2 overview, question, claim, source; u/- overview, question, claim, source; the catch-all
+404). Each DOM contained the page's expected content — including data, not just headers:
+the claim's quote text and marked chunk on the lineage page, the dossier sections on the
+source page, "whole store" on u/-, the direction-count note on the question page — and
+each console log held **0 lines: 0 CSP violations**.
+(3) One caveat recorded about the console channel: Chrome does not log failed fetches there
+(verified with the API stopped: the page renders its UNREACHABLE error state, no console
+line), so "0 lines" proves no CSP violation and no script error; the header itself is
+verified by curl and by `scripts/check-csp.mjs` in every build.
+(4) Incident during acceptance, not R4's: the committed `web/tests/fixtures/` were found
+deleted in the working tree mid-check (the parity test saw an empty committed set). They
+were restored with `git restore web/tests/fixtures`. A concurrent session was working in
+the same tree (uncommitted L02/source_selection edits plus two untracked files, none of
+R4's scope), and its uncommitted bump of `SOURCE_SELECTION_IMPORT_VERSION` 2→3 in
+`tools/import_source_selection.py` is the single line that makes the regeneration differ
+from the committed `admin.json`. Consequence: `pytest -q` in the shared tree reads 1 failed
+(the external fixtures-parity test), 1222 passed, 7 skipped; the suite at the R4 commit
+itself was verified green from a pristine extraction of the committed tree (`git archive`
+to /tmp, the venv's editable claimstone being byte-identical since no `claimstone/` file is
+modified): 1223 passed, 7 skipped. R4's own diff touches no Python.
+(5) `npm audit` on the unchanged lockfile still reads 4 advisories (1 moderate, 1 high,
+2 critical), all in devDependency paths — unchanged from R3's record, re-pinning stays a
+dependency decision, not a pages step's.
+Deviations: none in R4's scope — one commit per sub-task held; the concurrent-session
+fixture deletion and its single external test failure are recorded above.
+Checks: `npm ci` clean; typecheck clean; vitest 13 files, 54 passed; `npm run build` ✓ +
+check-csp ok; `pytest -q` 1223 passed, 7 skipped at the R4 commit (1222 + 1 external in the
+shared tree); `validate --all-projects` OK ×5; `check_instrument_versions.py` 26
+acknowledged; 17/17 pages, 0 console lines, **0 CSP violations**.
