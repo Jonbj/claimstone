@@ -12,7 +12,7 @@ One step per session; markers below are the authority for "what is next".
 | S4 scaffold `web/` | DONE |
 | S5 routes and components | DONE (SvelteKit; superseded by R2–R4) |
 | R1 server fields for the React design (`question_state_counts`, `source_tracker`) | DONE |
-| R2 React scaffold replaces the SvelteKit scaffold | TODO |
+| R2 React scaffold replaces the SvelteKit scaffold | DONE |
 | R3 pages, part 1 (index, project, inbox, admin) | TODO |
 | R4 pages, part 2 (flow overview, question, lineage, dossier) + CSP preview check | TODO |
 | S6 Dockerfile, compose services, `portal.sh` | TODO |
@@ -464,7 +464,7 @@ NOT DONE:
 Checks: `pytest -q` 1220 passed, 7 skipped; `validate` exit 0; 26 instruments; svelte-check 0/0;
 vitest 36 passed; build + check-csp ok.
 
-### R2 — IN PROGRESS
+### R2 — DONE
 - [x] R2.1 delete the SvelteKit sources and config; scaffold Vite 6 + React 19 + TS strict +
       react-router 7 (`createBrowserRouter`) + Tailwind v4 (`@tailwindcss/vite`), build output
       `dist/`, pinned devDependencies and committed `package-lock.json`; the §8.4 CSP header in
@@ -483,5 +483,56 @@ vitest 36 passed; build + check-csp ok.
       every shell tab resolves (full pages are R3/R4)
 - [x] R2.5 port vitest F1, F4, F5, F6, F8 to React Testing Library; add F10 (§8.5 source scan);
       `npm ci && npm run typecheck && npm test && npm run build` green from a clean install
-- [ ] R2.6 full Python checks green (`pytest -q`, `validate --all-projects`,
+- [x] R2.6 full Python checks green (`pytest -q`, `validate --all-projects`,
       `check_instrument_versions.py`) — `web/tests/fixtures/` untouched
+
+Checks (final lines, clean install):
+```
+$ cd web && rm -rf node_modules && npm ci && npm run typecheck && npm test && npm run build
+npm ci: added 557 packages, and audited 558 packages in 3s
+tsc --noEmit -p tsconfig.json                      (no output = clean)
+Test Files  6 passed (6)
+     Tests  29 passed (29)
+✓ built in 1.74s
+check-csp: ok (no inline script, no style attribute)
+$ .venv/bin/pytest -q
+1220 passed, 7 skipped in 37.54s
+$ .venv/bin/claimstone validate --all-projects
+(6 OK lines, one per project; exit 0)
+$ .venv/bin/python tools/check_instrument_versions.py
+26 instrument version(s) acknowledged in the design record
+(exit 0)
+```
+Decisions (spec silent): (1) The shadcn CLI (v4.21.3, `radix-nova` preset — Lucide icons,
+Geist font, exactly §8.2's choices) fetches component code from its own registry and
+Tremor's sources come from `github.com/tremorlabs/tremor` (the `tremor-raw` repo is a
+stub that redirects there): both treated as code registries inside the prompt's
+build-tooling allowance — no scholarly API, publisher or model backend was touched. (2)
+Version pins: react 19.3.0, react-router 7.18.4, vite 6.3.5, tailwindcss 4.3.3,
+typescript 5.8.3, vitest 3.2.3, jsdom 26.1.0, @types/node 22.15.32 — npm's first
+resolution produced vite 8 / react-router 8 / typescript 7, all against §8.2's named
+majors; TS/vitest/jsdom keep the S4-era versions known to work together. (3) recharts
+pinned to 2.15.4, the line Tremor's own package.json declares: the copied `DonutChart`
+uses `Pie`'s `activeIndex`, which recharts 3 removed — keeping the copied code intact
+outranked the newer major. (4) The new-style shadcn output imports `cn` and `radix-ui`
+meta packages and `@import "shadcn/tailwind.css"`; the CLI's `^` ranges were re-pinned
+exact (§8.2 "every dependency is pinned exactly"). (5) The dark palette is keyed to
+`[data-theme="dark"]` (the toggle's attribute, §8.3), replacing shadcn's `.dark` class —
+one mechanism switches both the CSS variables and the `dark:` variants. (6) The Flows
+tab links to the index: §4.1 has no cross-project flows page, and the index lists every
+project's flows; the tab is lit on `/p/:project/f/:sel` routes. (7) `useApi` returns
+`{data, error, pending, reload}` — `reload` re-runs the fetcher without changing deps,
+which is the hook shape rule 8's "refetch the current view" needs; `usePoll` ports
+`lib/poll.ts`'s semantics verbatim (3 s, visible tab only, first answer is the baseline,
+silent retry). (8) Base components keep the Svelte versions' class names and DOM shapes
+(the ported tests assert them); the vocabulary colours moved to `index.css` as plain
+CSS, CONTRADICTED still blue. (9) Index/Inbox/Admin are explicit placeholders for
+R3; the index already lists project names from `/projects` through `useApi`, so the
+fetch wrapper, hook and router are exercised by a real build, not just type-checked.
+Deviations: R2.1's commit carries `api.ts`/`api-types.ts`/`vocabulary.ts` and tests
+F1/F8 with the scaffold, and R2.3's commit is hooks-only — the `typecheck`/`test`
+scripts must pass from the first commit, the same interdependence S4 and R1 recorded.
+The six Svelte-shaped test files (F2, F3, F7 among them) were deleted with the Svelte
+sources: F2/F3/F7 are re-ported in R4 per the steps table; F10 already covers the
+CSP-shaped half of F3 for the React tree.
+NOT DONE:
