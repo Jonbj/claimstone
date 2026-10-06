@@ -13,7 +13,7 @@ One step per session; markers below are the authority for "what is next".
 | S5 routes and components | DONE (SvelteKit; superseded by R2–R4) |
 | R1 server fields for the React design (`question_state_counts`, `source_tracker`) | DONE |
 | R2 React scaffold replaces the SvelteKit scaffold | DONE |
-| R3 pages, part 1 (index, project, inbox, admin) | IN PROGRESS |
+| R3 pages, part 1 (index, project, inbox, admin) | DONE |
 | R4 pages, part 2 (flow overview, question, lineage, dossier) + CSP preview check | TODO |
 | S6 Dockerfile, compose services, `portal.sh` | TODO |
 | S7 parity check, D83, docs, instrument registration | TODO |
@@ -566,7 +566,7 @@ NOT DONE:
 Checks: `npm ci` added 304; typecheck clean; vitest 31 passed; build + check-csp ok;
 `pytest -q` 1220 passed, 7 skipped.
 
-### R3 — IN PROGRESS
+### R3 — DONE
 - [x] R3.1 index page (§8.3): one Card per project; flows and unbound selectors as rows,
       each row fetching its own `/summary` lazily and in parallel (skeleton while
       pending, floor badge — amber below floor, verdict and inbox counts, never a zero);
@@ -582,6 +582,67 @@ Checks: `npm ci` added 304; typecheck clean; vitest 31 passed; build + check-csp
       rule 8) with a discreet "refreshing…" on same-view refresh (R2 review rule)
 - [x] R3.4 admin page: credentials presence booleans only, configured/available
       backends with the server's notes verbatim, instrument versions
-- [ ] R3.5 full checks green: web (`npm run typecheck && npm test && npm run build`)
+- [x] R3.5 full checks green: web (`npm run typecheck && npm test && npm run build`)
       and Python (`pytest -q`, `validate --all-projects`,
       `check_instrument_versions.py`)
+
+Checks (final lines, clean install):
+```
+$ cd web && rm -rf node_modules && npm ci && npm run typecheck && npm test && npm run build
+npm ci: added 304 packages, and audited 305 packages in 2s
+tsc --noEmit -p tsconfig.json                      (no output = clean)
+Test Files  7 passed (7)
+     Tests  31 passed (31)
+✓ built in 2.61s
+check-csp: ok (no inline script, no style attribute)
+$ .venv/bin/pytest -q
+1220 passed, 7 skipped in 37.27s
+$ .venv/bin/claimstone validate --all-projects
+(6 OK lines, one per project; exit 0)
+$ .venv/bin/python tools/check_instrument_versions.py
+26 instrument version(s) acknowledged in the design record
+```
+Acceptance, measured: `claimstone api` in-process on a tmp `build_workspace` answered
+200 with `api_version: 1` on all nine routes the four pages fetch — `/projects`,
+`integrity`, `activity?limit=50`, `poll`, flow and unbound `summary`, flow and unbound
+`inbox`, `/admin` — and the summary carried the fields the index renders
+(`floor_status: OK`, `verdicts: {awaiting_adjudication: 19, adjudicated: 0, stale: 0}`,
+`inbox_counts: {REVIEW: 1, ADJUDICATION: 19}`), so every fetch path is live, not just
+type-checked.
+Decisions (spec silent): (1) The index skeleton satisfies §4.2 rule 1 *as* the pending
+state: the pulsing bars carry `role="status"` and `aria-label="computing…"`, so the
+named "computing…" state and §8.3's skeleton are one element, not two. (2) Floor badge:
+shadcn `Badge` outline with the server's status word verbatim (`floor {status}`), amber
+only when the word is not `OK` — the two possible words are admissibility's own `OK` /
+`INSUFFICIENT_ACQUISITION` (`admissibility.py` L19–20), measured on the fixture.
+(3) The rows' deep links resolve before R4: `p/:project/f/:sel` and `p/:project/u/:sel`
+are placeholder pages ("the overview page lands in R4") and a catch-all renders a named
+"not found" page instead of the router's default error screen; `p/:project` itself is
+this step's real project page. (4) The inbox page collects cards per project in
+parallel and per selector in server order (the Svelte shape) but groups into order-
+preserving Maps and applies the category filter at render time — the Svelte version
+re-grouped inside the effect, which the operator's later filter choice would have read
+stale; the filter now refetches nothing and reorders nothing. The control is the shadcn
+(Radix) Select — a selection, not a `<form>` (rule 4 / F10). A ConfigError project
+yields one INTEGRITY card carrying the server's `config_error` text; an unreadable
+selector inbox yields a named INTEGRITY card ("inbox unreadable for this selector").
+(5) The project page runs three independent `useApi` sections (integrity, flows-from-
+`/projects`, activity) each with its own Pending/ErrorState, instead of the Svelte
+single gate — a section renders when its own data arrives; the 3 s poll (rule 8)
+refetches all three and a discreet "refreshing…" shows while any of them refreshes
+(the R2 review's rule); a project the API's list does not name is a named error state,
+never an empty page. (6) `InboxCards` and `IntegrityPanel` are ports that keep the
+Svelte DOM shapes (`data-card-index` kept for F7's re-port in R4); `InboxCard` is now
+derived from the generated `Inbox` type instead of a hand-written shape. (7) Admin
+sorts instruments by name and renders both notes verbatim; booleans only, no value.
+(8) No new vitest in R3: the steps table allocates F2/F3/F7 to R4 and F9/F11 to R4's
+overview, so this step's own green lights are typecheck/test/build plus the live route
+acceptance above. (9) `npm audit` on the *unchanged* lockfile (R3 touched no
+dependency) reports 4 advisories — @vitest/mocker (moderate), tinypool (2×critical),
+vite dev-server file reads (high), all in devDependency paths that never run in
+production (the SPA is static files behind nginx; no Node in the runtime image); the
+offered fixes move vite 6.3.5→6.4.4 and vitest 3.2.3→3.2.7, outside §8.2's exact pins
+that R2 recorded with reasons. Recorded here for the operator/review, not acted on:
+re-pinning is a dependency decision, not a pages step's.
+Deviations: none — one commit per sub-task held throughout.
+NOT DONE:
