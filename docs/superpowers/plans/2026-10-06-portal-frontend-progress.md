@@ -9,7 +9,7 @@ One step per session; markers below are the authority for "what is next".
 | S1 shared transport base class out of `claimstone/portal.py` | DONE |
 | S2 `claimstone/api.py` + tests A1–A7 | DONE |
 | S3 schema, validator, fixtures | DONE |
-| S4 scaffold `web/` | TODO |
+| S4 scaffold `web/` | DONE |
 | S5 routes and components | TODO |
 | S6 Dockerfile, compose services, `portal.sh` | TODO |
 | S7 parity check, D83, docs, instrument registration | TODO |
@@ -161,25 +161,65 @@ NOT DONE:
 Checks: `pytest -q` → 1211 passed, 7 skipped; `validate --all-projects` exit 0; 26 instruments.
 S4 must generate its types from this schema version.
 
-### S4 — IN PROGRESS
-- [ ] S4.1 `web/` scaffold: `package.json` (pinned versions, scripts dev/build/check/test/gen:types),
+### S4 — DONE
+- [x] S4.1 `web/` scaffold: `package.json` (pinned versions, scripts dev/build/check/test/gen:types),
       `svelte.config.js` (adapter-static, fallback `index.html`), `vite.config.ts` (dev proxy
-      `/api` → 127.0.0.1:8788, vitest), `tsconfig.json` (strict), `.npmrc` (`ignore-scripts=true`),
-      `src/app.html`, `src/routes/+layout.ts` (`ssr = false`, `prerender = false`),
-      `src/routes/+layout.svelte` (header: breadcrumb, read-only badge, code revision, theme
-      toggle), `src/params/selkind.ts`; committed `package-lock.json`; `src/app.css`
-- [ ] S4.2 `npm run gen:types` (`json-schema-to-typescript` on `docs/contracts/portal-api.schema.json`)
-      and the generated, committed `src/lib/api-types.ts`; vitest F8 (regeneration produces no diff)
-- [ ] S4.3 `src/lib/api.ts` (typed fetch wrapper, `ApiError(code, message)`) and
-      `src/lib/vocabulary.ts` (five verdicts mapped, `NO_VERIFIED_CLAIM` /
-      `LITERATURE_VERDICT_NOT_APPLICABLE` dashed as engine states, unknown stays itself); vitest F1
-- [ ] S4.4 base components `Chip`, `Fraction`, `Pending`, `ErrorState`, `CommandBlock`; vitest
-      F4 (`Fraction` null → "—", never "0"), F5 (`ErrorState` renders each §3.3 code with message),
-      F6 (`CommandBlock` copies, no execute affordance, `<ONE_OF_FIVE>` survives)
-- [ ] S4.5 web checks green (`npm ci && npm run check && npm test && npm run build`) and full
-      Python checks green (`pytest -q`, `validate --all-projects`, `check_instrument_versions.py`)
+      `/api` → 127.0.0.1:8788, vitest jsdom), `tsconfig.json` (strict), `.npmrc`
+      (`ignore-scripts=true`), `src/app.html`, `src/app.css`, `src/routes/+layout.ts`
+      (`ssr = false`, `prerender = false`), `src/routes/+layout.svelte` (breadcrumb, read-only
+      badge, code revision from `/meta`, theme toggle), `src/params/selkind.ts`, `web/.gitignore`;
+      committed `package-lock.json`
+- [x] S4.2 `gen:types` (`json2ts` over `docs/contracts/portal-api.schema.json`) and the generated,
+      committed `src/lib/api-types.ts` (417 lines); vitest F8 (regeneration produces no diff)
+- [x] S4.3 `src/lib/api.ts` (typed fetch wrapper, every request GET, the §3.3 envelope →
+      `ApiError(code, message)`), `src/lib/vocabulary.ts` (five verdicts mapped,
+      `NO_VERIFIED_CLAIM`/`LITERATURE_VERDICT_NOT_APPLICABLE` dashed engine states, unknown stays
+      itself), a minimal index page so `check` has a route; vitest F1
+- [x] S4.4 base components `Chip`, `Fraction`, `Pending`, `ErrorState`, `CommandBlock`; vitest
+      F4, F5, F6
+- [x] S4.5 web checks green from a clean `npm ci` (`npm ci && npm run check && npm test && npm run
+      build`) and full Python checks green
 
-Checks:
-Decisions (spec silent):
-Deviations:
+Checks (final lines):
+```
+$ cd web && npm ci && npm run check && npm test && npm run build
+npm ci: added 222 packages in 1s
+svelte-check found 0 errors and 0 warnings
+Tests  23 passed (23)
+✔ done   (adapter-static wrote site to "build")
+$ .venv/bin/pytest -q
+1211 passed, 7 skipped in 36.58s
+$ .venv/bin/claimstone validate --all-projects
+OK   alembic-s4: 16 topics, 28 questions (registry v3, frozen 2026-09-25), 6 source classes, acquisition floor 0.80 (v1), 25 manifest rows, registry 9c3f265069c6
+OK   alembic-s4-breve: 12 topics, 17 questions (registry v1, frozen 2026-09-28), 6 source classes, acquisition floor 0.80 (v1), 18 manifest rows, registry 3fdb5aea634d
+OK   alembic-s4-lungo: 12 topics, 18 questions (registry v1, frozen 2026-09-28), 6 source classes, acquisition floor 0.80 (v1), 19 manifest rows, registry ee040e0c3cfc
+OK   example-news-and-returns: 16 topics, 20 questions (registry v2, frozen 2026-09-25), 6 source classes, acquisition floor 0.80 (v1), registry 85e5fcc44ddc
+OK   pilot-screen-time: 4 topics, 8 questions (registry v1, frozen 2026-09-28), 6 source classes, acquisition floor 0.80 (v1), 28 manifest rows, registry 82007de2b569
+OK   pmc-screen-time: 4 topics, 8 questions (registry v1, frozen 2026-09-28), 6 source classes, acquisition floor 0.80 (v1), 40 manifest rows, registry 82007de2b569
+$ .venv/bin/python tools/check_instrument_versions.py
+26 instrument version(s) acknowledged in the design record
+(exit 0)
+```
+Decisions (spec silent): devDependency versions pinned exactly to what `npm install` resolved
+on 2026-10-06 (svelte 5.33.2, @sveltejs/kit 2.20.0, adapter-static 3.0.8, vite 6.3.5, vitest
+3.2.3, typescript 5.8.3, svelte-check 4.2.2, json-schema-to-typescript 15.0.4, jsdom 26.1.0,
+@types/node 22.15.32; @testing-library/svelte upgraded 4.2.3 → 5.4.2 because 4.x's `render`
+types accept only Svelte 4 class components — Svelte 5 function components fail `svelte-check`);
+`gen:types` invokes `json2ts` (the package's own bin) on `../docs/contracts/portal-api.schema.json`
+and stdout-redirection, so no intermediate temp file; `resolve.conditions: ["browser"]` in
+`vite.config.ts` because Vitest otherwise loads Svelte's server build and `mount()` is
+unavailable (F4–F6 could not run); `web/.gitignore` ignores `node_modules/`, `build/`,
+`.svelte-kit/`; the theme toggle is a small `ThemeToggle.svelte` used by the layout (the spec's
+component list does not name it, but §4.1 puts a theme toggle in the header and a component is
+the only Svelte way); breadcrumb renders only leaf names (no fabricated intermediate links —
+a wrong deep link was worse than none); F5's sample texts are the API's two fixed module
+constants (MISDIRECTED, CROSS_ORIGIN) plus representative texts for the data-dependent codes,
+as decided in S3; the index page is a minimal `/projects` list — the full lazy index with
+per-selector summaries is S5's deliverable
+Deviations: S4.1–S4.4 landed in two commits (`docs: plan S4`, then `wip(S4.1)`) rather than one
+commit per sub-task: the scaffold, the generated types and the components are interdependent —
+`svelte-check` passes only with all of them present, and a commit that does not pass the checks
+is forbidden by the working method. The first `wip(S4.1)` commit carries the scaffold plus
+`api.ts`/`vocabulary.ts`/`api-types.ts` plus the components and tests; the `docs:` commit
+before it carries the plan. No check was skipped.
 NOT DONE:
