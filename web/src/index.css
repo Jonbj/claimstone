@@ -1,0 +1,5 @@
+@import "tailwindcss";
+
+/* §8.3: light theme first; the dark theme is toggled with a `data-theme` attribute
+   on <html>, not the OS media query. */
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));

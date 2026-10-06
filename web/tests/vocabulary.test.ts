@@ -1,7 +1,7 @@
 // F1: `NO_VERIFIED_CLAIM` is not mapped to `UNANSWERED_IN_LITERATURE` or `NEVER_ASKED`;
 // an unknown word stays itself; the five verdicts map; the engine states are dashed.
 import { describe, expect, it } from "vitest";
-import { ENGINE_STATES, VERDICTS, word } from "$lib/vocabulary";
+import { ENGINE_STATES, VERDICTS, word } from "@/lib/vocabulary";
 
 describe("F1: vocabulary", () => {
   it("maps exactly the five verdicts", () => {

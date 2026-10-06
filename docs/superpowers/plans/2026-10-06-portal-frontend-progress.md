@@ -465,7 +465,7 @@ Checks: `pytest -q` 1220 passed, 7 skipped; `validate` exit 0; 26 instruments; s
 vitest 36 passed; build + check-csp ok.
 
 ### R2 — IN PROGRESS
-- [ ] R2.1 delete the SvelteKit sources and config; scaffold Vite 6 + React 19 + TS strict +
+- [x] R2.1 delete the SvelteKit sources and config; scaffold Vite 6 + React 19 + TS strict +
       react-router 7 (`createBrowserRouter`) + Tailwind v4 (`@tailwindcss/vite`), build output
       `dist/`, pinned devDependencies and committed `package-lock.json`; the §8.4 CSP header in
       `preview.headers` and the new `check-csp.mjs` wired into `npm run build`;

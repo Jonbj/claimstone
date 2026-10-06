@@ -1,12 +1,24 @@
-import { sveltekit } from "@sveltejs/kit/vite";
+import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vitest/config";
+import { fileURLToPath } from "node:url";
+import path from "node:path";
+
+const webRoot = path.dirname(fileURLToPath(import.meta.url));
+
+// §8.4: the CSP is a plain header, sent by nginx in production and by `vite preview`
+// here — a Vite build has no inline script, so nothing needs a hash.
+const CSP =
+  "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; " +
+  "font-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'; " +
+  "frame-ancestors 'none'";
 
 export default defineConfig({
-  plugins: [sveltekit()],
+  plugins: [react(), tailwindcss()],
   resolve: {
-    // Svelte 5 + Vitest: without "browser" the server build of svelte is loaded and
-    // `mount()` is unavailable — components must run in the client bundle.
-    conditions: ["browser"],
+    alias: {
+      "@": path.resolve(webRoot, "src"),
+    },
   },
   server: {
     proxy: {
@@ -14,8 +26,13 @@ export default defineConfig({
       "/api": "http://127.0.0.1:8788",
     },
   },
+  preview: {
+    headers: {
+      "Content-Security-Policy": CSP,
+    },
+  },
   test: {
     environment: "jsdom",
-    include: ["tests/**/*.{test,spec}.ts"],
+    include: ["tests/**/*.{test,spec}.ts", "tests/**/*.{test,spec}.tsx"],
   },
 });
