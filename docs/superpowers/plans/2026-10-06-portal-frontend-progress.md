@@ -255,7 +255,7 @@ Checks: `svelte-check` 0 errors 0 warnings; vitest 23 passed; build + check-csp 
       (§4.2 rule 5, F19: the UI renders it verbatim and never re-derives). Regenerate the
       schema, the fixtures and `api-types.ts`; the existing tests keep passing (they pass today
       only because the fixture workspace has no adjudication row)
-- [ ] S5.2 components `StageStrip`, `FloorPanel`, `QuestionMatrix`, `InboxCards` (§4.1) with
+- [x] S5.2 components `StageStrip`, `FloorPanel`, `QuestionMatrix`, `InboxCards` (§4.1) with
       the §4.2 rules: per-class counts before the total (rule 2), server card order preserved
       (rule 6), five verdicts plus dashed engine states (rule 3), display text verbatim (rule 5);
       vitest F2, F7
