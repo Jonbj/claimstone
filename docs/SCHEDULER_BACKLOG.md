@@ -183,6 +183,27 @@ Source exposure, outcome horizon and role in the model must each be checked befo
 provisional exclusion becomes a controlled decision. Their private byte hashes and
 exact passages are in the guided L02 audit.
 
+An offline dossier and queue precursor now exercise the scheduler's first useful
+read-only operation. For each held source, verify the raw copy hash, active document
+generation, current claim quotes and independent review links, then surface known
+same-work and possible-version relations separately. For the frozen inventory,
+derive outstanding work from the **current** advisory view: unresolved observations,
+held unobserved copies, cached metadata without an authoritative abstract, and
+records needing metadata lookup. The 2026-10-06 L02 snapshot contains 813 tasks
+across those four classes. A queue item must name its next action and may use
+title cues only for work ordering, never for scientific exclusion or a recall claim.
+Rebuilding the same snapshot must be deterministic; new advisory observations
+must change the derived queue without rewriting old snapshots. A new model or
+network campaign still needs its own frozen plan and budget.
+
+After the remaining 18 held-source observations, the queue shrank from 813 to
+796 outstanding tasks. It must consult verified candidate relationships before
+proposing a metadata lookup: the separate DOI key for an already held work needs
+controlled reuse, not another fetch. It must also check `screening_metadata.jsonl`
+for retained abstracts before requesting them again. Five abstract payloads were
+reconstructed and identity-checked offline in this continuation. A possible
+version relation is insufficient for this reuse rule; it remains an identity task.
+
 D72 adds a measured resume requirement: a malformed model answer is a terminal unanswered case,
 not a reason to abandon all independent cases or retry the same call invisibly. The scheduler
 should finish the remaining frozen work, preserve the failed bytes, and report the missing

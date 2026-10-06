@@ -42,6 +42,37 @@ second PDF request; a one-time resume verified that Modena had received only a
 robots response, then fetched that already-approved copy. The private guided
 readout has hashes and evidence; the scheduler backlog records this resume case.
 
+The next offline continuation built a content-addressed `ACA001` dossier from
+the held PDF, 18 active chunks, 17 current L02 claims and their six supported/
+eleven overstated reviews. It appended one full-text `AI_PROVISIONAL` direct
+candidate observation and one verified title-key/DOI same-work relationship
+to the advisory source-selection ledgers. Idempotent replay wrote zero rows.
+The distinct 2013 SSRN DOI remains a possible version. The v2 view now has
+21 observed keys, one provisional direct candidate, four uncertain and 809
+unobserved; no candidate was admitted. An offline queue snapshot contains
+813 tasks (18 held readings, four uncertain, 379 cached-metadata abstract
+checks and 412 metadata lookups). Table 5's separate sentiment estimates need
+complete extraction/review; rounded t-statistics at lags 2 and 6 remain
+ambiguous. The hashes, exact passages and queue path are in the private guided
+readout. Do not use this single candidate to close the cohort or sign L02.
+
+The remaining 18 held sources were subsequently reassessed under v2 with
+active-chunk quote checks: 17 provisional context observations and one
+uncertain mixed-feed observation (`ACA012`). `ACA006` and `ACA015` now remain
+context specifically because v2 excludes filing tone from direct exposure.
+`tools/record_l02_held_v2_observations.py --apply` wrote 18 advisory rows and
+zero on replay. The latest view has **39 observed / 791 unobserved** keys,
+one provisional direct candidate, 18 context, 15 not-direct and five uncertain.
+An updated offline queue distinguishes one verified same-work relation to
+reuse, five locally recorded abstracts to validate/read, five uncertainty
+cases, 376 cached-metadata abstract tasks and 409 other metadata tasks.
+The five abstracts were reconstructed and identity-checked from their retained
+raw payloads in `l02-v2/remaining-held-abstracts-2026-10-06.json`.
+A new ten-lookup OpenAlex plan has an offline preview of ten pending,
+zero requests, SHA-256 `2709e7c4574cffb9442f358a5ae403fcf3983d71f187bffa4fed52fcfdf4bd2b`;
+execution requires the requested operator authorization. No new scientific
+claim, profile, admission or verdict was produced by this continuation.
+
 2026-10-06 research portal proposal: the operator requested protocol-bound research flows,
 per-stage drilldown, live events, human source/PDF intake, extractable results and model/key
 administration. The design at

@@ -123,6 +123,19 @@ closed, no candidate is admitted, and no screening accuracy or literature recall
 
 ## Offline identity relationship audit
 
+The guided 2026-10-06 continuation adds source-level offline preparation tools.
+`tools/build_source_selection_dossier.py` binds a held PDF, active generation,
+current claim quotes and review outcomes to a content-addressed dossier.
+`tools/preview_source_selection_queue.py` derives outstanding work from the
+frozen inventory and current advisory chains, including recorded abstracts and
+verified same-work counterparts. Both write only isolated audit snapshots.
+The targeted `record_l02_aca001_observation.py` and
+`record_l02_held_v2_observations.py` scripts recheck retained evidence and append
+provisional full-text observations through the existing locked API; reruns add
+zero. These are interactive agent readings, not batch model measurements or
+independent human labels. Their 19 held-source observations increase the current
+v2 view from 20 to 39 observed keys without closing or admitting a cohort.
+
 `tools/audit_identity_relationships.py --plan <selection-plan> --acquisitions <ledger> --write`
 reuses the frozen selection audit, lists assessed canonical corrections and identifies any
 acquisition still stored under an original key. It also lists cross-key identical byte hashes,
