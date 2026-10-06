@@ -85,10 +85,16 @@ def build(store: Store, inventory_path: Path, metadata_queue_path: Path,
             tier = 0
         elif key in latest_metadata:
             status = latest_metadata[key].get("status")
-            reason = ("missing_abstract_needs_alternative_authority" if status == "NO_ABSTRACT"
-                      else "metadata_outcome_needs_review")
-            next_action = ("plan_bounded_alternative_provider_lookup" if status == "NO_ABSTRACT"
-                           else "inspect_recorded_outcome_before_any_retry")
+            absent_providers = {r.get("provider", "openalex") for r in metadata_rows
+                                if r.get("candidate_key") == key and r.get("status") == "NO_ABSTRACT"}
+            if status == "NO_ABSTRACT" and {"openalex", "crossref"} <= absent_providers:
+                reason = "abstract_absent_from_checked_providers"
+                next_action = "inspect_cached_copy_locations_or_operator_supplied_text"
+            else:
+                reason = ("missing_abstract_needs_alternative_authority" if status == "NO_ABSTRACT"
+                          else "metadata_outcome_needs_review")
+                next_action = ("plan_bounded_alternative_provider_lookup" if status == "NO_ABSTRACT"
+                               else "inspect_recorded_outcome_before_any_retry")
             tier = 2
         elif has_cached_metadata:
             reason = "cached_metadata_needs_authoritative_abstract"
