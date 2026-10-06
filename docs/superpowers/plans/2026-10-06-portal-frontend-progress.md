@@ -542,3 +542,26 @@ should have been its own commit. The amend touched only that last commit,
 created seconds earlier in this session and never pushed; no other history
 was rewritten. Recorded here rather than hidden by a second rewrite.
 NOT DONE:
+
+### Review of R2 (Claude Code, between R2 and R3)
+- The `shadcn` **CLI** was a runtime dependency, kept only so `index.css` could import
+  `shadcn/tailwind.css`. It pulled the whole CLI toolchain in: 434 packages in the production
+  tree, 557 installed. The 16 KB stylesheet is now vendored as `src/styles/shadcn-tailwind.css`,
+  with its source version and licence in a header, and the dependency is removed. After the
+  change: 133 production packages, 304 installed. **Rule for R3/R4:** run the shadcn CLI with
+  `npx`, never add it to `package.json`.
+- `cn` (0.4.0) checked: the npm registry lists `shadcn <m@shadcn.com>` as maintainer and
+  `shadcn-ui/cn` as repository. It is legitimate (the new CLI's replacement for clsx +
+  tailwind-merge).
+- `useApi` reset the page to pending on every poll-triggered reload, so a flow page would have
+  flashed empty for seconds every few seconds while a stage ran. A reload of the **same view**
+  now keeps the data with `refreshing: true`; a change of view still drops it to pending. Test:
+  `tests/useapi.test.tsx`. **Rule for R3/R4:** show a discreet "refreshing…" while `refreshing`
+  is true.
+- The shell used raw greys (`bg-gray-50`, `bg-white`), so the dark theme did not switch it. It
+  now uses the shadcn tokens (`bg-muted/40`, `bg-card`, `border-border`,
+  `text-muted-foreground`). **Rule for R3/R4:** use tokens or explicit `dark:` variants, never
+  bare greys.
+- Endorsed: the re-pinning to §8.2's majors, recharts 2.15.4, and recording the `--amend` openly.
+Checks: `npm ci` added 304; typecheck clean; vitest 31 passed; build + check-csp ok;
+`pytest -q` 1220 passed, 7 skipped.

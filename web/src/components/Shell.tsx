@@ -6,7 +6,9 @@ import { cn } from "@/lib/utils";
 
 // §8.3 shell: white top bar with the product name, the tabs (Projects · Flows · Inbox ·
 // Administration) and, on the right, `read-only · rev <12 chars>`. The content sits on
-// gray-50 with a max width of 1360 px.
+// gray-50 with a max width of 1360 px. Colours come from the shadcn theme tokens (`bg-card`,
+// `text-muted-foreground`, `border-border`), never raw greys, so the `data-theme` toggle
+// switches the shell too (implementation review of R2).
 const TABS: Array<{ id: string; label: string; to: string; active: (pathname: string) => boolean }> = [
   { id: "projects", label: "Projects", to: "/", active: (p) => p === "/" },
   // There is no cross-project flows page in the design (§4.1): the index lists every
@@ -51,8 +53,8 @@ export default function Shell() {
   const { pathname } = useLocation();
   const rev = useRevision();
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900">
-      <header className="flex min-h-[60px] flex-wrap items-center gap-7 border-b border-gray-200 bg-white px-8">
+    <div className="min-h-screen bg-muted/40 text-foreground">
+      <header className="flex min-h-[60px] flex-wrap items-center gap-7 border-b border-border bg-card px-8">
         <span className="text-base font-bold">Claimstone</span>
         <nav className="flex flex-wrap gap-5 self-stretch" aria-label="Primary">
           {TABS.map((tab) => {
@@ -65,8 +67,8 @@ export default function Shell() {
                 className={cn(
                   "flex items-center border-b-2",
                   active
-                    ? "border-blue-600 font-medium text-blue-600"
-                    : "border-transparent text-gray-500",
+                    ? "border-blue-600 font-medium text-blue-600 dark:border-blue-400 dark:text-blue-400"
+                    : "border-transparent text-muted-foreground",
                 )}
               >
                 {tab.label}
@@ -75,7 +77,7 @@ export default function Shell() {
           })}
         </nav>
         <span
-          className="ml-auto font-mono text-xs text-gray-500"
+          className="ml-auto font-mono text-xs text-muted-foreground"
           title={rev.title}
         >
           read-only · {rev.text}
