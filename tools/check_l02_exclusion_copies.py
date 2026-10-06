@@ -30,7 +30,7 @@ FROZEN = {
     "selection_scope_sha256": ROOT / "selection-scope.json",
     "packet_sha256": ROOT / "human-reference-packets/b991c6a06218e1778ab93e8550c3e2ee095ac3f7933a2dc55b85fe8182517904.json",
     "ai_screening_sha256": ROOT / "ai-screening-claude-2026-10-05/l02-ai-screening.json",
-    "sources_sha256": Path("projects/alembic-s4-lungo/sources.yaml"),
+    "sources_sha256": Path("store/alembic-s4-lungo/audits/source-selection/population-policies/v1-sources-97cea1ebe253343d8c864833b3ecf85d3a2130bccc6706c8219b7d2fb5e4c59d.yaml"),
 }
 
 

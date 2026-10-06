@@ -24,6 +24,7 @@ ROOT = Path('store/alembic-s4-lungo/audits/source-selection/l02-v2')
 PACKET = ROOT / 'human-reference-packets/b991c6a06218e1778ab93e8550c3e2ee095ac3f7933a2dc55b85fe8182517904.json'
 AI = ROOT / 'ai-screening-claude-2026-10-05/l02-ai-screening.json'
 LEDGER = 'audits/source-selection/l02-v2/uncertain-fulltext-2026-10-05/outcomes.jsonl'
+FROZEN_SOURCES = Path('store/alembic-s4-lungo/audits/source-selection/population-policies/v1-sources-97cea1ebe253343d8c864833b3ecf85d3a2130bccc6706c8219b7d2fb5e4c59d.yaml')
 
 
 def sha(path: Path) -> str:
@@ -37,7 +38,7 @@ def prepare(plan_path: Path):
     project = load_project(plan['project'])
     if sha(PACKET) != plan['packet_sha256'] or sha(AI) != plan['ai_screening_sha256']:
         raise ValueError('frozen screening inputs changed')
-    if sha(project.root / 'sources.yaml') != plan['sources_sha256']:
+    if sha(FROZEN_SOURCES) != plan['sources_sha256']:
         raise ValueError('project source policy changed')
     packet = json.loads(PACKET.read_bytes())
     screening = json.loads(AI.read_bytes())

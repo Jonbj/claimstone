@@ -7,6 +7,18 @@ change a floor, registry, population, scientific instrument or model assignment.
 
 ## Workflow to automate
 
+The 2026-10-06 repository expansion exposes a round boundary the scheduler
+must retain. The project population v2 and new L02 round were frozen with two
+exact university hosts before any copy request. Existing DOI-keyed discovery
+observations still name `doi.org`: a copy URL found later does not change their
+round or pass the metadata host selector. The scheduler needs controlled
+candidate intake that records the authoritative DOI, the institutional copy
+route, the declared source class and their provenance without moving an old
+round's candidate. It must show a newly declared round with zero candidates as
+empty, not as a completed cohort or an acquisition rate of zero. Old plans
+must remain replayable against their archived v1 policy after a dated v2
+configuration change; an unrelated class or floor change must still fail.
+
 The operator supplies project files, an approved search protocol, scope and spending ceiling.
 The scheduler should advance the existing stages from their recorded state. It must show what
 finished, what remains and why it stopped, without requiring the operator to assemble commands.

@@ -14,13 +14,15 @@ import subprocess
 import sys
 from types import SimpleNamespace
 
+import yaml
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from claimstone.config import load_project
-from claimstone import ids, source_selection
+from claimstone import ids, population, source_selection
 from claimstone.store import Store
 from tools import fetch_screening_abstracts as metadata_lookup
 
-SOURCE_SELECTION_IMPORT_VERSION = 2
+SOURCE_SELECTION_IMPORT_VERSION = 3
 
 
 def digest(data: bytes) -> str:
@@ -52,20 +54,46 @@ def extract_pdf_text(path: Path) -> str:
     return result.stdout.decode('utf-8')
 
 
+def _check_frozen_sources(project, store: Store, expected_sha256: str) -> None:
+    """Replay an old selection plan after a separately frozen population revision."""
+    current = (project.root / 'sources.yaml').read_bytes()
+    if digest(current) == expected_sha256:
+        return
+    if len(expected_sha256) != 64 or any(c not in '0123456789abcdef' for c in expected_sha256):
+        raise ValueError('invalid frozen source-policy hash')
+    archived = store.path(
+        f'audits/source-selection/population-policies/v1-sources-{expected_sha256}.yaml')
+    if not archived.is_file() or digest(archived.read_bytes()) != expected_sha256:
+        raise ValueError('frozen project policy or registry changed')
+    old_config = yaml.safe_load(archived.read_bytes())
+    new_config = yaml.safe_load(current)
+    if not isinstance(old_config, dict) or not isinstance(new_config, dict) or \
+            {k: v for k, v in old_config.items() if k != 'population'} != \
+            {k: v for k, v in new_config.items() if k != 'population'}:
+        raise ValueError('source policy changed outside its archived population')
+    old_policy = population.validate(old_config.get('population'))
+    new_policy = population.validate(new_config.get('population'))
+    if not old_policy or not new_policy or new_policy['version'] <= old_policy['version'] or \
+            not any(row.get('policy_sha256') == population.digest(old_policy)
+                    for row in store.read('populations.jsonl')):
+        raise ValueError('frozen project policy or registry changed')
+
+
 def prepare(plan_path: Path, *, store_base='store'):
     plan = json.loads(plan_path.read_bytes())
-    if plan.get('version') not in {1, SOURCE_SELECTION_IMPORT_VERSION} or \
+    if plan.get('version') not in {1, 2, SOURCE_SELECTION_IMPORT_VERSION} or \
             not plan.get('scope_id') or not plan.get('question_id'):
         raise ValueError('versioned scope and question required')
     if (plan['version'] == 1 and 'replacement' in plan) or \
-            (plan['version'] == SOURCE_SELECTION_IMPORT_VERSION and
+            (plan['version'] in {2, SOURCE_SELECTION_IMPORT_VERSION} and
              not isinstance(plan.get('replacement'), dict)):
         raise ValueError('replacement requires a version 2 import plan')
     project = load_project(plan['project'])
+    store = Store(project.name, base=store_base)
     if project.registry_sha256 != plan['registry_sha256'] or \
-            digest((project.root / 'sources.yaml').read_bytes()) != plan['sources_sha256'] or \
             digest((project.root / 'questions.yaml').read_bytes()) != plan['questions_sha256']:
         raise ValueError('frozen project policy or registry changed')
+    _check_frozen_sources(project, store, plan['sources_sha256'])
     if plan['question_id'] not in project.question_ids:
         raise ValueError('question is absent from registry')
     inventory = json.loads(frozen(plan['inventory']))
@@ -92,7 +120,6 @@ def prepare(plan_path: Path, *, store_base='store'):
     if not isinstance(packet.get('criteria'), dict) or not packet['criteria']:
         raise ValueError('packet criteria missing')
 
-    store = Store(project.name, base=store_base)
     available_metadata = {}
     for record in store.read(metadata_lookup.LEDGER):
         if record.get('status') == 'ABSTRACT_AVAILABLE':
@@ -252,7 +279,7 @@ def prepare(plan_path: Path, *, store_base='store'):
         'supersedes': None,
     }, 'observation_id')
     source_selection.validate_identity(identity_row)
-    if plan['version'] == SOURCE_SELECTION_IMPORT_VERSION:
+    if plan['version'] in {2, SOURCE_SELECTION_IMPORT_VERSION}:
         replacement = plan['replacement']
         previous_ids = replacement.get('previous_assessment_ids')
         preserved = replacement.get('preserved_fulltext')

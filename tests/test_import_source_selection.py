@@ -127,6 +127,40 @@ def test_import_is_read_only_by_default_and_idempotent_when_applied(tmp_path, mo
     assert not (store_base / 'fixture/acquisitions.jsonl').exists()
 
 
+def test_archived_population_allows_old_plan_replay_without_policy_drift(tmp_path, monkeypatch):
+    import yaml
+    from claimstone import population
+    from claimstone.store import Store
+
+    plan_path, store_base, plan = _fixture(tmp_path, monkeypatch)
+    sources_path = Path(plan['project']) / 'sources.yaml'
+    old = {'classes': [], 'population': {'version': 1, 'declared_at': '2026-10-01',
+                                         'rationale': 'original scope', 'hosts': ['old.example']}}
+    old_bytes = yaml.safe_dump(old).encode()
+    sources_path.write_bytes(old_bytes)
+    old_sha = hashlib.sha256(old_bytes).hexdigest()
+    plan['sources_sha256'] = old_sha
+    plan_path.write_text(json.dumps(plan))
+    archive = (store_base / 'fixture/audits/source-selection/population-policies'
+               / f'v1-sources-{old_sha}.yaml')
+    archive.parent.mkdir(parents=True)
+    archive.write_bytes(old_bytes)
+    old_policy = population.validate(old['population'])
+    Store('fixture', base=store_base).append('populations.jsonl', {
+        'round': 'original', 'policy_sha256': population.digest(old_policy), 'policy': old_policy})
+    revised = {'classes': [], 'population': {'version': 2, 'declared_at': '2026-10-06',
+                                             'rationale': 'dated expansion',
+                                             'hosts': ['old.example', 'new.example']}}
+    sources_path.write_text(yaml.safe_dump(revised))
+    assert importer.run(plan_path, store_base=store_base)['would_write'] == {
+        'screening': 2, 'identity': 1}
+
+    revised['classes'] = [{'id': 'changed'}]
+    sources_path.write_text(yaml.safe_dump(revised))
+    with pytest.raises(ValueError, match='outside its archived population'):
+        importer.run(plan_path, store_base=store_base)
+
+
 def test_import_refuses_an_exact_quote_not_in_source(tmp_path, monkeypatch):
     plan_path, store_base, plan = _fixture(tmp_path, monkeypatch)
     ai_path = Path(plan['ai_screening']['path'])

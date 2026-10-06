@@ -40,13 +40,14 @@
   "jats_parser_version": 2,
   "model_report_version": 2,
   "population_version": 1,
+  "portal_api_version": 1,
   "profile_version": 5,
   "result_judge_version": 2,
   "reuse_version": 1,
   "review_version": 2,
   "scope_version": 1,
   "screening_version": 3,
-  "source_selection_import_version": 2,
+  "source_selection_import_version": 3,
   "source_selection_version": 1
  },
  "key_rotation_note": "Key rotation is done by editing `.env` outside the portal. Containers read `.env` when `./claimstone.sh` starts them."

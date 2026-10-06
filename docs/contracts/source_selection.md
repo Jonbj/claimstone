@@ -136,6 +136,16 @@ zero. These are interactive agent readings, not batch model measurements or
 independent human labels. Their 19 held-source observations increase the current
 v2 view from 20 to 39 observed keys without closing or admitting a cohort.
 
+After the dated L02 population v2 declaration, the v1 source-policy bytes are
+kept in the private, content-addressed population-policy audit directory.
+`source_selection_import_version 3` lets `import_source_selection.py` replay
+a plan frozen under v1 only when the
+archived bytes match its original hash, the current sources differ solely in a
+higher population version, and a v1 policy row is present in `populations.jsonl`.
+It still refuses an unrelated change to classes, floor or project registry.
+The new population does not transfer DOI-keyed discovery observations into the
+new round; copy inspection remains advisory until controlled candidate intake.
+
 `tools/audit_identity_relationships.py --plan <selection-plan> --acquisitions <ledger> --write`
 reuses the frozen selection audit, lists assessed canonical corrections and identifies any
 acquisition still stored under an original key. It also lists cross-key identical byte hashes,

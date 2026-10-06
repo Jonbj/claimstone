@@ -3662,6 +3662,49 @@ URL guard on every redirect hop (F15), and authenticated signing (F16, a
 `decision_contract_version` bump). P3 and P4 in the implementation spec's §10
 are the reviewed specs those need.
 
+## D83 — Declare an L02 university-host population before its copy checks (2026-10-06)
+
+`source_selection_import_version 3` adds archived-population replay; plan
+versions 1 and 2 remain readable and their observation format is unchanged.
+
+The operator authorized a dated new L02 repository round. Offline inspection
+of eleven works lacking abstracts from both checked providers found 52 cached
+location URLs, none on the exact v1 host list. Two host candidates can be named
+without a request or an outcome-dependent choice: retained OpenAlex payloads
+give a Southampton ePrints landing page for a work with Southampton-affiliated
+authors, and a Hannover university working-paper PDF for its Hannover-affiliated
+author. UCD/ANU leads use `hdl.handle.net`, whose final host remains unknown;
+BBVA's author/institution-copy eligibility is not established. Those three
+routes are not added by inference.
+
+`sources.yaml.population` is version 2, declared 2026-10-06. It preserves the
+v1 host/API predicates and adds only `eprints.soton.ac.uk` and
+`diskussionspapiere.wiwi.uni-hannover.de`. The new, empty round
+`s4-l02-repository-copies-2026-10-06-v2` holds policy digest
+`f53ed0699c770079d9d97e7992d661b14fb8448dd0600ba1ae3966a58d0b43ed`.
+V1 project bytes were saved with SHA-256
+`97cea1ebe253343d8c864833b3ecf85d3a2130bccc6706c8219b7d2fb5e4c59d`;
+the new bytes hash to
+`abb07e2fa08175ae557ec2416148008a5b64fba73a6579871698131767ffbb72`.
+Old rounds retain their frozen predicates and candidate denominators. The old
+selection and copy plans replay against the exact archived v1 bytes; changing
+classes, floor or registry does not qualify as a population-only replay.
+
+A host in this selector matches the discovery candidate's URL, not a copy URL
+found later. All four inspected DOI-keyed candidates had `doi.org` discovery
+URLs and were excluded in v1; the two newly listed copy hosts alone do not
+import them into v2. Controlled candidate intake and copy identity remain
+separate work. The new round currently has zero candidates, zero requests,
+zero admitted sources and no acquisition rate.
+
+The next network action is frozen in a two-target plan, SHA-256
+`07f1176800b6fc940dfe78aa0a386dcc4ccbf125b1d2e002613527a9f0e9d72f`.
+It is an isolated copy inspection with exact host checks, at most five physical
+page/copy transfers and four robots transfers. Its offline preview shows two
+pending targets and no writes. Operator approval of this specific campaign is
+required by `AGENTS.md` before execution. No source-selection protocol,
+floor, registry, acquisition or verdict changed here.
+
 ## D84 — A typed React frontend over a read-only JSON API, packaged as containers (2026-10-06)
 
 The operator retired server-rendered Python HTML for the portal's new views and asked for a

@@ -18,6 +18,35 @@ each step was reviewed and corrected by Claude Code, as recorded in
 `docs/superpowers/plans/2026-10-06-portal-frontend-progress.md`. Nothing in the portal writes,
 signs or starts work.
 
+2026-10-06 L02 university repository round: the operator authorized a new
+dated population. `projects/alembic-s4-lungo/sources.yaml` now declares
+population v2 with two additional exact hosts, `eprints.soton.ac.uk` and
+`diskussionspapiere.wiwi.uni-hannover.de`, selected from retained OpenAlex
+copy locations and matching author affiliations before any request. The new
+round `s4-l02-repository-copies-2026-10-06-v2` is frozen in
+`populations.jsonl` under policy SHA-256
+`f53ed0699c770079d9d97e7992d661b14fb8448dd0600ba1ae3966a58d0b43ed`.
+It currently has zero candidates and zero acquisition attempts. The v1 and v2
+source-policy bytes are preserved under private
+`audits/source-selection/population-policies/`, with declaration audit
+`declaration-d1a5822d739c35e24ec9dd6d820ca96db2b6b22fb15bdca520b90f4901568912.json`.
+Old v1 copy and screening plans preview against the archived v1 policy; the
+original rounds and denominators have not moved.
+
+This population is a discovery metadata selector: adding a university copy
+host does not import any DOI-keyed work whose discovery URL is `doi.org`.
+Controlled candidate intake still needs its own evidence-backed source route,
+identity and selection checks. `hdl.handle.net` and BBVA remain outside the
+new selector. A two-target copy-inspection campaign is frozen, offline previewed
+and **not yet network-executed** at
+`audits/source-selection/l02-v2/repository-copy-check-2026-10-06/plan.json`,
+SHA-256 `07f1176800b6fc940dfe78aa0a386dcc4ccbf125b1d2e002613527a9f0e9d72f`.
+It covers one Hannover direct PDF and one Southampton landing page with at
+most one same-host PDF follow-up: at most five physical page/copy transfers
+and four robots transfers, exact hosts only. The campaign writes request and
+isolated audit rows and cannot admit a candidate. `AGENTS.md` requires a
+specific operator authorization before executing this new network campaign.
+
 2026-10-06 research portal, phases P0–P2b implemented: the canonical selector
 (`claimstone/scope.py`) now scopes every per-round figure in `round_state` (claims, reviews,
 chunks and the stage's own confirmation count no longer leak across rounds, review F1/F3;
