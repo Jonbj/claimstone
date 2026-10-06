@@ -346,7 +346,89 @@ NOT DONE:
   `memory: 2g` on `api` for S6.
 Checks: `pytest -q` 1213 passed, 7 skipped; web 0 errors, 36 tests passed, build + check-csp ok.
 
-### R1 — IN PROGRESS
+### R1 — DONE
+- [x] R1.1 `question_state_counts` in `claimstone/portal_state.py`: the seven displayed states
+      (`signed`, `stale`, `awaiting_a_person`, `provisional`, `no_verified_claim`,
+      `not_applicable`, `historical`) counted over the matrix rows with the matrix's own
+      precedence (one `compute()`, no ledger read of its own); added to `flow_overview`'s payload
+- [x] R1.2 `source_tracker` in `claimstone/portal_state.py`: one entry per scoped candidate, in
+      scoped candidate order, with `candidate_key`, `source_id`, `source_class`, `state`
+      (admissibility's own branches: `confirmed` | `awaiting_normalize` | `not_a_document` |
+      `refused` | `not_attempted` | `unclassified`) and a display-ready `tooltip` (a 403 carries
+      the F19 text, `PAYWALL_TEXT`); added to `flow_overview`'s payload
+- [x] R1.3 schema: `api_schema.py` OVERVIEW gains both fields (the two vocabularies as enums);
+      regenerate `docs/contracts/portal-api.schema.json`, the fixtures
+      (`tools/build_portal_fixtures.py`) and `web/src/lib/api-types.ts` so F8 stays green
+- [x] R1.4 Python tests: counts sum to the registry size; tracker order equals the scoped
+      candidate order; a 403 entry's tooltip is the F19 text; unbound and flow selectors both
+      carry the fields; `flow_overview` still runs one `compute()`
+- [x] R1.5 full checks green (`pytest -q`, `validate --all-projects`,
+      `check_instrument_versions.py`) and web checks green (`npm run check && npm test && npm
+      run build`)
+
+Checks (final lines):
+```
+$ .venv/bin/pytest -q
+1219 passed, 7 skipped in 36.51s
+$ .venv/bin/claimstone validate --all-projects
+OK   alembic-s4: 16 topics, 28 questions (registry v3, frozen 2026-09-25), 6 source classes, acquisition floor 0.80 (v1), 25 manifest rows, registry 9c3f265069c6
+OK   alembic-s4-breve: 12 topics, 17 questions (registry v1, frozen 2026-09-28), 6 source classes, acquisition floor 0.80 (v1), 18 manifest rows, registry 3fdb5aea634d
+OK   alembic-s4-lungo: 12 topics, 18 questions (registry v1, frozen 2026-09-28), 6 source classes, acquisition floor 0.80 (v1), 19 manifest rows, registry ee040e0c3cfc
+OK   example-news-and-returns: 16 topics, 20 questions (registry v2, frozen 2026-09-25), 6 source classes, acquisition floor 0.80 (v1), registry 85e5fcc44ddc
+OK   pilot-screen-time: 4 topics, 8 questions (registry v1, frozen 2026-09-28), 6 source classes, acquisition floor 0.80 (v1), 28 manifest rows, registry 82007de2b569
+OK   pmc-screen-time: 4 topics, 8 questions (registry v1, frozen 2026-09-28), 6 source classes, acquisition floor 0.80 (v1), 40 manifest rows, registry 82007de2b569
+$ .venv/bin/python tools/check_instrument_versions.py
+26 instrument version(s) acknowledged in the design record
+$ cd web && npm run check && npm test && npm run build
+svelte-check found 0 errors and 0 warnings
+Tests  36 passed (36)
+check-csp: ok (1 inline script(s), hashed)
+$ .venv/bin/python tools/build_portal_fixtures.py
+wrote 20 fixture(s) under web/tests/fixtures/ (148660 bytes)
+$ .venv/bin/python tools/build_portal_api_schema.py
+wrote contracts/portal-api.schema.json (34427 bytes, 13 routes)
+```
+Decisions (spec silent): (1) The seven states' precedence is the matrix's verdict cell —
+operational first, then the recorded verdict (stale before signed), then NO_VERIFIED_CLAIM —
+then the two annotations an unsigned row can carry, historical before provisional (mirroring
+`synthesize.verdicts`'s awaiting count, which excludes an unavailable round before it inspects
+provisional), with the fresh unsigned profile as the residual `awaiting_a_person`. A row that
+is both NO_VERIFIED_CLAIM and provisional — Q02 in the fixture: 2 claims harvested, 0 reviewed —
+counts as `no_verified_claim`, because that is the chip the matrix's verdict cell shows and the
+provisional chip is the annotation beneath it; measured on the fixture, this is the only such
+row. (2) A question with no profile at all (the r2 legacy round's all 20) counts as
+`awaiting_a_person`: the spec's seven states include no "never profiled" state and the counts
+must sum to the registry size, so the residual absorbs it — the smallest decision that keeps
+both. (3) `question_state_counts` is a pure function over the matrix dict the page already
+built (zero ledger reads); `source_tracker` reads only `candidates.jsonl` and
+`documents.jsonl` via `latest_by` and takes `collapse`'s rows from the one `compute()` — the
+acquisitions ledger is not walked twice, and the existing
+`test_flow_overview_computes_each_reading_once` still passes. (4) The tracker states are
+`admissibility.rate`'s own branches: acquired → `documents.jsonl` decides
+confirmed/awaiting_normalize/not_a_document; else the recorded failure class, `UNCLASSIFIED`
+named as its own state, and a classless failed row is `not_attempted` — rate's own word for it
+in its failures histogram. `source_class` falls back to `"UNCLASSIFIED"` (admissibility's
+bucket word, so invariant 6 keeps travelling); `source_id` stays null when the candidate
+carries none (the fixture's `r2-w`). (5) Tooltips: fixed display texts for the five
+non-refusal states; a refusal follows F19 — `PAYWALL_TEXT` for `PAYWALL_403`, else
+`failure_display`'s text (the stored code, asserting nothing). (6) `source_tracker` raises
+`LedgerCorrupt` when `computed.collapsed` is None instead of returning null, and the schema
+declares a plain array: measured, interior damage in `acquisitions.jsonl` fails the overview
+route with the 500 LEDGER_CORRUPT envelope — `round_state.activity` raises before the tracker
+is built — so a null field would be dead code, and the API's envelope is the single error
+channel (the S2-era decision); the guard keeps a direct caller from reading "no collapse rows"
+as "nothing attempted". (7) `web/src/lib/api-types.ts` was regenerated in R1 although the step
+does not name it: F8's currency test compares it against the schema, and leaving it stale
+would keep a red web test between R1 and R2. (8) Regenerating the fixtures touched only the
+three overview fixtures (flow, unbound `-`, unbound r2), 148660 bytes total.
+Deviations: R1.1–R1.3 landed in one commit (`wip(R1.1,R1.2,R1.3)`) rather than one per
+sub-task: the payload change, the schema declaration and the regenerated
+contract/fixtures/types are interdependent — A2's minimal validator refuses an overview
+payload with undeclared top-level fields, so no smaller commit passes the checks (the same
+shape as S4's recorded deviation). The S5 section header also changed from `IN PROGRESS` to
+`DONE` in the `docs: plan R1` commit: the table already said DONE and every sub-task was
+ticked — the header was an oversight, not open work.
+NOT DONE:
 - [x] R1.1 `question_state_counts` in `claimstone/portal_state.py`: the seven displayed states
       (`signed`, `stale`, `awaiting_a_person`, `provisional`, `no_verified_claim`,
       `not_applicable`, `historical`) counted over the matrix rows with the matrix's own
