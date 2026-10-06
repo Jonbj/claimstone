@@ -13,7 +13,7 @@ One step per session; markers below are the authority for "what is next".
 | S5 routes and components | DONE (SvelteKit; superseded by R2–R4) |
 | R1 server fields for the React design (`question_state_counts`, `source_tracker`) | DONE |
 | R2 React scaffold replaces the SvelteKit scaffold | DONE |
-| R3 pages, part 1 (index, project, inbox, admin) | TODO |
+| R3 pages, part 1 (index, project, inbox, admin) | IN PROGRESS |
 | R4 pages, part 2 (flow overview, question, lineage, dossier) + CSP preview check | TODO |
 | S6 Dockerfile, compose services, `portal.sh` | TODO |
 | S7 parity check, D83, docs, instrument registration | TODO |
@@ -565,3 +565,23 @@ NOT DONE:
 - Endorsed: the re-pinning to §8.2's majors, recharts 2.15.4, and recording the `--amend` openly.
 Checks: `npm ci` added 304; typecheck clean; vitest 31 passed; build + check-csp ok;
 `pytest -q` 1220 passed, 7 skipped.
+
+### R3 — IN PROGRESS
+- [ ] R3.1 index page (§8.3): one Card per project; flows and unbound selectors as rows,
+      each row fetching its own `/summary` lazily and in parallel (skeleton while
+      pending, floor badge — amber below floor, verdict and inbox counts, never a zero);
+      ConfigError / registry drift / integrity_error surfaced per project; unbound rows
+      carry the "legacy: protocol not verified" badge; placeholder routes so the rows'
+      deep links resolve before R4 (`p/:project/f/:sel`, `p/:project/u/:sel`, catch-all)
+- [ ] R3.2 `InboxCards` component (ported) and the inbox page: `/projects` then every
+      selector's `/inbox` lazily and in parallel, grouped project → category, server
+      order inside each group; the operator's category filter is the only filter, a
+      selection control, not a form (§4.2 rules 4, 6)
+- [ ] R3.3 `IntegrityPanel` component (ported) and the project page `p/:project`:
+      integrity, flows, unbound selectors, whole-project activity; 3 s poll (§4.2
+      rule 8) with a discreet "refreshing…" on same-view refresh (R2 review rule)
+- [ ] R3.4 admin page: credentials presence booleans only, configured/available
+      backends with the server's notes verbatim, instrument versions
+- [ ] R3.5 full checks green: web (`npm run typecheck && npm test && npm run build`)
+      and Python (`pytest -q`, `validate --all-projects`,
+      `check_instrument_versions.py`)
