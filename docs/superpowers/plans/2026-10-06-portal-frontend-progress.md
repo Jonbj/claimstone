@@ -475,7 +475,7 @@ vitest 36 passed; build + check-csp ok.
       `CategoryBar`, `BarList`, `DonutChart`, `ProgressBar`) into `src/components/tremor/` with
       their README/licence and source version recorded; `recharts` and `lucide-react` pinned;
       bundled Geist + Geist Mono via `@fontsource-variable/*`
-- [ ] R2.3 port `api.ts`, `api-types.ts`, `vocabulary.ts` unchanged into `src/lib/`; add the
+- [x] R2.3 port `api.ts`, `api-types.ts`, `vocabulary.ts` unchanged into `src/lib/`; add the
       `useApi(fetcher, deps)` and `usePoll` hooks (§8.2 data row, §4.2 rule 8)
 - [ ] R2.4 the shell (white top bar, tabs Projects · Flows · Inbox · Administration, `read-only ·
       rev <12>`, theme toggle per §8.3) and the base components `Chip`, `Fraction`, `Pending`,
