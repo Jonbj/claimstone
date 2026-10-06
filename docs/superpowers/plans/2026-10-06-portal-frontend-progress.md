@@ -6,7 +6,7 @@ One step per session; markers below are the authority for "what is next".
 
 | step | marker |
 |---|---|
-| S1 shared transport base class out of `claimstone/portal.py` | TODO |
+| S1 shared transport base class out of `claimstone/portal.py` | IN PROGRESS |
 | S2 `claimstone/api.py` + tests A1–A7 | TODO |
 | S3 schema, validator, fixtures | TODO |
 | S4 scaffold `web/` | TODO |
@@ -27,3 +27,14 @@ $ .venv/bin/python tools/check_instrument_versions.py
 26 instrument version(s) acknowledged in the design record
 (exit 0)
 ```
+
+### S1 — IN PROGRESS
+- [ ] S1.1 `claimstone/transport.py`: `BaseHandler` with quiet logging, the response plumbing that carries the security headers (CSP as a `csp` class attribute), the Host/Origin authority checks with `--allow-host`, the 405 verb refusals, and the lookup-never-path helpers (`_project_root`, `_loaded`, `_flow`); `FLOW_ID` and `LOOPBACK_HOSTS` move with them
+- [ ] S1.2 `portal._Handler` subclasses `BaseHandler` and keeps only routing and rendering; `CSP` stays in `portal.py` and becomes the handler's `csp`; behaviour unchanged
+- [ ] S1.3 `portal.py` import cleanup; `tests/test_portal.py` green unchanged
+- [ ] S1.4 full checks green (`pytest -q`, `validate --all-projects`, `check_instrument_versions.py`)
+
+Checks:
+Decisions (spec silent): base module named `claimstone/transport.py`; CSP becomes a `csp` class attribute so `api.py` can carry its stricter policy (§3.1) without copying `_send`; `make_server`/`serve` stay in `portal.py` — the spec's S1 is the handler base, and `api.py` (S2) gets its own server factory
+Deviations:
+NOT DONE:
