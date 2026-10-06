@@ -103,6 +103,48 @@ failed lookups from never-looked-up candidates and preserves an available
 abstract after a later lookup failure. No new scientific
 claim, profile, admission or verdict was produced by this continuation.
 
+After the Crossref fallback, the operator asked to continue every offline step.
+Eight additional advisory abstract observations were recorded after checking
+each abstract against its retained payload hash and metadata row. The three new
+OpenAlex texts yield two contextual exclusions (conference-call tone with
+annual crash-risk outcome; ESG abnormal returns limited to event day) and one
+not-direct result (news-derived volatility and broad price-direction prediction,
+without a firm-level text-sentiment return test). Five earlier cached abstracts
+were also screened: two provisional direct candidates report weekly-news
+prediction over one quarter, one contextual exclusion uses media sentiment as a
+moderator of pollution-news exposure returns, one index-level aggregate-news
+study is not firm-level evidence, and one remains uncertain because its “short”
+and “long” horizons are unspecified. The two one-quarter candidates have
+different DOI keys but near-identical titles/abstracts; they are not merged and
+need a same-work/version check before independent-study counting. These eight
+rows are `AI_PROVISIONAL`, use `codex-interactive` with unknown harness version,
+and remain advisory. No model or network calls, identity rows, source admission,
+profile or verdict were created.
+
+The current v2 view is **47 observed / 783 unobserved** out of 830, with three
+provisional direct-candidate keys (one held full-text candidate plus the two
+possible versions), 21 context, six uncertain, zero admitted, and the cohort
+open. The fresh offline queue is
+`audits/source-selection/queues/5cd7c3f8aa0e98b8f369e80adfc490ad7bfd201dabdd64f273f35add84360d54.json`:
+789 tasks, comprising six unresolved observations, one verified relation to
+reuse, eleven keys without abstracts from both checked providers, 364 cached
+metadata tasks and 407 metadata lookups. Next work is local validation of the
+possible-version pair and inspection of cached legal-copy locations. Fetching
+any new copy remains a separately authorized network campaign.
+
+An offline audit of cached copy metadata for the eleven provider-exhausted keys
+found 52 listed routes, but none uses a host in the frozen exact host selector.
+Potential repository/author-copy leads include BBVA Research, University
+College Dublin (`hdl.handle.net`), Leibniz University Hannover and Australian
+National University (`hdl.handle.net`). These are metadata URLs only: no route
+was checked, no robots request was made and no bytes were fetched. The private
+content-addressed route audit is
+`audits/source-selection/copy-locations/c5b013341fff344bdf04f2046dbc0ba7acede6e23249fe8c9133bff16d641ddc.json`.
+The frozen `sources.yaml` population says additional university/author hosts
+require a dated population decision and a new round. Do not request these copies
+or count their papers in the current population unless the operator changes that
+scope.
+
 2026-10-06 research portal proposal: the operator requested protocol-bound research flows,
 per-stage drilldown, live events, human source/PDF intake, extractable results and model/key
 administration. The design at

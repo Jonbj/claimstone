@@ -218,6 +218,30 @@ keys and route them to lawful copy or operator-supplied text inspection. A
 successful metadata HTTP response is not an abstract, and another automatic
 request to either checked provider would add no evidence.
 
+The next offline pass checked eight additional cached abstracts against their
+recorded payload hashes. Three were newly fetched OpenAlex abstracts and five
+were older locally retained records. The two one-quarter prediction abstracts
+have separate DOI keys but near-identical titles and text; they remain separate
+provisional candidates until a work/version relationship is established. The
+scheduler must compare DOI, title, author, venue, publication/version data and
+the held text before it counts them as independent evidence. Record an
+OpenAlex provider from its request/campaign provenance even where the metadata
+row omits an explicit provider field; do not weaken the raw-payload or exact
+abstract checks to accommodate that representation. The resulting view has 47
+observed of 830, 783 unobserved, six uncertain observations and a fresh 789-task
+queue. No observation admitted a source.
+
+An offline review of cached location metadata for eleven works with no abstract
+from either checked provider found 52 URLs, all outside the project's exact
+frozen host selector. Some appear to be university repositories or a research
+institution, but provider OA labels do not verify copy identity, authorship,
+robots permission or eligibility under the declared population. The scheduler
+must show these as `OUTSIDE_FROZEN_HOST_SELECTOR`, retain their source payload
+hashes and stop before requesting them. `sources.yaml` requires a dated operator
+population decision and a new round before any newly named university/author
+host can enter the acquisition population. Preparing a metadata-derived URL is
+not authorization to fetch it.
+
 D72 adds a measured resume requirement: a malformed model answer is a terminal unanswered case,
 not a reason to abandon all independent cases or retry the same call invisibly. The scheduler
 should finish the remaining frozen work, preserve the failed bytes, and report the missing
