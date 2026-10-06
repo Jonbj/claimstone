@@ -242,6 +242,25 @@ population decision and a new round before any newly named university/author
 host can enter the acquisition population. Preparing a metadata-derived URL is
 not authorization to fetch it.
 
+An offline comparison of two separately keyed L02 candidates found same-author,
+near-identical titles and matching abstract statements about a 900,000-story
+dataset and a one-quarter weekly-news horizon. Their records identify an SSRN
+2013 item and the 2017 *Financial Analysts Journal* version. Treat them as one
+possible study family for planning, not two independent works; require copy-level
+identity evidence before writing a production identity relation or transferring
+source observations. The OpenAlex abstract is an inverted index and must be
+reconstructed before exact-text comparisons. The audit records this as
+`POSSIBLE_VERSION` without changing selection or admission.
+
+When cached copy routes fall outside the exact population hosts, the operator
+decision has two parts: approve a dated population revision/new round for named
+eligible host(s), then separately approve any bounded network campaign. A
+resolver such as `hdl.handle.net` is not the final repository host; inspect its
+redirect target under a specifically bounded plan, stop on an unapproved host,
+and do not add a wildcard. A commercial research host such as BBVA requires
+evidence that the copy meets the existing author/institution rule before it is
+proposed for inclusion.
+
 D72 adds a measured resume requirement: a malformed model answer is a terminal unanswered case,
 not a reason to abandon all independent cases or retry the same call invisibly. The scheduler
 should finish the remaining frozen work, preserve the failed bytes, and report the missing

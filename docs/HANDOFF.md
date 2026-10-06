@@ -145,6 +145,25 @@ require a dated population decision and a new round. Do not request these copies
 or count their papers in the current population unless the operator changes that
 scope.
 
+Offline identity comparison of the two one-quarter direct candidates supports a
+`POSSIBLE_VERSION` relation: same authors, near-identical titles, and two exact
+shared passages, with SSRN 2013 versus Financial Analysts Journal 2017 metadata.
+Keep them as one possible study family; no identity-ledger row or evidence
+transfer was made without a held copy. The corrected assessment is
+`audits/source-selection/identity-audits/a12ac3e23b0f5cecbd9385732af940b576b1b28cd187940cbf2fe5bece357978.json`.
+It supersedes an earlier private audit whose abstract-similarity calculation
+used the raw OpenAlex inverted-index object; that earlier metric is invalid and
+must not be used.
+
+A draft population-change proposal lists four cached copy routes and the
+questions that need an operator decision:
+`audits/source-selection/population-proposals/8b94db833b958f4f21bdfe69f7aeed92624855fbe64f307f052d0440908dd2d5.json`.
+It is not applied. The exact allowed hosts in `sources.yaml` are unchanged. The
+next decision is whether to create a dated population version and new L02 round
+for additional verified university/author repositories. A network request
+approval alone does not change that selector; redirect destinations also need
+their own host and robots checks.
+
 2026-10-06 research portal proposal: the operator requested protocol-bound research flows,
 per-stage drilldown, live events, human source/PDF intake, extractable results and model/key
 administration. The design at
