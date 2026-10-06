@@ -1,21 +1,10 @@
 <script lang="ts">
   // Integrity (§4.1): can these numbers be trusted now. Every state is a named chip
   // with its word (§4.2 rule 7); a null is a dash, never zero (rule 1).
+  import type { Integrity } from "$lib/api-types";
   import Chip from "./Chip.svelte";
 
-  export type IntegrityData = {
-    config: { state: string; error: string | null };
-    registry: { state: string; error: string | null };
-    ledger_repairs: number;
-    orphans: number | null;
-    invalid_flows: string[];
-    instruments: string[];
-    code: { revision: string | null; dirty: boolean | null; grobid_image: string };
-    ledgers: Record<string, { rows: number; torn_tail: boolean; error: string | null }>;
-    [k: string]: unknown;
-  };
-
-  let { integrity }: { integrity: IntegrityData } = $props();
+  let { integrity }: { integrity: Integrity } = $props();
 </script>
 
 <section>
@@ -43,11 +32,11 @@
   <p class="line"><b>code</b> {(integrity.code.revision ?? "unknown").slice(0, 12)}
     {#if integrity.code.dirty}· dirty{/if}
     · grobid {(integrity.code.grobid_image ?? "").slice(0, 40)}</p>
-  {#each Object.entries(integrity.ledgers).toSorted(([a], [b]) => a.localeCompare(b)) as [name, entry] (name)}
+  {#each Object.entries(integrity.ledgers).toSorted(([a], [b]) => String(a).localeCompare(String(b))) as [name, entry] (name)}
     <p class="line">
-      <span class="mono">{name}</span> · {entry.rows} rows
-      {#if entry.torn_tail}· <Chip text="torn tail" />{/if}
-      {#if entry.error}· <Chip text={entry.error} />{/if}
+      <span class="mono">{name}</span> · {entry?.rows} rows
+      {#if entry?.torn_tail}· <Chip text="torn tail" />{/if}
+      {#if entry?.error}· <Chip text={entry.error} />{/if}
     </p>
   {/each}
 </section>

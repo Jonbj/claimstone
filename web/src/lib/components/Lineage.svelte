@@ -2,42 +2,16 @@
   // Invariant 1, end to end (§4.1): claim → review → chunk → document → acquisition →
   // candidate. A missing step is a named state, never an absence; the quote is rechecked
   // by the server (`quote_found`) and the failure is a named banner here.
+  import type { Lineage } from "$lib/api-types";
   import Chip from "./Chip.svelte";
 
-  export type LineageData = {
-    claim_id: string;
-    source_id: string;
-    steps: {
-      claim: Record<string, unknown>;
-      review: Record<string, unknown> | null;
-      chunk: {
-        chunk_id: string;
-        evidence_quote: string;
-        generation_sha256: string | null;
-        text_sha256: string | null;
-        text: string | null;
-        quote_found: boolean;
-      } | null;
-      document: Record<string, unknown> | null;
-      document_pdf_instrument: string | null;
-      acquisition: Record<string, unknown> | null;
-      acquisition_candidate_key: string | null;
-      candidate: Record<string, unknown> | null;
-    };
-    [k: string]: unknown;
-  };
-
-  let { lineage }: { lineage: LineageData } = $props();
+  let { lineage }: { lineage: Lineage } = $props();
 
   const claim = $derived(lineage.steps.claim as Record<string, string | null>);
   const review = $derived(lineage.steps.review);
   const chunk = $derived(lineage.steps.chunk);
   const document = $derived(lineage.steps.document);
-  const acquisition = $derived(
-    lineage.steps.acquisition as
-      | { attempts?: Array<Record<string, unknown>>; [k: string]: unknown }
-      | null,
-  );
+  const acquisition = $derived(lineage.steps.acquisition);
   const candidate = $derived(lineage.steps.candidate as Record<string, string> | null);
 
   // §4.2 rule 1: the marked text is the chunk's, with the quote's first occurrence

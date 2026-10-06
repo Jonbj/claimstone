@@ -261,7 +261,7 @@ Checks: `svelte-check` 0 errors 0 warnings; vitest 23 passed; build + check-csp 
       vitest F2, F7
 - [x] S5.3 components `Lineage`, `SourceDossier`, `IntegrityPanel` (§4.1); vitest F3 (a source
       scan of `src/` finds no `method:` other than GET and no `<form>`, comments stripped)
-- [ ] S5.4 routes: lazy index (`/projects` at once, then per-selector `/summary` in parallel,
+- [x] S5.4 routes: lazy index (`/projects` at once, then per-selector `/summary` in parallel,
       "computing…" never a zero), `p/[project]` (integrity, flows, unbound selectors, activity),
       `p/[project]/[kind=selkind]/[sel]` (overview), the question/claim/source routes, `inbox`
       (grouped by project then category, operator category filter only), `admin`; 3 s poll on

@@ -3,21 +3,9 @@
   // document, active chunks, advisory rows and the claim count per question. Every
   // `failure_display` is rendered verbatim (§4.2 rule 5) — the UI never re-derives it
   // from `failure_class`.
-  export type DossierData = {
-    candidate_key: string;
-    source_id: string;
-    candidate: { source_class?: string; round?: string } | null;
-    acquisitions: Array<Record<string, any>>;
-    counted_acquisition: Record<string, any> | null;
-    document: Record<string, any> | null;
-    active_chunks: number | null;
-    advisory: Record<string, Array<Record<string, any>>>;
-    advisory_note: string;
-    claims_by_question: Record<string, number>;
-    [k: string]: unknown;
-  };
+  import type { SourceDossier } from "$lib/api-types";
 
-  let { dossier }: { dossier: DossierData } = $props();
+  let { dossier }: { dossier: SourceDossier } = $props();
 </script>
 
 <section>
