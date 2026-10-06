@@ -156,6 +156,13 @@ export interface Lineage {
   source_id: string;
   steps: {
     acquisition: {
+      attempts: {
+        failure_display: string;
+        fetch_version: number;
+        http_status: number | null;
+        url: string | null;
+        [k: string]: unknown;
+      }[];
       [k: string]: unknown;
     } | null;
     acquisition_candidate_key: string | null;
@@ -361,11 +368,25 @@ export interface QuestionDetail {
     round: string | null;
   };
   text: string;
-  verdict: null | "SUPPORTED" | "CONTRADICTED" | "CONTESTED_IN_LITERATURE" | "UNANSWERED_IN_LITERATURE" | "NEVER_ASKED";
+  verdict: {
+    adjudicated_at: string;
+    adjudicated_by: string;
+    profile_sha256: string;
+    question_id: string;
+    rationale: string;
+    verdict: "SUPPORTED" | "CONTRADICTED" | "CONTESTED_IN_LITERATURE" | "UNANSWERED_IN_LITERATURE" | "NEVER_ASKED";
+  } | null;
   verdict_stale: boolean;
 }
 export interface SourceDossier {
   acquisitions: {
+    attempts: {
+      failure_display: string;
+      fetch_version: number;
+      http_status: number | null;
+      url: string | null;
+      [k: string]: unknown;
+    }[];
     [k: string]: unknown;
   }[];
   active_chunks: number | null;

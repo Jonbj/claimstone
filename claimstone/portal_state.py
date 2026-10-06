@@ -21,7 +21,7 @@ import math
 import os
 import pathlib
 from dataclasses import dataclass
-from typing import Any, Iterable
+from typing import Any, Iterable, Mapping
 
 from claimstone import admissibility, claim_records, chunk_sets, flows, net, review, round_state, scope, synthesize
 from claimstone.config import (ConfigError, Project, RegistryDrift, check_registry_drift,
@@ -38,6 +38,24 @@ NEW_FLOW_NOTE = ("a protocol change is a new flow: `claimstone flow create ... "
                  "--derived-from <id> --relation supersedes`")
 INTEGRITY_NOTE = "inspect by hand; never repair interior damage"
 SIGN_NOTE = "a person reads the profile and signs; an agent does not"
+
+
+def failure_display(failure_class: Any) -> str:
+    """F19, one implementation for every view: the stored code beside a display text that
+    asserts no inference the UI or the reader must not repeat as a fact."""
+    text = str(failure_class or "")
+    if text == "PAYWALL_403":
+        return "HTTP 403 (access refused) [PAYWALL_403]"
+    return text
+
+
+def _attempt_display(attempt: Mapping[str, Any]) -> dict[str, Any]:
+    """One attempt row for the API, with the failure class rendered display-ready (F19):
+    the stored code's name asserts an inference the UI must never repeat as a fact, so the
+    server says it once and the frontend renders `failure_display` verbatim (§4.2 rule 5)."""
+    out = dict(attempt)
+    out["failure_display"] = failure_display(attempt.get("failure_class"))
+    return out
 
 CATEGORY_ORDER = ("INTEGRITY", "PROTOCOL", "ACQUISITION", "CLASSIFICATION", "NORMALIZE",
                   "EXTRACT", "REVIEW", "ADJUDICATION", "ADVISORY")
@@ -692,6 +710,10 @@ def lineage(project: Project, store: Store, selector: scope.Selector,
     key = next((k for k, row in scoped.items()
                 if str(row.get("source_id") or k) == source_id), None)
     acquisition = admissibility.collapse(store).get(key) if key is not None else None
+    if acquisition is not None:
+        # F19: each attempt carries its display-ready failure class; the UI renders it verbatim.
+        acquisition = {**acquisition,
+                       "attempts": [_attempt_display(a) for a in acquisition.get("attempts") or []]}
 
     return {
         "project": project.name, "selector": selector.as_dict(),
@@ -726,7 +748,13 @@ def source_dossier(project: Project, store: Store, selector: scope.Selector,
 
     every_row = [row for row in store.read("acquisitions.jsonl")
                  if str(row.get("candidate_key")) == str(candidate_key)]
+    # F19: display-ready failure classes on every attempt of every row, and on the counted one.
+    every_row = [{**row, "attempts": [_attempt_display(a) for a in row.get("attempts") or []]}
+                 for row in every_row]
     counted = admissibility.collapse(store).get(str(candidate_key))
+    if counted is not None:
+        counted = {**counted,
+                   "attempts": [_attempt_display(a) for a in counted.get("attempts") or []]}
 
     document = store.latest_by("documents.jsonl", "source_id").get(source_id)
     try:

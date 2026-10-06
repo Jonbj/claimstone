@@ -626,6 +626,43 @@
      "additionalProperties": false,
      "properties": {
       "acquisition": {
+       "properties": {
+        "attempts": {
+         "items": {
+          "properties": {
+           "failure_display": {
+            "type": "string"
+           },
+           "fetch_version": {
+            "type": "integer"
+           },
+           "http_status": {
+            "type": [
+             "integer",
+             "null"
+            ]
+           },
+           "url": {
+            "type": [
+             "string",
+             "null"
+            ]
+           }
+          },
+          "required": [
+           "url",
+           "http_status",
+           "failure_display",
+           "fetch_version"
+          ],
+          "type": "object"
+         },
+         "type": "array"
+        }
+       },
+       "required": [
+        "attempts"
+       ],
        "type": [
         "object",
         "null"
@@ -1377,13 +1414,45 @@
      "type": "string"
     },
     "verdict": {
-     "enum": [
-      null,
-      "SUPPORTED",
-      "CONTRADICTED",
-      "CONTESTED_IN_LITERATURE",
-      "UNANSWERED_IN_LITERATURE",
-      "NEVER_ASKED"
+     "additionalProperties": false,
+     "properties": {
+      "adjudicated_at": {
+       "type": "string"
+      },
+      "adjudicated_by": {
+       "type": "string"
+      },
+      "profile_sha256": {
+       "type": "string"
+      },
+      "question_id": {
+       "type": "string"
+      },
+      "rationale": {
+       "type": "string"
+      },
+      "verdict": {
+       "enum": [
+        "SUPPORTED",
+        "CONTRADICTED",
+        "CONTESTED_IN_LITERATURE",
+        "UNANSWERED_IN_LITERATURE",
+        "NEVER_ASKED"
+       ],
+       "type": "string"
+      }
+     },
+     "required": [
+      "question_id",
+      "verdict",
+      "rationale",
+      "adjudicated_by",
+      "adjudicated_at",
+      "profile_sha256"
+     ],
+     "type": [
+      "object",
+      "null"
      ]
     },
     "verdict_stale": {
@@ -1414,6 +1483,43 @@
    "properties": {
     "acquisitions": {
      "items": {
+      "properties": {
+       "attempts": {
+        "items": {
+         "properties": {
+          "failure_display": {
+           "type": "string"
+          },
+          "fetch_version": {
+           "type": "integer"
+          },
+          "http_status": {
+           "type": [
+            "integer",
+            "null"
+           ]
+          },
+          "url": {
+           "type": [
+            "string",
+            "null"
+           ]
+          }
+         },
+         "required": [
+          "url",
+          "http_status",
+          "failure_display",
+          "fetch_version"
+         ],
+         "type": "object"
+        },
+        "type": "array"
+       }
+      },
+      "required": [
+       "attempts"
+      ],
       "type": "object"
      },
      "type": "array"

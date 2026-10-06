@@ -66,6 +66,11 @@ _CODE = {
 
 _VERDICT_OR_NULL = {"enum": [None, *VERDICTS]}
 
+# An attempt's failure class, display-ready (F19): a stored class name asserts an inference
+# the UI must not repeat as a fact, so the server renders it once and the frontend shows it
+# verbatim (§4.2 rule 5). `HTTP 403 (access refused) [PAYWALL_403]` and friends.
+_FAILURE_DISPLAY = {"type": "string"}
+
 _CARD = {
     "type": "object",
     "required": ["category", "scope", "subject", "cause", "command", "note"],
@@ -390,7 +395,22 @@ QUESTION_DETAIL = _payload("question detail", {
         "additionalProperties": False,
     },
     "results": {"type": "array", "items": {"type": "object"}},
-    "verdict": _VERDICT_OR_NULL,
+    # The recorded adjudication row itself, or null: the UI renders the word, who signed and
+    # when — `adjudicate` is the only verdict-producing call and its row is the evidence.
+    "verdict": {
+        "type": ["object", "null"],
+        "required": ["question_id", "verdict", "rationale", "adjudicated_by",
+                     "adjudicated_at", "profile_sha256"],
+        "properties": {
+            "question_id": _STR,
+            "verdict": {"type": "string", "enum": list(VERDICTS)},
+            "rationale": _STR,
+            "adjudicated_by": _STR,
+            "adjudicated_at": _STR,
+            "profile_sha256": _STR,
+        },
+        "additionalProperties": False,
+    },
     "verdict_stale": _BOOL,
     "operational_not_applicable": _BOOL,
     "not_applicable_state": _STR_OR_NULL,
@@ -425,7 +445,28 @@ LINEAGE = _payload("lineage", {
             },
             "document": {"type": ["object", "null"]},
             "document_pdf_instrument": _STR_OR_NULL,
-            "acquisition": {"type": ["object", "null"]},
+            # The collapsed acquisition, with every attempt's failure class rendered
+            # display-ready (F19): `failure_display` is what the UI shows, verbatim.
+            "acquisition": {
+                "type": ["object", "null"],
+                "required": ["attempts"],
+                "properties": {
+                    "attempts": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "required": ["url", "http_status", "failure_display",
+                                         "fetch_version"],
+                            "properties": {
+                                "url": _STR_OR_NULL,
+                                "http_status": _INT_OR_NULL,
+                                "failure_display": _FAILURE_DISPLAY,
+                                "fetch_version": _INT,
+                            },
+                        },
+                    },
+                },
+            },
             "acquisition_candidate_key": _STR_OR_NULL,
             "candidate": {"type": ["object", "null"]},
         },
@@ -439,7 +480,31 @@ SOURCE_DOSSIER = _payload("source dossier", {
     "candidate_key": _STR,
     "source_id": _STR,
     "candidate": {"type": ["object", "null"]},
-    "acquisitions": {"type": "array", "items": {"type": "object"}},
+    # Every acquisition row in ledger order (§4.11), each attempt carrying its display-ready
+    # failure class (F19) — the UI never re-derives it from `failure_class`.
+    "acquisitions": {
+        "type": "array",
+        "items": {
+            "type": "object",
+            "required": ["attempts"],
+            "properties": {
+                "attempts": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "required": ["url", "http_status", "failure_display",
+                                     "fetch_version"],
+                        "properties": {
+                            "url": _STR_OR_NULL,
+                            "http_status": _INT_OR_NULL,
+                            "failure_display": _FAILURE_DISPLAY,
+                            "fetch_version": _INT,
+                        },
+                    },
+                },
+            },
+        },
+    },
     "counted_acquisition": {"type": ["object", "null"]},
     "document": {"type": ["object", "null"]},
     "active_chunks": _INT_OR_NULL,

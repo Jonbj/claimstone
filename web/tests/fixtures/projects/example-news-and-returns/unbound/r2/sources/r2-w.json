@@ -5,6 +5,7 @@
    "attempts": [
     {
      "failure_class": "PAYWALL_403",
+     "failure_display": "HTTP 403 (access refused) [PAYWALL_403]",
      "fetch_version": 3,
      "http_status": 403,
      "url": "https://example.org/locked.pdf"
@@ -41,6 +42,7 @@
   "attempts": [
    {
     "failure_class": "PAYWALL_403",
+    "failure_display": "HTTP 403 (access refused) [PAYWALL_403]",
     "fetch_version": 3,
     "http_status": 403,
     "url": "https://example.org/locked.pdf"

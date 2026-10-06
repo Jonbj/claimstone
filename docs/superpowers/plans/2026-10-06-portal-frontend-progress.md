@@ -247,7 +247,7 @@ Checks: `svelte-check` 0 errors 0 warnings; vitest 23 passed; build + check-csp 
 `pytest -q` 1211 passed, 7 skipped.
 
 ### S5 — IN PROGRESS
-- [ ] S5.1 `claimstone/api_schema.py` + `claimstone/portal_state.py`: `question_detail`'s `verdict`
+- [x] S5.1 `claimstone/api_schema.py` + `claimstone/portal_state.py`: `question_detail`'s `verdict`
       field returns the recorded adjudication row (a dict with `verdict`, `adjudicated_by`,
       `adjudicated_at`, `rationale`, `profile_sha256`, …), as the HTML portal already renders —
       the committed schema's `_VERDICT_OR_NULL` declaration there was wrong (it promised a bare

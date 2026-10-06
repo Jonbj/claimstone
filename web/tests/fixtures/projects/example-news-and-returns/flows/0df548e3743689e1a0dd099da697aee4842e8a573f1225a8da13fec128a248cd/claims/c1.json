@@ -13,6 +13,7 @@
    "attempts": [
     {
      "failure_class": null,
+     "failure_display": "",
      "fetch_version": 3,
      "http_status": 200,
      "url": "https://example.org/S01.pdf"
