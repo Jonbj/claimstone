@@ -470,7 +470,7 @@ vitest 36 passed; build + check-csp ok.
       `dist/`, pinned devDependencies and committed `package-lock.json`; the §8.4 CSP header in
       `preview.headers` and the new `check-csp.mjs` wired into `npm run build`;
       `npm ci && npm run typecheck && npm run build` green
-- [ ] R2.2 shadcn/ui via its CLI (`button`, `badge`, `card`, `table`, `tabs`, `select`,
+- [x] R2.2 shadcn/ui via its CLI (`button`, `badge`, `card`, `table`, `tabs`, `select`,
       `separator`, `tooltip`) into `src/components/ui/`; the Tremor Raw copies (`Tracker`,
       `CategoryBar`, `BarList`, `DonutChart`, `ProgressBar`) into `src/components/tremor/` with
       their README/licence and source version recorded; `recharts` and `lucide-react` pinned;
