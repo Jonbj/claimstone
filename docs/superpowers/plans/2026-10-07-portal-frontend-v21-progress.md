@@ -9,7 +9,7 @@ Spec: `docs/superpowers/specs/2026-10-07-portal-frontend-v21-spec.md`. Branch `r
 | F3 | The flow journey | DONE |
 | F4 | The reading desk | DONE |
 | F5 | Decisions and Add material | TODO |
-| F6 | Export, Administration, closing pass | IN PROGRESS |
+| F6 | Export, Administration, closing pass | DONE |
 
 ## F1 — Foundations (DONE)
 
@@ -242,7 +242,7 @@ and excluded-interpretations list (existing results table kept as is); the Decis
 A failed poll reload replaces the page by the error state and drops unsaved text (existing page behaviour;
 the draft is the safeguard). Not checked in a browser (no servers were started).
 
-## F6 — Export, Administration, closing pass (IN PROGRESS)
+## F6 — Export, Administration, closing pass (DONE)
 
 - [x] F6.1 Export page `/p/:project/f/:sel/export` (flows only): `api.exports` (GET), list, Create snapshot with the copies checkbox and the `copies` answer, per-row Verify (never on load; disabled while running), route in `App.tsx`.
   Files: `web/src/lib/api.ts`, `web/src/pages/ExportPage.tsx`, `web/src/App.tsx`, `web/tests/export.test.tsx`.
@@ -256,3 +256,44 @@ the draft is the safeguard). Not checked in a browser (no servers were started).
   Files: `web/tests/states.test.tsx` and the pages it exposes.
 - [x] F6.6 Docs: `docs/HANDOFF.md` portal paragraph, a new `D` decision, F6 result in this log.
   Files: `docs/HANDOFF.md`, `docs/DESIGN_DECISIONS.md`, this log.
+
+### F6 result
+
+Final checks (web/, then repo root):
+
+```
+gen:types unchanged            (git diff --exit-code web/src/lib/api-types.ts: clean)
+typecheck: tsc --noEmit -p tsconfig.json   (no errors)
+ Test Files  29 passed (29)
+      Tests  167 passed (167)
+✓ built in 3.90s
+check-csp: ok (no inline script, no style attribute)
+7 passed in 3.74s              (.venv/bin/pytest -q tests/test_api_contract.py tests/test_portal_fixtures.py)
+```
+
+Files: `web/src/pages/ExportPage.tsx`, `web/src/components/RowFields.tsx` (new); `web/src/pages/AdminPage.tsx`,
+`web/src/pages/QuestionPage.tsx`, `web/src/pages/TodayPage.tsx`, `web/src/lib/api.ts` (`exports`, GET),
+`web/src/App.tsx` (export route); tests `export` (7), `admin` (7), `states` (6) new, `readingdesk` (+2),
+`today` (+2); `docs/HANDOFF.md`, `docs/DESIGN_DECISIONS.md` (D109).
+
+Decisions where the spec was silent:
+- Reading desk keeps its last good `QuestionDetail` for the same view and renders it under a
+  "Refresh failed at T; the values shown are from T0" banner naming the server's code and message. The
+  panel is never unmounted, so its state is in memory only. A first load that fails is still the plain error
+  state. The next successful reload clears the banner. Times are the browser's ISO clock, shown as text.
+- Export: Verify is shown only signed in, one request at a time across rows; "Not checked in this visit" is
+  said per row; `copies` is rendered from the answer as included (key, licence) and excluded (key, reason);
+  `null` says copies were not asked for. Problems are strings (`export.verify`).
+- Admin: the credential name select is fed from the control admin's `credentials` keys; Save needs name,
+  value and password; reachability rows come from `check_targets`/`checks`; the paid-test reason is the
+  server's own 501 sentence, copied as a constant (`PAID_TEST_REASON`), and the route is never called.
+- Today's newest rows show only named scalar fields (kind, state, candidate, source, question, intake,
+  decision, export, verdict, acquired, failure class); other fields are not rendered.
+- The `/admin` page's old `font-semibold` title is now the serif title.
+
+Deviations: none from the spec.
+
+NOT DONE: Decisions, Add material and their routes (parallel branch; the reviewer wires them); the
+design's admin table of backends with runner presence, scheduler heartbeat, acquisition conduct block and
+spending-by-authorization (no API data); the export design's "what this snapshot would contain" preview
+and "newer data since" status (no API data). Nothing was checked in a browser.
