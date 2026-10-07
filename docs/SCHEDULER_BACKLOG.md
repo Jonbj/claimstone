@@ -341,3 +341,27 @@ following duties still need executable units:
 - Turn access refusals into a separate, verified copy-offer and human intake
   workflow. The operator decides any purchase; a supplied copy's effect on
   the floor must follow a declared project policy.
+
+## Provider integration review, 2026-10-07
+
+The operator-supplied guides in `docs/tools/` were compared with the current
+searchers, resolver, transport and D65–D67 measurements. These are scheduler
+duties and proposed experiments, not permission to alter a frozen round or
+start a network campaign.
+
+| Priority | Scheduler duty | Acceptance evidence |
+|---|---|---|
+| Before another arXiv campaign | Enforce one legacy arXiv API request at a time and at least three seconds between requests across workers under our control, including robots/API requests. The current generic fetcher waits only 0.34 seconds per instance. | A concurrent-worker test proves a shared limit; recorded physical request starts respect it. See `https://info.arxiv.org/help/api/tou.html`. |
+| Before relying on arXiv zero hits | Freeze separately authorized query variants: exact phrase, title/abstract terms joined with `AND`, and justified synonyms or categories. Keep the old exact-phrase results and protocol intact. | On a known-source reference set, compare unique verified works, irrelevant results and request cost for each variant. A zero-result exact phrase never closes literature recall. D66 measured 19 such empty queries. |
+| Before broad Crossref expansion | Test `query.title` alongside current `query.bibliographic` in a new dated search protocol, with separate query identities and a fixed result/request cap. | Compare retrieval of known relevant works and marginal unique candidates. Do not rank or exclude studies solely by Crossref score or a query's top-N position. |
+| Before multiple workers or automatic retries | Apply provider-aware shared rate limits and bounded backoff to 429/5xx/timeouts. Reconcile `request_started` and query/acquisition rows before a retry; a retry consumes the same approved physical-request ceiling or needs a new named plan. | Restart and concurrent-worker tests show no unrecorded request, no over-ceiling retry and no 429 interpreted as an empty search. Crossref's 2025 list-query polite limit is 3 requests/second, below the new guide's suggested 8. See `https://www.crossref.org/blog/announcing-changes-to-rest-api-rate-limits/`. |
+| When repeating DOI lookups | Reuse retained Unpaywall/OpenAlex responses by DOI and retrieval date; allow bounded refresh because OA locations change. Keep previous raw bytes and distinguish 404, `closed`, an OA landing page and a failed PDF transfer. | Two rounds can reuse a fresh record without a new request; a stale or failed location produces an explicit refresh proposal, not a silent permanent exclusion. |
+| Before version-sensitive deduplication | Store arXiv's canonical base ID, returned version and explicit work/version relationships alongside title and DOI. Do not change `candidate_key_version 2` silently or merge by title alone. | A v1/v2 pair and a preprint/journal pair stay traceable as artifacts without becoming two independent studies by accident. |
+| For search monitoring | Report per-query caps, unique-key yield, known-reference retrieval and metadata exclusions. Use diminishing yield to propose a stop, never to claim measured literature completeness. | Preview shows remaining unsearched/deeper queries and the operator can inspect a proposed stop against the frozen protocol. |
+
+Already in place: Crossref `mailto` and identifying User-Agent; Unpaywall DOI
+lookup and its best/all OA locations; PDF-first fallback, recorded licence and
+version, content checking, raw request retention, idempotent candidate writes,
+host refusal budgets and bounded scheduler authorization. The guides' OAI-PMH
+mirror, vector database, mass PDF download and paid bulk feeds have no measured
+benefit at the present scale and are not implementation prerequisites.
