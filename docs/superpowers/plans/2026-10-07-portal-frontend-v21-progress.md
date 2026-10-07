@@ -138,9 +138,9 @@ the known fields (stage, state, kind, ids) as labelled text instead.
 
 ## F3 — The flow journey (IN PROGRESS)
 
-- [ ] F3.1 `OperationsPanel`: "Right now" list from `control.operations` (signed in only; signed out says "Sign in to see and authorize operations"). State word and note verbatim, limits, spent, unknown-cost units said as reserved, completed units, last event, `worker_note`; Pause/Resume disabled with a title. Named error on failure.
+- [x] F3.1 `OperationsPanel`: "Right now" list from `control.operations` (signed in only; signed out says "Sign in to see and authorize operations"). State word and note verbatim, limits, spent, unknown-cost units said as reserved, completed units, last event, `worker_note`; Pause/Resume disabled with a title. Named error on failure.
   Files: `web/src/components/OperationsPanel.tsx`, `web/tests/operations.test.tsx`.
-- [ ] F3.2 Authorize for `PLANNED` only: confirmation dialog listing the exact limits, POST them unchanged, disabled while running, the server's 409 sentence as given, reload after success.
+- [x] F3.2 Authorize for `PLANNED` only: confirmation dialog listing the exact limits, POST them unchanged, disabled while running, the server's 409 sentence as given, reload after success.
   Files: `web/src/components/OperationsPanel.tsx`, `web/tests/operations.test.tsx`.
 - [ ] F3.3 `FlowOverviewPage` header restyle (serif title, scope and protocol chips, Add material / Decisions / Export / Activity) and the panel mounted for flows only; `/u/` gets no write control and no panel.
   Files: `web/src/pages/FlowOverviewPage.tsx`.
