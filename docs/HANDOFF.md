@@ -9,6 +9,21 @@ what order.
 
 ## Where the work stands
 
+2026-10-07 L02 scheduler discovery retry: authorized plan
+`5ff7c4cc24cd05aa0f827a21d8efdbba8bd29aa092e6acb4d541656c8b609ab6`
+ran outside the sandbox. OpenAlex returned HTTP 200 and ten records for
+`news sentiment predicts stock returns weeks`; the ledger records two physical
+requests, robots and API, within the three-request ceiling. All ten records
+were rejected by the round's frozen metadata population (`no_declared_metadata_match`):
+their discovery locations were DOI, journal or other undeclared hosts. The
+round still has **zero candidates**. This is not a finding of zero relevant
+literature: the searcher's primary location does not establish whether an
+eligible institutional copy exists. A separate controlled intake route is
+still required for those works. An offline arXiv batch plan, ID
+`5154d5409788a992b69540a2db8054b5b85738f246e56025117d3282f1898562`,
+contains two T01 terms, at most ten results each and six physical requests
+total to `export.arxiv.org`; it has not been authorized or executed.
+
 2026-10-07 first live scheduler query: the operator authorized plan
 `66b7e73da7fffd60895662dbb097e0e1385f78f1e31041f1d224f79e64793d19`
 for one L02 OpenAlex T01 query, at most ten results and three physical
