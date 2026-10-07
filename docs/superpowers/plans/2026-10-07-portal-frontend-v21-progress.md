@@ -19,7 +19,7 @@ Spec: `docs/superpowers/specs/2026-10-07-portal-frontend-v21-spec.md`. Branch `r
   Files: `web/src/lib/control.ts`, `web/vite.config.ts`, `web/tests/control.test.ts`.
 - [x] F1.3 `SessionProvider` (context, `useSession`), 401 handling; session tests.
   Files: `web/src/lib/session.tsx`, `web/tests/session.test.tsx`.
-- [ ] F1.4 Login page `/login`, safe `?next=` redirect; routes wired in `App.tsx` (`/projects`, `/login`, provider).
+- [x] F1.4 Login page `/login`, safe `?next=` redirect; routes wired in `App.tsx` (`/projects`, `/login`, provider).
   Files: `web/src/pages/LoginPage.tsx`, `web/src/lib/session.tsx` (safeNext), `web/src/App.tsx`, `web/tests/login.test.tsx`.
 - [ ] F1.5 Shell v2: dark left sidebar, collapse to top bar under 900 px, operator footer; Shell test.
   Files: `web/src/components/Shell.tsx`, `web/tests/shell.test.tsx`.

@@ -1,10 +1,12 @@
 import { createBrowserRouter, RouterProvider } from "react-router";
 import Shell from "@/components/Shell";
 import AdminPage from "@/pages/AdminPage";
+import { SessionProvider } from "@/lib/session";
 import ClaimPage from "@/pages/ClaimPage";
 import FlowOverviewPage from "@/pages/FlowOverviewPage";
 import IndexPage from "@/pages/IndexPage";
 import InboxPage from "@/pages/InboxPage";
+import LoginPage from "@/pages/LoginPage";
 import NotFoundPage from "@/pages/NotFoundPage";
 import ProjectPage from "@/pages/ProjectPage";
 import QuestionPage from "@/pages/QuestionPage";
@@ -16,9 +18,19 @@ import SourcePage from "@/pages/SourcePage";
 const router = createBrowserRouter([
   {
     path: "/",
-    element: <Shell />,
+    // The provider sits inside the router so the login page can navigate, and above the Shell
+    // so the sidebar and every page read the same session.
+    element: (
+      <SessionProvider>
+        <Shell />
+      </SessionProvider>
+    ),
     children: [
+      // F1: `/` is still the projects index; Today replaces it in F2. `/projects` is the
+      // sidebar's Projects link.
       { index: true, element: <IndexPage /> },
+      { path: "projects", element: <IndexPage /> },
+      { path: "login", element: <LoginPage /> },
       { path: "inbox", element: <InboxPage /> },
       { path: "admin", element: <AdminPage /> },
       { path: "p/:project", element: <ProjectPage /> },
