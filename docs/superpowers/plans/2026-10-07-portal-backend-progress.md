@@ -323,7 +323,7 @@ Deviations: (none — B3 follows the spec's form as written)
 NOT DONE: (none)
 
 ### B4 — IN PROGRESS
-- [ ] B4.1 `claimstone/operators.py`: the operators ledger — scrypt n=2^15, r=8, p=1, salted,
+- [x] B4.1 `claimstone/operators.py`: the operators ledger — scrypt n=2^15, r=8, p=1, salted,
       `add`/`disable` append-only rows, constant-time verify, `operator_version 1`, in
       `CLAIMSTONE_STATE_DIR` (default `.claimstone/`) (files: `claimstone/operators.py`)
 - [ ] B4.2 `claimstone/control.py`: the server — `transport.py`'s Host/Origin checks and
