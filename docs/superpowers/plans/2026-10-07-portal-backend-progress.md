@@ -35,7 +35,7 @@ $ .venv/bin/python tools/check_instrument_versions.py
 | **B7a** | Intake of DOIs, URLs and references; cohort routing; single explicit fetch | spec B7a tests pass | DONE (fetch moved to B7b) |
 | **B7b** | File intake, quarantine, engine gates, `operator-supplied` acquisition row, `supplied_copies` policy (F14) | spec B7b tests pass; existing admissibility tests unchanged and passing | DONE (URL fetch deferred to B12) |
 | **B8** | Identity resolution, retry-campaign record and preview, purchase offers and stages, defer/decline, F13 ordering test | spec B8 tests pass | DONE |
-| **B9** | Seen markers and `/control/v1/today` | spec B9 tests pass | TODO |
+| **B9** | Seen markers and `/control/v1/today` | spec B9 tests pass | DONE |
 | **B10** | Export create and verify from the control API; exports list in the read API; PDF licence rule | spec B10 tests pass | TODO |
 | **B11** | Reachability checks, write-only credentials, 501 for the paid test call | spec B11 tests pass | TODO |
 | **B12** | Scheduler-facing routes, **only if** the operations ledger module exists; otherwise mark `BLOCKED` with the reason and end the session | as spec B12, or `BLOCKED` recorded | TODO |
@@ -550,3 +550,13 @@ written from the portal. Spec route `…/identity/{observation_id}/resolve` is r
 `…/intake/{intake_id}/resolve` accordingly.
 
 NOT DONE: (none in scope)
+
+### B9 — DONE (2026-10-07, Claude Code)
+- [x] B9.1 `claimstone/today.py`: `SEEN_VERSION 1`, markers in the state dir (owner-only), changes from
+      rows' own times, needs-you from inbox cards and `decisions.open_items` (files: `claimstone/today.py`)
+- [x] B9.2 routes `GET /control/v1/today`, `POST /control/v1/seen` (files: `claimstone/control.py`)
+- [x] B9.3 tests, contract, version, D104 (files: `tests/test_today.py`, docs, tools, fixtures)
+
+Decisions (recorded as D104): markers are installation state, not per project (deviation from spec
+§1.4's table); continues-without-you is `null` with a note until B12.
+Checks (final): `1403 passed, 7 skipped`; validate 6× OK; `35 instrument version(s)`; web `72 passed`.

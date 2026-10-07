@@ -252,6 +252,23 @@ portal resolves intake items; screening identity keeps its own tools.
   empty until B12 exists, said so in a field rather than shown as an empty list that means
   "nothing".
 
+As built (B9):
+- **`seen.jsonl` is installation state**, in the state directory beside `operators.jsonl`, not per
+  project. A marker without a project covers every project, and an operator's markers are theirs
+  alone. The file is owner-only (`0600`).
+- Rows: `{seen_version: 1, actor, project|null, until, recorded_at}`. `until` defaults to now and
+  must carry a zone and not be in the future.
+- `POST /control/v1/seen` `{project?, until?}` → 201. An unknown project → 404.
+- `GET /control/v1/today` → per project:
+  - `since` and `first_visit`;
+  - `changed`: per-stage counts and the 20 newest rows after the marker, from the rows' own
+    timestamps only, with the count of undated rows reported rather than guessed;
+  - `needs_you`, with `required` (inbox `ADJUDICATION`, `INTEGRITY`, `PROTOCOL` cards and identity
+    questions) and `optional` (offers, deferred items now due).
+
+  A project that cannot be read carries `error` instead of being left out.
+  `continues_without_you` is `null` with a note until B12 reports the scheduler's queue.
+
 ### B10 — exports
 
 - `POST /control/v1/p/{p}/flows/{flow_id}/exports` with `{include_pdfs: false}` calls

@@ -4250,3 +4250,18 @@ declined campaign makes no request, and a declined offer buys nothing.
 The open list is ordered without reading claims, reviews or stances (F13). Required identity
 questions come first, then source class, candidate key and age. A test adds claims of both stances
 and asserts that the order does not move.
+
+## D104 — "Since your last visit" is an operator's marker, read against the rows' own times (2026-10-07)
+
+B9 builds the Today view. The spec placed `seen.jsonl` under each project's store. It is installation
+state instead (`seen_version 1`, in the state directory beside `operators.jsonl`, D99), because a
+marker belongs to a person rather than to a corpus, and one marker may cover every project. Changes
+are counted from each row's own timestamp. A row without one is counted as undated and reported,
+never placed in time by a file's mtime (review F17). "Needs you" splits required items from
+optional ones:
+- required: questions ready to sign, integrity and protocol blocks, identity questions;
+- optional: offers.
+
+"Continues without you" is reported as unavailable, not as an empty list, until the
+scheduler-facing routes (B12) can read the queue: an empty list there would be a claim nobody
+checked.

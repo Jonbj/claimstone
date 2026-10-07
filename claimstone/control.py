@@ -33,7 +33,8 @@ from typing import Any, Callable
 import urllib.parse
 from urllib.parse import unquote, urlparse
 
-from claimstone import decisions, drafts, flows, intake, operators, portal_state, scope, synthesize
+from claimstone import (decisions, drafts, flows, intake, operators, portal_state, scope,
+                        synthesize, today)
 from claimstone.config import ConfigError, RegistryDrift
 from claimstone.store import LedgerCorrupt, Store
 from claimstone.transport import LOOPBACK_HOSTS, BaseHandler
@@ -246,6 +247,9 @@ ROUTES: tuple[Route, ...] = (
     Route("POST", ("p", "{project}", "flows", "{flow_id}", "offers"), "_offer_record"),
     Route("POST", ("p", "{project}", "flows", "{flow_id}", "offers", "{offer_id}", "stage"),
           "_offer_stage"),
+    # B9: Today, and the operator's "seen up to" markers.
+    Route("GET", ("today",), "_today"),
+    Route("POST", ("seen",), "_seen"),
 )
 
 
@@ -868,7 +872,35 @@ def _offer_stage(self: _Handler, params: dict[str, str], query: Any,
         actor=session.operator_id, code_revision=self.code_revision))}, 201
 
 
-for _name, _function in (("_identity_resolve", _identity_resolve),
+def _today(self: _Handler, params: dict[str, str], query: Any,
+           body: dict[str, Any]) -> tuple[Any, int]:
+    session = self._require_session()
+    return today.today(self.projects_dir, self.store_dir, self.state_dir,
+                       actor=session.operator_id), 200
+
+
+def _seen(self: _Handler, params: dict[str, str], query: Any,
+          body: dict[str, Any]) -> tuple[Any, int]:
+    self._only_keys(body, frozenset({"project", "until"}))
+    session = self._require_session()
+    project = body.get("project")
+    if project is not None:
+        if not isinstance(project, str):
+            raise ControlError(422, "VALIDATION", "project must be a project name")
+        self._project_root(project)  # an unknown project is a 404, never a marker for nothing
+    until = body.get("until")
+    if until is not None and not isinstance(until, str):
+        raise ControlError(422, "VALIDATION", "until must be an ISO date-time")
+    try:
+        row = today.mark_seen(self.state_dir, actor=session.operator_id, project=project,
+                              until=until)
+    except ValueError as exc:
+        raise ControlError(422, "VALIDATION", str(exc)) from None
+    return {"seen": row}, 201
+
+
+for _name, _function in (("_today", _today), ("_seen", _seen),
+                         ("_identity_resolve", _identity_resolve),
                          ("_decisions_list", _decisions_list),
                          ("_retry_preview", _retry_preview), ("_retry_approve", _retry_approve),
                          ("_decision_state", _decision_state), ("_offer_record", _offer_record),
