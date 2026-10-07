@@ -183,7 +183,7 @@ NOT DONE (no API data, or later step): the 8-step journey bar, topic text and bu
 heartbeat (the API gives `worker_note` only); Pause/Resume (disabled, ledger has no stopping event); the
 Material, Decisions and Export routes (F5 branch, F6; the links 404 until merged). Not checked in a browser.
 
-## F4 — The reading desk (IN PROGRESS)
+## F4 — The reading desk (DONE)
 
 - [x] F4.1 `api.profiles` (GET only) and the diff panel's from/to choices from the stored-profile list (a select per side, the current profile marked); pasted hashes stay only when the list is empty or unavailable. The panel can be opened from outside with a from/to request (used by the stale banner).
   Files: `web/src/lib/api.ts`, `web/src/components/ProfileDiffPanel.tsx`, `web/tests/profilediff.test.tsx`.
@@ -193,4 +193,51 @@ Material, Decisions and Export routes (F5 branch, F6; the links 404 until merged
   Files: `web/src/components/SignaturePanel.tsx`, `web/tests/signature.test.tsx`.
 - [x] F4.4 Drafts: `GET …/draft` on load, "profile changed while you read" banner with signing blocked until the profile is reloaded, Save draft and save on blur when the text changed; the verdict is never stored.
   Files: `web/src/components/SignaturePanel.tsx`, `web/tests/signature.test.tsx`.
-- [ ] F4.5 Close: F4 result in this log.
+- [x] F4.5 Close: F4 result in this log.
+
+### F4 result
+
+Final checks (web/, then repo root):
+
+```
+gen:types unchanged            (git diff --exit-code web/src/lib/api-types.ts: clean)
+typecheck: tsc --noEmit -p tsconfig.json   (no errors)
+ Test Files  26 passed (26)
+      Tests  143 passed (143)
+✓ built in 3.99s
+check-csp: ok (no inline script, no style attribute)
+7 passed in 3.86s              (.venv/bin/pytest -q tests/test_api_contract.py tests/test_portal_fixtures.py)
+```
+
+Files: `web/src/components/SignaturePanel.tsx` (new), `web/src/pages/QuestionPage.tsx`,
+`web/src/components/ProfileDiffPanel.tsx`, `web/src/lib/api.ts` (`profiles`, GET), tests `signature` (new,
+14), `readingdesk` (new, 7), `profilediff` (+3).
+
+Decisions where the spec was silent:
+- The signature binds to a hash **pinned** when the panel appears. If the page later holds a different hash
+  (the 3 s poll reloaded it), the panel says "The evidence changed", keeps the text, offers Compare (pinned to
+  new, in the diff panel) and "Use the current profile", and blocks signing until that is taken; taking it
+  clears the attestation. The profile card above still shows whatever the page holds, so the pinned hash is
+  the one in the attestation line and the POST.
+- `STALE_PROFILE`: the server's code and sentence are shown by `ErrorState`, the banner appears, the page is
+  asked to reload, signing is blocked until the operator takes the new profile; Compare appears once the
+  page knows a different hash.
+- The draft banner ("The profile changed while you read") blocks signing until "Reload the profile", which
+  re-reads the question and takes the current hash; a draft never restores a verdict or the attestation.
+- Save draft is disabled for blank text; blur saves only if the text differs from the last saved/loaded text;
+  a draft loaded from the server is not re-saved until edited; an in-flight save is not duplicated.
+- Character count is in code points of the trimmed text, as Python counts it.
+- Gate order on the page: operational (API's `not_applicable_state`), unbound `/u/`, provisional, no hash or
+  `unavailable`, session pending, signed out ("Sign in to sign." with a login link), else the panel.
+- After signing the form is replaced by the stored row (verdict, adjudicated_by, profile_sha256); the page
+  reloads its question so the verdict section updates; no navigation.
+- Panel is keyed by project, selector and question, and no storage is used, so no choice carries over.
+- Sub-task order: F4.3 was committed before F4.2 (the page needs the panel).
+
+Deviations: none from the spec's requirements. The "Opened N of M" reading aid is omitted.
+
+NOT DONE (no API data, or later step): "Opened N of M" aid; the design's "server: final, admissible, stored
+profile equals current (checked N s ago)" line (no such API field); the design's claim-by-claim reading column
+and excluded-interpretations list (existing results table kept as is); the Decisions/Material routes (F5).
+A failed poll reload replaces the page by the error state and drops unsaved text (existing page behaviour;
+the draft is the safeguard). Not checked in a browser (no servers were started).
