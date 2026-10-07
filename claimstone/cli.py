@@ -975,6 +975,84 @@ def _scheduler_preview(args: argparse.Namespace) -> int:
     return 0
 
 
+def _scheduler_operation(args: argparse.Namespace) -> int:
+    import json
+    from claimstone import operations
+    from claimstone.store import LedgerCorrupt
+
+    project, store = _flow_open(args)
+    try:
+        if args.scheduler_command == 'plan':
+            reviewer = None
+            if args.reviewer:
+                backend, slash, model = args.reviewer.partition('/')
+                if not slash or not backend or not model:
+                    raise operations.OperationError('--reviewer requires backend/model')
+                reviewer = (backend, model)
+            result = operations.plan(project, store, args.flow_id, args.stage,
+                                     batch=args.batch, reviewer=reviewer,
+                                     model=args.model, max_calls=args.max_calls,
+                                     backend=args.backend, budget_id=args.budget_id,
+                                     budget_cents=args.budget_cents,
+                                     max_call_cents=args.max_call_cents,
+                                     price_in_cents=args.price_in_cents,
+                                     price_out_cents=args.price_out_cents,
+                                     candidate_key=args.candidate_key,
+                                     allowed_hosts=args.allow_host,
+                                     max_requests=args.max_requests,
+                                     api=args.api, topic_id=args.topic,
+                                     term=args.term, per_query=args.per_query,
+                                     run_label=args.run_label,
+                                     use_apis=args.use_apis,
+                                     retry_classes=args.retry_class,
+                                     retry_reason=args.retry_reason)
+            result = {'operation_id': operations._digest(result), 'plan': result}
+        elif args.scheduler_command == 'batch-plan':
+            result = operations.plan_batch(project, store, args.flow_id, args.stage,
+                                           apis=args.api, allowed_hosts=args.allow_host,
+                                           max_units=args.max_units,
+                                           max_requests_each=args.max_requests_each,
+                                           per_query=args.per_query,
+                                           use_apis=args.use_apis,
+                                           retry_classes=args.retry_class,
+                                           retry_reason=args.retry_reason)
+        elif args.scheduler_command == 'authorize-batch':
+            result = operations.authorize_batch(store, args.batch_id)
+        elif args.scheduler_command == 'drive':
+            result = operations.drive_local(project, store, args.flow_id,
+                                            extract_model=args.extract_model,
+                                            review_model=args.review_model,
+                                            max_local_calls=args.max_local_calls)
+        elif args.scheduler_command == 'authorize':
+            result = operations.authorize(store, args.operation_id)
+        elif args.scheduler_command == 'run':
+            result = operations.execute(project, store, args.operation_id)
+        elif args.scheduler_command == 'tick':
+            result = operations.tick(project, store, max_operations=args.max_operations)
+        elif args.scheduler_command == 'worker':
+            import time
+            if args.poll_seconds < 1:
+                raise operations.OperationError('--poll-seconds must be at least 1')
+            print('scheduler worker running; Ctrl-C stops after the current operation',
+                  file=sys.stderr)
+            try:
+                while True:
+                    tick_result = operations.tick(load_project(args.project), store,
+                                                  max_operations=args.max_operations)
+                    if tick_result['processed']:
+                        print(json.dumps(tick_result, ensure_ascii=False), flush=True)
+                    time.sleep(args.poll_seconds)
+            except KeyboardInterrupt:
+                return 0
+        else:
+            result = operations.status(store, args.operation_id)
+    except (operations.OperationError, LedgerCorrupt, ValueError) as exc:
+        print(f'scheduler refused: {exc}', file=sys.stderr)
+        return 2
+    print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
+    return 0
+
+
 def _flow_create(args: argparse.Namespace) -> int:
     from claimstone import flows, scope
 
@@ -1341,6 +1419,101 @@ def build_parser() -> argparse.ArgumentParser:
     scheduler_cmd.add_argument("--store", default="store", help="where generated data lives")
     scheduler_cmd.set_defaults(func=_scheduler_preview)
 
+    scheduler = sub.add_parser('scheduler', help='bounded operations for a protocol-bound flow')
+    scheduler_sub = scheduler.add_subparsers(dest='scheduler_command', required=True)
+    scheduler_plan = scheduler_sub.add_parser('plan', help='freeze one scoped offline stage')
+    scheduler_plan.add_argument('project')
+    scheduler_plan.add_argument('flow_id')
+    scheduler_plan.add_argument('stage', choices=('normalize', 'extract-build',
+                                                  'extract-drain', 'extract-harvest',
+                                                  'review-build', 'review-drain',
+                                                  'review-harvest', 'synthesize',
+                                                  'acquire', 'discover'))
+    scheduler_plan.add_argument('--batch')
+    scheduler_plan.add_argument('--reviewer', help='backend/model for review-build')
+    scheduler_plan.add_argument('--model', help='exact model for a drain plan')
+    scheduler_plan.add_argument('--backend', choices=('llamacpp', 'ollama-cloud'),
+                                default='llamacpp')
+    scheduler_plan.add_argument('--max-calls', type=int, help='maximum model calls')
+    scheduler_plan.add_argument('--budget-id', help='persistent paid budget name')
+    scheduler_plan.add_argument('--budget-cents', type=int,
+                                help='cumulative authorized reservation ceiling in USD cents')
+    scheduler_plan.add_argument('--max-call-cents', type=int,
+                                help='conservative reservation per remote call in USD cents')
+    scheduler_plan.add_argument('--price-in-cents', type=int,
+                                help='declared input price ceiling in USD cents per million tokens')
+    scheduler_plan.add_argument('--price-out-cents', type=int,
+                                help='declared output price ceiling in USD cents per million tokens')
+    scheduler_plan.add_argument('--candidate-key', help='exact candidate key for acquire')
+    scheduler_plan.add_argument('--allow-host', action='append', default=[],
+                                help='exact network host permitted; repeatable')
+    scheduler_plan.add_argument('--max-requests', type=int,
+                                help='physical request ceiling, including robots and redirects')
+    scheduler_plan.add_argument('--api', help='one scholarly API for discover')
+    scheduler_plan.add_argument('--topic', help='one topic id for discover')
+    scheduler_plan.add_argument('--term', help='one exact frozen search term')
+    scheduler_plan.add_argument('--per-query', type=int,
+                                help='maximum results requested from the API')
+    scheduler_plan.add_argument('--run-label',
+                                help='new named attempt after a failed offline operation')
+    scheduler_plan.add_argument('--use-apis', action='store_true',
+                                help='allow the acquisition resolver’s metadata API cascade')
+    scheduler_plan.add_argument('--retry-class', action='append', default=[],
+                                help='explicit terminal class for one acquisition retry')
+    scheduler_plan.add_argument('--retry-reason',
+                                help='why a terminal acquisition failure is retried')
+    scheduler_plan.add_argument('--store', default='store')
+    scheduler_plan.set_defaults(func=_scheduler_operation)
+    scheduler_batch_plan = scheduler_sub.add_parser(
+        'batch-plan', help='freeze a bounded set of one-query or one-candidate plans')
+    scheduler_batch_plan.add_argument('project')
+    scheduler_batch_plan.add_argument('flow_id')
+    scheduler_batch_plan.add_argument('stage', choices=('discover', 'acquire'))
+    scheduler_batch_plan.add_argument('--store', default='store')
+    scheduler_batch_plan.add_argument('--api', action='append', default=[],
+                                      help='API included in discovery; repeatable')
+    scheduler_batch_plan.add_argument('--allow-host', action='append', default=[],
+                                      help='exact host; repeatable')
+    scheduler_batch_plan.add_argument('--max-units', type=int, required=True)
+    scheduler_batch_plan.add_argument('--max-requests-each', type=int, required=True)
+    scheduler_batch_plan.add_argument('--per-query', type=int, default=25)
+    scheduler_batch_plan.add_argument('--use-apis', action='store_true')
+    scheduler_batch_plan.add_argument('--retry-class', action='append', default=[])
+    scheduler_batch_plan.add_argument('--retry-reason')
+    scheduler_batch_plan.set_defaults(func=_scheduler_operation)
+    scheduler_authorize_batch = scheduler_sub.add_parser(
+        'authorize-batch', help='authorize every exact plan in a frozen batch')
+    scheduler_authorize_batch.add_argument('project')
+    scheduler_authorize_batch.add_argument('batch_id')
+    scheduler_authorize_batch.add_argument('--store', default='store')
+    scheduler_authorize_batch.set_defaults(func=_scheduler_operation)
+    scheduler_drive = scheduler_sub.add_parser(
+        'drive', help='one bounded local pass through scoped research stages')
+    scheduler_drive.add_argument('project')
+    scheduler_drive.add_argument('flow_id')
+    scheduler_drive.add_argument('--store', default='store')
+    scheduler_drive.add_argument('--extract-model', required=True)
+    scheduler_drive.add_argument('--review-model', required=True)
+    scheduler_drive.add_argument('--max-local-calls', type=int, required=True)
+    scheduler_drive.set_defaults(func=_scheduler_operation)
+    for action in ('authorize', 'run', 'status'):
+        command = scheduler_sub.add_parser(action)
+        command.add_argument('project')
+        command.add_argument('operation_id')
+        command.add_argument('--store', default='store')
+        command.set_defaults(func=_scheduler_operation)
+    scheduler_tick = scheduler_sub.add_parser('tick', help='run approved local operations')
+    scheduler_tick.add_argument('project')
+    scheduler_tick.add_argument('--store', default='store')
+    scheduler_tick.add_argument('--max-operations', type=int, default=1)
+    scheduler_tick.set_defaults(func=_scheduler_operation)
+    scheduler_worker = scheduler_sub.add_parser('worker', help='poll and run approved operations')
+    scheduler_worker.add_argument('project')
+    scheduler_worker.add_argument('--store', default='store')
+    scheduler_worker.add_argument('--max-operations', type=int, default=1)
+    scheduler_worker.add_argument('--poll-seconds', type=int, default=30)
+    scheduler_worker.set_defaults(func=_scheduler_operation)
+
     portal_cmd = sub.add_parser("portal", help="the read-only multi-project research portal")
     portal_cmd.add_argument("--projects-dir", default="projects",
                             help="every project under this directory is served")
@@ -1424,6 +1597,26 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
+        # A CLI stage makes read/modify/write decisions across several ledgers.
+        # Hold the same project lock used by flow, source selection and Store.append.
+        # The scheduler uses finer unit boundaries; the legacy CLI remains safely
+        # serialized even when two terminals start the same stage concurrently.
+        writers = {"import-manifest", "acquire", "discover", "regate", "normalize",
+                   "extract", "review", "synthesize", "adjudicate", "model-run"}
+        writes = args.command in writers or (args.command == "flow" and
+                                              args.flow_command in {"create", "title"})
+        if args.command == "acquire" and args.dry_run:
+            writes = False
+        if args.command == "normalize" and args.confirm_audit:
+            writes = False
+        if args.command == "flow" and not writes:
+            return int(args.func(args))
+        if writes:
+            from claimstone.store import Store
+            from pathlib import Path
+
+            with Store(Path(args.project).name, base=args.store).writer_lock():
+                return int(args.func(args))
         return int(args.func(args))
     except ConfigError as exc:
         # A contract violation is the user's to fix, so it gets a sentence rather than a

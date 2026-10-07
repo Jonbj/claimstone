@@ -68,9 +68,12 @@ def run(
     topics: Iterable[str] | None = None,
     per_query: int = 25,
     round_name: str = ROUTINE,
+    terms: Iterable[str] | None = None,
+    campaign: str | None = None,
 ) -> dict[str, Any]:
     """Search every term of every selected topic; append only candidates not already seen."""
     wanted = set(topics) if topics else None
+    wanted_terms = set(terms) if terms else None
     policy = getattr(project, "population", {})
     population.check_round(store, policy, round_name)
     known = set(store.latest_by("candidates.jsonl", "candidate_key"))
@@ -87,11 +90,15 @@ def run(
         if wanted and topic.id not in wanted:
             continue
         for term in topic.terms:
+            if wanted_terms is not None and term not in wanted_terms:
+                continue
             for api in apis:
                 queries += 1
                 searcher = SEARCHERS[api]
                 context = {'purpose': 'discovery', 'round': round_name, 'source_api': api,
                            'query': term, 'topic_id': topic.id}
+                if campaign is not None:
+                    context['campaign'] = campaign
                 logged = RecordingFetcher(fetcher, store, **context)
                 returned = 0
                 failure = None

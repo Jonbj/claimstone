@@ -73,6 +73,14 @@ so `.env` must hold `CLAIMSTONE_CONTACT_EMAIL`.
 
 ## Status
 
+The scheduler now has bounded, operator-authorized operations for scoped
+offline stages, local and explicitly budgeted remote model calls, one scholarly query and one candidate
+acquisition. `scheduler batch-plan` prepares reviewable multi-unit campaigns;
+`scheduler worker` executes only plans already authorized. The research portal
+is still read-only, and no new live network campaign was started as part of
+this development. See [the scheduler contract](docs/contracts/scheduler_operations.md)
+for current limits.
+
 All six stages are implemented and one round has run end to end on literature deposited in PubMed
 Central: 37 of 40 sources confirmed against a floor of 0.80, 1,721 accepted annotations and 271 rejections.
 

@@ -5,7 +5,7 @@
    "category": "REVIEW",
    "cause": "2 claim(s) awaiting review",
    "command": null,
-   "note": "see docs/GUIDE.md, stage 5; review is not round-scoped and builds work for the whole project (review F7)",
+   "note": "plan a scoped review-build operation with a different reader",
    "scope": "flow 0df548e37436",
    "subject": "Q02"
   },

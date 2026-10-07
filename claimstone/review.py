@@ -23,7 +23,7 @@ import datetime as _dt
 import hashlib
 from typing import Any
 
-from claimstone import chunk_sets, claim_records, model_call
+from claimstone import chunk_sets, claim_records, model_call, scope
 from claimstone.store import Store
 
 REVIEW_VERSION = 2
@@ -128,6 +128,7 @@ def build(
     reviewer: tuple[str, str] | None = None,
     limit: int | None = None,
     question_id: str | None = None,
+    selector: scope.Selector | None = None,
 ) -> dict[str, Any]:
     """One review unit per accepted claim that has no review yet.
 
@@ -143,11 +144,14 @@ def build(
     reviewed = set(current(store))
     chunks = chunk_sets.current(store)
     questions = {q.id: q for q in project.questions}
+    allowed = scope.source_ids(store, selector) if selector is not None else None
 
     units: list[dict[str, Any]] = []
     same_reader = missing_chunk = unknown_question = 0
 
     for claim in claim_records.current(store)[0].values():
+        if allowed is not None and str(claim.get('source_id')) not in allowed:
+            continue
         if str(claim.get("claim_id")) in reviewed:
             continue
         if question_id is not None and str(claim.get("question_id")) != question_id:

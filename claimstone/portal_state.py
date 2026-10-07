@@ -310,16 +310,14 @@ def inbox_cards(project: Project, store: Store, selector: scope.Selector,
                 "EXTRACT", scope_label, question_id,
                 f"{profile.get('kind') or 'question'}: {detail} reading(s) open",
                 None,
-                "see docs/GUIDE.md, stage 4; extraction is not round-scoped and builds work "
-                "for the whole project (review F7)"))
+                "plan a scoped extract-build operation for this flow"))
         awaiting_review = int(profile.get("awaiting_review") or 0)
         if awaiting_review:
             cards.append(Card(
                 "REVIEW", scope_label, question_id,
                 f"{awaiting_review} claim(s) awaiting review",
                 None,
-                "see docs/GUIDE.md, stage 5; review is not round-scoped and builds work for "
-                "the whole project (review F7)"))
+                "plan a scoped review-build operation with a different reader"))
         card = adjudication_card(project, selector, row, scope_label)
         if card is not None:
             cards.append(card)

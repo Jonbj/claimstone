@@ -116,7 +116,8 @@ def work_unit(
 # Transient: the next drain should try again. TRUNCATED is terminal because raising the cap
 # changes `call_id`, so a retry under a bigger cap is a different call and not a second
 # attempt at this one.
-TERMINAL = frozenset({"NOT_JSON", "SCHEMA_INVALID", "REFUSED", "PROMPT_MISMATCH", "TRUNCATED"})
+TERMINAL = frozenset({"NOT_JSON", "SCHEMA_INVALID", "REFUSED", "PROMPT_MISMATCH",
+                      "TRUNCATED", "MODEL_IDENTITY_MISMATCH"})
 TRANSIENT = frozenset({"TIMEOUT", "RATE_LIMITED", "BACKEND_ERROR", "EMPTY"})
 
 
@@ -398,6 +399,7 @@ def drain(
     *,
     limit: int | None = None,
     retry_classes: frozenset[str] = frozenset(),
+    call_ids: frozenset[str] | None = None,
 ) -> Any:
     """Answer what is pending, appending each result as it lands.
 
@@ -418,6 +420,8 @@ def drain(
     pending = queue.pending(
         backend=runner.name, model=reader_model, retry_classes=retry_classes
     )
+    if call_ids is not None:
+        pending = [row for row in pending if str(row['call_id']) in call_ids]
     if limit is not None:
         pending = pending[:limit]
     if not pending:

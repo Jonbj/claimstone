@@ -15,9 +15,9 @@ ledger; it does not write production acquisition or document rows.
 | `purpose` | discovery, citation-resolution or acquisition |
 | `round`, `source_api`, `query`, `topic_id` | discovery context when applicable |
 | `candidate_key`, `source_class`, `campaign` | acquisition context when applicable |
-| `event` | redirect, robots, transport, blocked, response or validated_response |
+| `event` | request_started, redirect, robots, transport, blocked, response or validated_response |
 | `url`, `request_url`, `redirect_chain` | outcome destination, original URL and destinations actually visited |
-| `fetch_version` | transport/check instrument; currently 3 |
+| `fetch_version` | transport/check instrument; currently 5 for new bounded requests |
 | `ok`, `http_status`, `failure_class`, `detail` | explicit outcome; blocked destinations may have no HTTP status |
 | `content_type`, `bytes`, `elapsed_s` | available response metadata |
 | `raw_sha256`, `raw_path` | available body stored under requests/raw, content-addressed |
@@ -30,6 +30,11 @@ check redirect exclusions and budgets. `response` and `validated_response` are c
 **not extra HTTP attempts**; JSON validation can fail after a successful transport. Do not count
 all request-log rows as paid transfers or sources. Test/alternate fetchers may only emit summaries.
 Only bodies provided by the transport are stored; redirects and HTTP failures can lack raw bodies.
+`request_started` is appended before a bounded campaign opens a socket. It has
+the campaign context, URL, timestamp, version and null outcome fields; it is
+charged to the physical request ceiling across restarts. It is not a completed
+response. If no corresponding transport or stage outcome exists after a crash,
+the scheduler refuses to repeat the request automatically.
 
 ## Query completion
 

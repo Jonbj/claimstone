@@ -9,14 +9,28 @@ what order.
 
 ## Where the work stands
 
+2026-10-07 scheduler implementation (D87–D93): the project-wide writer lock,
+persisted host-failure budget, pinned public-address transport, round-scoped
+normalize/extract/review builders and append-only operation ledger are in
+place. `claimstone scheduler` can freeze exact one-query and one-candidate
+network plans, group them with summed ceilings, record an operator's local
+authorization, and run approved units through `tick` or a polling `worker`.
+It can also build/harvest scoped queues, drain bounded local llama.cpp calls
+and explicitly authorized Ollama Cloud calls under cumulative reservations,
+and use `scheduler drive` for a single operator-invoked local pass through
+normalize, extraction, review and profiles. A physical request without its stage outcome refuses
+automatic retry. No live scheduler campaign or model run has been launched.
+The portal remains read-only; automatic paid-lane planning, human copy offers/intake,
+portal controls and full autonomous stage planning remain pending. See
+`docs/contracts/scheduler_operations.md` and `docs/SCHEDULER_BACKLOG.md`.
+
 2026-10-06 scheduler first slice (D86): `claimstone scheduler-preview PROJECT
 FLOW_ID` is an offline, read-only next-work view over a bound flow. On the new
 L02 repository flow it reports zero candidates and proposes bounded discovery
 or controlled intake; it cannot close the cohort or authorize execution.
-The operation event and resume design is in
-`docs/contracts/scheduler_operations.md`. A worker still requires the shared
-writer lock, persistent host budget, redirect guard and round-scoped stage
-builders before it can run.
+The original operation event and resume design is in
+`docs/contracts/scheduler_operations.md`; the 2026-10-07 entry above records
+the implemented subset.
 
 2026-10-06 portal frontend and containers (D84): the portal now has a React + shadcn/ui + Tremor
 frontend (`web/`) over the read-only JSON API `claimstone api`. `./portal.sh` starts both in

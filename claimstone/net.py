@@ -10,16 +10,20 @@ what keep a blocked publisher from turning into thousands of requests.
 from __future__ import annotations
 
 import os
+import datetime as dt
+import ipaddress
 import time
+import socket
 import urllib.parse
 import urllib.robotparser
 from dataclasses import dataclass, field
 from typing import Any
 
 import requests
+from requests.adapters import HTTPAdapter
 from typing import Protocol
 
-FETCH_VERSION = 3
+FETCH_VERSION = 5
 
 REDIRECT = "REDIRECT_ERROR"
 
@@ -40,6 +44,8 @@ ROBOTS = "ROBOTS_DISALLOWED"
 BUDGET = "DOMAIN_BUDGET_EXHAUSTED"
 BAD_TYPE = "UNEXPECTED_CONTENT_TYPE"
 EMPTY = "EMPTY_RESPONSE"
+ADDRESS_REFUSED = "NON_GLOBAL_ADDRESS"
+REQUEST_LIMIT = "REQUEST_LIMIT_REACHED"
 
 # Set by the content gate in fulltext.py rather than by HTTP: a 200 that carries a landing
 # page, or the abstract page of a document, is a failure of acquisition even though the
@@ -58,6 +64,7 @@ NO_LOCATIONS = "NO_LOCATIONS"
 TERMINAL = frozenset(
     {PAYWALL, ROBOTS, EXCLUDED, NOT_FOUND, BAD_TYPE, LANDING, ABSTRACT, TOO_SHORT,
      CORRUPT_PDF, NOT_TEXT, NO_LOCATIONS, REDIRECT,
+     ADDRESS_REFUSED, REQUEST_LIMIT,
      # Terminal on conduct grounds rather than because retrying could not work. The host asked us to
      # prove we are not a robot; knocking again without answering that is ignoring the request, so a
      # retry needs a named campaign like any other. The class exists to keep the *denominator* honest —
@@ -91,6 +98,33 @@ def contact_email() -> str:
 
 def host_of(url: str) -> str:
     return (urllib.parse.urlparse(url).hostname or "").lower()
+
+
+class _PinnedAdapter(HTTPAdapter):
+    """Connect to the preflighted IP while authenticating the original TLS host."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.pins: dict[str, str] = {}
+
+    def send(self, request, *args, **kwargs):
+        parsed = urllib.parse.urlsplit(request.url)
+        request.headers['Host'] = parsed.netloc
+        # An environmental proxy would resolve the original URL again and
+        # bypass the pin. Bounded fetchers disable trust_env as well.
+        if kwargs.get('proxies'):
+            raise requests.ProxyError('proxies are unavailable for pinned requests')
+        return super().send(request, *args, **kwargs)
+
+    def get_connection_with_tls_context(self, request, verify, proxies=None, cert=None):
+        parsed = urllib.parse.urlsplit(request.url)
+        host = (parsed.hostname or '').lower()
+        address = self.pins.get(host)
+        if address is None:
+            raise requests.ConnectionError(f'no pinned address for {host}')
+        pool_kwargs = {'assert_hostname': host, 'server_hostname': host} if parsed.scheme == 'https' else {}
+        return self.poolmanager.connection_from_host(
+            address, port=parsed.port, scheme=parsed.scheme, pool_kwargs=pool_kwargs)
 
 
 @dataclass
@@ -144,17 +178,32 @@ class Fetcher:
     obey_robots: bool = True
     max_redirects: int = 10
     on_outcome: Any = None
+    on_request: Any = None
     pause_s: float = 0.34
+    allowed_hosts: frozenset[str] | None = None
+    allowed_schemes: frozenset[str] = frozenset({'http', 'https'})
+    enforce_global_addresses: bool = False
+    max_physical_requests: int | None = None
 
     _host_failures: dict[str, list[float]] = field(default_factory=dict)
     _robots: dict[str, urllib.robotparser.RobotFileParser | None] = field(default_factory=dict)
     robots_notes: dict[str, str] = field(default_factory=dict)
     _session: requests.Session | None = None
     _last_request: float = 0.0
+    _physical_requests: int = 0
+    _pinned_adapter: _PinnedAdapter | None = None
+    failure_store: Any = None
 
     def __post_init__(self) -> None:
+        if self.enforce_global_addresses and not self.allowed_hosts:
+            raise ValueError('bounded transport requires an exact allowed_hosts set')
         self._session = requests.Session()
         self._session.headers["User-Agent"] = USER_AGENT.format(contact=contact_email())
+        if self.enforce_global_addresses:
+            self._session.trust_env = False
+            self._pinned_adapter = _PinnedAdapter()
+            self._session.mount('https://', self._pinned_adapter)
+            self._session.mount('http://', self._pinned_adapter)
 
     # -- budget ---------------------------------------------------------------
 
@@ -163,12 +212,52 @@ class Fetcher:
 
     def _recent_failures(self, host: str) -> int:
         cutoff = time.time() - self.failure_ttl_s
+        if self.failure_store is not None:
+            # Transport/robots events are written once per physical request. The
+            # response summary is intentionally ignored or it would count twice.
+            failures = {PAYWALL, RATE_LIMITED, SERVER_ERROR, TIMEOUT, CONNECTION}
+            count = 0
+            for row in self.failure_store.read('requests.jsonl'):
+                if row.get('event') not in {'transport', 'robots'} or row.get('failure_class') not in failures:
+                    continue
+                if host_of(str(row.get('url') or '')) != host:
+                    continue
+                try:
+                    stamp = dt.datetime.fromisoformat(str(row['recorded_at']))
+                    when = stamp.timestamp() if stamp.tzinfo else 0
+                except (KeyError, TypeError, ValueError, OverflowError):
+                    # An undated failure cannot safely be assigned to the TTL.
+                    # The ledger validator handles malformed rows separately.
+                    continue
+                count += when >= cutoff
+            return count
         kept = [t for t in self._host_failures.get(host, []) if t >= cutoff]
         self._host_failures[host] = kept
         return len(kept)
 
     def budget_exhausted(self, host: str) -> bool:
         return self._recent_failures(host) >= self.max_403_per_host
+
+    def _address_allowed(self, host: str) -> bool:
+        """Reject literal and resolved non-global addresses before each hop.
+
+        A separately configured allowlist is mandatory for a bounded plan.
+        The selected public address is pinned to the transport for this hop,
+        preventing a second DNS answer at connection time from changing it.
+        """
+        if not self.enforce_global_addresses:
+            return True
+        try:
+            addresses = {item[4][0] for item in socket.getaddrinfo(
+                host, None, type=socket.SOCK_STREAM)}
+        except (OSError, ValueError):
+            return False
+        if not addresses or not all(ipaddress.ip_address(address).is_global
+                                    for address in addresses):
+            return False
+        if self._pinned_adapter is not None:
+            self._pinned_adapter.pins[host] = sorted(addresses)[0]
+        return True
 
     # -- robots ---------------------------------------------------------------
 
@@ -245,14 +334,32 @@ class Fetcher:
             outcome.redirect_chain = list(chain)
             outcome.elapsed_s = time.time() - started
             if self.on_outcome:
-                blocked = outcome.status is None and outcome.failure_class in (EXCLUDED, BUDGET, ROBOTS, REDIRECT)
+                blocked = outcome.status is None and outcome.failure_class in (
+                    EXCLUDED, BUDGET, ROBOTS, REDIRECT, ADDRESS_REFUSED, REQUEST_LIMIT)
                 self.on_outcome(outcome, 'blocked' if blocked else ('transport' if check_robots else 'robots'))
             return outcome
 
         while True:
-            host = host_of(url)
-            if urllib.parse.urlparse(url).scheme not in ('http', 'https') or not host:
+            try:
+                parsed_url = urllib.parse.urlsplit(url)
+                port = parsed_url.port
+            except ValueError:
+                return finish(Outcome(url, False, failure_class=REDIRECT,
+                                      detail='malformed destination'))
+            host = (parsed_url.hostname or '').lower()
+            if parsed_url.scheme not in self.allowed_schemes or not host:
                 return finish(Outcome(url, False, failure_class=REDIRECT, detail='non-HTTP destination'))
+            if self.enforce_global_addresses and (
+                    parsed_url.username is not None or parsed_url.password is not None or
+                    port not in (None, 80 if parsed_url.scheme == 'http' else 443)):
+                return finish(Outcome(url, False, failure_class=ADDRESS_REFUSED,
+                                      detail='credentials or nonstandard port in destination'))
+            if self.allowed_hosts is not None and host not in self.allowed_hosts:
+                return finish(Outcome(url, False, failure_class=EXCLUDED,
+                                      detail=f'{host} is outside this plan'))
+            if not self._address_allowed(host):
+                return finish(Outcome(url, False, failure_class=ADDRESS_REFUSED,
+                                      detail=f'{host} does not resolve only to global addresses'))
             if host in self.excluded_hosts or any(host.endswith('.' + h) for h in self.excluded_hosts):
                 return finish(Outcome(url, False, failure_class=EXCLUDED, detail=f'{host} is excluded'))
             if self.budget_exhausted(host):
@@ -266,6 +373,13 @@ class Fetcher:
                 return finish(Outcome(url, False, failure_class=REDIRECT, detail='redirect loop or limit'))
             chain.append(url)
             assert self._session is not None
+            if (self.max_physical_requests is not None and
+                    self._physical_requests >= self.max_physical_requests):
+                return finish(Outcome(url, False, failure_class=REQUEST_LIMIT,
+                                      detail='physical request ceiling reached'))
+            self._physical_requests += 1
+            if self.on_request:
+                self.on_request(url)
             self._throttle()
             headers = {'Accept': 'application/json'} if as_json else {}
             # A header keeps the key out of permanent request URLs. Recompute per hop:

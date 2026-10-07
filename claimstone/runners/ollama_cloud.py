@@ -71,7 +71,8 @@ class OllamaCloudRunner:
         return f"ollama-cloud/{self.endpoint}{thinking}{shape}"
 
     def _price(self, usage: dict[str, int]) -> float | None:
-        if self.price_in is None or self.price_out is None:
+        if (self.price_in is None or self.price_out is None or
+                'input_tokens' not in usage or 'output_tokens' not in usage):
             # Unpriced, not free. A cost report that folded this in would be wrong.
             return None
         cached = usage.get("cached_input_tokens", 0)

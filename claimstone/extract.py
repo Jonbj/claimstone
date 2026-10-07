@@ -21,7 +21,7 @@ from __future__ import annotations
 import datetime as _dt
 from typing import Any, Iterable
 
-from claimstone import chunk_sets, claim_records, claimgate, model_call, numbers
+from claimstone import chunk_sets, claim_records, claimgate, model_call, numbers, scope
 from claimstone.store import Store, sha256_text
 
 # The registry's word, not "lane". `model_call.LANES` is ("extract", "review") — the boundary's two
@@ -199,6 +199,7 @@ def build(
     batch: str,
     limit: int | None = None,
     kind: str | None = None,
+    selector: scope.Selector | None = None,
 ) -> dict[str, Any]:
     """One work unit per kind per chunk of every confirmed document.
 
@@ -211,6 +212,8 @@ def build(
     if kind is not None and kind not in KINDS:
         raise ValueError(f"unknown kind {kind!r}: {', '.join(KINDS)}")
     confirmed = _confirmed_sources(store)
+    if selector is not None:
+        confirmed &= scope.source_ids(store, selector)
     chunks = [
         row for row in chunk_sets.current(store).values()
         if str(row.get("source_id")) in confirmed

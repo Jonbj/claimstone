@@ -17,7 +17,6 @@ from __future__ import annotations
 
 import dataclasses
 import datetime as _dt
-import fcntl
 import getpass
 import hashlib
 import json
@@ -30,10 +29,9 @@ from claimstone import scope
 from claimstone.config import Project, check_registry_drift
 from claimstone.store import Store
 
-FLOW_VERSION = 1
+FLOW_VERSION = 2
 
 FLOWS = "flows.jsonl"
-LOCK = ".flows.lock"
 
 INPUT_FILES = ("topics.yaml", "questions.yaml", "sources.yaml", "manifest.tsv")
 
@@ -120,15 +118,9 @@ def _code_identity(root: Path) -> tuple[str | None, bool | None]:
 
 @contextmanager
 def _flows_lock(store: Store):
-    """The one writer lock a flow has (review F5): it serializes flow writes against each other,
-    rereads under the lock, and stops nothing else — which is why `export` cuts at a newline."""
-    store.root.mkdir(parents=True, exist_ok=True)
-    with store.path(LOCK).open("a+b") as handle:
-        fcntl.flock(handle, fcntl.LOCK_EX)
-        try:
-            yield
-        finally:
-            fcntl.flock(handle, fcntl.LOCK_UN)
+    """Use the project-wide lock for a flow's read-modify-write transaction."""
+    with store.writer_lock():
+        yield
 
 
 def binding_id(binding: dict[str, Any]) -> str:
@@ -220,7 +212,17 @@ def create(project: Project, store: Store, *, selector: scope.Selector, title: s
     if relation not in (None, "supersedes", "derived_from"):
         raise ValueError(f"unknown relation: {relation}")
 
-    population = _population_sha(store, selector.round)
+    # A new flow must freeze its declared population before discovery writes
+    # candidates. Otherwise the first discovery run creates populations.jsonl
+    # and immediately makes the flow appear drifted.
+    with store.writer_lock():
+        if derived_from is not None and derived_from not in flows(store):
+            raise ValueError(f"unknown flow to derive from: {derived_from}")
+        if selector.round is not None and not any(
+                row.get('round') == selector.round for row in store.read('candidates.jsonl')):
+            from claimstone import population as population_mod
+            population_mod.check_round(store, project.population, selector.round)
+        population = _population_sha(store, selector.round)
     binding = {
         "project": project.name,
         "selector": selector.as_dict(),

@@ -309,3 +309,35 @@ remaining missing-text count and never infer a screening decision from a title a
 The operator ran that fallback and it supplied all seven abstracts; the rebuilt packet now has
 twenty of twenty texts. The scheduler must keep the twenty blank human decisions distinct from
 metadata completeness, and wait for independent assessment before a held-out model comparison.
+
+## Implementation ledger, 2026-10-07
+
+The first executable slice is `claimstone scheduler`: exact offline plans for
+normalize, scoped extract/review queue construction and profile synthesis.
+It records authorization and completion in `operations.jsonl`, checks frozen
+inputs and reuses completed results. It can drain bounded local llama.cpp or
+explicitly budgeted Ollama Cloud
+queues, attempt candidate URLs, and run scholarly API queries under exact
+authorized hosts and per-unit request ceilings. Batch planning and approval
+allow a worker to process several such units unattended. It cannot yet run
+full open-access acquisition cascades or automatically plan paid lanes. The
+operator-invoked `scheduler drive` chains the scoped local stages under a
+total call cap and stops at network/floor/human gates. The
+following duties still need executable units:
+
+- Bounded discovery and acquisition plans must freeze exact work identities,
+  allowed hosts, robots/redirect ceilings and retry campaigns. Reconcile
+  request and stage ledgers after interruption before restarting a unit.
+- Use the pinned-public-address transport for every approved network unit;
+  never fall back to an unpinned fetcher on a redirect or DNS failure.
+- Count physical requests and host failures across restarts, including robots
+  and redirects, against the approved ceiling and TTL.
+- Drain model queues with explicit backend/model/harness, per-call reservation,
+  cumulative spend ceiling and unknown-cost accounting. Keep extract and
+  review readers distinct, and retain failed answers as unanswered units.
+- Connect the operation ledger to a background worker and the authenticated
+  control service. Record heartbeats, stop requests and resource limits; expose
+  status and live events without granting a portal process direct write access.
+- Turn access refusals into a separate, verified copy-offer and human intake
+  workflow. The operator decides any purchase; a supplied copy's effect on
+  the floor must follow a declared project policy.

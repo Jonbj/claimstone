@@ -28,7 +28,8 @@ from claimstone.store import Store
 def files_snapshot(store):
     return {str(path.relative_to(store.root)): {
         'bytes': path.stat().st_size, 'sha256': hashlib.sha256(path.read_bytes()).hexdigest()}
-        for path in sorted(store.root.rglob('*')) if path.is_file()}
+        for path in sorted(store.root.rglob('*'))
+        if path.is_file() and path.name != '.writer.lock'}
 
 
 def validate_history(store, before, allowed):

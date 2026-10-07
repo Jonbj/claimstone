@@ -58,6 +58,7 @@ INSTRUMENTS = (
     ("claimstone/flows.py", "FLOW_VERSION", "flow_version"),
     ("claimstone/export.py", "EXPORT_VERSION", "export_version"),
     ("claimstone/scheduler_preview.py", "SCHEDULER_PREVIEW_VERSION", "scheduler_preview_version"),
+    ("claimstone/operations.py", "OPERATIONS_VERSION", "operations_version"),
 )
 
 # The parser is an instrument too, and a string rather than a number. Measured: lfoppiano/grobid

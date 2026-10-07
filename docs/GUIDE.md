@@ -5,6 +5,54 @@ prints an offline, read-only proposal of next work. It does not authorize or
 start a stage. It names protocol/integrity blockers and keeps an empty new
 round distinct from a closed candidate cohort (D86).
 
+An existing flow can also run one bounded offline stage through the operation
+ledger. For example, after candidates and acquired copies exist:
+
+```bash
+.venv/bin/claimstone scheduler plan projects/<name> <flow-id> normalize
+.venv/bin/claimstone scheduler authorize projects/<name> <operation-id>
+.venv/bin/claimstone scheduler run projects/<name> <operation-id>
+.venv/bin/claimstone scheduler status projects/<name> <operation-id>
+```
+
+Use `extract-build --batch <name>` or `review-build --batch <name>
+--reviewer <backend>/<model>` for scoped queue construction. A local model
+queue can be drained with `extract-drain` or `review-drain` plus `--batch`,
+`--model` and `--max-calls`; then plan the matching `extract-harvest` or
+`review-harvest`. `synthesize` builds a profile. The operator authorizes each
+exact plan from the local OS account. These operations permit no external
+internet requests except an explicitly planned single-candidate `acquire`
+with `--candidate-key`, repeatable `--allow-host` and `--max-requests`.
+A `discover` plan instead names `--api`, `--topic`, `--term`, `--per-query`,
+`--allow-host` and `--max-requests`; it runs one frozen query per authorization.
+For a metered drain, add `--backend ollama-cloud`, `--budget-id`,
+`--budget-cents`, `--max-call-cents`, `--price-in-cents` and
+`--price-out-cents`. Prices are declared upper estimates in USD cents per
+million tokens, and reservations are cumulative across plans with the same
+budget ID. Review the exact plan and authorize it before a worker may call the
+provider. Credits in an account alone grant no authorization. A provider bill
+can exceed a local estimate; use the provider's account spending controls as
+the external hard cap. Interrupted calls with uncertain billing stop for
+inspection rather than being sent again.
+After a failed offline operation, use a new `--run-label` once the cause is
+resolved. An uncertain physical request blocks automatic retry even with a
+new label.
+
+For several query or candidate plans, `scheduler batch-plan` accepts explicit
+APIs/hosts, `--max-units` and `--max-requests-each`, and prints one batch ID
+with the total ceiling and skipped items. Review that JSON, then run
+`scheduler authorize-batch PROJECT BATCH_ID`. `scheduler tick PROJECT` runs a
+bounded number of approved operations once; `scheduler worker PROJECT` polls
+for further approved operations. The worker does not approve new work.
+For a single unattended local pass after collection, run `scheduler drive
+PROJECT FLOW_ID --extract-model MODEL_A --review-model MODEL_B
+--max-local-calls N`. It stops at the network, acquisition-floor or human
+reading gate; it cannot sign a verdict. Run it inside `./claimstone.sh` if
+PDF normalization needs the internal GROBID service.
+The same invocation first runs any network units for that flow that were
+already authorized when it started; it never expands their host lists or
+ceilings.
+
 What each stage does, what it writes, and what the numbers mean. *In italiano: [GUIDE.it.md](GUIDE.it.md).*
 
 Worked against the round that closed on 2026-09-28 — `pmc-screen-time`, 40 sources — so every figure here is

@@ -7,7 +7,6 @@ from __future__ import annotations
 
 from collections import Counter
 from contextlib import contextmanager
-import fcntl
 import hashlib
 import json
 from typing import Any, Iterable
@@ -187,13 +186,8 @@ def append_observations(store: Store, screening: list[dict[str, Any]],
 
 @contextmanager
 def _writer_lock(store: Store):
-    store.root.mkdir(parents=True, exist_ok=True)
-    with store.path('.source_selection.lock').open('a+b') as handle:
-        fcntl.flock(handle, fcntl.LOCK_EX)
-        try:
-            yield
-        finally:
-            fcntl.flock(handle, fcntl.LOCK_UN)
+    with store.writer_lock():
+        yield
 
 
 def preview(store: Store, scope_id: str, question_id: str, inventory_keys: set[str],

@@ -13,7 +13,7 @@ from claimstone import flows, portal_state, scope
 from claimstone.config import Project, RegistryDrift, check_registry_drift
 from claimstone.store import LedgerCorrupt, Store
 
-SCHEDULER_PREVIEW_VERSION = 1
+SCHEDULER_PREVIEW_VERSION = 2
 
 
 def preview(project: Project, store: Store, flow_id: str) -> dict[str, Any]:
@@ -86,7 +86,7 @@ def preview(project: Project, store: Store, flow_id: str) -> dict[str, Any]:
         elif card.category in {"ACQUISITION", "CLASSIFICATION"}:
             kind = "PLAN_OR_OPERATOR_DECISION"
         elif card.category in {"EXTRACT", "REVIEW"}:
-            kind = "SCOPED_STAGE_NOT_READY"
+            kind = "SCOPED_OFFLINE_STAGE_PLAN_AVAILABLE"
         else:
             kind = "OFFLINE_INSPECTION_OR_STAGE_WORK"
         result["proposals"].append({

@@ -80,6 +80,11 @@ def test_without_declared_prices_the_call_is_unpriced_not_free():
     assert runner(post).run(request()).cost_usd is None
 
 
+def test_declared_prices_do_not_make_missing_usage_free():
+    post = FakePost({'message': {'content': '[]'}})
+    assert runner(post, price_in=0.30, price_out=1.20).run(request()).cost_usd is None
+
+
 def test_a_cut_off_answer_is_reported_as_truncated():
     post = FakePost({"message": {"content": "[{"}, "done_reason": "length"})
     assert runner(post).run(request()).truncated is True

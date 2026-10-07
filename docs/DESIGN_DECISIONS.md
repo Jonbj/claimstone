@@ -3859,7 +3859,8 @@ scoped calls, not the claim gate, review verdict or admission rule.
 `operations_version 1` introduces a bounded operation: plan,
 OS-account authorization, started and completed/failed events in
 `operations.jsonl`. Plans hash the flow binding, exact input ledger bytes,
-code files, stage and batch. Execution checks the frozen inputs and holds the
+the complete `claimstone/` Python package, stage and batch. Execution checks
+the frozen inputs and holds the
 project writer lock through the stage. An interrupted stage can resume from
 the existing append-only stage rows; a completed operation returns its stored
 result without repeating work. Local `llamacpp` drain plans freeze a named
@@ -3932,8 +3933,9 @@ The scientific instruments this work introduces — the new record types
 control API's payload — are each versioned like an instrument and registered
 in `tools/check_instrument_versions.py`, so a bump is recorded, not silent.
 B13 completes this entry with the measured test counts. This entry authorizes
-no campaign, no model spending and no executor; the scheduler's first
-implementation gate (`docs/contracts/scheduler_operations.md`) still stands.
+no campaign or model spending. The scheduler implementation and remaining
+gates are recorded separately in D88 and D90–D92 and
+`docs/contracts/scheduler_operations.md`.
 
 ## D90 — Bound physical requests and reject non-global destinations (2026-10-07)
 
@@ -3946,5 +3948,117 @@ which could otherwise resolve the URL again. The default fetcher behavior is
 unchanged for existing campaigns; a bounded scheduler plan must enable these
 guards. Tests establish that localhost and out-of-plan hosts are refused
 before a socket call, a zero request ceiling permits no transfer, and the
-adapter selects the pinned IP while retaining the original TLS name. This
+adapter selects the pinned IP while retaining the original TLS name. Bounded
+plans also freeze permitted schemes: an HTTPS destination cannot redirect to
+HTTP, and credentials or nonstandard ports are refused before a socket. This
 version changes request conduct, not scientific interpretation.
+
+The bounded path records `request_started` before each physical transfer.
+After a restart, `RecordingFetcher` counts those rows for the named campaign
+so the approved ceiling cannot reset. A start recorded before a crash but
+before the socket opens is conservatively charged.
+
+## D91 — One-candidate bounded acquisition operations (2026-10-07)
+
+An `acquire` operation freezes one candidate key and row, the prior attempt,
+the flow selector, exact allowed hosts and a maximum number of physical
+requests. The plan ID is the campaign name. Local OS authorization records
+that exact ceiling before a worker constructs a `fetch_version 5` transport.
+The operation disables metadata API discovery, so it only attempts the held
+candidate URL and any same-plan redirects or derived routes. Robots and each
+redirect hop consume the same ceiling; an unapproved host is refused before
+the socket. A 403 remains an access refusal, never evidence of a sale.
+
+If the acquisition row exists after an interruption with the operation's
+campaign, the worker reconciles it without another request. If a physical
+`request_started` exists but no acquisition row does, the operation fails and
+requires inspection rather than reissuing an uncertain request. Tests use a
+fake transport to verify the robots+copy ceiling and that a repeated run adds
+no requests. No live campaign was authorized or executed by this decision.
+
+The same plan can opt into the existing metadata API cascade, still under the
+exact host list and physical ceiling; an unknown OA destination is blocked
+until a new plan names it. Reopening a terminal acquisition failure requires
+the exact prior failure class and a recorded reason. The ordinary retry rule
+is not relaxed. A test verifies that a prior 403 is ineligible without the
+named retry and eligible only with both class and reason.
+
+## D92 — Freeze one discovery query per authorized operation (2026-10-07)
+
+A discovery plan names one existing topic ID, one verbatim term, one API,
+one round, a per-query result cap, exact hosts and a physical request ceiling.
+The plan ID is its campaign. The bounded transport records each robots,
+redirect and API request start. `discover.run` accepts a term selector and
+adds the campaign to both request and query rows, while the ordinary CLI
+behavior remains unchanged when no campaign is supplied.
+
+After a crash, a matching query row is reconciled without another transfer.
+If a physical start exists without its query row, the worker refuses to rerun
+the query automatically. Other queries may add candidates before it starts;
+the shared frozen population and protocol still govern deduplication. The
+test exercises a two-transfer robots+API query with
+a fake transport, verifies the recorded outcome and proves a second run
+opens no socket. No live search was authorized by this decision.
+
+## D93 — Batch plans retain one ceiling per unit and one operator approval (2026-10-07)
+
+`operation_batches.jsonl` groups at most the operator's declared number of
+query or candidate plans. It hashes their exact operation IDs and records
+skipped items, remaining unplanned units and the sum of physical request
+ceilings. One local `authorize-batch` command appends an authorization event
+to each plan under the project writer lock; it never broadens a host or a
+ceiling. `scheduler tick` and the polling `scheduler worker` run only such
+authorized plans. A changed prerequisite becomes a failed operation rather
+than a worker that repeatedly tries it. Tests verify the total ceiling and
+idempotent batch authorization in a temporary store. No real campaign was
+created by this decision.
+
+## D94 — One bounded local drive through the scientific stages (2026-10-07)
+
+`scheduler drive PROJECT FLOW_ID --extract-model A --review-model B
+--max-local-calls N` runs one operator-invoked pass. It first executes the
+flow's network operations that were already authorized when the command
+started, within each exact plan's ceiling. It then plans and records
+authorization for scoped normalize, extract queue construction, at most N
+local llama.cpp calls in total, answer harvest, independent-reader review
+queue construction/harvest and profile building. A and B must differ.
+Existing stage gates still decide whether a profile may be built. It stops
+with `NEEDS_AUTHORIZED_DISCOVERY` or `NEEDS_ACQUISITION_FLOOR` instead of
+inventing a completed research result. No scientific verdict is signed.
+The tests start with an empty flow, a one-document flow and an already
+authorized fake query; exactly one model call occurs under a local ceiling
+of one, and the query runs before the local pass. Each offline
+stage still has an exact operation plan and authorization event, so the
+drive does not bypass the operation ledger. The test makes no live scholarly
+request. The command permits only the scholarly requests already approved in
+exact operation plans and makes no metered model call.
+
+## D95 — Local model identity must be reported, not merely requested (2026-10-07)
+
+The `llamacpp` scheduler wrapper adds `strict-model-report=1` to its recorded
+harness identity. If the server reports a model different from the plan, the
+raw answer is retained but the result is terminal
+`MODEL_IDENTITY_MISMATCH` and cannot become a claim or review. This matters
+because the review gate compares backend/model readers: two requested names
+would falsely look independent if the same loaded model answered both. The
+test simulates that mismatch and verifies `ok: false`, the failure class and
+the strict harness marker. Existing non-scheduler model runs retain their
+prior behavior and provenance; no historical result is rewritten.
+
+## D96 — Reserve paid model work across worker restarts (2026-10-07)
+
+`operations_version 2` permits an exact `ollama-cloud` extract or review drain
+only when its plan freezes model, harness, queue hash, call IDs, a named
+cumulative budget, per-call reservation and declared input/output price
+ceilings. Authorization sums the full reservations of all previously
+authorized plans under the same budget ID; failed and unused reservations are
+not recycled. Before each provider call the worker appends `call_started`.
+A crash after that event without a result stops automatic retry, because the
+provider may have charged for a reply the process did not record. A reported
+unknown or over-reservation cost stops further calls. The per-call estimate
+uses UTF-8 prompt bytes plus 8192 tokens of allowance and the request's
+output limit; it is a local guard, not a provider-enforced billing cap.
+Tests with a fake remote runner verify that a second plan cannot exceed a
+15-cent cumulative budget after a 10-cent authorization, that the call-start
+event precedes its result, and that an unsettled call is never resent. No
+paid call was made by these tests or this decision.

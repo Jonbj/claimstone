@@ -353,7 +353,7 @@
   "created_by": "fixture",
   "event": "created",
   "flow_id": "0df548e3743689e1a0dd099da697aee4842e8a573f1225a8da13fec128a248cd",
-  "flow_version": 1,
+  "flow_version": 2,
   "input_files": {
    "manifest.tsv": null,
    "questions.yaml": "24142fc60ee12a8008dac6f7308599290ea37f69cd0745c39862a01db097b23d",
@@ -367,7 +367,7 @@
    "category": "REVIEW",
    "cause": "2 claim(s) awaiting review",
    "command": null,
-   "note": "see docs/GUIDE.md, stage 5; review is not round-scoped and builds work for the whole project (review F7)",
+   "note": "plan a scoped review-build operation with a different reader",
    "scope": "flow 0df548e37436",
    "subject": "Q02"
   },

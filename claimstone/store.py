@@ -18,9 +18,12 @@ to refuse.
 from __future__ import annotations
 
 import datetime as _dt
+import fcntl
 import hashlib
 import json
 import pathlib
+import threading
+from contextlib import contextmanager
 from typing import Any, Iterable, Iterator
 
 
@@ -51,6 +54,58 @@ class Store:
 
     REPAIR_LEDGER = "ledger_repairs.jsonl"
 
+    _process_locks: dict[pathlib.Path, threading.RLock] = {}
+    _lock_guard = threading.Lock()
+    _held = threading.local()
+
+    @contextmanager
+    def writer_lock(self):
+        """Serialize project writers across threads, Store instances and processes.
+
+        Reentrant in one thread so a stage can hold the lock while appending several
+        ledgers. Every read-modify-write operation must hold this lock throughout.
+        """
+        key = self.root.resolve()
+        with self._lock_guard:
+            local = self._process_locks.setdefault(key, threading.RLock())
+        with local:
+            held = getattr(self._held, "files", None)
+            if held is None:
+                held = self._held.files = {}
+            if key in held:
+                yield
+                return
+            self.root.mkdir(parents=True, exist_ok=True)
+            with (self.root / ".writer.lock").open("a+b") as handle:
+                fcntl.flock(handle, fcntl.LOCK_EX)
+                held[key] = handle
+                try:
+                    yield
+                finally:
+                    del held[key]
+                    fcntl.flock(handle, fcntl.LOCK_UN)
+
+    def writer_busy(self) -> bool:
+        """Whether another thread or process currently holds the project writer lock."""
+        key = self.root.resolve()
+        with self._lock_guard:
+            local = self._process_locks.setdefault(key, threading.RLock())
+        if not local.acquire(blocking=False):
+            return True
+        try:
+            path = self.root / ".writer.lock"
+            if not path.exists():
+                return False
+            with path.open("rb") as handle:
+                try:
+                    fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                except BlockingIOError:
+                    return True
+                fcntl.flock(handle, fcntl.LOCK_UN)
+                return False
+        finally:
+            local.release()
+
     def append(self, name: str, row: dict[str, Any]) -> None:
         """Append one row, repairing a half-written tail first.
 
@@ -62,10 +117,11 @@ class Store:
         # The row's own directory, not just the project root: a ledger may sit under a subpath —
         # `calls/<lane>/<batch>/requests.jsonl` is one — and creating only the root leaves the
         # append raising FileNotFoundError on a name that is otherwise perfectly valid.
-        (self.root / name).parent.mkdir(parents=True, exist_ok=True)
-        self._ensure_clean_tail(name)
-        with (self.root / name).open("a", encoding="utf-8") as handle:
-            handle.write(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n")
+        with self.writer_lock():
+            (self.root / name).parent.mkdir(parents=True, exist_ok=True)
+            self._ensure_clean_tail(name)
+            with (self.root / name).open("a", encoding="utf-8") as handle:
+                handle.write(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n")
 
     def _ensure_clean_tail(self, name: str) -> None:
         path = self.root / name
@@ -137,17 +193,18 @@ class Store:
         Returns whether anything was removed. Truncation is the only mutation this class
         performs, and it removes only a line no reader ever accepted.
         """
-        path = self.root / name
-        if not path.exists():
-            return False
-        data = path.read_bytes()
-        if not data or data.endswith(b"\n"):
-            return False
-        cut = data.rfind(b"\n")
-        path.write_bytes(data[: cut + 1] if cut >= 0 else b"")
-        if name in self.torn_tail:
-            self.torn_tail.remove(name)
-        return True
+        with self.writer_lock():
+            path = self.root / name
+            if not path.exists():
+                return False
+            data = path.read_bytes()
+            if not data or data.endswith(b"\n"):
+                return False
+            cut = data.rfind(b"\n")
+            path.write_bytes(data[: cut + 1] if cut >= 0 else b"")
+            if name in self.torn_tail:
+                self.torn_tail.remove(name)
+            return True
 
     def latest_by(self, name: str, key: str) -> dict[str, dict[str, Any]]:
         """Collapse an append-only log to the most recent row per key."""
@@ -161,13 +218,14 @@ class Store:
     def store_bytes_at(self, where: str, data: bytes, suffix: str) -> tuple[str, pathlib.Path]:
         """Write bytes under their own hash, inside `where`. Re-storing the same bytes is a no-op,
         so a re-drain that gets an identical answer costs nothing."""
-        digest = sha256_bytes(data)
-        directory = self.root / where
-        directory.mkdir(parents=True, exist_ok=True)
-        target = directory / f"{digest}{suffix}"
-        if not target.exists():
-            target.write_bytes(data)
-        return digest, target
+        with self.writer_lock():
+            digest = sha256_bytes(data)
+            directory = self.root / where
+            directory.mkdir(parents=True, exist_ok=True)
+            target = directory / f"{digest}{suffix}"
+            if not target.exists():
+                target.write_bytes(data)
+            return digest, target
 
     def store_bytes(self, data: bytes, suffix: str) -> tuple[str, pathlib.Path]:
         """Write bytes under their own hash. Re-fetching the same bytes is a no-op."""

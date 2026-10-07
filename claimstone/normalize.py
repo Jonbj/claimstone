@@ -17,7 +17,7 @@ import pathlib
 from typing import Any, Iterator
 
 from claimstone import chunk as chunking
-from claimstone import html_doc, jats, tei, model_call
+from claimstone import html_doc, jats, tei, model_call, scope
 from claimstone.store import sha256_text
 from claimstone.store import Store
 
@@ -76,6 +76,7 @@ def run(
     thresholds: dict[str, int] | None = None,
     force: bool = False,
     limit: int | None = None,
+    selector: scope.Selector | None = None,
 ) -> Iterator[dict[str, Any]]:
     """Normalize every acquired source not already done. Idempotent by content hash."""
     th = {**chunking.DEFAULT_THRESHOLDS, **CONFIRM_DEFAULTS, **(thresholds or {})}
@@ -83,7 +84,10 @@ def run(
     references = _reference_rows(store)
     attempted = 0
 
+    allowed = scope.source_ids(store, selector) if selector is not None else None
     for source in _acquired(store):
+        if allowed is not None and str(source.get('source_id') or source.get('candidate_key')) not in allowed:
+            continue
         if limit is not None and attempted >= limit:
             return
         digest = str(source.get("sha256") or "")
