@@ -248,7 +248,7 @@ the draft is the safeguard). Not checked in a browser (no servers were started).
   Files: `web/src/lib/api.ts`, `web/src/pages/ExportPage.tsx`, `web/src/App.tsx`, `web/tests/export.test.tsx`.
 - [x] F6.2 Administration `/admin`: read API presence block, control admin when signed in (last check per target, Check buttons, credential form cleared after every submit, never echoed), Paid test disabled with the 501 reason.
   Files: `web/src/pages/AdminPage.tsx`, `web/tests/admin.test.tsx`.
-- [ ] F6.3 Reviewer fix A: the reading desk keeps its last good data and the panel state through a failed poll refresh, with a named stale banner; no storage.
+- [x] F6.3 Reviewer fix A: the reading desk keeps its last good data and the panel state through a failed poll refresh, with a named stale banner; no storage.
   Files: `web/src/pages/QuestionPage.tsx`, `web/tests/readingdesk.test.tsx`.
 - [ ] F6.4 Reviewer fix B: Today's newest rows as labelled fields, not JSON.
   Files: `web/src/pages/TodayPage.tsx`, `web/tests/today.test.tsx`.

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link, useLocation, useParams } from "react-router";
 import Chip from "@/components/Chip";
 import CommandBlock from "@/components/CommandBlock";
@@ -45,10 +45,25 @@ export default function QuestionPage({ kind }: { kind: "f" | "u" }) {
   const location = useLocation();
   const [diffRequest, setDiffRequest] = useState<DiffRequest | null>(null);
 
-  if (detail.error)
-    return <ErrorState error={detail.error} context="question" />;
-  if (detail.pending || !detail.data) return <Pending label="loading question…" />;
-  const data: QuestionDetail = detail.data;
+  // The last answer this view received. A poll reload that fails must not unmount the page: the
+  // signature panel below holds the reasoning somebody is typing, in memory only, and an error
+  // state in its place would drop it. The old values stay on screen under a named banner; the
+  // first load of a view that fails still shows the plain error state.
+  const viewKey = `${project}|${kind}|${sel}|${qid}`;
+  const lastGood = useRef<{ key: string; data: QuestionDetail; at: string } | null>(null);
+  const failure = useRef<{ error: Error; at: string } | null>(null);
+  if (detail.data && lastGood.current?.data !== detail.data) {
+    lastGood.current = { key: viewKey, data: detail.data, at: new Date().toISOString() };
+  }
+  if (detail.error && failure.current?.error !== detail.error) {
+    failure.current = { error: detail.error, at: new Date().toISOString() };
+  }
+  const held = lastGood.current?.key === viewKey ? lastGood.current : null;
+  const data: QuestionDetail | null = detail.data ?? held?.data ?? null;
+  const refreshFailed = detail.error && held ? failure.current : null;
+
+  if (detail.error && !held) return <ErrorState error={detail.error} context="question" />;
+  if (!data) return <Pending label="loading question…" />;
 
   const base = `/p/${encodeURIComponent(project)}/${kind}/${encodeURIComponent(sel)}`;
   const fields = data.profile_fields;
@@ -109,10 +124,22 @@ export default function QuestionPage({ kind }: { kind: "f" | "u" }) {
 
   return (
     <section className="flex flex-col gap-5">
+      {refreshFailed && held ? (
+        <div role="alert" data-testid="refresh-failed"
+             className="rounded-lg border border-amber-400 bg-amber-50 p-3 text-sm text-amber-950 dark:bg-amber-950/30 dark:text-amber-100">
+          <p className="font-semibold">
+            Refresh failed at {refreshFailed.at}; the values shown are from {held.at}.
+          </p>
+          <p className="mt-1">
+            Your unsaved text is kept. The page will try again when the ledgers next change.
+          </p>
+          <ErrorState error={refreshFailed.error} context="refresh" />
+        </div>
+      ) : null}
       <header>
         <h1 className="text-[26px] font-normal">
           <span className="font-mono">{data.id}</span>: {data.text}
-          {detail.refreshing ? (
+          {detail.refreshing || (detail.pending && held) ? (
             <span className="pending ml-3" role="status">
               refreshing…
             </span>

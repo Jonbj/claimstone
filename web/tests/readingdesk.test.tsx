@@ -29,6 +29,9 @@ const operational = {
 };
 
 let posts: Array<{ url: string; body: Record<string, unknown> }>;
+// Test hooks: a poll whose ledgers change on every call, and a question read that can be made to fail.
+let pollCalls = 0;
+let failQuestion = false;
 
 function mount(opts: {
   question?: unknown; signedIn?: boolean; kind?: "f" | "u"; profilesStatus?: number;
@@ -56,8 +59,12 @@ function mount(opts: {
         ? json(200, profiles)
         : json(profilesStatus, { error: { code: "NOT_FOUND", message: "no profiles here" } });
     }
-    if (url.includes("/questions/Q02")) return json(200, question);
-    if (url.includes("/poll")) return json(200, { ledgers: {} });
+    if (url.includes("/questions/Q02")) {
+      return failQuestion
+        ? json(503, { error: { code: "LEDGER_CORRUPT", message: "candidates.jsonl line 4 is damaged" } })
+        : json(200, question);
+    }
+    if (url.includes("/poll")) return json(200, { ledgers: { n: pollCalls++ } });
     return json(404, { error: { code: "NOT_FOUND", message: "x" } });
   });
   const path = kind === "f" ? `/p/demo/f/${FLOW}/q/Q02` : "/p/demo/u/-/q/Q02";
@@ -73,7 +80,7 @@ function mount(opts: {
   );
 }
 
-beforeEach(() => setCsrfToken(null));
+beforeEach(() => { setCsrfToken(null); pollCalls = 0; failQuestion = false; });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 describe("F4.2: reading desk", () => {
@@ -137,5 +144,47 @@ describe("F4.2: reading desk", () => {
     expect(posts.find((p) => p.url.endsWith("/adjudicate"))!.body).toEqual({
       verdict: "NEVER_ASKED", rationale: "y".repeat(130), profile_sha256: HASH, attest: true });
     expect(screen.getByRole("heading", { level: 1 }).textContent).toContain("Q02");
+  });
+});
+
+describe("F6: a failed poll refresh keeps the reading desk", () => {
+  afterEach(() => vi.useRealTimers());
+
+  it("keeps typed, unsaved reasoning, the verdict and the attestation, and names the failure", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    mount({});
+    await screen.findByRole("form", { name: "Sign the verdict" });
+    fireEvent.click(screen.getByRole("radio", { name: /Never asked/ }));
+    const box = () => screen.getAllByRole("textbox").find((t) => t.tagName === "TEXTAREA") as HTMLTextAreaElement;
+    fireEvent.change(box(), { target: { value: "unsaved reasoning ".repeat(10) } });
+    fireEvent.click(screen.getByRole("checkbox"));
+
+    failQuestion = true;
+    await vi.advanceTimersByTimeAsync(3000); // baseline poll
+    await vi.advanceTimersByTimeAsync(3000); // ledgers moved: the page reloads and the read fails
+    const banner = await screen.findByTestId("refresh-failed");
+    expect(banner.textContent).toContain("Refresh failed at");
+    expect(banner.textContent).toContain("the values shown are from");
+    expect(banner.textContent).toContain("LEDGER_CORRUPT");
+    expect(banner.textContent).toContain("candidates.jsonl line 4 is damaged");
+
+    expect(box().value).toBe("unsaved reasoning ".repeat(10));
+    expect((screen.getByRole("radio", { name: /Never asked/ }) as HTMLInputElement).checked).toBe(true);
+    expect((screen.getByRole("checkbox") as HTMLInputElement).checked).toBe(true);
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toContain("Q02");
+
+    // The next change that reads fine clears the banner and still keeps the text.
+    failQuestion = false;
+    await vi.advanceTimersByTimeAsync(3000);
+    await waitFor(() => expect(screen.queryByTestId("refresh-failed")).toBeNull());
+    expect(box().value).toBe("unsaved reasoning ".repeat(10));
+  });
+
+  it("a first load that fails is still the plain error state", async () => {
+    failQuestion = true;
+    mount({});
+    expect(await screen.findByText("LEDGER_CORRUPT")).toBeTruthy();
+    expect(screen.queryByTestId("refresh-failed")).toBeNull();
+    expect(screen.queryByRole("form", { name: "Sign the verdict" })).toBeNull();
   });
 });
