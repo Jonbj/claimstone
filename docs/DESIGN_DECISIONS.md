@@ -4213,3 +4213,40 @@ Correction to D101: the single explicit fetch of an operator-proposed URL was **
 B7b. An operator who holds a copy uploads it. Fetching a URL someone proposed is a network request
 on their behalf, so it waits for the scheduler's authorized operations (B12) rather than becoming a
 route around them.
+
+## D103 — Decisions are records; possession and plans come from the ledgers, never from a button (2026-10-07)
+
+B8 adds `decisions.jsonl` (`decision_version 1`) for the three decisions the portal design puts in
+front of a person. None of them executes anything.
+
+- **Identity.** A `POSSIBLE_VERSION` intake item gets one of four answers, with a reason of at least
+  20 characters except `not_sure`.
+  - `same_work` accepts a file through the single acceptance path of B7b, the identity now
+    confirmed by the decision, or marks a reference a `DUPLICATE`.
+  - `version_of` records the relation. It is **not** a way for a version's file to become the
+    candidate's copy, and it never changes the study count.
+  - `different` rejects a file for that candidate, or routes a reference again as a new work.
+
+  This step's decision: whether a version's full text may stand in for the work it versions is
+  scientific policy, and nothing here grants it.
+- **Retry campaigns.** The plan is built on the server from what was recorded: the candidate's
+  last outcome and the hosts its attempts reached.
+  - Excluded hosts, and hosts whose recorded failures reach the fetcher's budget, are refused in
+    the preview. `net.recorded_host_failures` is now the one count both the fetcher and the preview
+    use.
+  - Approving stores the plan verbatim under a new campaign name with a request bound, and executes
+    nothing. It becomes work only when an authorized operation names it (B12).
+- **Purchase offers.**
+  - An offer exists only when an operator records one they verified, with vendor, price, currency,
+    terms, verification time and what it might resolve. A 403 is never one.
+  - `approved`, `bought_externally` and `declined` are set by hand, in order.
+  - `copy_provided` and `copy_verified` are derived from intake and never written: possession is a
+    file that passed B7b's gates.
+  - A changed offer is a new offer, and the old one becomes `obsolete` without its approval.
+
+Deferring needs a future date and declining needs a reason. Both state a fixed consequence: a
+declined campaign makes no request, and a declined offer buys nothing.
+
+The open list is ordered without reading claims, reviews or stances (F13). Required identity
+questions come first, then source class, candidate key and age. A test adds claims of both stances
+and asserts that the order does not move.

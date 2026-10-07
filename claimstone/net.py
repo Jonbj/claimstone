@@ -160,6 +160,33 @@ class Outcome:
 
 
 
+
+def recorded_host_failures(store: Any, host: str, ttl_s: int = 48 * 3600) -> int:
+    """Failures against `host` within `ttl_s`, read from `requests.jsonl` (F6).
+
+    The one count both the per-run `Fetcher` budget and an operator's campaign preview use, so a
+    preview can never call a host available that the next fetch would refuse."""
+    cutoff = time.time() - ttl_s
+    # Transport/robots events are written once per physical request. The
+    # response summary is intentionally ignored or it would count twice.
+    failures = {PAYWALL, RATE_LIMITED, SERVER_ERROR, TIMEOUT, CONNECTION}
+    count = 0
+    for row in store.read('requests.jsonl'):
+        if row.get('event') not in {'transport', 'robots'} or row.get('failure_class') not in failures:
+            continue
+        if host_of(str(row.get('url') or '')) != host:
+            continue
+        try:
+            stamp = dt.datetime.fromisoformat(str(row['recorded_at']))
+            when = stamp.timestamp() if stamp.tzinfo else 0
+        except (KeyError, TypeError, ValueError, OverflowError):
+            # An undated failure cannot safely be assigned to the TTL.
+            # The ledger validator handles malformed rows separately.
+            continue
+        count += when >= cutoff
+    return count
+
+
 def global_addresses(host: str, resolver: Any = None) -> set[str] | None:
     """Every address `host` resolves to, or None unless all of them are global.
 
@@ -237,24 +264,7 @@ class Fetcher:
     def _recent_failures(self, host: str) -> int:
         cutoff = time.time() - self.failure_ttl_s
         if self.failure_store is not None:
-            # Transport/robots events are written once per physical request. The
-            # response summary is intentionally ignored or it would count twice.
-            failures = {PAYWALL, RATE_LIMITED, SERVER_ERROR, TIMEOUT, CONNECTION}
-            count = 0
-            for row in self.failure_store.read('requests.jsonl'):
-                if row.get('event') not in {'transport', 'robots'} or row.get('failure_class') not in failures:
-                    continue
-                if host_of(str(row.get('url') or '')) != host:
-                    continue
-                try:
-                    stamp = dt.datetime.fromisoformat(str(row['recorded_at']))
-                    when = stamp.timestamp() if stamp.tzinfo else 0
-                except (KeyError, TypeError, ValueError, OverflowError):
-                    # An undated failure cannot safely be assigned to the TTL.
-                    # The ledger validator handles malformed rows separately.
-                    continue
-                count += when >= cutoff
-            return count
+            return recorded_host_failures(self.failure_store, host, self.failure_ttl_s)
         kept = [t for t in self._host_failures.get(host, []) if t >= cutoff]
         self._host_failures[host] = kept
         return len(kept)

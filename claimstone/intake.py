@@ -323,10 +323,7 @@ def receive_file(store: Store, project: Any, flow_row: dict[str, Any], selector:
                       "identical bytes are already held; nothing added, not a second study", extra)
 
     payload = path.read_bytes()
-    thresholds = {**fulltext.DEFAULT_THRESHOLDS, **(project.gate_thresholds or {})}
-    from claimstone.config import resolve_gate_policy
-    policy = resolve_gate_policy(project.gate_policy or {}, project.classes,
-                                 candidate.get("source_class"))
+    thresholds, policy = _gate_for(project, candidate)
     judged = fulltext.classify(payload, "application/pdf", "upload.pdf", thresholds, policy=policy)
     if not judged.accepted:
         return record("REJECTED", "file_checks",
@@ -351,35 +348,109 @@ def receive_file(store: Store, project: Any, flow_row: dict[str, Any], selector:
                       + (" (its DOI is)" if doi_found else "")
                       + "; whether this is the same work, a version or another work is a "
                       "person's decision", {"identity": evidence})
+    return _accept(store, project, flow_id, candidate, path=path, payload=payload,
+                   links={**links, "identity": evidence}, common=common)
 
+
+def _gate_for(project: Any, candidate: dict[str, Any]) -> tuple[dict[str, int], dict[str, Any]]:
+    from claimstone.config import resolve_gate_policy
+    thresholds = {**fulltext.DEFAULT_THRESHOLDS, **(project.gate_thresholds or {})}
+    policy = resolve_gate_policy(project.gate_policy or {}, project.classes,
+                                 candidate.get("source_class"))
+    return thresholds, policy
+
+
+def _accept(store: Store, project: Any, flow_id: str, candidate: dict[str, Any], *,
+            path: pathlib.Path, payload: bytes, links: dict[str, Any], common: dict[str, Any],
+            intake_id: str | None = None) -> dict[str, Any]:
+    """The one way a file becomes a candidate's copy: out of quarantine into `raw/`, one
+    `operator-supplied` acquisition row, and the intake row that says how it counts. The content
+    gate is re-run here so the acquisition row carries the gate it passed, whoever confirmed the
+    identity."""
+    target = str(candidate["candidate_key"])
     reason_held = _holds_copy(store, candidate)
     if reason_held:
-        return record("DUPLICATE", "identity", reason_held + "; nothing added",
-                      {"identity": evidence})
-
+        row = _row(flow_id, state="DUPLICATE", stage="identity",
+                   reason=reason_held + "; nothing added", links=links, intake_id=intake_id,
+                   **common)
+        store.append(LEDGER, row)
+        return row
+    thresholds, policy = _gate_for(project, candidate)
+    judged = fulltext.classify(payload, "application/pdf", "upload.pdf", thresholds, policy=policy)
+    if not judged.accepted:  # unreachable for a file that reached identity; kept as a guard
+        raise IntakeRefused(f"not a document by the content gate: {judged.kind}")
     _digest, stored = store.store_bytes(payload, ".pdf")
     counted = getattr(project, "supplied_copies", "separate") == "count"
     with store.writer_lock():
-        held = store.latest_by("acquisitions.jsonl", "candidate_key").get(str(target))
+        held = store.latest_by("acquisitions.jsonl", "candidate_key").get(target)
         intake_row = _row(
             flow_id, state="COUNTED" if counted else "REPORTED_SEPARATELY", stage="accepted",
             reason=("accepted; counts toward the floor (declared policy: count)" if counted else
                     "accepted; reported separately from the floor (policy: separate)")
             + "; listed for the next scoped normalize",
-            links={**links, "identity": evidence}, **common)
+            links=links, intake_id=intake_id, **common)
         store.append("acquisitions.jsonl", {
-            "candidate_key": str(target), "source_id": candidate.get("source_id"),
+            "candidate_key": target, "source_id": candidate.get("source_id"),
             "source_class": candidate.get("source_class"), "campaign": CAMPAIGN,
             "attempt_no": int((held or {}).get("attempt_no") or 0) + 1,
-            "acquired": True, "sha256": sha, "stored_path": str(stored),
+            "acquired": True, "sha256": common["value"], "stored_path": str(stored),
             "url": str(candidate.get("url") or ""), "provenance": admissibility.OPERATOR_SUPPLIED,
             "version": "", "licence": None, "oa_status": None, "host_type": None,
             "content_type": "application/pdf", "bytes": len(payload),
             "gate": judged.as_row(thresholds, policy), "failure_class": None, "attempts": [],
-            "fetched_at": None, "supplied_at": intake_row["recorded_at"], "supplied_by": actor,
+            "fetched_at": None, "supplied_at": intake_row["recorded_at"],
+            "supplied_by": common["actor"],
             "intake_id": intake_row["intake_id"], "intake_version": INTAKE_VERSION,
         })
         store.append(LEDGER, intake_row)
     if path.exists():
         path.unlink()
     return intake_row
+
+
+# --- state changes a person's decision causes (B8) -----------------------------------------------
+
+
+def restate(store: Store, item: dict[str, Any], *, state: str, stage: str, reason: str,
+            decision_id: str) -> dict[str, Any]:
+    """A new row for the same item with the state a decision gave it."""
+    row = {**item, "state": state, "stage": stage, "reason": reason,
+           "links": {**(item.get("links") or {}), "decision_id": decision_id},
+           "recorded_at": _now()}
+    store.append(LEDGER, row)
+    return row
+
+
+def accept_file(store: Store, project: Any, flow_row: dict[str, Any], selector: scope.Selector,
+                *, item: dict[str, Any], identity_by: str) -> dict[str, Any]:
+    """A POSSIBLE_VERSION file a person answered `same_work` for: accepted through the same path
+    as a file whose title was found, with the decision recorded as its identity evidence."""
+    links = dict(item.get("links") or {})
+    candidate = scope.candidates(store, selector).get(str(links.get("candidate_key")))
+    if candidate is None:
+        raise UnknownTarget(f"no candidate {links.get('candidate_key')} in this flow")
+    path = store.root / QUARANTINE / f"{item['value']}.pdf"
+    if not path.exists():
+        raise IntakeRefused("the quarantined file is no longer held")
+    links["identity"] = {**(links.get("identity") or {}), "confirmed_by_decision": identity_by}
+    links["decision_id"] = identity_by
+    common = {"kind": "file", "value": item["value"], "submitted": item.get("submitted"),
+              "actor": item.get("actor"), "code_revision": item.get("code_revision")}
+    return _accept(store, project, str(flow_row["flow_id"]), candidate, path=path,
+                   payload=path.read_bytes(), links=links, common=common,
+                   intake_id=item["intake_id"])
+
+
+def reroute(store: Store, project: Any, flow_row: dict[str, Any], selector: scope.Selector, *,
+            item: dict[str, Any], decision_id: str) -> dict[str, Any]:
+    """A reference a person answered `different` for: routed as a new work, as B7a would have
+    routed it with no title match."""
+    if selector.manifest_only or not selector.round:
+        return restate(store, {**item, "links": {"open_flows": _open_flows(
+            store, project, str(flow_row["flow_id"]))}},
+            state="NEEDS_NEW_ROUND", stage="identity",
+            reason="a person answered: a different work; this flow's candidate set is fixed",
+            decision_id=decision_id)
+    return restate(store, {**item, "links": {}}, state="READY", stage="identity",
+                   reason=(f"a person answered: a different work; routed to round "
+                           f"{selector.round}'s next discover"), decision_id=decision_id)

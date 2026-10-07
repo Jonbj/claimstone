@@ -33,7 +33,7 @@ from typing import Any, Callable
 import urllib.parse
 from urllib.parse import unquote, urlparse
 
-from claimstone import drafts, flows, intake, operators, portal_state, scope, synthesize
+from claimstone import decisions, drafts, flows, intake, operators, portal_state, scope, synthesize
 from claimstone.config import ConfigError, RegistryDrift
 from claimstone.store import LedgerCorrupt, Store
 from claimstone.transport import LOOPBACK_HOSTS, BaseHandler
@@ -233,6 +233,19 @@ ROUTES: tuple[Route, ...] = (
     # B7b: a file for one candidate; the body is the file itself, not JSON.
     Route("POST", ("p", "{project}", "flows", "{flow_id}", "intake", "file"), "_intake_file",
           raw=True),
+    # B8: decisions. The preview route precedes the state route: same length, fixed segment first.
+    Route("POST", ("p", "{project}", "flows", "{flow_id}", "intake", "{intake_id}", "resolve"),
+          "_identity_resolve"),
+    Route("GET", ("p", "{project}", "flows", "{flow_id}", "decisions"), "_decisions_list"),
+    Route("GET", ("p", "{project}", "flows", "{flow_id}", "decisions", "retry-campaign",
+                  "preview"), "_retry_preview"),
+    Route("POST", ("p", "{project}", "flows", "{flow_id}", "decisions", "retry-campaign"),
+          "_retry_approve"),
+    Route("POST", ("p", "{project}", "flows", "{flow_id}", "decisions", "{decision_id}", "state"),
+          "_decision_state"),
+    Route("POST", ("p", "{project}", "flows", "{flow_id}", "offers"), "_offer_record"),
+    Route("POST", ("p", "{project}", "flows", "{flow_id}", "offers", "{offer_id}", "stage"),
+          "_offer_stage"),
 )
 
 
@@ -756,6 +769,111 @@ def _intake_file(self: _Handler, params: dict[str, str], query: Any,
     except intake.IntakeRefused as exc:
         raise ControlError(422, "VALIDATION", str(exc)) from None
     return {"intake": recorded}, 201
+
+
+def _decided(call: Callable[[], Any]) -> Any:
+    """One mapping from the decision rules' refusals to the envelope."""
+    try:
+        return call()
+    except decisions.Conflict as exc:
+        raise ControlError(409, "CONFLICT", str(exc)) from None
+    except (decisions.DecisionRefused, intake.IntakeRefused) as exc:
+        raise ControlError(422, "VALIDATION", str(exc)) from None
+    except (LookupError, intake.UnknownTarget) as exc:
+        raise portal_state.NotFound(str(exc.args[0] if exc.args else exc)) from None
+
+
+def _identity_resolve(self: _Handler, params: dict[str, str], query: Any,
+                      body: dict[str, Any]) -> tuple[Any, int]:
+    self._only_keys(body, frozenset({"answer", "reason"}))
+    session = self._require_session()
+    project, store, row, selector = _flow_only(self, params)
+    result = _decided(lambda: decisions.resolve_identity(
+        store, project, row, selector, intake_id=params["intake_id"], answer=body.get("answer"),
+        reason=body.get("reason"), actor=session.operator_id, code_revision=self.code_revision))
+    return result, 201
+
+
+def _decisions_list(self: _Handler, params: dict[str, str], query: Any,
+                    body: dict[str, Any]) -> tuple[Any, int]:
+    """What waits for a person in this flow (F13 order), and what was decided recently."""
+    _project, store, row, selector = _flow_only(self, params)
+    flow_id = str(row["flow_id"])
+    decided = [r for r in decisions.latest(store).values()
+               if r.get("flow_id") == flow_id and r.get("state") not in ("proposed",)]
+    decided.sort(key=lambda r: str(r.get("recorded_at")), reverse=True)
+    return {"flow_id": flow_id, "open": decisions.open_items(store, selector, flow_id),
+            "decided_recently": decided[:20]}, 200
+
+
+def _candidate_ids(value: Any) -> list[str]:
+    if isinstance(value, str):
+        value = [part for part in value.split(",") if part]
+    if (not isinstance(value, list) or not value or len(value) > 200
+            or any(not isinstance(v, str) or not v for v in value)):
+        raise ControlError(422, "VALIDATION", "candidate_ids must name 1-200 candidates")
+    return list(dict.fromkeys(value))
+
+
+def _retry_preview(self: _Handler, params: dict[str, str], query: Any,
+                   body: dict[str, Any]) -> tuple[Any, int]:
+    project, store, _row, selector = _flow_only(self, params)
+    raw = (urllib.parse.parse_qs(urlparse(self.path).query).get("candidate_ids") or [""])[0]
+    keys = _candidate_ids(raw)
+    return _decided(lambda: decisions.retry_preview(store, project, selector, keys)), 200
+
+
+def _retry_approve(self: _Handler, params: dict[str, str], query: Any,
+                   body: dict[str, Any]) -> tuple[Any, int]:
+    self._only_keys(body, frozenset({"candidate_ids", "campaign", "max_requests"}))
+    session = self._require_session()
+    project, store, row, selector = _flow_only(self, params)
+    keys = _candidate_ids(body.get("candidate_ids"))
+    return {"decision": _decided(lambda: decisions.approve_retry(
+        store, project, row, selector, candidate_keys=keys, campaign=body.get("campaign"),
+        max_requests=body.get("max_requests"), actor=session.operator_id,
+        code_revision=self.code_revision))}, 201
+
+
+def _decision_state(self: _Handler, params: dict[str, str], query: Any,
+                    body: dict[str, Any]) -> tuple[Any, int]:
+    self._only_keys(body, frozenset({"state", "until", "reason"}))
+    session = self._require_session()
+    _project, store, row, _selector = _flow_only(self, params)
+    return {"decision": _decided(lambda: decisions.set_state(
+        store, row, decision_id=params["decision_id"], state=body.get("state"),
+        until=body.get("until"), reason=body.get("reason"), actor=session.operator_id,
+        code_revision=self.code_revision))}, 201
+
+
+def _offer_record(self: _Handler, params: dict[str, str], query: Any,
+                  body: dict[str, Any]) -> tuple[Any, int]:
+    self._only_keys(body, frozenset({"candidate_id", "work_version", "vendor", "price",
+                                     "currency", "tax_status", "terms_url", "verified_at",
+                                     "resolves"}))
+    session = self._require_session()
+    _project, store, row, selector = _flow_only(self, params)
+    return {"offer": _decided(lambda: decisions.record_offer(
+        store, row, selector, body=body, actor=session.operator_id,
+        code_revision=self.code_revision))}, 201
+
+
+def _offer_stage(self: _Handler, params: dict[str, str], query: Any,
+                 body: dict[str, Any]) -> tuple[Any, int]:
+    self._only_keys(body, frozenset({"stage"}))
+    session = self._require_session()
+    _project, store, row, _selector = _flow_only(self, params)
+    return {"offer": _decided(lambda: decisions.offer_stage(
+        store, row, offer_id=params["offer_id"], stage=body.get("stage"),
+        actor=session.operator_id, code_revision=self.code_revision))}, 201
+
+
+for _name, _function in (("_identity_resolve", _identity_resolve),
+                         ("_decisions_list", _decisions_list),
+                         ("_retry_preview", _retry_preview), ("_retry_approve", _retry_approve),
+                         ("_decision_state", _decision_state), ("_offer_record", _offer_record),
+                         ("_offer_stage", _offer_stage)):
+    setattr(_Handler, _name, _function)
 
 
 _Handler._intake_file = _intake_file      # type: ignore[attr-defined]

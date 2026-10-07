@@ -70,6 +70,8 @@ INSTRUMENTS = (
     ("claimstone/drafts.py", "DRAFT_VERSION", "draft_version"),
     # Where a proposed item was routed decides whether it can ever join a population (D101).
     ("claimstone/intake.py", "INTAKE_VERSION", "intake_version"),
+    # A decision row is what lets a later reader see who approved which plan or offer (D103).
+    ("claimstone/decisions.py", "DECISION_VERSION", "decision_version"),
 )
 
 # The parser is an instrument too, and a string rather than a number. Measured: lfoppiano/grobid

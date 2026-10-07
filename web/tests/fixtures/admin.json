@@ -30,6 +30,7 @@
   "candidate_key_version": 2,
   "chunk_version": 2,
   "claim_gate_version": 4,
+  "decision_version": 1,
   "discovery_version": 3,
   "draft_version": 1,
   "export_version": 1,

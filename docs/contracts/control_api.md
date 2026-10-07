@@ -230,6 +230,19 @@ As built (B7b):
 - **Ordering (F13).** The decisions list is ordered by required/optional, then by
   acquisition metadata and frozen denominators, then by age.
 
+As built (B8): row format and rules in `docs/contracts/decisions.md`.
+- `POST …/intake/{intake_id}/resolve` `{answer, reason}` → 201 `{decision, intake}`.
+- `GET …/decisions` → `{open, decided_recently}`.
+- `GET …/decisions/retry-campaign/preview?candidate_ids=a,b` → the plan.
+- `POST …/decisions/retry-campaign` `{candidate_ids, campaign, max_requests}` → 201.
+- `POST …/decisions/{decision_id}/state` `{state, until?, reason}` → 201.
+- `POST …/offers` → 201.
+- `POST …/offers/{offer_id}/stage` `{stage}` → 201.
+
+Error mapping: a refused rule is 422, a state conflict 409, an unknown id 404.
+`source_identity.jsonl` observations (D79–D81 screening scopes) are not written from here. The
+portal resolves intake items; screening identity keeps its own tools.
+
 ### B9 — today
 
 - `POST /control/v1/seen` with `{project?, until}` appends to `seen.jsonl`.

@@ -34,7 +34,7 @@ $ .venv/bin/python tools/check_instrument_versions.py
 | **BR** | Read API: stored-profile list of one question; exports list of one flow (B10's read route) | as `2026-10-07-portal-backend-reads-prompt.md` | DONE (portal-backend-reads, merged 2026-10-07; decisions in the reads log) |
 | **B7a** | Intake of DOIs, URLs and references; cohort routing; single explicit fetch | spec B7a tests pass | DONE (fetch moved to B7b) |
 | **B7b** | File intake, quarantine, engine gates, `operator-supplied` acquisition row, `supplied_copies` policy (F14) | spec B7b tests pass; existing admissibility tests unchanged and passing | DONE (URL fetch deferred to B12) |
-| **B8** | Identity resolution, retry-campaign record and preview, purchase offers and stages, defer/decline, F13 ordering test | spec B8 tests pass | TODO |
+| **B8** | Identity resolution, retry-campaign record and preview, purchase offers and stages, defer/decline, F13 ordering test | spec B8 tests pass | DONE |
 | **B9** | Seen markers and `/control/v1/today` | spec B9 tests pass | TODO |
 | **B10** | Export create and verify from the control API; exports list in the read API; PDF licence rule | spec B10 tests pass | TODO |
 | **B11** | Reachability checks, write-only credentials, 501 for the paid test call | spec B11 tests pass | TODO |
@@ -522,3 +522,31 @@ The explicit fetch of an intake URL is not built (D102 corrects D101): it waits 
 operations. B13 must install `pdftotext` in the control image.
 
 NOT DONE: the intake URL fetch (deferred to B12, reasoned above).
+
+### B8 — DONE (2026-10-07, Claude Code)
+- [x] B8.1 `claimstone/decisions.py`: `DECISION_VERSION 1`, `decisions.jsonl`; identity resolution of
+      `POSSIBLE_VERSION` intake items (same_work / version_of / different / not_sure, reason ≥ 20)
+      (files: `claimstone/decisions.py`, `claimstone/intake.py`)
+- [x] B8.2 retry campaign: server preview from recorded attempts (hosts, excluded, exhausted budget,
+      bounded requests) and an approval record that executes nothing (files: `claimstone/decisions.py`)
+- [x] B8.3 purchase offers: verified-offer record, approved / bought_externally / declined by hand,
+      copy_provided / copy_verified derived from intake only, a changed offer obsoletes the old one
+      (files: `claimstone/decisions.py`)
+- [x] B8.4 defer / decline with the consequence stated; the open-decisions list ordered without any
+      claim, review or stance (F13) (files: `claimstone/decisions.py`)
+- [x] B8.5 control routes, tests, contract, version, D entry, checks
+
+Checks (final): `1397 passed, 7 skipped`; validate 6× OK; `34 instrument version(s)`; web `72 passed`;
+fixtures: admin/meta only.
+
+Decisions (spec silent), recorded as D103: `version_of` never makes a version's file the candidate's
+copy; possession derived from intake, never written; retry plans from recorded attempts with
+`net.recorded_host_failures` shared with the fetcher (refactor, behaviour unchanged: 97 network tests);
+an approved campaign is not an open item (it waits for an operation); campaign names unique per store;
+`intake._accept` is the single acceptance path, used by B7b and by `same_work`.
+
+Deviations: identity answers act on intake items; `source_identity.jsonl` (screening scopes) is not
+written from the portal. Spec route `…/identity/{observation_id}/resolve` is realised as
+`…/intake/{intake_id}/resolve` accordingly.
+
+NOT DONE: (none in scope)
