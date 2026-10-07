@@ -94,9 +94,18 @@ def _store_hashes(store: Store) -> dict[str, str]:
             for path in sorted(store.root.rglob("*")) if path.is_file()}
 
 
-def _routes(flow_id: str) -> list[str]:
+def _q02_sha(store: Store) -> str:
+    """Q02's stored profile hash: the diff route's fixture and contract coverage need a
+    hash the ledger actually holds, and hardcoding one would break on every content change."""
+    return next(str(row["profile_sha256"]) for row in store.read("profiles.jsonl")
+                if str(row.get("question_id")) == "Q02")
+
+
+def _routes(flow_id: str, sha: str | None = None) -> list[str]:
+    """Every §3.2 route the fixtures and tests A1/A2 walk. The profile-diff route needs a
+    stored hash, so it joins the list only when one is supplied."""
     base = f"/api/v1/projects/{PROJECT}"
-    return [
+    routes = [
         "/api/v1/meta",
         "/api/v1/projects",
         "/api/v1/admin",
@@ -118,6 +127,12 @@ def _routes(flow_id: str) -> list[str]:
         f"{base}/unbound/r2/sources/r2-w",
         f"{base}/unbound/-/overview",
     ]
+    if sha is not None:
+        # Identical hashes → the empty diff: the one comparison the fixture workspace can
+        # make, since it holds exactly one profile row per question.
+        routes.append(f"{base}/flows/{flow_id}/questions/Q02/profile-diff"
+                      f"?from={sha}&to={sha}")
+    return routes
 
 
 def test_every_route_answers_and_writes_nothing(workspace):
@@ -126,7 +141,7 @@ def test_every_route_answers_and_writes_nothing(workspace):
     with _served(workspace) as (_httpd, base, store):
         flow_id = next(iter(flows.flows(store)))
         before = _store_hashes(store)
-        for route in _routes(flow_id):
+        for route in _routes(flow_id, _q02_sha(store)):
             status, headers, payload = _get_json(base + route)
             assert status == 200, route
             assert payload["api_version"] == 1, route

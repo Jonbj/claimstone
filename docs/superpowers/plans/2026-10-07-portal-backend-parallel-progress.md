@@ -37,5 +37,9 @@ why `validate` reads three project lines and pytest skips 13 tests that read rea
 - [x] B6.2 the route in `api.py` (`GET …/questions/{qid}/profile-diff?from=…&to=…`, read-only; a hash not
       in the ledger → 404; a missing end → 400) + schema in `api_schema.py`, generated schema regenerated
       (files: `claimstone/api.py`, `claimstone/api_schema.py`, `docs/contracts/portal-api.schema.json`)
-- [ ] B6.3 tests: identical hashes → empty diff; a result losing its review → removed with its reason
+- [x] B6.3 tests: identical hashes → empty diff; a result losing its review → removed with its reason;
+      added and changed relations; 404 and 400 refusals — the later profile generations built by the real
+      stage 5 (`review.build`, answered call, `review.harvest`) and the real stage 6, never hand-written
+      profile rows
+      (files: `tests/test_api_profile_diff.py` (new), `tests/test_api.py`, `tests/test_api_contract.py`)
 - [ ] B6.4 fixtures regenerated; all checks and web checks pass; step marked DONE
