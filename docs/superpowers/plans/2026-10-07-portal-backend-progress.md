@@ -421,3 +421,17 @@ Merged `portal-backend-reads` with `--no-ff`. `control_api.md` merged without co
 regenerate with no diff; web `72 passed`, build and check-csp ok. Reviewed: scope rule is
 `synthesize._scope` (same as `latest_profiles`); no `path` leaves the process; nothing verifies
 on GET. From here the backend steps run on the main line only, one at a time (no parallel worktree).
+
+### B5 — IN PROGRESS (2026-10-07, reviewer session: Claude Code develops from here)
+- [ ] B5.1 `claimstone/drafts.py`: `DRAFT_VERSION 1`, append and latest-per-(operator, flow, question);
+      `drafts.jsonl` excluded from export snapshots; `docs/contracts/drafts.md`
+      (files: `claimstone/drafts.py`, `claimstone/export.py`, `docs/contracts/drafts.md`)
+- [ ] B5.2 control server: flow context (project reloaded, registry drift, flow lookup, binding must be
+      `CURRENT`), error mapping for NotFound / RegistryDrift / LedgerCorrupt, and `Idempotency-Key` for
+      authenticated POSTs (files: `claimstone/control.py`)
+- [ ] B5.3 routes: `POST …/adjudicate`, `POST …/draft`, `GET …/draft` (files: `claimstone/control.py`)
+- [ ] B5.4 tests: the spec's B5 list plus drift, idempotency, operational, unknown ids, drafts not
+      exported (files: `tests/test_control_signing.py`)
+- [ ] B5.5 contract, version registration, D entry, checks
+      (files: `docs/contracts/control_api.md`, `tools/check_instrument_versions.py`,
+      `docs/DESIGN_DECISIONS.md`, fixtures if the admin list changes)
