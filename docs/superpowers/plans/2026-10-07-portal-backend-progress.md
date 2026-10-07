@@ -326,7 +326,7 @@ NOT DONE: (none)
 - [x] B4.1 `claimstone/operators.py`: the operators ledger — scrypt n=2^15, r=8, p=1, salted,
       `add`/`disable` append-only rows, constant-time verify, `operator_version 1`, in
       `CLAIMSTONE_STATE_DIR` (default `.claimstone/`) (files: `claimstone/operators.py`)
-- [ ] B4.2 `claimstone/control.py`: the server — `transport.py`'s Host/Origin checks and
+- [x] B4.2 `claimstone/control.py`: the server — `transport.py`'s Host/Origin checks and
       headers reused without inheriting GET-only; the §1.3 session/CSRF/body rules; the three
       session routes (`POST /session`, `POST /session/end`, `GET /session`); in-memory sessions
       expiring after 12 h of inactivity; 5 failures per id per 15 min → 429; a route registry
