@@ -189,7 +189,7 @@ Material, Decisions and Export routes (F5 branch, F6; the links 404 until merged
   Files: `web/src/lib/api.ts`, `web/src/components/ProfileDiffPanel.tsx`, `web/tests/profilediff.test.tsx`.
 - [ ] F4.2 `QuestionPage` restyle and the gate that decides what the verdict section shows: operational (the API's `not_applicable_state`), provisional, no profile or `unavailable`, unbound `/u/`, signed out ("Sign in to sign"), or the signature panel. Stored profiles feed the diff panel.
   Files: `web/src/pages/QuestionPage.tsx`, `web/tests/readingdesk.test.tsx`.
-- [ ] F4.3 `SignaturePanel`: five radios (none checked, definitions from the verdict contract), reasoning with live trimmed count against 120, attestation, Sign as {name}; POST `{verdict, rationale, profile_sha256, attest: true}`; 409 code and sentence verbatim, `STALE_PROFILE` banner with reload and diff; the stored row shown after success.
+- [x] F4.3 `SignaturePanel`: five radios (none checked, definitions from the verdict contract), reasoning with live trimmed count against 120, attestation, Sign as {name}; POST `{verdict, rationale, profile_sha256, attest: true}`; 409 code and sentence verbatim, `STALE_PROFILE` banner with reload and diff; the stored row shown after success.
   Files: `web/src/components/SignaturePanel.tsx`, `web/tests/signature.test.tsx`.
 - [ ] F4.4 Drafts: `GET …/draft` on load, "profile changed while you read" banner with signing blocked until the profile is reloaded, Save draft and save on blur when the text changed; the verdict is never stored.
   Files: `web/src/components/SignaturePanel.tsx`, `web/tests/signature.test.tsx`.
