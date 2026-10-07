@@ -51,19 +51,27 @@ $ .venv/bin/python tools/check_instrument_versions.py
   spec 1.4, and the error codes of 1.3 (files: `docs/contracts/control_api.md`)
 - [x] B0.3 Checks pass, no code changed (files: none)
 
-Checks (a clean worktree at HEAD + exactly this step's two docs; see Deviations for why the
-main checkout cannot show them):
+Checks (final, run in the main checkout at commit e525382; the scheduler session's parallel
+work-in-progress on the same branch is uncommitted and moving under us — see Deviations):
 
 ```
-$ PYTHONPATH=/tmp/opencode/b0-verify …/.venv/bin/python -m pytest -q
-1137 passed, 13 skipped in 37.77s
-$ PYTHONPATH=… …/.venv/bin/python -m claimstone.cli validate --all-projects
-OK   alembic-s4: … OK   alembic-s4-breve: … OK   alembic-s4-lungo: …
-OK   example-news-and-returns: … OK   pilot-screen-time: … OK   pmc-screen-time: …
-(all six lines OK, identical to the baseline)
-$ …/.venv/bin/python tools/check_instrument_versions.py
-28 instrument version(s) acknowledged in the design record
+$ .venv/bin/pytest -q
+1244 passed, 7 skipped in 40.36s
+$ .venv/bin/claimstone validate --all-projects
+OK   alembic-s4: 16 topics, 28 questions (registry v3, frozen 2026-09-25), 6 source classes, acquisition floor 0.80 (v1), 25 manifest rows, registry 9c3f265069c6
+OK   alembic-s4-breve: 12 topics, 17 questions (registry v1, frozen 2026-09-28), 6 source classes, acquisition floor 0.80 (v1), 18 manifest rows, registry 3fdb5aea634d
+OK   alembic-s4-lungo: 12 topics, 18 questions (registry v1, frozen 2026-09-28), 6 source classes, acquisition floor 0.80 (v1), 19 manifest rows, registry ee040e0c3cfc
+OK   example-news-and-returns: 16 topics, 20 questions (registry v2, frozen 2026-09-25), 6 source classes, acquisition floor 0.80 (v1), registry 85e5fcc44ddc
+OK   pilot-screen-time: 4 topics, 8 questions (registry v1, frozen 2026-09-28), 6 source classes, acquisition floor 0.80 (v1), 28 manifest rows, registry 82007de2b569
+OK   pmc-screen-time: 4 topics, 8 questions (registry v1, frozen 2026-09-28), 6 source classes, acquisition floor 0.80 (v1), 40 manifest rows, registry 82007de2b569
+$ .venv/bin/python tools/check_instrument_versions.py
+29 instrument version(s) acknowledged in the design record
 ```
+
+The pytest run includes the scheduler session's in-flight tests (1244 = the 1229 baseline
+plus their new test files, which were mid-write during this session); `check_instrument_versions`
+prints 29 because their uncommitted `tools/check_instrument_versions.py` edit registered
+`operations_version 1`. No figure here is this step's alone; this step changed no code.
 
 Decisions (spec silent):
 - The decision entry was written as **D87**, the next free number when this session started (as
@@ -77,21 +85,22 @@ Decisions (spec silent):
   step table's B13, which the prompt routes through this log.
 
 Deviations:
-- The three checks were run in a clean detached worktree (`/tmp/opencode/b0-verify`, at HEAD
-  `eb2b32b` plus only this step's two files), not in the main checkout. The main checkout
-  currently carries the parallel scheduler session's uncommitted WIP (net.py `FETCH_VERSION = 5`,
-  request_log.py, store.py, operations.py, and its D87/D88/D90 entries), and that WIP — not this
-  step's docs — fails 4 tests there: `test_compare_reviewers.py` (2, a `request_log.py:15`
-  `TypeError` from the WIP's `RecordingFetcher` change; both pass in isolation),
-  `test_portal_fixtures.py::test_committed_fixtures_equal_the_regeneration` (fixture says
-  `fetch_version 5`, still-uncommitted code),
-  `test_remaining_integrity.py::test_discovery_cli_reports_failed_queries_and_returns_failure`
-  (same `request_log.py:15` TypeError). No file named in this step's sub-tasks was touched by
-  that WIP except `docs/DESIGN_DECISIONS.md`, whose diff is additive; every one of the 4
-  failures also fails with this step's changes removed (verified in the clean worktree: 1137
-  passed, 13 skipped against HEAD's 1229-test baseline plus the scheduler session's new test
-  files). This step changed no code, so it cannot have caused them.
-- No code changed in B0; nothing but `docs/DESIGN_DECISIONS.md` and
-  `docs/contracts/control_api.md` enters its commits.
+- The scheduler session works uncommitted on this branch in parallel, and its tree moved under
+  this step three times. (1) At this step's first check run its WIP failed 4 tests
+  (`test_compare_reviewers.py` ×2 and `test_remaining_integrity.py` ×1, all a
+  `request_log.py:15` TypeError from its own uncommitted `RecordingFetcher` change, and
+  `test_portal_fixtures.py`'s fixture check against its uncommitted `FETCH_VERSION = 5`);
+  this step's changes are two docs and cannot cause any of them — verified by running the same
+  three checks in a clean detached worktree at HEAD plus exactly this step's two files
+  (1137 passed, 13 skipped, all six validate lines OK, instruments 28). (2) It renumbered
+  this step's decision entry in the working tree from D87 (as written) to D89, adding its own
+  D87/D88/D90 around it; this step's commit stages only its own entry, additively over HEAD.
+  (3) By the final check run its WIP had become green in the main checkout, which is why the
+  final lines above are from the real checkout.
+- The decision-entry number is the one the step table told this step to use ("next free `D`
+  number at the time you write it"): **D87 as written, D89 as it stands in the working tree**
+  after the scheduler session's renumbering. Both numbers are recorded here rather than
+  resolved, because resolving the collision would mean editing another session's uncommitted
+  files.
 
 NOT DONE: (none)
