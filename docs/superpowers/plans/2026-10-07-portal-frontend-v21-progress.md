@@ -297,3 +297,10 @@ NOT DONE: Decisions, Add material and their routes (parallel branch; the reviewe
 design's admin table of backends with runner presence, scheduler heartbeat, acquisition conduct block and
 spending-by-authorization (no API data); the export design's "what this snapshot would contain" preview
 and "newer data since" status (no API data). Nothing was checked in a browser.
+
+### F3, F4, F6 reviews — 2026-10-08 (reviewer)
+Accepted. F3: authorize posts `op.limits` unchanged. F4: verdict and attestation start empty
+(`useState(null)` / `false`), no browser storage, POST body exactly the four keys; the defect it
+reported itself (unsaved text lost on a failed poll) was fixed in F6.3 with a test. F6: export verify
+only on request, credential fields cleared in `finally`, paid test never called, D109 written.
+Remaining before the browser walk-through: merge F5 (parallel branch) and wire its two routes.
