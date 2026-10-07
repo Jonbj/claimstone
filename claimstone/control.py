@@ -464,10 +464,10 @@ def serve(projects_dir: str | pathlib.Path = "projects",
           port: int = 8790, allow_hosts: tuple[str, ...] = (),
           state_dir: str | pathlib.Path | None = None) -> None:
     """Block and serve the control API."""
-    print(f"claimstone control — http://{host}:{port}/control/v1/session  "
-          "(authenticated writes; Ctrl-C to stop)")
     httpd = make_server(projects_dir, store_dir, host=host, port=port,
                         allow_hosts=allow_hosts, state_dir=state_dir)
+    print(f"claimstone control — http://{host}:{port}/control/v1/session  "
+          "(authenticated writes; Ctrl-C to stop)")
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:

@@ -1190,6 +1190,45 @@ def _api(args: argparse.Namespace) -> int:
     return 0
 
 
+def _control(args: argparse.Namespace) -> int:
+    from claimstone import control
+
+    try:
+        control.serve(args.projects, args.store, host=args.bind, port=args.port,
+                      allow_hosts=tuple(args.allow_host))
+    except ValueError as exc:
+        # The refused non-loopback bind: this process writes, so unlike the read-only
+        # servers it does not proceed on a warning (spec B4).
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    return 0
+
+
+def _operator(args: argparse.Namespace) -> int:
+    import getpass
+
+    from claimstone import operators
+
+    directory = operators.state_dir()
+    try:
+        if args.operator_command == "add":
+            password = getpass.getpass("password: ")
+            if password != getpass.getpass("again: "):
+                print("passwords do not match", file=sys.stderr)
+                return 2
+            operators.add_operator(directory, args.id, args.name, password)
+            print(f"operator recorded: {args.id} ({args.name}) in {directory}/")
+        elif args.operator_command == "disable":
+            operators.disable_operator(directory, args.id)
+            print(f"operator disabled: {args.id}")
+        else:  # argparse makes this unreachable; kept honest anyway
+            return 2
+    except operators.OperatorError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+    return 0
+
+
 def _export(args: argparse.Namespace) -> int:
     import pathlib
 
@@ -1549,6 +1588,34 @@ def build_parser() -> argparse.ArgumentParser:
                               "reverse proxy in front forwards; repeatable. Loopback names on "
                               "the bound port are always allowed")
     api_cmd.set_defaults(func=_api)
+
+    control_cmd = sub.add_parser(
+        "control", help="the authenticated write boundary the portal posts to")
+    control_cmd.add_argument("--projects", default="projects",
+                             help="every project under this directory is served")
+    control_cmd.add_argument("--store", default="store", help="where generated data lives")
+    control_cmd.add_argument("--bind", default="127.0.0.1",
+                             help="loopback only; a non-loopback bind is refused unless "
+                                  "--allow-host names the authority of the proxy in front")
+    control_cmd.add_argument("--port", type=int, default=8790)
+    control_cmd.add_argument("--allow-host", action="append", default=[],
+                             metavar="NAME[:PORT]",
+                             help="an extra Host/Origin authority to answer for, e.g. the "
+                                  "name a reverse proxy in front forwards; repeatable. "
+                                  "Naming one authorizes the non-loopback bind it fronts")
+    control_cmd.set_defaults(func=_control)
+
+    operator_cmd = sub.add_parser("operator", help="who may hold a control-API session")
+    operator_sub = operator_cmd.add_subparsers(dest="operator_command", required=True)
+    operator_add = operator_sub.add_parser(
+        "add", help="record an operator; prompts for the password twice")
+    operator_add.add_argument("id", help="the id a session authenticates")
+    operator_add.add_argument("--name", required=True,
+                              help="display name, recorded with the row and shown when signed")
+    operator_disable = operator_sub.add_parser(
+        "disable", help="append a disabling row; the id can no longer log in")
+    operator_disable.add_argument("id", help="the operator id to disable")
+    operator_cmd.set_defaults(func=_operator)
 
     export_cmd = sub.add_parser("export", help="freeze one flow's ledgers into a verifiable snapshot")
     export_cmd.add_argument("project", help="path to a project directory")

@@ -332,9 +332,9 @@ NOT DONE: (none)
       expiring after 12 h of inactivity; 5 failures per id per 15 min → 429; a route registry
       later steps extend and the anonymous test enumerates; non-loopback bind refused without
       `--allow-host` (files: `claimstone/control.py`)
-- [ ] B4.3 CLI: `claimstone operator add ID --name` (getpass twice) and `operator disable ID`;
+- [x] B4.3 CLI: `claimstone operator add ID --name` (getpass twice) and `operator disable ID`;
       `claimstone control` with `--projects/--store/--bind/--port/--allow-host` as the contract
-      names them (files: `claimstone/cli.py`)
+      names them (files: `claimstone/cli.py`, `claimstone/control.py` (serve order))
 - [ ] B4.4 `.claimstone/` gitignored; `operator_version` registered in the instrument checker
       and acknowledged by a dated design-record entry; `control_api.md` gains the decided
       session details (cookie name, error codes, payload shapes) (files: `.gitignore`,
