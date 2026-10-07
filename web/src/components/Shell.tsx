@@ -2,19 +2,23 @@ import { useEffect, useState } from "react";
 import { Link, Outlet, useLocation } from "react-router";
 import ThemeToggle from "@/components/ThemeToggle";
 import { api } from "@/lib/api";
+import { useSession } from "@/lib/session";
 import { cn } from "@/lib/utils";
 
-// §8.3 shell: white top bar with the product name, the tabs (Projects · Flows · Inbox ·
-// Administration) and, on the right, `read-only · rev <12 chars>`. The content sits on
-// gray-50 with a max width of 1360 px. Colours come from the shadcn theme tokens (`bg-card`,
-// `text-muted-foreground`, `border-border`), never raw greys, so the `data-theme` toggle
-// switches the shell too (implementation review of R2).
-const TABS: Array<{ id: string; label: string; to: string; active: (pathname: string) => boolean }> = [
-  { id: "projects", label: "Projects", to: "/", active: (p) => p === "/" },
-  // There is no cross-project flows page in the design (§4.1): the index lists every
-  // project's flows, and the Flows tab is the one lit while a flow is on screen.
-  { id: "flows", label: "Flows", to: "/", active: (p) => /^\/p\/[^/]+\/f\//.test(p) },
-  { id: "inbox", label: "Inbox", to: "/inbox", active: (p) => p.startsWith("/inbox") },
+// v2.1 shell (spec F1): a dark left rail, 232 px wide, with New project (disabled: nothing
+// builds projects from the web yet), Today, Projects and Administration, and a footer with the
+// signed-in operator and Sign out, or Sign in. Under 900 px the rail becomes a top bar. The
+// rail is dark in both themes (`bg-rail`); the content area follows the theme tokens. The old
+// Inbox tab is gone from the rail, but `/inbox` is still routable.
+const NAV: Array<{ id: string; label: string; to: string; active: (pathname: string) => boolean }> = [
+  { id: "today", label: "Today", to: "/", active: (p) => p === "/" },
+  // A project or flow on screen lights Projects: Today is the only other top-level page.
+  {
+    id: "projects",
+    label: "Projects",
+    to: "/projects",
+    active: (p) => p.startsWith("/projects") || p.startsWith("/p/") || p.startsWith("/inbox"),
+  },
   { id: "admin", label: "Administration", to: "/admin", active: (p) => p.startsWith("/admin") },
 ];
 
@@ -43,48 +47,101 @@ function useRevision(): { text: string; title: string } {
   if (revision !== null) {
     return {
       text: `rev ${revision.slice(0, 12)}${dirty === true ? " (dirty)" : ""}`,
-      title: "This view derives from the ledgers and writes nothing",
+      title: "the code revision the API reports",
     };
   }
   return { text: "…", title: "code revision not loaded yet" };
+}
+
+function Operator() {
+  const session = useSession();
+  const { pathname, search } = useLocation();
+  if (!session.ready) {
+    return <span className="text-xs text-rail-muted">checking session…</span>;
+  }
+  if (session.operator) {
+    return (
+      <div className="flex items-center gap-2 min-[900px]:flex-col min-[900px]:items-start">
+        <span className="text-sm font-medium text-rail-foreground" data-testid="operator-name">
+          {session.operator.name}
+        </span>
+        <button
+          type="button"
+          onClick={() => void session.signOut()}
+          className="min-h-11 rounded-lg border border-rail-border px-3 text-sm text-rail-muted hover:text-rail-foreground"
+        >
+          Sign out
+        </button>
+      </div>
+    );
+  }
+  // Come back to where the operator was; `safeNext` only accepts a path starting with one `/`.
+  const next = pathname === "/login" ? "" : `?next=${encodeURIComponent(pathname + search)}`;
+  return (
+    <Link
+      to={`/login${next}`}
+      className="flex min-h-11 items-center rounded-lg border border-rail-border px-3 text-sm text-rail-foreground"
+    >
+      Sign in
+    </Link>
+  );
 }
 
 export default function Shell() {
   const { pathname } = useLocation();
   const rev = useRevision();
   return (
-    <div className="min-h-screen bg-muted/40 text-foreground">
-      <header className="flex min-h-[60px] flex-wrap items-center gap-7 border-b border-border bg-card px-8">
-        <span className="text-base font-bold">Claimstone</span>
-        <nav className="flex flex-wrap gap-5 self-stretch" aria-label="Primary">
-          {TABS.map((tab) => {
-            const active = tab.active(pathname);
+    <div className="min-h-screen bg-muted/40 text-foreground min-[900px]:flex">
+      <nav
+        aria-label="Primary"
+        className="flex flex-wrap items-center gap-x-4 gap-y-2 bg-rail px-4 py-3 text-rail-muted min-[900px]:sticky min-[900px]:top-0 min-[900px]:h-screen min-[900px]:w-[232px] min-[900px]:shrink-0 min-[900px]:flex-col min-[900px]:flex-nowrap min-[900px]:items-stretch min-[900px]:gap-1 min-[900px]:px-3.5 min-[900px]:py-5"
+      >
+        <Link to="/" className="font-serif text-2xl text-rail-foreground min-[900px]:mb-3 min-[900px]:px-2.5">
+          Claimstone
+        </Link>
+        <div className="flex flex-col min-[900px]:mb-3">
+          <button
+            type="button"
+            disabled
+            aria-describedby="new-project-note"
+            title="creating projects from the web is not built yet"
+            className="min-h-11 rounded-lg bg-rail-active px-3 text-sm font-semibold text-rail-muted opacity-60"
+          >
+            + New project
+          </button>
+          <span id="new-project-note" className="mt-1 hidden text-xs text-rail-muted min-[900px]:block">
+            creating projects from the web is not built yet
+          </span>
+        </div>
+        <div className="flex flex-wrap gap-1 min-[900px]:flex-col">
+          {NAV.map((item) => {
+            const active = item.active(pathname);
             return (
               <Link
-                key={tab.id}
-                to={tab.to}
+                key={item.id}
+                to={item.to}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "flex items-center border-b-2",
+                  "flex min-h-11 items-center rounded-lg px-2.5 text-sm",
                   active
-                    ? "border-blue-600 font-medium text-blue-600 dark:border-blue-400 dark:text-blue-400"
-                    : "border-transparent text-muted-foreground",
+                    ? "bg-rail-active font-medium text-rail-foreground"
+                    : "text-rail-muted hover:text-rail-foreground",
                 )}
               >
-                {tab.label}
+                {item.label}
               </Link>
             );
           })}
-        </nav>
-        <span
-          className="ml-auto font-mono text-xs text-muted-foreground"
-          title={rev.title}
-        >
-          read-only · {rev.text}
-        </span>
-        <ThemeToggle />
-      </header>
-      <main className="mx-auto flex max-w-[1360px] flex-col gap-6 px-8 pb-12 pt-7">
+        </div>
+        <div className="ml-auto flex items-center gap-3 min-[900px]:mt-auto min-[900px]:ml-0 min-[900px]:flex-col min-[900px]:items-stretch min-[900px]:border-t min-[900px]:border-rail-border min-[900px]:pt-3">
+          <Operator />
+          <span className="font-mono text-xs text-rail-muted" title={rev.title}>
+            {rev.text}
+          </span>
+          <ThemeToggle />
+        </div>
+      </nav>
+      <main className="mx-auto flex min-w-0 max-w-[1360px] flex-1 flex-col gap-6 px-4 pb-12 pt-7 min-[900px]:px-8">
         <Outlet />
       </main>
     </div>
