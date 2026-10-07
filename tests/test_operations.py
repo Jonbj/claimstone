@@ -308,6 +308,61 @@ def test_tick_runs_only_authorized_operations(tmp_path):
     assert operations.tick(project, store)['processed'] == 0
 
 
+def test_discovery_pretransport_failure_needs_a_named_retry(tmp_path, monkeypatch):
+    from claimstone import discover, net
+    from claimstone.store import sha256_text
+
+    project, store, flow = _fixture(tmp_path)
+    term = project.topics[0].terms[0]
+    query_id = sha256_text(f'new|openalex|{project.topics[0].id}|{term}')
+    store.append('queries.jsonl', {
+        'query_id': query_id, 'round': 'new', 'source_api': 'openalex',
+        'topic_id': project.topics[0].id, 'query': term, 'campaign': 'old',
+        'ok': False, 'failure_class': 'NON_GLOBAL_ADDRESS', 'returned': 0})
+    opts = dict(api='openalex', topic_id=project.topics[0].id, term=term,
+                per_query=10, allowed_hosts=['api.openalex.org'], max_requests=3)
+    with pytest.raises(operations.OperationError, match='pre-transport'):
+        operations.plan(project, store, flow['flow_id'], 'discover', **opts)
+    plan = operations.plan(project, store, flow['flow_id'], 'discover',
+                           run_label='dns-retry', retry_reason='sandbox DNS blocked before HTTP',
+                           **opts)
+    assert plan['prior_query_sha256']
+    operation_id = operations._digest(plan)
+    monkeypatch.setattr(net, 'Fetcher', lambda **kwargs: object())
+
+    def fake_run(project, store, fetcher, **kwargs):
+        store.append('queries.jsonl', {
+            'query_id': query_id, 'round': 'new', 'source_api': 'openalex',
+            'topic_id': project.topics[0].id, 'query': term,
+            'campaign': operation_id, 'ok': True, 'returned': 2})
+        return {'queries': 1}
+
+    monkeypatch.setattr(discover, 'run', fake_run)
+    operations.authorize(store, operation_id)
+    assert operations.execute(project, store, operation_id) == {
+        'query_id': query_id, 'ok': True, 'returned': 2, 'reconciled': False}
+
+
+def test_discovery_retry_refuses_an_old_physical_request(tmp_path):
+    from claimstone.store import sha256_text
+
+    project, store, flow = _fixture(tmp_path)
+    term = project.topics[0].terms[0]
+    store.append('queries.jsonl', {
+        'query_id': sha256_text(f'new|openalex|{project.topics[0].id}|{term}'),
+        'round': 'new', 'source_api': 'openalex', 'topic_id': project.topics[0].id,
+        'query': term, 'campaign': 'old', 'ok': False,
+        'failure_class': 'NON_GLOBAL_ADDRESS', 'returned': 0})
+    store.append('requests.jsonl', {
+        'event': 'request_started', 'round': 'new', 'source_api': 'openalex',
+        'topic_id': project.topics[0].id, 'query': term, 'campaign': 'old'})
+    with pytest.raises(operations.OperationError, match='physical query request'):
+        operations.plan(project, store, flow['flow_id'], 'discover',
+                        api='openalex', topic_id=project.topics[0].id, term=term,
+                        per_query=10, allowed_hosts=['api.openalex.org'],
+                        max_requests=3, run_label='retry', retry_reason='DNS')
+
+
 def test_acquisition_plan_counts_robots_and_copy_without_real_network(tmp_path, monkeypatch):
     import socket
     import requests

@@ -21,7 +21,7 @@ from claimstone import flows, scheduler_preview, scope
 from claimstone.config import Project
 from claimstone.store import Store
 
-OPERATIONS_VERSION = 2
+OPERATIONS_VERSION = 3
 LEDGER = 'operations.jsonl'
 BATCH_LEDGER = 'operation_batches.jsonl'
 STAGE_INPUTS = {
@@ -148,7 +148,7 @@ def _events(store: Store) -> dict[str, list[dict[str, Any]]]:
     for row in store.read(LEDGER):
         event_id = row.get('event_id')
         body = {key: value for key, value in row.items() if key not in {'event_id', 'at'}}
-        if event_id != _digest(body) or row.get('operation_version') not in {1, OPERATIONS_VERSION}:
+        if event_id != _digest(body) or row.get('operation_version') not in {1, 2, OPERATIONS_VERSION}:
             raise OperationError('invalid operation event id or version')
         packed = _canonical(row)
         if event_id in seen:
@@ -248,6 +248,7 @@ def plan(project: Project, store: Store, flow_id: str, stage: str, *,
         prior_acquisition = None
         hosts: list[str] = []
         query_id = None
+        prior_query = None
         if stage == 'discover':
             from claimstone import discover
             from claimstone.store import sha256_text
@@ -258,8 +259,13 @@ def plan(project: Project, store: Store, flow_id: str, stage: str, *,
                 raise OperationError('topic, term or API is absent from the frozen protocol')
             hosts = _exact_hosts(allowed_hosts)
             query_id = sha256_text(f'{selector.round}|{api}|{topic_id}|{term}')
-            if query_id in store.latest_by('queries.jsonl', 'query_id'):
-                raise OperationError('query already has a recorded outcome; retry needs a separate policy')
+            prior_query = store.latest_by('queries.jsonl', 'query_id').get(query_id)
+            if prior_query is not None:
+                if (prior_query.get('ok') or not run_label or not retry_reason or
+                        not retry_reason.strip() or
+                        prior_query.get('failure_class') not in {
+                            'NON_GLOBAL_ADDRESS', 'DNS_ERROR', 'NETWORK_ERROR'}):
+                    raise OperationError('query retry requires a failed pre-transport outcome, run label and reason')
             if any(row.get('event') == 'request_started' and
                    row.get('round') == selector.round and row.get('source_api') == api and
                    row.get('topic_id') == topic_id and row.get('query') == term
@@ -363,6 +369,8 @@ def plan(project: Project, store: Store, flow_id: str, stage: str, *,
                   'retry_reason': retry_reason if stage == 'acquire' else None,
                   'query': {'api': api, 'topic_id': topic_id, 'term': term,
                             'per_query': per_query, 'query_id': query_id} if stage == 'discover' else None,
+                  'prior_query_sha256': _digest(prior_query) if prior_query else None,
+                  'query_retry_reason': retry_reason if stage == 'discover' else None,
                   'max_network_requests': max_requests if stage in {'acquire', 'discover'} else 0,
                   'max_model_calls': len(call_ids),
                   'max_spend_usd': (len(call_ids) * max_call_cents / 100 if paid else 0)}
@@ -389,7 +397,7 @@ def authorize(store: Store, operation_id: str, *, batch_id: str | None = None) -
             raise OperationError('operation is no longer awaiting authorization')
         plan_row = rows[0]['plan']
         if plan_row.get('operation_version') != OPERATIONS_VERSION:
-            raise OperationError('legacy operation requires a fresh version 2 plan')
+            raise OperationError('legacy operation requires a fresh version 3 plan')
         if plan_row['budget_id']:
             approved = [group[0]['plan'] for group in _events(store).values()
                         if len(group) > 1 and group[1]['event'] == 'authorized'
@@ -538,7 +546,18 @@ def execute(project: Project, store: Store, operation_id: str,
             query = plan_row['query']
             discovery_result = store.latest_by('queries.jsonl', 'query_id').get(query['query_id'])
             if discovery_result is not None and discovery_result.get('campaign') != operation_id:
-                raise OperationError('query outcome belongs to another campaign')
+                if (not plan_row.get('prior_query_sha256') or
+                        _digest(discovery_result) != plan_row['prior_query_sha256'] or
+                        discovery_result.get('ok')):
+                    raise OperationError('query outcome belongs to another campaign')
+                if any(row.get('event') == 'request_started' and
+                       row.get('round') == selector.round and
+                       row.get('source_api') == query['api'] and
+                       row.get('topic_id') == query['topic_id'] and
+                       row.get('query') == query['term']
+                       for row in store.read('requests.jsonl')):
+                    raise OperationError('prior query has a physical request; inspect before retry')
+                discovery_result = None
         draining = plan_row['stage'] in {'extract-drain', 'review-drain'}
         if not draining and len(rows) > 2 and rows[-1]['event'] == 'unit_completed':
             _append(store, operation_id, plan_row['flow_id'], 'completed', 'worker',

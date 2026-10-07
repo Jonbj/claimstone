@@ -9,6 +9,16 @@ what order.
 
 ## Where the work stands
 
+2026-10-07 first live scheduler query: the operator authorized plan
+`66b7e73da7fffd60895662dbb097e0e1385f78f1e31041f1d224f79e64793d19`
+for one L02 OpenAlex T01 query, at most ten results and three physical
+requests. Sandbox DNS blocked it before any HTTP request (`NON_GLOBAL_ADDRESS`);
+the query ledger records `ok: false`, `returned: 0`, and there are zero
+`request_started` rows for the campaign. These are not zero literature hits.
+The host resolves to global addresses outside the sandbox. D97 and
+`operations_version 3` allow a separately authorized, named pre-transport
+retry bound to that failed row. No copy, model call or purchase occurred.
+
 2026-10-07 scheduler implementation (D87–D93): the project-wide writer lock,
 persisted host-failure budget, pinned public-address transport, round-scoped
 normalize/extract/review builders and append-only operation ledger are in

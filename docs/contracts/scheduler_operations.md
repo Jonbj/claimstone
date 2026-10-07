@@ -1,6 +1,6 @@
 # Scheduler operations — append-only contract
 
-**Status:** `operations_version 2` implements one scoped normalize,
+**Status:** `operations_version 3` implements one scoped normalize,
 extract-build, review-build, harvest or synthesize stage per operation, a
 bounded local `llamacpp` or explicitly budgeted `ollama-cloud` drain, a
 bounded one-candidate acquisition from an existing URL, or one bounded
@@ -53,6 +53,11 @@ The current one-stage operation can be retried after a terminal offline
 failure only with a new `--run-label`. An unsettled physical request without
 its acquisition/query outcome blocks even a newly labelled plan until it is
 inspected; a name alone cannot justify another network transfer.
+A discovery query that failed before any physical request can be planned again
+with a new `--run-label` and `--retry-reason`. Its plan binds the previous
+query row by hash and refuses success or any earlier physical request. A
+completed query or a failed query with a physical request is never silently
+retried.
 
 The existing `flow_id` binds a selector and protocol. A flow whose binding has
 drifted, whose registry drifted, or whose pre-binding rows lack verified

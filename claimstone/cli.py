@@ -1461,7 +1461,7 @@ def build_parser() -> argparse.ArgumentParser:
     scheduler_plan.add_argument('--retry-class', action='append', default=[],
                                 help='explicit terminal class for one acquisition retry')
     scheduler_plan.add_argument('--retry-reason',
-                                help='why a terminal acquisition failure is retried')
+                                help='why a terminal acquisition or pre-transport query failure is retried')
     scheduler_plan.add_argument('--store', default='store')
     scheduler_plan.set_defaults(func=_scheduler_operation)
     scheduler_batch_plan = scheduler_sub.add_parser(

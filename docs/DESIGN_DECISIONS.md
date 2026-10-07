@@ -4062,3 +4062,19 @@ Tests with a fake remote runner verify that a second plan cannot exceed a
 15-cent cumulative budget after a 10-cent authorization, that the call-start
 event precedes its result, and that an unsettled call is never resent. No
 paid call was made by these tests or this decision.
+
+## D97 — Replan only pre-transport discovery failures (2026-10-07)
+
+The first authorized L02 scheduler query (one OpenAlex T01 term, at most ten
+results and three physical requests) was blocked by the sandbox DNS resolver:
+the recorded `NON_GLOBAL_ADDRESS` outcome had zero `request_started` rows and
+zero returned results. A DNS check outside the sandbox resolved only global
+addresses. The completed operation correctly refused implicit replay, but
+`operations_version 2` also refused every explicit query retry. Under
+`operations_version 3`, a new plan may retry the same query only when its
+latest result is a named pre-transport failure, no physical request for that
+query exists, and the operator supplies both a run label and reason. The new
+plan hashes the prior query row; a changed outcome invalidates it. Tests
+exercise a successful named retry with fake transport and refusal when an
+earlier physical request exists. This rule does not turn the sandbox failure
+into an empty literature result and does not authorize the retry by itself.

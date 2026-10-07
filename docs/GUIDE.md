@@ -37,6 +37,9 @@ inspection rather than being sent again.
 After a failed offline operation, use a new `--run-label` once the cause is
 resolved. An uncertain physical request blocks automatic retry even with a
 new label.
+For a query that failed before any physical request, a new discovery plan may
+name `--run-label` and `--retry-reason`. It binds the prior failure row and
+still requires a separate operator authorization before execution.
 
 For several query or candidate plans, `scheduler batch-plan` accepts explicit
 APIs/hosts, `--max-units` and `--max-requests-each`, and prints one batch ID
