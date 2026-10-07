@@ -64,7 +64,7 @@ def reuse_cached(store, candidate, origin, *, origin_store, expected_sha256,
     row = {
         "candidate_key": candidate["candidate_key"], "source_id": candidate.get("source_id"),
         "source_class": candidate["source_class"], "campaign": campaign,
-        "attempt_no": (existing or {}).get("attempt_no", 0) + 1,
+        "attempt_no": None,  # assigned under the writer lock at append time (F5)
         "acquired": judged.accepted, "sha256": digest if judged.accepted else None,
         "stored_path": str(path), "url": candidate["url"], "provenance": "store-reuse",
         "version": origin.get("version", ""), "licence": origin.get("licence"),
@@ -78,7 +78,15 @@ def reuse_cached(store, candidate, origin, *, origin_store, expected_sha256,
             "identity": dict(identity),
         },
     }
-    store.append("acquisitions.jsonl", row)
+    # F5: the attempt number is read under the project writer lock, immediately before the
+    # append — the bytes and the gate ran without the lock (no work happens under it), and a
+    # concurrent writer between the earlier read and this append cannot produce a duplicate
+    # attempt_no because this re-read is the one that counts.
+    with store.writer_lock():
+        latest = store.latest_by("acquisitions.jsonl", "candidate_key").get(
+            str(candidate["candidate_key"]))
+        row["attempt_no"] = int((latest or {}).get("attempt_no") or 0) + 1
+        store.append("acquisitions.jsonl", row)
     return row
 
 
@@ -345,7 +353,6 @@ def run(
     for candidate in eligible_candidates(candidates, previous, retry_classes=retry_classes,
             retry_after_s=retry_after_s, limit=limit, round_name=round_name,
             manifest_only=manifest_only, only_oa=only_oa):
-        prior = previous.get(str(candidate["candidate_key"]))
         try:
             row = acquire_one(
                 fetcher, store, candidate, campaign=campaign, use_apis=use_apis,
@@ -373,6 +380,11 @@ def run(
                 "campaign": campaign,
                 "oa_status": None,
             }
-        row["attempt_no"] = int((prior or {}).get("attempt_no") or 0) + 1
-        store.append("acquisitions.jsonl", row)
+        # F5: same rule as reuse_cached — the fetch ran without the lock; the attempt number
+        # is assigned from a re-read taken under the lock, immediately before the append.
+        with store.writer_lock():
+            latest = store.latest_by("acquisitions.jsonl", "candidate_key").get(
+                str(candidate["candidate_key"]))
+            row["attempt_no"] = int((latest or {}).get("attempt_no") or 0) + 1
+            store.append("acquisitions.jsonl", row)
         yield row

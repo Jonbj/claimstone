@@ -182,52 +182,62 @@ def adjudicate(
     by: str,
     profile_sha256: str = "",
 ) -> dict[str, Any]:
-    """Record one person's judgement about one profile. The only verdict-producing call in the project."""
+    """Record one person's judgement about one profile. The only verdict-producing call in the project.
+
+    The whole transaction — read the stored profile, compare it against the live preview, append
+    the signature — holds the project writer lock (F5): a synthesize racing this call either
+    finishes before it (the check sees the new profile and the old hash is refused) or waits
+    until after (the signature precedes the new profile, and the report's staleness rule is
+    what the reader sees). What can no longer happen is the third outcome: a profile change
+    landing between the check and the append, leaving a signature on a hash that was already
+    old when it was written.
+    """
     if verdict not in VERDICTS:
         raise ValueError(f"{verdict!r} is not one of {list(VERDICTS)}")
-    profiles = latest_profiles(store, round_name=round_name, manifest_only=manifest_only)
-    profile = profiles.get(str(question_id))
-    if profile is None:
-        raise KeyError(f"no profile for {question_id}: run synthesize first")
-    if profile.get("state") == evidence.NOT_APPLICABLE:
-        raise ValueError(
-            f"{question_id} is kind {profile.get('kind')!r} and receives no verdict — "
-            "a sixth state is not how that is recorded")
-    if profile.get("provisional"):
-        raise Provisional(
-            f"{question_id}'s profile is provisional ({', '.join(profile.get('blocking') or [])}): "
-            "a verdict recorded against evidence still arriving is a verdict about something else")
-    fresh, _ = preview(project, store, round_name=round_name, manifest_only=manifest_only)
-    current_profile = next((r for r in fresh if str(r["question_id"]) == str(question_id)), None)
-    if current_profile is None or current_profile["profile_sha256"] != profile.get("profile_sha256"):
-        raise StaleProfile("stored profile differs from current evidence; run synthesize and read it again")
-    if not profile_sha256:
-        raise ValueError("the profile hash shown to the adjudicator is required")
-    text = (rationale or "").strip()
-    if len(text) < MIN_RATIONALE_CHARS:
-        raise ValueError(
-            f"a rationale of {len(text)} characters is below the declared minimum of "
-            f"{MIN_RATIONALE_CHARS}: the reasoning is the verdict's only defence")
-    current = str(profile.get("profile_sha256") or "")
-    if profile_sha256 and profile_sha256 != current:
-        raise StaleProfile(f"shown {profile_sha256[:12]}, current {current[:12]}")
+    with store.writer_lock():
+        profiles = latest_profiles(store, round_name=round_name, manifest_only=manifest_only)
+        profile = profiles.get(str(question_id))
+        if profile is None:
+            raise KeyError(f"no profile for {question_id}: run synthesize first")
+        if profile.get("state") == evidence.NOT_APPLICABLE:
+            raise ValueError(
+                f"{question_id} is kind {profile.get('kind')!r} and receives no verdict — "
+                "a sixth state is not how that is recorded")
+        if profile.get("provisional"):
+            raise Provisional(
+                f"{question_id}'s profile is provisional ({', '.join(profile.get('blocking') or [])}): "
+                "a verdict recorded against evidence still arriving is a verdict about something else")
+        fresh, _ = preview(project, store, round_name=round_name, manifest_only=manifest_only)
+        current_profile = next((r for r in fresh if str(r["question_id"]) == str(question_id)), None)
+        if current_profile is None or current_profile["profile_sha256"] != profile.get("profile_sha256"):
+            raise StaleProfile("stored profile differs from current evidence; run synthesize and read it again")
+        if not profile_sha256:
+            raise ValueError("the profile hash shown to the adjudicator is required")
+        text = (rationale or "").strip()
+        if len(text) < MIN_RATIONALE_CHARS:
+            raise ValueError(
+                f"a rationale of {len(text)} characters is below the declared minimum of "
+                f"{MIN_RATIONALE_CHARS}: the reasoning is the verdict's only defence")
+        current = str(profile.get("profile_sha256") or "")
+        if profile_sha256 and profile_sha256 != current:
+            raise StaleProfile(f"shown {profile_sha256[:12]}, current {current[:12]}")
 
-    row = {
-        "question_id": str(question_id),
-        "round": round_name,
-        "manifest_only": manifest_only,
-        "verdict": verdict,
-        "rationale": text,
-        # What makes this auditable: if the evidence changes, the judgement is stale and the report says
-        # so rather than continuing to display it.
-        "profile_sha256": current,
-        "decision_contract_version": profile.get("decision_contract_version"),
-        "registry_version": profile.get("registry_version"),
-        "registry_sha256": profile.get("registry_sha256"),
-        "adjudicated_by": by,
-        "adjudicated_at": _now(),
-    }
-    store.append(ADJUDICATIONS, row)
+        row = {
+            "question_id": str(question_id),
+            "round": round_name,
+            "manifest_only": manifest_only,
+            "verdict": verdict,
+            "rationale": text,
+            # What makes this auditable: if the evidence changes, the judgement is stale and the report says
+            # so rather than continuing to display it.
+            "profile_sha256": current,
+            "decision_contract_version": profile.get("decision_contract_version"),
+            "registry_version": profile.get("registry_version"),
+            "registry_sha256": profile.get("registry_sha256"),
+            "adjudicated_by": by,
+            "adjudicated_at": _now(),
+        }
+        store.append(ADJUDICATIONS, row)
     return row
 
 
