@@ -17,7 +17,7 @@ Spec: `docs/superpowers/specs/2026-10-07-portal-frontend-v21-spec.md`. Branch `r
   Files: `web/package.json`, `web/package-lock.json`, `web/src/index.css`.
 - [x] F1.2 Control client `lib/control.ts` with hand-written types for every control route, `ControlError`, in-memory CSRF; vite dev proxy for `/control`; client tests.
   Files: `web/src/lib/control.ts`, `web/vite.config.ts`, `web/tests/control.test.ts`.
-- [ ] F1.3 `SessionProvider` (context, `useSession`), 401 handling; session tests.
+- [x] F1.3 `SessionProvider` (context, `useSession`), 401 handling; session tests.
   Files: `web/src/lib/session.tsx`, `web/tests/session.test.tsx`.
 - [ ] F1.4 Login page `/login`, safe `?next=` redirect; routes wired in `App.tsx` (`/projects`, `/login`, provider).
   Files: `web/src/pages/LoginPage.tsx`, `web/src/lib/session.tsx` (safeNext), `web/src/App.tsx`, `web/tests/login.test.tsx`.
