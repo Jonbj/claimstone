@@ -41,3 +41,8 @@ $ .venv/bin/python tools/check_instrument_versions.py
 | **B13** | `control` service in compose and nginx, version registrations, decision entry completed, `HANDOFF.md` | checks pass; `docker compose config` validates; `api` service unchanged | TODO |
 
 ## Log entries
+
+### B0 — IN PROGRESS
+- [ ] B0.1 Decision entry D87 in `docs/DESIGN_DECISIONS.md`: the separate authenticated control service; records the D82/D84 clauses that stay, the two-process reason, the 1.2/1.3 rules, and the operator policies the work enforces but does not choose (files: `docs/DESIGN_DECISIONS.md`)
+- [ ] B0.2 `docs/contracts/control_api.md`: routes, envelope, auth and CSRF, the ledger table of spec 1.4, and the error codes of 1.3 (files: `docs/contracts/control_api.md`)
+- [ ] B0.3 Checks pass, no code changed (files: none)
