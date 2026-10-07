@@ -77,7 +77,7 @@ covered the moment it is registered.
    must be present and allowed.
 3. **Body.** `Content-Type: application/json`, at most 64 KiB, except the file upload of
    B7b. Unknown keys → 400.
-4. **Lock.** The project writer lock (`claimstone/locks.py`, B1) is held while re-reading
+4. **Lock.** The project writer lock (`Store.writer_lock`, B1) is held while re-reading
    the ledgers the decision depends on and appending. Network calls happen outside the
    lock; their outcomes re-enter under it.
 5. **Freshness.** The live project is reloaded and registry drift is checked on every
@@ -86,8 +86,12 @@ covered the moment it is registered.
 6. **Ledger rows.** Every row carries `actor` (operator id), `signer_auth:
    "portal-session"`, a UTC `recorded_at`, the code revision, and a `*_version` integer of
    its record type.
-7. **Idempotency.** A request may carry `Idempotency-Key`; a repeated key with the same
-   body returns the first result. A repeated key with a different body → 409.
+7. **Idempotency.** A request may carry `Idempotency-Key` (1–200 characters). Keys are
+   per operator and held in server memory for 24 hours; a restart forgets them, as it ends
+   every session. A repeated key with the same route and body replays the first successful
+   answer; with a different body → 409 `IDEMPOTENCY_CONFLICT`; while the first request still
+   runs → 409 `IDEMPOTENCY_IN_PROGRESS`. A refused request keeps nothing, so its key stays
+   free for the corrected request. (Implemented in B5.)
 8. **Errors.** The read API's envelope (`{"error": {"code", "message"}}`):
    - 401: no session.
    - 403: CSRF, Origin or permission failure.
@@ -119,6 +123,20 @@ question id from the registry. Every id is looked up in ledgers, never used as a
   `profile_sha256` is still current.
 
 Drafts are never read by the engine, never exported and never count as a signature.
+
+As built (B5):
+- Signing also requires the flow's binding to be `CURRENT` (`flows.binding_state`). A
+  drifted flow → 409 `FLOW_DRIFTED`, naming the state and the differing digests: the flow no
+  longer names the protocol the engine judges with. Drafts do not require it.
+- `adjudicate` answers 201 `{"adjudication": <the stored row>}`. Request-rule refusals are
+  422 `VALIDATION` before the engine runs: verdict not one of the five (nothing is
+  preselected or defaulted), `attest` not the literal `true`, rationale under 120 trimmed
+  characters, `profile_sha256` not 64 hex. Engine refusals are 409: `NO_PROFILE`,
+  `PROVISIONAL`, `STALE_PROFILE`, and `REFUSED` (an operational question), each with the
+  engine's sentence. Unknown project, flow or question → 404.
+- `POST …/draft` answers 201 `{"draft", "current", "current_profile_sha256"}`; `GET …/draft`
+  answers the operator's own latest draft or `null`, with `current` null when there is no
+  draft. Another operator's drafts are never returned. Row format: `docs/contracts/drafts.md`.
 
 ### B7a — intake: references, DOIs, links
 

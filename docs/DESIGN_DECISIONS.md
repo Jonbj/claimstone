@@ -4119,3 +4119,39 @@ authority in front: unlike the read-only servers, this process writes, so it doe
 proceed on a warning. The route registry the anonymous-access test enumerates is the
 contract that every POST route later steps add is covered the moment it is registered.
 
+
+## D100 — Signing from the web binds to a current flow; drafts are kept and never exported (2026-10-07)
+
+B5 of the portal-backend spec adds the first routes through which the control server (D89, D99)
+writes a project ledger. `POST /control/v1/p/{p}/flows/{flow_id}/q/{question_id}/adjudicate`
+calls `synthesize.adjudicate` with `signer_auth: "portal-session"`, the session's operator id as
+`actor` and the operator's display name as `adjudicated_by` (D98). The route adds request rules
+and nothing scientific:
+- the verdict must be one of the five, sent explicitly; nothing is preselected or defaulted;
+- `attest` must be the literal `true`;
+- the rationale is checked at 120 trimmed characters before the engine runs;
+- the profile hash must be well-formed.
+
+Every other refusal is the engine's own sentence, as 409.
+
+One rule is new and is this step's decision: **signing requires the flow's binding to be
+`CURRENT`**. A flow names a selector bound to a protocol digest. When the registry, protocol or
+population has drifted, the engine judges with the live project, so a signature recorded "in"
+that flow would carry a meaning the operator did not select. The refusal names the drifted
+digests and points to binding a new flow. The CLI, which signs by round rather than by flow, is
+unchanged.
+
+`drafts.jsonl` (`draft_version 1`) keeps an operator's unfinished reasoning with the hash of the
+profile it was written against. That is what lets the reading desk keep the text when the
+profile changes and still block signing until the change is read. Drafts are private to their
+operator, never read by any stage, never a signature, and excluded from `export.snapshot` beside
+`exports.jsonl`. The exclusion changes no existing export identity, because no store had drafts
+before this step.
+
+`Idempotency-Key`, deferred by B4, is implemented here for every authenticated POST:
+- keys are per operator, in memory for 24 hours;
+- the same key and request replay the first success;
+- a different request under the same key, or a key still running, is a conflict;
+- a refusal frees its key.
+
+A double submission therefore cannot sign twice. Tests in `tests/test_control_signing.py`.

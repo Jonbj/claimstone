@@ -27,7 +27,8 @@ import pathlib
 import tempfile
 from typing import Any
 
-from claimstone import admissibility, claim_records, chunk_sets, flows, portal_state, review, scope, synthesize
+from claimstone import (admissibility, chunk_sets, claim_records, drafts, flows, portal_state, review,
+                        scope, synthesize)
 from claimstone.config import Project, discover_projects, load_project
 from claimstone.store import Store
 
@@ -54,7 +55,9 @@ def snapshot(store: Store) -> tuple[list[dict[str, Any]], list[str]]:
 
     `exports.jsonl` itself is excluded: it is bookkeeping about exports, not evidence, and
     including it would make every export a new identity however unchanged the ledgers are
-    (E-T5 is the test that forces this reading). `audits/` and `exports/` directories are not
+    (E-T5 is the test that forces this reading). `drafts.jsonl` is excluded for a stronger
+    reason: it is an operator's unfinished private text, never evidence and never a judgement
+    (spec B5). `audits/` and `exports/` directories are not
     matched by the globs and never were evidence for the outputs.
     """
     paths = sorted(store.root.glob("*.jsonl")) + sorted(store.root.glob("calls/**/*.jsonl"))
@@ -63,7 +66,8 @@ def snapshot(store: Store) -> tuple[list[dict[str, Any]], list[str]]:
     with flows._flows_lock(store):
         for path in paths:
             relative = str(path.relative_to(store.root))
-            if relative.startswith(("audits/", "exports/")) or relative == EXPORTS_LEDGER:
+            if (relative.startswith(("audits/", "exports/"))
+                    or relative in (EXPORTS_LEDGER, drafts.LEDGER)):
                 continue
             data = path.read_bytes()
             cut = data.rfind(b"\n")

@@ -14,8 +14,10 @@ a later step is covered the moment it is registered.
 
 from __future__ import annotations
 
+import hashlib
 import ipaddress
 import json
+import re
 import os
 import pathlib
 import secrets
@@ -30,7 +32,9 @@ from http.server import ThreadingHTTPServer
 from typing import Any, Callable
 from urllib.parse import unquote, urlparse
 
-from claimstone import flows, operators
+from claimstone import drafts, flows, operators, portal_state, scope, synthesize
+from claimstone.config import ConfigError, RegistryDrift
+from claimstone.store import LedgerCorrupt, Store
 from claimstone.transport import LOOPBACK_HOSTS, BaseHandler
 
 CONTROL_VERSION = 1
@@ -46,6 +50,11 @@ MAX_BODY = 64 * 1024  # §1.3 rule 3; B7b's upload is the one later exception
 SESSION_IDLE_SECONDS = 12 * 60 * 60   # 12 hours of inactivity
 LOGIN_WINDOW_SECONDS = 15 * 60        # per operator id
 LOGIN_FAILURE_LIMIT = 5
+
+IDEMPOTENCY_SECONDS = 24 * 60 * 60   # a replayed key is answered from memory for a day
+IDEMPOTENCY_MAX = 10_000             # oldest entries are dropped beyond this
+
+PROFILE_SHA = re.compile(r"^[0-9a-f]{64}$")
 
 MISDIRECTED_TEXT = "the Host header does not name this server"
 NO_ORIGIN_TEXT = "every mutating request must carry a same-origin Origin header"
@@ -141,6 +150,58 @@ class LoginBudget:
             self._failures.setdefault(operator_id, deque()).append(self._clock())
 
 
+class Idempotency:
+    """`Idempotency-Key` for authenticated POSTs (§1.3 rule 7), in memory like the sessions.
+
+    Keyed by (operator id, key). The same key with the same request replays the first
+    successful answer; with a different request it is a conflict; while the first is still
+    running it is a conflict too, so a double click can never execute twice. Only successes
+    are kept: a refused request leaves the key free, because nothing happened. A restart
+    forgets the keys — the same window in which every session ends.
+    """
+
+    def __init__(self, ttl_seconds: int = IDEMPOTENCY_SECONDS, limit: int = IDEMPOTENCY_MAX,
+                 clock: Callable[[], float] = time.monotonic) -> None:
+        self._ttl = float(ttl_seconds)
+        self._limit = limit
+        self._clock = clock
+        self._lock = threading.Lock()
+        # (operator, key) -> (fingerprint, stored_at, result or None while pending)
+        self._held: dict[tuple[str, str], tuple[str, float, tuple[Any, int] | None]] = {}
+
+    def begin(self, operator_id: str, key: str, fingerprint: str) -> tuple[Any, int] | None:
+        """The stored result to replay, or None after marking the key as running."""
+        with self._lock:
+            now = self._clock()
+            for held in [k for k, (_f, at, _r) in self._held.items() if at + self._ttl <= now]:
+                self._held.pop(held, None)
+            found = self._held.get((operator_id, key))
+            if found is not None:
+                held_fingerprint, _at, result = found
+                if held_fingerprint != fingerprint:
+                    raise ControlError(409, "IDEMPOTENCY_CONFLICT",
+                                       "this Idempotency-Key was used for a different request")
+                if result is None:
+                    raise ControlError(409, "IDEMPOTENCY_IN_PROGRESS",
+                                       "a request with this Idempotency-Key is still running")
+                return result
+            while len(self._held) >= self._limit:
+                self._held.pop(next(iter(self._held)))
+            self._held[(operator_id, key)] = (fingerprint, now, None)
+            return None
+
+    def finish(self, operator_id: str, key: str, result: tuple[Any, int] | None) -> None:
+        """Keep a success for replay; forget the key after a refusal."""
+        with self._lock:
+            found = self._held.get((operator_id, key))
+            if found is None:
+                return
+            if result is None:
+                self._held.pop((operator_id, key), None)
+            else:
+                self._held[(operator_id, key)] = (found[0], found[1], result)
+
+
 # --- the route registry ---------------------------------------------------------------------------
 
 
@@ -156,6 +217,14 @@ ROUTES: tuple[Route, ...] = (
     Route("POST", ("session",), "_session_create", public=True),
     Route("GET", ("session",), "_session_read"),
     Route("POST", ("session", "end"), "_session_end"),
+    # B5: signing and drafts. `{question_id}` is looked up in the registry, `{flow_id}` in
+    # flows.jsonl, `{project}` among the discovered projects — never used as a path.
+    Route("POST", ("p", "{project}", "flows", "{flow_id}", "q", "{question_id}", "adjudicate"),
+          "_adjudicate"),
+    Route("POST", ("p", "{project}", "flows", "{flow_id}", "q", "{question_id}", "draft"),
+          "_draft_save"),
+    Route("GET", ("p", "{project}", "flows", "{flow_id}", "q", "{question_id}", "draft"),
+          "_draft_read"),
 )
 
 
@@ -178,6 +247,7 @@ class _Handler(BaseHandler):
 
     sessions: Sessions
     login_budget: LoginBudget
+    idempotency: Idempotency
     state_dir: pathlib.Path
 
     # --- responses, with the read API's envelope ------------------------------------------------
@@ -246,13 +316,14 @@ class _Handler(BaseHandler):
             route, params = self._match("GET", self._segments())
             if not route.public:
                 self._require_session()  # authenticated reads: 401 before the route
-            getattr(self, route.handler)(params, None, {})
+            result = getattr(self, route.handler)(params, None, {})
+            if result is not None:
+                payload, status = result
+                self._json(payload, status)
         except BrokenPipeError:
             pass
-        except ControlError as exc:
-            self._error(exc.status, exc.code, exc.message)
-        except Exception as exc:  # noqa: BLE001 - the class name alone, never the payload
-            self._error(500, "INTERNAL", type(exc).__name__)
+        except Exception as exc:  # noqa: BLE001 - mapped to a named answer below
+            self._answer_exception(exc)
 
     def do_POST(self) -> None:  # noqa: N802 - http.server's naming
         try:
@@ -267,12 +338,56 @@ class _Handler(BaseHandler):
                 self._require_origin()
                 self._require_csrf()
             body = self._read_body()
-            getattr(self, route.handler)(params, None, body)
+            if route.public:
+                getattr(self, route.handler)(params, None, body)  # writes its own answer
+                return
+            self._post_authenticated(route, params, body)
         except BrokenPipeError:
             pass
-        except ControlError as exc:
+        except Exception as exc:  # noqa: BLE001 - mapped to a named answer below
+            self._answer_exception(exc)
+
+    def _post_authenticated(self, route: Route, params: dict[str, str],
+                            body: dict[str, Any]) -> None:
+        """Run one authenticated POST, honouring `Idempotency-Key` (§1.3 rule 7). Routes
+        that answer for themselves (the session routes) return None and are not replayed."""
+        session = self._require_session()
+        key = self.headers.get("Idempotency-Key")
+        if key is None:
+            result = getattr(self, route.handler)(params, None, body)
+            if result is not None:
+                self._json(result[0], result[1])
+            return
+        if not key.strip() or len(key) > 200:
+            raise ControlError(400, "BAD_REQUEST", "Idempotency-Key must be 1-200 characters")
+        fingerprint = hashlib.sha256(json.dumps(
+            [route.handler, params, body], sort_keys=True, ensure_ascii=False,
+            default=str).encode("utf-8")).hexdigest()
+        replay = self.idempotency.begin(session.operator_id, key, fingerprint)
+        if replay is not None:
+            self._json(replay[0], replay[1])
+            return
+        result: tuple[Any, int] | None = None
+        try:
+            result = getattr(self, route.handler)(params, None, body)
+        finally:
+            self.idempotency.finish(session.operator_id, key, result)
+        if result is not None:
+            self._json(result[0], result[1])
+
+    def _answer_exception(self, exc: Exception) -> None:
+        """One mapping from what the engine and the lookups raise to the envelope."""
+        if isinstance(exc, ControlError):
             self._error(exc.status, exc.code, exc.message)
-        except Exception as exc:  # noqa: BLE001 - the class name alone, never the payload
+        elif isinstance(exc, portal_state.NotFound):
+            self._error(404, "NOT_FOUND", str(exc))
+        elif isinstance(exc, RegistryDrift):  # a ConfigError subclass: the named state first
+            self._error(409, "REGISTRY_DRIFT", str(exc))
+        elif isinstance(exc, ConfigError):
+            self._error(409, "CONFIG_ERROR", str(exc))
+        elif isinstance(exc, LedgerCorrupt):
+            self._error(500, "LEDGER_CORRUPT", str(exc))
+        else:  # the class name alone, never the payload
             self._error(500, "INTERNAL", type(exc).__name__)
 
     def _segments(self) -> list[str]:
@@ -419,6 +534,142 @@ class _Handler(BaseHandler):
                    cookies=(self._session_cookie("", expire=True),))
 
 
+# --- B5: signing and drafts ---------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class _FlowContext:
+    project: Any
+    store: Store
+    flow_row: dict[str, Any]
+    selector: scope.Selector
+    question_id: str
+
+
+def _flow_context(handler: _Handler, params: dict[str, str], *,
+                  require_current: bool) -> _FlowContext:
+    """Project reloaded and registry drift checked on every request (§1.3 rule 5, F9), the
+    flow looked up in its ledger, the question in the registry.
+
+    `require_current` is for signing: a flow whose binding drifted no longer names the
+    protocol the engine is judging with, so a signature "in this flow" would bind to a
+    meaning the operator did not select. The refusal says which part drifted."""
+    project, store, _root = handler._loaded(params["project"])
+    row = handler._flow(store, params["flow_id"])
+    if require_current:
+        binding = flows.binding_state(project, store, row)
+        if binding["state"] != "CURRENT":
+            raise ControlError(
+                409, "FLOW_DRIFTED",
+                f"this flow's binding is {binding['state']} "
+                f"({', '.join(binding['differences'])}): it no longer describes the live "
+                "protocol, so nothing can be signed under it; bind a new flow first")
+    question_id = params["question_id"]
+    if question_id not in project.question_ids:
+        raise portal_state.NotFound(f"unknown question id: {question_id}")
+    selector = portal_state._selector_of(row, scope.Selector(None))
+    return _FlowContext(project, store, row, selector, question_id)
+
+
+def _profile_hash(body: dict[str, Any]) -> str:
+    value = body.get("profile_sha256")
+    if not isinstance(value, str) or not PROFILE_SHA.match(value):
+        raise ControlError(422, "VALIDATION",
+                           "profile_sha256 must be the 64-hex hash of the profile you read")
+    return value
+
+
+def _current_hash(context: _FlowContext) -> str | None:
+    profile = synthesize.latest_profiles(
+        context.store, round_name=context.selector.round,
+        manifest_only=context.selector.manifest_only).get(context.question_id)
+    return str(profile["profile_sha256"]) if profile else None
+
+
+def _adjudicate(self: _Handler, params: dict[str, str], query: Any,
+                body: dict[str, Any]) -> tuple[Any, int]:
+    """Sign one verdict as the session's operator (spec B5). Every scientific refusal is the
+    engine's own: this route adds only the request rules, the attestation and the flow's
+    binding check, and never fills in a verdict for anyone."""
+    self._only_keys(body, frozenset({"verdict", "rationale", "profile_sha256", "attest"}))
+    session = self._require_session()
+    verdict = body.get("verdict")
+    if verdict not in synthesize.VERDICTS:
+        raise ControlError(422, "VALIDATION",
+                           f"verdict must be one of {', '.join(synthesize.VERDICTS)}")
+    if body.get("attest") is not True:
+        raise ControlError(422, "VALIDATION",
+                           "attest must be the literal true: the signer states they read "
+                           "the evidence profile this verdict binds to")
+    rationale = body.get("rationale")
+    if not isinstance(rationale, str):
+        raise ControlError(422, "VALIDATION", "rationale must be text")
+    trimmed = rationale.strip()
+    if len(trimmed) < synthesize.MIN_RATIONALE_CHARS:
+        raise ControlError(
+            422, "VALIDATION",
+            f"a rationale of {len(trimmed)} characters is below the declared minimum of "
+            f"{synthesize.MIN_RATIONALE_CHARS}: the reasoning is the verdict's only defence")
+    shown = _profile_hash(body)
+    context = _flow_context(self, params, require_current=True)
+    try:
+        row = synthesize.adjudicate(
+            context.store, context.question_id, project=context.project,
+            round_name=context.selector.round, manifest_only=context.selector.manifest_only,
+            verdict=verdict, rationale=rationale, by=session.operator_name,
+            signer_auth="portal-session", actor=session.operator_id, profile_sha256=shown)
+    except KeyError as exc:
+        raise ControlError(409, "NO_PROFILE", str(exc.args[0] if exc.args else exc)) from None
+    except synthesize.Provisional as exc:
+        raise ControlError(409, "PROVISIONAL", str(exc)) from None
+    except synthesize.StaleProfile as exc:
+        raise ControlError(409, "STALE_PROFILE", str(exc)) from None
+    except ValueError as exc:  # the request rules passed above: what remains is a state refusal
+        raise ControlError(409, "REFUSED", str(exc)) from None
+    return {"adjudication": row}, 201
+
+
+def _draft_save(self: _Handler, params: dict[str, str], query: Any,
+                body: dict[str, Any]) -> tuple[Any, int]:
+    """Keep the operator's unfinished reasoning. Not a signature, not evidence."""
+    self._only_keys(body, frozenset({"rationale", "profile_sha256"}))
+    session = self._require_session()
+    rationale = body.get("rationale")
+    if not isinstance(rationale, str):
+        raise ControlError(422, "VALIDATION", "rationale must be text")
+    shown = _profile_hash(body)
+    context = _flow_context(self, params, require_current=False)
+    try:
+        row = drafts.append(context.store, actor=session.operator_id,
+                            flow_id=str(context.flow_row["flow_id"]),
+                            question_id=context.question_id, rationale=rationale,
+                            profile_sha256=shown, code_revision=self.code_revision)
+    except ValueError as exc:
+        raise ControlError(422, "VALIDATION", str(exc)) from None
+    current = _current_hash(context)
+    return {"draft": row, "current": shown == current, "current_profile_sha256": current}, 201
+
+
+def _draft_read(self: _Handler, params: dict[str, str], query: Any,
+                body: dict[str, Any]) -> tuple[Any, int]:
+    """This operator's latest draft, and whether the profile it was written against is still
+    the current one. `current` is null when there is no draft to compare."""
+    session = self._require_session()
+    context = _flow_context(self, params, require_current=False)
+    row = drafts.latest(context.store, actor=session.operator_id,
+                        flow_id=str(context.flow_row["flow_id"]),
+                        question_id=context.question_id)
+    current = _current_hash(context)
+    return {"draft": row,
+            "current": (row["profile_sha256"] == current) if row else None,
+            "current_profile_sha256": current}, 200
+
+
+_Handler._adjudicate = _adjudicate      # type: ignore[attr-defined]
+_Handler._draft_save = _draft_save      # type: ignore[attr-defined]
+_Handler._draft_read = _draft_read      # type: ignore[attr-defined]
+
+
 # --- the server -----------------------------------------------------------------------------------
 
 
@@ -458,6 +709,7 @@ def make_server(projects_dir: str | pathlib.Path = "projects",
         "state_dir": operators.state_dir(state_dir),
         "sessions": Sessions(),
         "login_budget": LoginBudget(),
+        "idempotency": Idempotency(),
         "started_at": _now_iso(),
     })
     httpd = ThreadingHTTPServer((host, port), handler)

@@ -29,7 +29,7 @@ $ .venv/bin/python tools/check_instrument_versions.py
 | **B2** | Host failure budget rebuilt from `requests.jsonl`; `urlguard.py`; manual redirects checked per hop (F6, F15) | spec B2 tests pass; checks pass | DONE (main line, scheduler session `67ca0a4` — substance in `store.py`/`net.py`, form deviation: no `locks.py`/`urlguard.py`) |
 | **B3** | `adjudication_version 2`, `signer_auth`, `actor`; required parameters; read API field, schema, fixtures (F16) | spec B3 tests pass; checks pass | DONE (main line, reviewer session 2026-10-07) |
 | **B4** | `claimstone control`, `claimstone operator add/disable`, sessions, CSRF, rate limit | spec B4 tests pass, including the "every POST refuses anonymous" test | DONE |
-| **B5** | Web signing and drafts | spec B5 tests pass | TODO |
+| **B5** | Web signing and drafts | spec B5 tests pass | DONE |
 | **B6** | Profile diff route in the read API; schema and fixtures | spec B6 tests pass | DONE (portal-backend-parallel, merged `3045aa2` 2026-10-07; decisions in the parallel log) |
 | **BR** | Read API: stored-profile list of one question; exports list of one flow (B10's read route) | as `2026-10-07-portal-backend-reads-prompt.md` | DONE (portal-backend-reads, merged 2026-10-07; decisions in the reads log) |
 | **B7a** | Intake of DOIs, URLs and references; cohort routing; single explicit fetch | spec B7a tests pass | TODO |
@@ -422,16 +422,46 @@ regenerate with no diff; web `72 passed`, build and check-csp ok. Reviewed: scop
 `synthesize._scope` (same as `latest_profiles`); no `path` leaves the process; nothing verifies
 on GET. From here the backend steps run on the main line only, one at a time (no parallel worktree).
 
-### B5 — IN PROGRESS (2026-10-07, reviewer session: Claude Code develops from here)
-- [ ] B5.1 `claimstone/drafts.py`: `DRAFT_VERSION 1`, append and latest-per-(operator, flow, question);
+### B5 — DONE (2026-10-07, Claude Code develops from here)
+- [x] B5.1 `claimstone/drafts.py`: `DRAFT_VERSION 1`, append and latest-per-(operator, flow, question);
       `drafts.jsonl` excluded from export snapshots; `docs/contracts/drafts.md`
       (files: `claimstone/drafts.py`, `claimstone/export.py`, `docs/contracts/drafts.md`)
-- [ ] B5.2 control server: flow context (project reloaded, registry drift, flow lookup, binding must be
+- [x] B5.2 control server: flow context (project reloaded, registry drift, flow lookup, binding must be
       `CURRENT`), error mapping for NotFound / RegistryDrift / LedgerCorrupt, and `Idempotency-Key` for
       authenticated POSTs (files: `claimstone/control.py`)
-- [ ] B5.3 routes: `POST …/adjudicate`, `POST …/draft`, `GET …/draft` (files: `claimstone/control.py`)
-- [ ] B5.4 tests: the spec's B5 list plus drift, idempotency, operational, unknown ids, drafts not
+- [x] B5.3 routes: `POST …/adjudicate`, `POST …/draft`, `GET …/draft` (files: `claimstone/control.py`)
+- [x] B5.4 tests: the spec's B5 list plus drift, idempotency, operational, unknown ids, drafts not
       exported (files: `tests/test_control_signing.py`)
-- [ ] B5.5 contract, version registration, D entry, checks
+- [x] B5.5 contract, version registration, D entry, checks
       (files: `docs/contracts/control_api.md`, `tools/check_instrument_versions.py`,
       `docs/DESIGN_DECISIONS.md`, fixtures if the admin list changes)
+
+Checks (final, main checkout):
+
+```
+$ .venv/bin/pytest -q
+1332 passed, 7 skipped in 76.25s (0:01:16)
+$ .venv/bin/claimstone validate --all-projects
+6 × OK (unchanged lines)
+$ .venv/bin/python tools/check_instrument_versions.py
+32 instrument version(s) acknowledged in the design record
+$ cd web && npm run gen:types && npm run typecheck && npm test && npm run build
+Tests  72 passed (72); gen:types no diff; check-csp: ok
+```
+
+Decisions (spec silent), recorded as D100:
+- Signing requires the flow's binding `CURRENT` → else 409 `FLOW_DRIFTED`. Drafts do not.
+- Request rules refused as 422 before the engine runs (verdict one of five, literal `attest: true`,
+  120 trimmed characters, 64-hex hash); engine refusals mapped to 409 `NO_PROFILE` / `PROVISIONAL` /
+  `STALE_PROFILE` / `REFUSED` with the engine's sentence.
+- `drafts.jsonl` excluded from `export.snapshot`; drafts private to their operator; text kept as
+  typed (no trim, no minimum, ≤ 20,000 characters).
+- `Idempotency-Key` implemented for every authenticated POST (deferred by B4): per operator, in
+  memory 24 h; a refusal frees its key.
+- The operational-question route test appends a `NOT_APPLICABLE` profile row, because the example
+  project declares no operational question; the engine side is `test_adjudicate`'s.
+
+Deviations: one commit for the step instead of one per sub-task (single developer, no interruption
+risk). Contract text corrected: rule 4 names `Store.writer_lock`, not `locks.py`.
+
+NOT DONE: (none)

@@ -65,6 +65,9 @@ INSTRUMENTS = (
     # The operator ledger decides who may write through the control API: a row shape change
     # is a change in who can authenticate, so it is versioned like any instrument (D99).
     ("claimstone/operators.py", "OPERATOR_VERSION", "operator_version"),
+    # A draft is never evidence, but its row shape is what the reading desk restores after a
+    # profile change: a change to it is a change to what a person gets back (D100).
+    ("claimstone/drafts.py", "DRAFT_VERSION", "draft_version"),
 )
 
 # The parser is an instrument too, and a string rather than a number. Measured: lfoppiano/grobid
