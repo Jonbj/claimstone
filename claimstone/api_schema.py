@@ -463,6 +463,64 @@ QUESTION_DETAIL = _payload("question detail", {
 }, ["project", "selector", "id", "kind", "text", "profile", "profile_fields", "results",
     "verdict", "verdict_stale", "operational_not_applicable", "not_applicable_state", "adjudication_card"])
 
+# One side of the diff: the stored profile's identity and the instrument versions that
+# decided its contents, so a re-extraction under a new gate never reads as the literature
+# having moved.
+_DIFF_SIDE = {
+    "type": "object",
+    "required": ["profile_sha256", "built_at", "claim_gate_version",
+                 "decision_contract_version", "registry_version"],
+    "properties": {
+        "profile_sha256": _STR,
+        "built_at": _STR,
+        "claim_gate_version": _INT,
+        "decision_contract_version": _INT,
+        "registry_version": _INT,
+    },
+    "additionalProperties": False,
+}
+
+# The per-relation and per-direction counts of one stored profile, exactly as the ledger
+# holds them: by_class values are per source class and the engine owns no closed list.
+_DIFF_COUNTS = {
+    "type": "object",
+    "required": ["by_class", "direction_count"],
+    "properties": {
+        "by_class": {"type": "object"},
+        "direction_count": {"type": "object", "additionalProperties": _INT},
+    },
+    "additionalProperties": False,
+}
+
+PROFILE_DIFF = _payload("profile diff", {
+    "project": _STR,
+    "selector": _SELECTOR,
+    "id": _STR,
+    "from": _DIFF_SIDE,
+    "to": _DIFF_SIDE,
+    # The reason the rows record, when they record one (a changed instrument version); no
+    # invented narrative otherwise.
+    "reason": _STR_OR_NULL,
+    "summary": {
+        "type": "object",
+        "required": ["added", "removed", "changed"],
+        "properties": {"added": _INT, "removed": _INT, "changed": _INT},
+        "additionalProperties": False,
+    },
+    # Keyed by `result_id` (the claim id): pass-through profile result rows stay open,
+    # like `results` above — their vocabulary is the kind's field list, not this API's.
+    "added": {"type": "array", "items": {"type": "object"}},
+    "removed": {"type": "array", "items": {"type": "object"}},
+    "changed": {"type": "array", "items": {"type": "object"}},
+    "counts": {
+        "type": "object",
+        "required": ["from", "to"],
+        "properties": {"from": _DIFF_COUNTS, "to": _DIFF_COUNTS},
+        "additionalProperties": False,
+    },
+}, ["project", "selector", "id", "from", "to", "reason", "summary", "added", "removed",
+    "changed", "counts"])
+
 LINEAGE = _payload("lineage", {
     "project": _STR,
     "selector": _SELECTOR,
@@ -585,6 +643,7 @@ ROUTES: dict[str, dict[str, Any]] = {
     "/projects/{p}/{sel}/overview": OVERVIEW,
     "/projects/{p}/{sel}/inbox": INBOX,
     "/projects/{p}/{sel}/questions/{qid}": QUESTION_DETAIL,
+    "/projects/{p}/{sel}/questions/{qid}/profile-diff": PROFILE_DIFF,
     "/projects/{p}/{sel}/claims/{claim_id}": LINEAGE,
     "/projects/{p}/{sel}/sources/{candidate_key}": SOURCE_DOSSIER,
     "/error": ERROR,
