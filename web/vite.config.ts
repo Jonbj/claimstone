@@ -24,6 +24,9 @@ export default defineConfig({
     proxy: {
       // Dev only: the API runs on the host at 127.0.0.1:8788 (design §4.1).
       "/api": "http://127.0.0.1:8788",
+      // The control API (spec v2.1 F1). In dev its Host and Origin checks see
+      // localhost:5173, so the control server must run with `--allow-host localhost:5173`.
+      "/control": "http://127.0.0.1:8790",
     },
   },
   preview: {

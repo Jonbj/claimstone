@@ -1,6 +1,6 @@
 // F10 (§8.5): a source scan of `src/` (comments stripped) finds no
 // `dangerouslySetInnerHTML`, no `<style`, no `components/ui/chart`, no non-GET
-// `fetch` and no `<form`. Behind the §8.4 header CSP (`style-src 'self'`,
+// `fetch` outside lib/control.ts and no `<form` without an onSubmit. Behind the §8.4 header CSP (`style-src 'self'`,
 // `script-src 'self'`, `form-action 'none'`) any of these would break the page
 // or the read-only guarantee. Comments are stripped before matching so a
 // grep-able comment cannot make the scan lie (HANDOFF's lesson).
@@ -57,14 +57,19 @@ describe("F10: the sources stay inside the §8.4 CSP", () => {
     const offenders: string[] = [];
     for (const { path, code } of files) {
       for (const match of code.matchAll(/method\s*:\s*["'`]([A-Za-z]+)["'`]/g)) {
-        if (match[1].toUpperCase() !== "GET") offenders.push(`${path}: ${match[0]}`);
+        // v2.1: lib/control.ts is the one module allowed to write (tests/writes.test.ts).
+        if (match[1].toUpperCase() !== "GET" && !path.endsWith("/lib/control.ts")) {
+          offenders.push(`${path}: ${match[0]}`);
+        }
       }
     }
     expect(offenders).toEqual([]);
   });
 
-  it("has no <form> element", () => {
-    const offenders = files.filter(({ code }) => /<form[\s>]/i.test(code));
+  it("has no <form> element without an onSubmit", () => {
+    // v2.1: forms exist, but `form-action 'none'` blocks a native submit, so each handles it.
+    const offenders = files.filter(({ code }) =>
+      [...code.matchAll(/<form\b([^>]*)>/gi)].some((m) => !/\bonSubmit\s*=/.test(m[1])));
     expect(offenders.map((f) => f.path.replace(SRC, ""))).toEqual([]);
   });
 });

@@ -15,7 +15,7 @@ Spec: `docs/superpowers/specs/2026-10-07-portal-frontend-v21-spec.md`. Branch `r
 
 - [x] F1.1 Fonts and theme tokens. Pin `@fontsource/instrument-serif`; v2.1 tokens as CSS variables and Tailwind theme entries.
   Files: `web/package.json`, `web/package-lock.json`, `web/src/index.css`.
-- [ ] F1.2 Control client `lib/control.ts` with hand-written types for every control route, `ControlError`, in-memory CSRF; vite dev proxy for `/control`; client tests.
+- [x] F1.2 Control client `lib/control.ts` with hand-written types for every control route, `ControlError`, in-memory CSRF; vite dev proxy for `/control`; client tests.
   Files: `web/src/lib/control.ts`, `web/vite.config.ts`, `web/tests/control.test.ts`.
 - [ ] F1.3 `SessionProvider` (context, `useSession`), 401 handling; session tests.
   Files: `web/src/lib/session.tsx`, `web/tests/session.test.tsx`.
@@ -23,5 +23,5 @@ Spec: `docs/superpowers/specs/2026-10-07-portal-frontend-v21-spec.md`. Branch `r
   Files: `web/src/pages/LoginPage.tsx`, `web/src/lib/session.tsx` (safeNext), `web/src/App.tsx`, `web/tests/login.test.tsx`.
 - [ ] F1.5 Shell v2: dark left sidebar, collapse to top bar under 900 px, operator footer; Shell test.
   Files: `web/src/components/Shell.tsx`, `web/tests/shell.test.tsx`.
-- [ ] F1.6 Writes test: `writesnothing.test.ts` rewritten as `writes.test.ts`.
-  Files: `web/tests/writesnothing.test.ts` (removed), `web/tests/writes.test.ts`.
+- [x] F1.6 Writes test: `writesnothing.test.ts` rewritten as `writes.test.ts`.
+  Files: `web/tests/writesnothing.test.ts` (removed), `web/tests/writes.test.ts`. Done together with F1.2, because control.ts makes the old test fail.
