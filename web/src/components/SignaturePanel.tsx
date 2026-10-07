@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import ErrorState from "@/components/ErrorState";
 import { ControlError, VERDICTS, control } from "@/lib/control";
@@ -74,13 +74,68 @@ export default function SignaturePanel({
   const [staleSeen, setStaleSeen] = useState(false);
   const [signed, setSigned] = useState<Row | null>(null);
 
+  // Drafts keep the reasoning text only: never the verdict, never the attestation.
+  const [draftChange, setDraftChange] = useState<{ from: string; to: string | null } | null>(null);
+  const [draftNote, setDraftNote] = useState<string | null>(null);
+  const [draftError, setDraftError] = useState<Error | null>(null);
+  const [savingDraft, setSavingDraft] = useState(false);
+  const savedText = useRef<string | null>(null);
+  const saving = useRef(false);
+
+  useEffect(() => {
+    let alive = true;
+    control
+      .draft(project, flowId, qid)
+      .then((reply) => {
+        if (!alive || !reply.draft) return;
+        const text = String(reply.draft.rationale ?? "");
+        savedText.current = text;
+        // Never overwrite what the person has already started typing.
+        setRationale((now) => (now === "" ? text : now));
+        if (reply.current === false) {
+          setDraftChange({ from: String(reply.draft.profile_sha256), to: reply.current_profile_sha256 });
+        }
+      })
+      .catch((cause: unknown) => {
+        if (alive) setDraftError(cause instanceof Error ? cause : new Error(String(cause)));
+      });
+    return () => {
+      alive = false;
+    };
+  }, [project, flowId, qid]);
+
+  async function saveDraft(text: string) {
+    if (saving.current || text.trim() === "") return;
+    saving.current = true;
+    setSavingDraft(true);
+    setDraftError(null);
+    try {
+      const reply = await control.saveDraft(project, flowId, qid, {
+        rationale: text,
+        profile_sha256: shownHash,
+      });
+      savedText.current = text;
+      setDraftNote("Draft saved");
+      if (reply.current === false) {
+        setDraftChange({ from: shownHash, to: reply.current_profile_sha256 });
+      }
+    } catch (cause) {
+      setDraftNote(null);
+      setDraftError(cause instanceof Error ? cause : new Error(String(cause)));
+    } finally {
+      saving.current = false;
+      setSavingDraft(false);
+    }
+  }
+
   const changed = shownHash !== latestHash;
   const count = trimmedLength(rationale);
-  const blocked = changed || staleSeen;
+  const blocked = changed || staleSeen || draftChange !== null;
   const canSign = verdict !== null && count >= MIN_RATIONALE_CHARS && attest && !running && !blocked;
 
   function adopt() {
     setShownHash(latestHash);
+    setDraftChange(null);
     setStaleSeen(false);
     setAttest(false);
     setError(null);
@@ -134,6 +189,28 @@ export default function SignaturePanel({
           If the evidence changes later, your signature is marked stale, never silently kept.
         </p>
       </div>
+
+      {draftChange ? (
+        <div className={banner} role="alert" data-testid="draft-changed">
+          <p className="font-semibold">The profile changed while you read</p>
+          <p className="mt-1">
+            Your saved draft is back in the box. It was written against profile{" "}
+            {draftChange.from.slice(0, 12)}; signing is blocked until you reload the current profile.
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {draftChange.to ? (
+              <button type="button" className="rounded border border-border px-3 py-1"
+                onClick={() => onCompare(draftChange.from, draftChange.to as string)}>
+                Compare with the current profile
+              </button>
+            ) : null}
+            <button type="button" className="rounded bg-primary px-3 py-1 text-primary-foreground"
+              onClick={() => { onReload(); adopt(); }}>
+              Reload the profile
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       {changed || staleSeen ? (
         <div className={banner} role="alert" data-testid="evidence-changed">
@@ -191,6 +268,9 @@ export default function SignaturePanel({
           rows={6}
           value={rationale}
           onChange={(e) => setRationale(e.target.value)}
+          onBlur={() => {
+            if (rationale !== savedText.current && !running) void saveDraft(rationale);
+          }}
           placeholder="Why this verdict, on this evidence, within this scope"
           className="rounded-lg border border-border bg-card p-3 text-sm font-normal"
         />
@@ -218,6 +298,19 @@ export default function SignaturePanel({
         <li>{attest ? "✓" : "○"} Your reading attestation</li>
         <li>✓ Signed in as {operatorName}</li>
       </ul>
+
+      <div className="flex flex-wrap items-center gap-3 text-sm">
+        <button
+          type="button"
+          className="rounded border border-border px-3 py-1 disabled:opacity-50"
+          disabled={savingDraft || running || rationale.trim() === ""}
+          onClick={() => void saveDraft(rationale)}
+        >
+          {savingDraft ? "Saving…" : "Save draft"}
+        </button>
+        <span className="text-xs text-muted-foreground" role="status">{draftNote}</span>
+      </div>
+      {draftError ? <ErrorState error={draftError} context="draft" /> : null}
 
       {error ? <ErrorState error={error} context="signing" /> : null}
 
