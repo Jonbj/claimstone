@@ -1,10 +1,12 @@
 """B1 (F5): the project writer lock makes every read-modify-write a transaction.
 
-The three windows the triage found — adjudicate's check-then-append, acquire's attempt
-number read outside the lock, and two processes appending at once — are each demonstrated
-by a test that fails against the pre-B1 code, not by an assertion about implementation
-details. The flows lock is the project lock by construction, and the test says so out loud
-so a future second lock cannot be added without breaking it.
+The two windows the triage found — adjudicate's check-then-append and acquire's attempt
+number read outside the lock — are each demonstrated by a test verified to fail against
+the pre-B1 code (checked at 286a356, 2026-10-07), not by an assertion about implementation
+details. The two-process test pins the lock primitive itself: it passed before B1 because
+the primitive already existed, and it exists to keep it true. The flows lock is the project
+lock by construction, and the test says so out loud so a future second lock cannot be
+added without breaking it.
 """
 
 import os

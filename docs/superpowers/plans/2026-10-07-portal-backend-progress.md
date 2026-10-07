@@ -25,7 +25,7 @@ $ .venv/bin/python tools/check_instrument_versions.py
 | step | content (spec section) | done when | marker |
 |---|---|---|---|
 | **B0** | Decision entry (next free `D` number at the time you write it) and `docs/contracts/control_api.md` | files exist; checks pass; no code changed | DONE |
-| **B1** | Project writer lock adopted by every writer; re-read under the lock in acquire and adjudicate (F5) | spec B1 tests pass; checks pass | IN PROGRESS (triaged 2026-10-07: lock primitive already on the main line; the re-read scope is the step) |
+| **B1** | Project writer lock adopted by every writer; re-read under the lock in acquire and adjudicate (F5) | spec B1 tests pass; checks pass | DONE (main line, reviewer session 2026-10-07 — reduced scope per the triage; form deviation: no `locks.py`) |
 | **B2** | Host failure budget rebuilt from `requests.jsonl`; `urlguard.py`; manual redirects checked per hop (F6, F15) | spec B2 tests pass; checks pass | DONE (main line, scheduler session `67ca0a4` — substance in `store.py`/`net.py`, form deviation: no `locks.py`/`urlguard.py`) |
 | **B3** | `adjudication_version 2`, `signer_auth`, `actor`; required parameters; read API field, schema, fixtures (F16) | spec B3 tests pass; checks pass | TODO |
 | **B4** | `claimstone control`, `claimstone operator add/disable`, sessions, CSRF, rate limit | spec B4 tests pass, including the "every POST refuses anonymous" test | TODO |
@@ -158,21 +158,72 @@ here as the deviation it is.
 
 Next: B1 (reduced scope above), then B3.
 
-### B1 — IN PROGRESS (2026-10-07, reviewer session, after the triage above)
+### B1 — DONE (2026-10-07, reviewer session, after the triage above)
 
-- [ ] B1.1 `synthesize.adjudicate` holds `store.writer_lock()` across the profile check and the
+- [x] B1.1 `synthesize.adjudicate` holds `store.writer_lock()` across the profile check and the
       append: `latest_profiles`, the `preview` comparison and the `store.append` become one
       transaction, so a profile change can no longer land between the check and the signature (F5)
       (files: `claimstone/synthesize.py`)
-- [ ] B1.2 `acquire.run` and `acquire.reuse_cached` re-read the candidate's latest attempt under
+- [x] B1.2 `acquire.run` and `acquire.reuse_cached` re-read the candidate's latest attempt under
       `store.writer_lock()` immediately before appending and assign `attempt_no` from that re-read;
-      the fetch itself stays outside the lock (the spec's network rule)
-      (files: `claimstone/acquire.py`)
-- [ ] B1.3 the spec's three tests, deterministic: two processes appending through the writer →
-      no duplicate ids and a clean tail; a concurrent acquisition landing between the prior read
-      and the append → no duplicate `attempt_no`; adjudicate's check and append under one hold,
-      a competing append provably cannot interleave; the flows lock is the project lock by
-      construction (files: `tests/test_b1_writer_lock.py` (new))
-- [ ] B1.4 checks pass; DONE recorded with the triage's form deviation (no `locks.py`:
-      `Store.writer_lock` is the one lock, `flows._flows_lock` delegates to it, so the lock-order
-      rule holds by construction — there is no second lock to invert)
+      the fetch itself stays outside the lock (the spec's network rule). The now-unused prior
+      read in `run` is removed (files: `claimstone/acquire.py`)
+- [x] B1.3 the spec's tests, deterministic, plus the acquire window: two processes appending
+      through the writer → 30 rows, no duplicate `attempt_no`, clean tail; a competing
+      acquisition landing after `run`'s prior read → `attempt_no` 2, not a duplicate 1;
+      adjudicate's check and append under one hold, a competing append provably cannot
+      interleave; the flows lock is the project lock by construction
+      (files: `tests/test_b1_writer_lock.py` (new))
+- [x] B1.4 checks pass; DONE recorded with the triage's form deviation (no `locks.py`:
+      `Store.writer_lock` is the one lock, `flows._flows_lock` delegates to it, so the
+      lock-order rule holds by construction — there is no second lock to invert)
+
+Checks (final, in the main checkout):
+
+```
+$ .venv/bin/pytest -q
+1272 passed, 7 skipped in 44.92s
+$ .venv/bin/claimstone validate --all-projects
+OK   alembic-s4: 16 topics, 28 questions (registry v3, frozen 2026-09-25), 6 source classes, acquisition floor 0.80 (v1), 25 manifest rows, registry 9c3f265069c6
+OK   alembic-s4-breve: 12 topics, 17 questions (registry v1, frozen 2026-09-28), 6 source classes, acquisition floor 0.80 (v1), 18 manifest rows, registry 3fdb5aea634d
+OK   alembic-s4-lungo: 12 topics, 18 questions (registry v1, frozen 2026-09-28), 6 source classes, acquisition floor 0.80 (v1), 19 manifest rows, registry ee040e0c3cfc
+OK   example-news-and-returns: 16 topics, 20 questions (registry v2, frozen 2026-09-25), 6 source classes, acquisition floor 0.80 (v1), registry 85e5fcc44ddc
+OK   pilot-screen-time: 4 topics, 8 questions (registry v1, frozen 2026-09-25), 6 source classes, acquisition floor 0.80 (v1), 28 manifest rows, registry 82007de2b569
+OK   pmc-screen-time: 4 topics, 8 questions (registry v1, frozen 2026-09-28), 6 source classes, acquisition floor 0.80 (v1), 40 manifest rows, registry 82007de2b569
+$ .venv/bin/python tools/check_instrument_versions.py
+29 instrument version(s) acknowledged in the design record
+$ cd web && npm run typecheck && npm test && npm run build
+Tests  55 passed (55)
+✓ built in 3.93s
+check-csp: ok (no inline script, no style attribute)
+```
+
+Verified, not asserted: the two window tests were run against the pre-B1 code
+(`git checkout 286a356 -- claimstone/acquire.py claimstone/synthesize.py`):
+`2 failed, 2 passed` — the adjudicate test and the competing-acquisition test fail
+without the lock, the two-process test and the flows-lock test pass (the primitive
+already existed; they are regression guards). The test file's docstring records this.
+
+Decisions (spec silent):
+- The competing-acquisition test is in-process, not a timed race: a monkeypatched
+  `acquire_one` appends its competing row for the same candidate between `run`'s prior
+  read and the append, deterministically — the outcome is the same on every run.
+- The adjudicate test observes the hold from inside it: a monkeypatched
+  `synthesize.preview` records `store.writer_busy()` and starts a thread whose append
+  cannot finish within 0.5 s while adjudicate still holds the lock; the join has a
+  timeout, the main path has no timing dependence.
+- `reuse_cached`'s row carries `"attempt_no": None` until the lock block assigns it,
+  so a row can never leave the function with a number read outside the lock.
+- The two-process test's children run the read-modify-write themselves (script on the
+  command line, no helper file), 15 iterations each, so the 30-row outcome exercises
+  flock contention the in-process RLock cannot produce.
+
+Deviations:
+- The triage's form deviation, carried as decided: no `claimstone/locks.py`;
+  `Store.writer_lock` is the one lock and `flows._flows_lock` delegates to it, so the
+  lock-order rule holds by construction.
+- The spec's "two processes → no duplicate ids" test is realised as "no duplicate
+  `attempt_no`": `append` mints no id of its own, and the acquire read-modify-write is
+  the operation whose duplicate the spec's F5 text names.
+
+NOT DONE: (none)
