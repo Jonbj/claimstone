@@ -1,13 +1,17 @@
-import { Link, useParams } from "react-router";
+import { useState } from "react";
+import { Link, useLocation, useParams } from "react-router";
 import Chip from "@/components/Chip";
 import CommandBlock from "@/components/CommandBlock";
 import ErrorState from "@/components/ErrorState";
 import Pending from "@/components/Pending";
 import ProfileDiffPanel from "@/components/ProfileDiffPanel";
+import type { DiffRequest } from "@/components/ProfileDiffPanel";
+import SignaturePanel from "@/components/SignaturePanel";
 import { useApi } from "@/hooks/useApi";
 import { usePoll } from "@/hooks/usePoll";
 import { api } from "@/lib/api";
 import type { QuestionDetail } from "@/lib/api-types";
+import { useSession } from "@/lib/session";
 
 // One question (§8.3): the profile, its results with claim links, and any recorded
 // verdict. `CommandBlock` shows the adjudicate command with its placeholders — a person
@@ -35,7 +39,11 @@ export default function QuestionPage({ kind }: { kind: "f" | "u" }) {
   const qid = rawQid ? decodeURIComponent(rawQid) : "";
 
   const detail = useApi(() => api.question(project, kind, sel, qid), [project, kind, sel, qid]);
+  const profiles = useApi(() => api.profiles(project, kind, sel, qid), [project, kind, sel, qid]);
   usePoll(project || null, () => detail.reload());
+  const session = useSession();
+  const location = useLocation();
+  const [diffRequest, setDiffRequest] = useState<DiffRequest | null>(null);
 
   if (detail.error)
     return <ErrorState error={detail.error} context="question" />;
@@ -45,10 +53,64 @@ export default function QuestionPage({ kind }: { kind: "f" | "u" }) {
   const base = `/p/${encodeURIComponent(project)}/${kind}/${encodeURIComponent(sel)}`;
   const fields = data.profile_fields;
 
+  // What the signing area shows. The panel appears only for a bound flow, a signed-in person,
+  // a question that takes a verdict, and a final stored profile; every other case says why not.
+  const note = (text: React.ReactNode) => (
+    <section className={card}>
+      <h2 className="mb-1 text-base font-semibold">signature</h2>
+      <p className="text-sm text-muted-foreground">{text}</p>
+    </section>
+  );
+  const profileHash = fields.profile_sha256;
+  let signing: React.ReactNode = null;
+  if (data.operational_not_applicable) {
+    signing = null; // the verdict section above already shows the API's state
+  } else if (kind === "u") {
+    signing = note("This selector is not bound to a flow, so it is read-only and signing is not offered.");
+  } else if (fields.provisional === true) {
+    signing = note("This profile is provisional; signing is not offered for it.");
+  } else if (!profileHash || fields.unavailable) {
+    signing = note("There is no current stored profile to sign.");
+  } else if (!session.ready) {
+    signing = <Pending label="checking the session…" />;
+  } else if (!session.operator) {
+    signing = note(
+      <>
+        Sign in to sign.{" "}
+        <Link
+          to={`/login?next=${encodeURIComponent(location.pathname)}`}
+          className="text-blue-600 hover:underline dark:text-blue-400"
+        >
+          Sign in
+        </Link>
+      </>,
+    );
+  } else {
+    signing = (
+      <SignaturePanel
+        key={`${project}|${sel}|${qid}`}
+        project={project}
+        flowId={sel}
+        qid={qid}
+        operatorName={session.operator.name}
+        latestHash={profileHash}
+        onReload={() => {
+          detail.reload();
+          profiles.reload();
+        }}
+        onCompare={(from, to) => setDiffRequest((r) => ({ from, to, nonce: (r?.nonce ?? 0) + 1 }))}
+        onSigned={() => {
+          detail.reload();
+          profiles.reload();
+        }}
+      />
+    );
+  }
+
   return (
     <section className="flex flex-col gap-5">
       <header>
-        <h1 className="text-[22px] font-semibold">
+        <h1 className="text-[26px] font-normal">
           <span className="font-mono">{data.id}</span>: {data.text}
           {detail.refreshing ? (
             <span className="pending ml-3" role="status">
@@ -141,19 +203,22 @@ export default function QuestionPage({ kind }: { kind: "f" | "u" }) {
         )}
       </section>
 
+      {profiles.error ? <ErrorState error={profiles.error} context="stored profiles" /> : null}
       <ProfileDiffPanel
         project={project}
         kind={kind}
         sel={sel}
         qid={qid}
         currentProfileSha256={fields.profile_sha256}
+        profiles={profiles.data?.profiles ?? null}
+        request={diffRequest}
       />
 
       <section className={card}>
         <h2 className="mb-1 text-base font-semibold">verdict</h2>
         {data.operational_not_applicable ? (
           <p>
-            <Chip text="LITERATURE_VERDICT_NOT_APPLICABLE" />
+            <Chip text={data.not_applicable_state ?? "—"} />
           </p>
         ) : data.verdict ? (
           <p className="flex flex-wrap items-baseline gap-2 text-sm">
@@ -188,6 +253,8 @@ export default function QuestionPage({ kind }: { kind: "f" | "u" }) {
           A person reads the profile and signs; an agent does not.
         </p>
       </section>
+
+      {signing}
     </section>
   );
 }
