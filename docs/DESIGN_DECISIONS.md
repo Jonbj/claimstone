@@ -3820,3 +3820,131 @@ unit and lease events before an executor can use them. Execution still needs
 the project-wide writer lock, persistent host budget, redirect guard and
 round-scoped stage builders named in P3/P4. This entry does not authorize any
 campaign or model spending.
+
+## D87 — Serialize project writers and carry host refusals across restarts (2026-10-07)
+
+`Store.writer_lock` uses one `.writer.lock` per project and is reentrant within
+one thread. Flow and source-selection transactions use it; every Store append,
+tail repair and content-addressed write uses it too. Mutating CLI commands hold
+the lock across their read-modify-write stage. This is a conservative
+serialization boundary for the existing CLI; a scheduler worker can narrow it
+to one unit after the operation ledger exists. Existing `.flows.lock` and
+`.source_selection.lock` are no longer acquired by those writers.
+
+`fetch_version 4` reconstructs the recent host failure budget from physical
+`transport` and `robots` events in `requests.jsonl` when `RecordingFetcher`
+binds the transport to a project. Summary rows are ignored so one request
+cannot count twice. A restart therefore sees the same 403, 429, 5xx, timeout
+and connection failures within the configured TTL. The in-memory budget still
+applies to unbound test and compatibility fetchers. The restart regression
+records one timeout, constructs a new fetcher and verifies that it makes zero
+further physical requests when the budget is one. This changes request
+conduct, not the content gate or scientific denominator. Historical rows
+remain under their recorded fetch version.
+
+## D88 — Bind population before discovery and execute scoped offline plans (2026-10-07)
+
+`flow_version 2` declares a configured population when a new, empty round is
+bound. Previously a flow created before discovery stored a null population
+digest, and the first discovery run declared the population and made that
+flow appear drifted. Existing flows retain their recorded identity; no ledger
+row is rewritten.
+
+`scheduler_preview_version 2` describes extract and review as scoped offline
+stage plans now that normalize, extract-build and review-build accept a shared
+`Selector`. The code paths use `scope.source_ids` and leave other round sources
+out of their work units. This changes queue construction for explicitly
+scoped calls, not the claim gate, review verdict or admission rule.
+
+`operations_version 1` introduces a bounded operation: plan,
+OS-account authorization, started and completed/failed events in
+`operations.jsonl`. Plans hash the flow binding, exact input ledger bytes,
+code files, stage and batch. Execution checks the frozen inputs and holds the
+project writer lock through the stage. An interrupted stage can resume from
+the existing append-only stage rows; a completed operation returns its stored
+result without repeating work. Local `llamacpp` drain plans freeze a named
+batch, model, harness and at most N never-attempted call ids; each result is
+recorded before its operation unit completes, so a crash can reconcile the
+result without calling the model twice. A batch containing sources outside
+the flow is refused. These plans allow zero external network requests and
+zero metered spend. Tests prove a changed input refuses an already
+authorized plan and a repeated completed execution appends no duplicate
+events. No scientific verdict is created by these operations.
+
+## D89 — A separate authenticated control service for portal writes (2026-10-07)
+
+The v2.1 portal design (`docs/design/portal/v2/README.md`, §7) names the
+controls that need backend work; the review
+(`2026-10-06-research-portal-review.md`) named the defects that blocked them.
+This decision authorizes a **write boundary** and records its shape; the
+implementation spec is `2026-10-07-portal-backend-spec.md` (steps B0–B13), and
+the progress log is `2026-10-07-portal-backend-progress.md`.
+
+**What stays unchanged from D82/D84:** the read API (`claimstone api`) stays
+read-only — GET only, store and projects mounted `:ro`, no secret, no
+authentication, no network egress. Nothing in this work adds a write path to
+`api.py` or `transport.BaseHandler`. D82's scoped reads and D84's "meaning is
+decided on the server" clause both stand.
+
+**Why two processes, not one.** D84 records "the API holds no secret and
+mounts the store read-only" as a security property: a defect in a read route
+can never write. Writes therefore live in a new, separate process,
+`claimstone control` (`claimstone/control.py`), on prefix `/control/v1`,
+with the store mounted read-write, an authenticated operator session, and
+network egress only for the explicit admin checks and the operator URL
+fetch of intake. It reuses `transport.py`'s Host/Origin checks and response
+headers; it does not inherit "GET only".
+
+**What the control server never does (spec §1.2):** it never signs for
+anyone — a signature carries the authenticated operator, never a typed name;
+it never preselects, suggests or defaults a verdict; it never starts network
+or paid model work except the two explicit actions named above; it never
+decides scientific policy — policies are declared in the project's input
+files or recorded by the operator, and the server enforces them; it never
+ranks access, intake or purchase items by anything derived from claims,
+reviews or stances (F13); and it never runs stage commands — executing work
+is the scheduler's job (B12).
+
+**The rules every mutating route obeys (spec §1.3):** a valid session
+cookie; CSRF via an `X-CSRF-Token` header plus a present, allowed `Origin`;
+`Content-Type: application/json` bodies at most 64 KiB with unknown keys
+refused; the project writer lock (B1, closing F5) held while re-reading the
+ledgers a decision depends on and appending, with network calls outside the
+lock; the live project reloaded and registry drift checked on every request
+with `check_registry_drift(..., record=False)` (F9), any drift answering
+409 with nothing written; every ledger row carrying `actor`,
+`signer_auth: "portal-session"`, a UTC `recorded_at`, the code revision and
+a `*_version` integer; optional `Idempotency-Key` semantics; and the read
+API's `{"error": {"code", "message"}}` envelope with 401/403/404/409/413/422
+as the answer set. The message is the engine's own sentence when there is
+one, for example `StaleProfile`'s.
+
+**The operator policies this work enforces but does not choose (spec §3):**
+whether supplied copies count toward the floor is declared per project in
+`sources.yaml: supplied_copies` and defaults to `separate` (F14); any
+authenticated operator may record "bought externally", with `actor`; evidence
+of possession is set only by an intake that passes the quarantine checks,
+never by hand; PDFs with an unknown licence are excluded from exports and
+listed (default excluded).
+
+The scientific instruments this work introduces — the new record types
+(drafts, intake, decisions, seen, control-side adjudication shape) and the
+control API's payload — are each versioned like an instrument and registered
+in `tools/check_instrument_versions.py`, so a bump is recorded, not silent.
+B13 completes this entry with the measured test counts. This entry authorizes
+no campaign, no model spending and no executor; the scheduler's first
+implementation gate (`docs/contracts/scheduler_operations.md`) still stands.
+
+## D90 — Bound physical requests and reject non-global destinations (2026-10-07)
+
+`fetch_version 5` adds opt-in exact-host allowlists, a physical request ceiling
+that includes robots and redirect hops, and a preflight that rejects literal
+or DNS-resolved non-global addresses at every hop. A bounded fetcher pins the
+selected public IP in its HTTP transport, sends the original Host header and
+verifies TLS against the original hostname. It disables environment proxies,
+which could otherwise resolve the URL again. The default fetcher behavior is
+unchanged for existing campaigns; a bounded scheduler plan must enable these
+guards. Tests establish that localhost and out-of-plan hosts are refused
+before a socket call, a zero request ceiling permits no transfer, and the
+adapter selects the pinned IP while retaining the original TLS name. This
+version changes request conduct, not scientific interpretation.
