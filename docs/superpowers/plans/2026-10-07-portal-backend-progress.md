@@ -28,7 +28,7 @@ $ .venv/bin/python tools/check_instrument_versions.py
 | **B1** | Project writer lock adopted by every writer; re-read under the lock in acquire and adjudicate (F5) | spec B1 tests pass; checks pass | DONE (main line, reviewer session 2026-10-07 — reduced scope per the triage; form deviation: no `locks.py`) |
 | **B2** | Host failure budget rebuilt from `requests.jsonl`; `urlguard.py`; manual redirects checked per hop (F6, F15) | spec B2 tests pass; checks pass | DONE (main line, scheduler session `67ca0a4` — substance in `store.py`/`net.py`, form deviation: no `locks.py`/`urlguard.py`) |
 | **B3** | `adjudication_version 2`, `signer_auth`, `actor`; required parameters; read API field, schema, fixtures (F16) | spec B3 tests pass; checks pass | DONE (main line, reviewer session 2026-10-07) |
-| **B4** | `claimstone control`, `claimstone operator add/disable`, sessions, CSRF, rate limit | spec B4 tests pass, including the "every POST refuses anonymous" test | IN PROGRESS |
+| **B4** | `claimstone control`, `claimstone operator add/disable`, sessions, CSRF, rate limit | spec B4 tests pass, including the "every POST refuses anonymous" test | DONE |
 | **B5** | Web signing and drafts | spec B5 tests pass | TODO |
 | **B6** | Profile diff route in the read API; schema and fixtures | spec B6 tests pass | DONE (portal-backend-parallel, merged `3045aa2` 2026-10-07; decisions in the parallel log) |
 | **BR** | Read API: stored-profile list of one question; exports list of one flow (B10's read route) | as `2026-10-07-portal-backend-reads-prompt.md` | PARALLEL (portal-backend-reads) |
@@ -345,5 +345,58 @@ NOT DONE: (none)
       missing or foreign; cookie flags; non-loopback refused; every POST route in the registry
       refuses an anonymous request, covering routes added by later steps automatically
       (files: `tests/test_control.py` (new))
-- [ ] B4.6 checks pass; DONE recorded
+- [x] B4.6 checks pass; DONE recorded
+
+Checks (final, in the main checkout):
+
+```
+$ .venv/bin/pytest -q
+1298 passed, 7 skipped in 55.60s
+$ .venv/bin/claimstone validate --all-projects
+OK   alembic-s4: 16 topics, 28 questions (registry v3, frozen 2026-09-25), 6 source classes, acquisition floor 0.80 (v1), 25 manifest rows, registry 9c3f265069c6
+OK   alembic-s4-breve: 12 topics, 17 questions (registry v1, frozen 2026-09-28), 6 source classes, acquisition floor 0.80 (v1), 18 manifest rows, registry 3fdb5aea634d
+OK   alembic-s4-lungo: 12 topics, 18 questions (registry v1, frozen 2026-09-28), 6 source classes, acquisition floor 0.80 (v1), 19 manifest rows, registry ee040e0c3cfc
+OK   example-news-and-returns: 16 topics, 20 questions (registry v2, frozen 2026-09-25), 6 source classes, acquisition floor 0.80 (v1), registry 85e5fcc44ddc
+OK   pilot-screen-time: 4 topics, 8 questions (registry v1, frozen 2026-09-28), 6 source classes, acquisition floor 0.80 (v1), 28 manifest rows, registry 82007de2b569
+OK   pmc-screen-time: 4 topics, 8 questions (registry v1, frozen 2026-09-28), 6 source classes, acquisition floor 0.80 (v1), 40 manifest rows, registry 82007de2b569
+$ .venv/bin/python tools/check_instrument_versions.py
+31 instrument version(s) acknowledged in the design record
+$ cd web && npm run typecheck && npm test
+Tests  72 passed (72)
+```
+
+The 19 new tests are `tests/test_control.py`; the web count is 72 (55 at B3) because
+other sessions' merged work grew the frontend suite — this step's fixture change is one
+line each in `admin.json` and `meta.json`, regenerated because they embed the
+instrument list (`operator_version 1`), exactly the effect B3 recorded.
+
+Decisions (spec silent):
+- Flags as the contract names them: `--projects` and `--bind` (where `api` says
+  `--projects-dir` and `--host`). The contract file is the promise; noted in its text.
+- The login POST carries no `X-CSRF-Token` check — no session exists yet to own one —
+  but `Origin` present-and-allowed is enforced on every POST, the login included.
+- A disabled operator answers the same 401 sentence as an unknown id: account state is
+  not the caller's business, and the uniform sentence is what the ledger can prove.
+- A successful login does not clear the failure window: the spec counts failures, and
+  the window slides on its own; the 6th attempt inside 15 minutes is 429 even with the
+  correct password.
+- An empty POST body is read as `{}`; the no-keys logout (`session/end`) goes through
+  bare, and the login's empty body is then a 422 (no keys), not a 400.
+- `Secure` is added on TLS or `X-Forwarded-Proto: https`: honouring the header can only
+  add the flag, never remove it, so a spoofed header's worst case is a cookie browsers
+  refuse to send over plain HTTP.
+- `operator add` refuses an id that has any row at all: re-enabling after a disable is
+  a deliberate act the ledger does not silently perform.
+- The anonymous sweep substitutes `x-<name>` for `{param}` template segments, so a
+  parameterized POST route added by a later step is covered without editing the test.
+- The idempotency machinery of §1.3 rule 7 is deferred to the first route with a ledger
+  side effect (B5+): sessions are in memory and the session routes write no ledger.
+- Wrong-verb requests answer 405 naming the allowed verbs (the rebind of `_refuse`
+  covers PUT/DELETE/PATCH/HEAD/OPTIONS, which the base had bound to its GET-only
+  sentence); a wrong `Content-Type` answers 400 — the spec's table has no 415.
+
+Deviations: (none — B4 follows the spec's form as written; the `--projects/--bind`
+naming follows the contract's own text over `api`'s, recorded as a decision above)
+
+NOT DONE: (none)
 
