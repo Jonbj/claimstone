@@ -11,6 +11,7 @@ import type {
   Meta,
   Overview,
   Poll,
+  ProfileDiff,
   Projects,
   QuestionDetail,
   SourceDossier,
@@ -76,6 +77,12 @@ export const api = {
   question: (project: string, kind: "f" | "u", sel: string, qid: string) =>
     get<QuestionDetail>(
       `/projects/${encodeURIComponent(project)}/${selectorPath(kind, sel)}/questions/${encodeURIComponent(qid)}`),
+  profileDiff: (project: string, kind: "f" | "u", sel: string, qid: string,
+                fromSha: string, toSha: string) =>
+    get<ProfileDiff>(
+      `/projects/${encodeURIComponent(project)}/${selectorPath(kind, sel)}` +
+      `/questions/${encodeURIComponent(qid)}/profile-diff` +
+      `?from=${encodeURIComponent(fromSha)}&to=${encodeURIComponent(toSha)}`),
   claim: (project: string, kind: "f" | "u", sel: string, claimId: string) =>
     get<Lineage>(
       `/projects/${encodeURIComponent(project)}/${selectorPath(kind, sel)}/claims/${encodeURIComponent(claimId)}`),

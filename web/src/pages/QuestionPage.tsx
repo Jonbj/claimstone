@@ -3,6 +3,7 @@ import Chip from "@/components/Chip";
 import CommandBlock from "@/components/CommandBlock";
 import ErrorState from "@/components/ErrorState";
 import Pending from "@/components/Pending";
+import ProfileDiffPanel from "@/components/ProfileDiffPanel";
 import { useApi } from "@/hooks/useApi";
 import { usePoll } from "@/hooks/usePoll";
 import { api } from "@/lib/api";
@@ -139,6 +140,14 @@ export default function QuestionPage({ kind }: { kind: "f" | "u" }) {
           <p className="mt-1 text-sm text-muted-foreground">no results for this scope</p>
         )}
       </section>
+
+      <ProfileDiffPanel
+        project={project}
+        kind={kind}
+        sel={sel}
+        qid={qid}
+        currentProfileSha256={fields.profile_sha256}
+      />
 
       <section className={card}>
         <h2 className="mb-1 text-base font-semibold">verdict</h2>
