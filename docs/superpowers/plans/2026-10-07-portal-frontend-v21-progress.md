@@ -244,7 +244,7 @@ the draft is the safeguard). Not checked in a browser (no servers were started).
 
 ## F6 — Export, Administration, closing pass (IN PROGRESS)
 
-- [ ] F6.1 Export page `/p/:project/f/:sel/export` (flows only): `api.exports` (GET), list, Create snapshot with the copies checkbox and the `copies` answer, per-row Verify (never on load; disabled while running), route in `App.tsx`.
+- [x] F6.1 Export page `/p/:project/f/:sel/export` (flows only): `api.exports` (GET), list, Create snapshot with the copies checkbox and the `copies` answer, per-row Verify (never on load; disabled while running), route in `App.tsx`.
   Files: `web/src/lib/api.ts`, `web/src/pages/ExportPage.tsx`, `web/src/App.tsx`, `web/tests/export.test.tsx`.
 - [ ] F6.2 Administration `/admin`: read API presence block, control admin when signed in (last check per target, Check buttons, credential form cleared after every submit, never echoed), Paid test disabled with the 501 reason.
   Files: `web/src/pages/AdminPage.tsx`, `web/tests/admin.test.tsx`.

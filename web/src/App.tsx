@@ -3,6 +3,7 @@ import Shell from "@/components/Shell";
 import AdminPage from "@/pages/AdminPage";
 import { SessionProvider } from "@/lib/session";
 import ClaimPage from "@/pages/ClaimPage";
+import ExportPage from "@/pages/ExportPage";
 import FlowOverviewPage from "@/pages/FlowOverviewPage";
 import IndexPage from "@/pages/IndexPage";
 import InboxPage from "@/pages/InboxPage";
@@ -35,6 +36,7 @@ const router = createBrowserRouter([
       { path: "admin", element: <AdminPage /> },
       { path: "p/:project", element: <ProjectPage /> },
       { path: "p/:project/f/:sel", element: <FlowOverviewPage kind="f" /> },
+      { path: "p/:project/f/:sel/export", element: <ExportPage /> },
       { path: "p/:project/u/:sel", element: <FlowOverviewPage kind="u" /> },
       { path: "p/:project/f/:sel/q/:qid", element: <QuestionPage kind="f" /> },
       { path: "p/:project/u/:sel/q/:qid", element: <QuestionPage kind="u" /> },

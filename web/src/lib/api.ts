@@ -5,6 +5,7 @@ import type {
   Activity,
   Admin,
   Error as ApiErrorPayload,
+  FlowExports,
   Inbox,
   Integrity,
   Lineage,
@@ -84,6 +85,9 @@ export const api = {
       `/projects/${encodeURIComponent(project)}/${selectorPath(kind, sel)}` +
       `/questions/${encodeURIComponent(qid)}/profile-diff` +
       `?from=${encodeURIComponent(fromSha)}&to=${encodeURIComponent(toSha)}`),
+  exports: (project: string, flowId: string) =>
+    get<FlowExports>(
+      `/projects/${encodeURIComponent(project)}/flows/${encodeURIComponent(flowId)}/exports`),
   profiles: (project: string, kind: "f" | "u", sel: string, qid: string) =>
     get<StoredProfiles>(
       `/projects/${encodeURIComponent(project)}/${selectorPath(kind, sel)}` +
