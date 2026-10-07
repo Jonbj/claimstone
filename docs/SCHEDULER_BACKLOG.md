@@ -365,3 +365,25 @@ version, content checking, raw request retention, idempotent candidate writes,
 host refusal budgets and bounded scheduler authorization. The guides' OAI-PMH
 mirror, vector database, mass PDF download and paid bulk feeds have no measured
 benefit at the present scale and are not implementation prerequisites.
+
+### OpenAlex guide comparison, 2026-10-07
+
+The new `docs/tools/openalex_integration_guide.md` was checked against the
+current OpenAlex searcher, DOI/copy resolver, bounded operation planner and
+official 2026 authentication, pricing, search and corpus documentation. The
+existing key is sent as a bearer token only to HTTPS `api.openalex.org`; raw
+responses are retained. The query's `mailto` parameter is legacy and ignored
+by the current OpenAlex API, so it must not be counted as authentication.
+
+| Priority | Scheduler duty | Acceptance evidence |
+|---|---|---|
+| Before unattended OpenAlex expansion | Freeze an API-use ceiling alongside physical request ceilings, record OpenAlex's per-call cost and remaining daily credits, and stop when the approved boundary is reached. The current `budget_cents` applies only to Ollama Cloud model drains; an OpenAlex key may also have prepaid credits. A local estimate cannot guarantee free-only use when other clients share the key, so require a provider-side spending cap or a dedicated key without prepaid credit for that promise. | A simulated depleted free quota stops or follows an explicitly authorized paid policy. Usage is attributed to the exact operation; 429 from quota exhaustion stays distinct from an empty result. Check response headers and the documented `meta.cost_usd` field, accepting only shapes proven by fixtures. |
+| Before widening a search protocol | Compare the current broad `search=` query with `search.title_abstract_keywords`, controlled boolean/proximity variants and, if vocabulary is uncertain, a separately bounded semantic query. Freeze `corpus=core/all`, query mode, filters, sort and per-page cap in each plan. | A held known-work set measures unique relevant retrieval, noise and API cost. Changing query mode or corpus creates a dated round/protocol rather than silently altering earlier denominators. No semantic result is auto-admitted. |
+| For capped OpenAlex queries | Record `meta.count`, page/rank and result cap. Offer separately authorized cursor pages or a narrower query; save the returned cursor exactly for interrupted work. Do not raise `per_page` to 100 when the operator intentionally capped a pilot at 10 or 25. | A capped first page is reported as incomplete search depth, never complete literature coverage; restart does not repeat a page or exceed the approved page/request ceiling. |
+| For identity and provenance | Retain the OpenAlex Work ID and all query-hit observations alongside DOI and source/copy URLs. Treat Work identity and legal copy identity separately; check upstream merge/split errors against the document. | Two queries finding one Work preserve both query paths, and a mismatched copy remains blocked despite matching OA metadata. Changing candidate keys requires a versioned measured migration. |
+
+At current volume, the guide's snapshot, daily sync, paid membership, universal
+`per_page=100`, reranking every result and OpenAlex content-download endpoint
+are not prerequisites. The existing `select` includes `primary_location` and
+`open_access` because this project's frozen metadata population needs them;
+dropping those fields for a thinner first pass would change selection behavior.
