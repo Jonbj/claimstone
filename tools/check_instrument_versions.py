@@ -68,6 +68,8 @@ INSTRUMENTS = (
     # A draft is never evidence, but its row shape is what the reading desk restores after a
     # profile change: a change to it is a change to what a person gets back (D100).
     ("claimstone/drafts.py", "DRAFT_VERSION", "draft_version"),
+    # Where a proposed item was routed decides whether it can ever join a population (D101).
+    ("claimstone/intake.py", "INTAKE_VERSION", "intake_version"),
 )
 
 # The parser is an instrument too, and a string rather than a number. Measured: lfoppiano/grobid

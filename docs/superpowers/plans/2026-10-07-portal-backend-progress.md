@@ -32,7 +32,7 @@ $ .venv/bin/python tools/check_instrument_versions.py
 | **B5** | Web signing and drafts | spec B5 tests pass | DONE |
 | **B6** | Profile diff route in the read API; schema and fixtures | spec B6 tests pass | DONE (portal-backend-parallel, merged `3045aa2` 2026-10-07; decisions in the parallel log) |
 | **BR** | Read API: stored-profile list of one question; exports list of one flow (B10's read route) | as `2026-10-07-portal-backend-reads-prompt.md` | DONE (portal-backend-reads, merged 2026-10-07; decisions in the reads log) |
-| **B7a** | Intake of DOIs, URLs and references; cohort routing; single explicit fetch | spec B7a tests pass | TODO |
+| **B7a** | Intake of DOIs, URLs and references; cohort routing; single explicit fetch | spec B7a tests pass | DONE (fetch moved to B7b) |
 | **B7b** | File intake, quarantine, engine gates, `operator-supplied` acquisition row, `supplied_copies` policy (F14) | spec B7b tests pass; existing admissibility tests unchanged and passing | TODO |
 | **B8** | Identity resolution, retry-campaign record and preview, purchase offers and stages, defer/decline, F13 ordering test | spec B8 tests pass | TODO |
 | **B9** | Seen markers and `/control/v1/today` | spec B9 tests pass | TODO |
@@ -465,3 +465,27 @@ Deviations: one commit for the step instead of one per sub-task (single develope
 risk). Contract text corrected: rule 4 names `Store.writer_lock`, not `locks.py`.
 
 NOT DONE: (none)
+
+### B7a — DONE (2026-10-07, Claude Code)
+- [x] B7a.1 `net.global_destination(url)`: the global-address rule `Fetcher._address_allowed` applies,
+      as a function usable before any request (files: `claimstone/net.py`)
+- [x] B7a.2 `claimstone/intake.py`: `INTAKE_VERSION 1`, normalisation per kind, cohort routing
+      (DUPLICATE / POSSIBLE_VERSION / NEEDS_NEW_ROUND / READY), list of latest states
+      (files: `claimstone/intake.py`)
+- [x] B7a.3 control routes `POST …/intake` and `GET …/intake` (files: `claimstone/control.py`)
+- [x] B7a.4 tests, contract `docs/contracts/intake.md`, version, D entry, checks
+      (files: `tests/test_intake.py`, docs, `tools/check_instrument_versions.py`, fixtures)
+
+Checks (final): `1353 passed, 7 skipped`; validate 6× OK; `33 instrument version(s)`; web `72 passed`;
+fixtures regenerated (admin/meta: the instrument list).
+
+Decisions (spec silent), recorded as D101: routing by what the engine treats as frozen (`manifest_only`
+or no round → `NEEDS_NEW_ROUND`; open round → `READY`); DOI/URL exact match → `DUPLICATE` of the
+candidate; reference vs folded title → `POSSIBLE_VERSION` (titles ≤ 20 characters only on equality);
+a re-submission is its own row in state `DUPLICATE`; `net.global_addresses` shared with `Fetcher`;
+the resolver is injectable only through `make_server(resolver=…)`, for tests.
+
+Deviations: the single explicit fetch moves to B7b (no quarantine exists for its bytes before then).
+`discover` does not read `intake.jsonl`: `READY` is recorded and routed, not admitted (named in D101).
+
+NOT DONE: (none in scope)

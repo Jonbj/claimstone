@@ -32,7 +32,7 @@ from http.server import ThreadingHTTPServer
 from typing import Any, Callable
 from urllib.parse import unquote, urlparse
 
-from claimstone import drafts, flows, operators, portal_state, scope, synthesize
+from claimstone import drafts, flows, intake, operators, portal_state, scope, synthesize
 from claimstone.config import ConfigError, RegistryDrift
 from claimstone.store import LedgerCorrupt, Store
 from claimstone.transport import LOOPBACK_HOSTS, BaseHandler
@@ -225,6 +225,9 @@ ROUTES: tuple[Route, ...] = (
           "_draft_save"),
     Route("GET", ("p", "{project}", "flows", "{flow_id}", "q", "{question_id}", "draft"),
           "_draft_read"),
+    # B7a: material intake (references, DOIs, links). Recording and routing only.
+    Route("POST", ("p", "{project}", "flows", "{flow_id}", "intake"), "_intake_submit"),
+    Route("GET", ("p", "{project}", "flows", "{flow_id}", "intake"), "_intake_list"),
 )
 
 
@@ -249,6 +252,9 @@ class _Handler(BaseHandler):
     login_budget: LoginBudget
     idempotency: Idempotency
     state_dir: pathlib.Path
+    # Name resolution for the intake URL check. None is the system resolver; tests pass a
+    # fake one so no real name is ever looked up (the hook exists for nothing else).
+    resolver: Any = None
 
     # --- responses, with the read API's envelope ------------------------------------------------
 
@@ -546,6 +552,14 @@ class _FlowContext:
     question_id: str
 
 
+def _flow_only(handler: _Handler, params: dict[str, str]
+               ) -> tuple[Any, Store, dict[str, Any], scope.Selector]:
+    """Project reloaded with registry drift checked, and the flow looked up (no question)."""
+    project, store, _root = handler._loaded(params["project"])
+    row = handler._flow(store, params["flow_id"])
+    return project, store, row, portal_state._selector_of(row, scope.Selector(None))
+
+
 def _flow_context(handler: _Handler, params: dict[str, str], *,
                   require_current: bool) -> _FlowContext:
     """Project reloaded and registry drift checked on every request (§1.3 rule 5, F9), the
@@ -665,6 +679,36 @@ def _draft_read(self: _Handler, params: dict[str, str], query: Any,
             "current_profile_sha256": current}, 200
 
 
+def _intake_submit(self: _Handler, params: dict[str, str], query: Any,
+                   body: dict[str, Any]) -> tuple[Any, int]:
+    """Record one proposed DOI, link or reference and say where it was routed (spec B7a).
+    Nothing is fetched and nothing counts: the answer is the routing, before any use."""
+    self._only_keys(body, frozenset({"kind", "value", "note"}))
+    session = self._require_session()
+    kind, value, note = body.get("kind"), body.get("value"), body.get("note")
+    if not isinstance(kind, str) or not isinstance(value, str):
+        raise ControlError(422, "VALIDATION", "kind and value must be text")
+    if note is not None and not isinstance(note, str):
+        raise ControlError(422, "VALIDATION", "note must be text when given")
+    project, store, row, selector = _flow_only(self, params)
+    try:
+        recorded = intake.submit(store, project, row, selector, kind=kind, value=value,
+                                 note=note, actor=session.operator_id,
+                                 code_revision=self.code_revision, resolver=self.resolver)
+    except intake.IntakeRefused as exc:
+        raise ControlError(422, "VALIDATION", str(exc)) from None
+    return {"intake": recorded}, 201
+
+
+def _intake_list(self: _Handler, params: dict[str, str], query: Any,
+                 body: dict[str, Any]) -> tuple[Any, int]:
+    _project, store, row, _selector = _flow_only(self, params)
+    return {"flow_id": str(row["flow_id"]),
+            "items": intake.for_flow(store, str(row["flow_id"]))}, 200
+
+
+_Handler._intake_submit = _intake_submit  # type: ignore[attr-defined]
+_Handler._intake_list = _intake_list      # type: ignore[attr-defined]
 _Handler._adjudicate = _adjudicate      # type: ignore[attr-defined]
 _Handler._draft_save = _draft_save      # type: ignore[attr-defined]
 _Handler._draft_read = _draft_read      # type: ignore[attr-defined]
@@ -686,7 +730,8 @@ def make_server(projects_dir: str | pathlib.Path = "projects",
                 store_dir: str | pathlib.Path = "store", *,
                 host: str = "127.0.0.1", port: int = 8790,
                 allow_hosts: tuple[str, ...] = (),
-                state_dir: str | pathlib.Path | None = None) -> ThreadingHTTPServer:
+                state_dir: str | pathlib.Path | None = None,
+                resolver: Any = None) -> ThreadingHTTPServer:
     """The control server. A non-loopback bind is refused outright — this process
     writes, so it does not proceed on a warning the way the read-only servers do —
     unless `--allow-host` names the authority of the proxy that fronts it."""
@@ -710,6 +755,7 @@ def make_server(projects_dir: str | pathlib.Path = "projects",
         "sessions": Sessions(),
         "login_budget": LoginBudget(),
         "idempotency": Idempotency(),
+        "resolver": staticmethod(resolver) if resolver is not None else None,
         "started_at": _now_iso(),
     })
     httpd = ThreadingHTTPServer((host, port), handler)

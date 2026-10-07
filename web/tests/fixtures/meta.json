@@ -21,6 +21,7 @@
   "html_parser_version": 2,
   "identity_relation_version": 2,
   "image": "lfoppiano/grobid:0.8.1",
+  "intake_version": 1,
   "jats_parser_version": 2,
   "model_report_version": 2,
   "operations_version": 3,

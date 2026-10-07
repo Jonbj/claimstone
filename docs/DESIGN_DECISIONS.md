@@ -4155,3 +4155,28 @@ before this step.
 - a refusal frees its key.
 
 A double submission therefore cannot sign twice. Tests in `tests/test_control_signing.py`.
+
+## D101 — Proposed material is routed by what the engine treats as frozen (2026-10-07)
+
+B7a records DOIs, links and references an operator proposes for a flow, in `intake.jsonl`
+(`intake_version 1`). It routes each item before anything could count. The spec said "frozen round
+(a closed manifest or cohort)", but the engine has no closed-cohort state. A round freezes its
+population predicate in `populations.jsonl`, and `discover` keeps adding candidates that match it
+(review F10). The routing therefore uses the one fixed set the engine has: a `manifest_only` flow,
+or a whole-store flow that names no round, cannot take a new work (`NEEDS_NEW_ROUND`, listing the
+open flows). An open round takes it as `READY` for its next discover, which applies the population
+predicate. The intake never decides admission.
+
+The matching rules:
+- an exact DOI or normalised-URL match with a scoped candidate is a `DUPLICATE`;
+- a reference matching a candidate's folded title is a `POSSIBLE_VERSION`, left for a person (B8).
+  A title shorter than 21 characters only counts as a match when it equals the reference outright,
+  because a short title found inside a longer reference is not evidence of the same work.
+
+A URL is refused unless every address it resolves to is global. `net.global_addresses` is now the
+single rule shared with `Fetcher`'s per-hop check.
+
+Two dependencies are named rather than invented:
+- `discover` does not read `intake.jsonl` yet, so `READY` means recorded and routed, not admitted;
+- the spec's single explicit fetch moves to B7b, which builds the quarantine its bytes need, so
+  B7a sends no request.

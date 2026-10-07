@@ -158,6 +158,30 @@ class Outcome:
         }
 
 
+
+
+def global_addresses(host: str, resolver: Any = None) -> set[str] | None:
+    """Every address `host` resolves to, or None unless all of them are global.
+
+    One rule for the two places that need it: `Fetcher._address_allowed` before each hop of
+    a bounded plan, and the control server before it records an operator-supplied URL
+    (spec B7a, F15). Loopback, private, link-local, multicast, reserved, unspecified and the
+    metadata address are all non-global, so all are refused. A name that does not resolve
+    is refused too: nothing is known about where it would lead.
+    """
+    try:
+        addresses = {item[4][0] for item in (resolver or socket.getaddrinfo)(
+            host, None, type=socket.SOCK_STREAM)}
+    except (OSError, ValueError, UnicodeError):
+        return None
+    try:
+        if not addresses or not all(ipaddress.ip_address(address).is_global
+                                    for address in addresses):
+            return None
+    except ValueError:
+        return None
+    return addresses
+
 class FetcherLike(Protocol):
     """What the stages need from a fetcher. Tests supply their own implementation."""
 
@@ -247,13 +271,8 @@ class Fetcher:
         """
         if not self.enforce_global_addresses:
             return True
-        try:
-            addresses = {item[4][0] for item in socket.getaddrinfo(
-                host, None, type=socket.SOCK_STREAM)}
-        except (OSError, ValueError):
-            return False
-        if not addresses or not all(ipaddress.ip_address(address).is_global
-                                    for address in addresses):
+        addresses = global_addresses(host)
+        if addresses is None:
             return False
         if self._pinned_adapter is not None:
             self._pinned_adapter.pins[host] = sorted(addresses)[0]

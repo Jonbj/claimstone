@@ -153,6 +153,14 @@ As built (B5):
   PDF continues as in B7b.
 - `GET /control/v1/p/{p}/flows/{flow_id}/intake` lists items with their latest state.
 
+As built (B7a):
+- The routes are `POST` and `GET /control/v1/p/{p}/flows/{flow_id}/intake`. `POST` answers 201
+  `{"intake": <row>}`. A malformed item or a forbidden destination is 422 and is not recorded.
+- `GET` answers `{"flow_id", "items"}`: the latest state per item, newest first.
+- Routing and the row format: `docs/contracts/intake.md`.
+- **The single explicit fetch moved to B7b.** Its only purpose is to put bytes into the
+  quarantine that B7b builds, so B7a makes no request of any kind.
+
 ### B7b — intake: files and quarantine
 
 - `POST /control/v1/p/{p}/flows/{flow_id}/intake/file?target={candidate_id}`: the body is
