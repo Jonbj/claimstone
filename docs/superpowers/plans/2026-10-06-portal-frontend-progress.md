@@ -17,6 +17,7 @@ One step per session; markers below are the authority for "what is next".
 | R4 pages, part 2 (flow overview, question, lineage, dossier) + CSP preview check | DONE |
 | S6 Dockerfile, compose services, `portal.sh` | DONE (substance built by the scheduler session as D84 — form deviation: outside this plan; recorded 2026-10-07) |
 | S7 parity check, D83, docs, instrument registration | DONE (recorded 2026-10-07; the decision is D84 — planned as D83, taken the same day by the parallel L02 entry) |
+| R5 profile-diff panel on the question page | DONE (parallel session `4181a36`, merged `77315d3`; own log `2026-10-07-portal-frontend-r5-progress.md`) |
 
 ## Baseline (2026-10-06, before any work)
 
@@ -882,3 +883,46 @@ Deviations: none beyond S6's — the step's substance (parity test, D84, docs, r
 already committed (S3's parity test, `94c8d89`'s registration and docs); this closure verified
 each item and closed the markers.
 NOT DONE:
+
+### Review and merge — R5, S6/S7 (2026-10-07, reviewer session)
+
+Both parallel branches merged into `research-portal` with `--no-ff`, no conflicts:
+S6/S7 closure as `7491fd7` (log only), R5 as `77315d3` (the panel, its tests, its own
+progress log). The two branches' changed-file sets were disjoint from each other and from
+the main line's in-flight B3 work, verified against the merge base `861d3e9` before
+merging.
+
+Checks at the merge commits, in the main checkout (R5's web work beside B3's regenerated
+`api-types.ts` and fixtures):
+
+```
+$ .venv/bin/pytest -q
+1279 passed, 7 skipped in 45.66s
+$ .venv/bin/claimstone validate --all-projects
+(6 OK lines, exit 0)
+$ .venv/bin/python tools/check_instrument_versions.py
+30 instrument version(s) acknowledged in the design record
+$ cd web && npm run gen:types && npm run typecheck && npm test && npm run build
+(api-types.ts regenerated: no diff — the committed types are current)
+Test Files  15 passed (15)
+Tests  72 passed (72)
+check-csp: ok (no inline script, no style attribute)
+```
+
+Reviewer findings on R5 (the panel read in full before merging):
+- The invariants hold: no verdict word anywhere, `evidence_quote` and reasons verbatim,
+  direction counts under the panel's own "a count, not a strength" heading, removed
+  reasons only when the ledger recorded one, 400/404 through `ErrorState`, fetch only on
+  the compare action, `from==to` left valid.
+- The R5 session's stance deviation is **accepted as correct, not merely recorded**:
+  `vocabulary.ts` holds verdict words and engine states only, and stances are neither
+  (invariant 2 is exactly that line) — rendering stances through a verdict vocabulary
+  would have been the defect the deviation avoided.
+- Follow-up taken by the reviewer, not left in the branch: the read API has **no route
+  listing a question's stored profile hashes**, so the operator pastes both ends of a
+  diff (the `from` prefill is the one hash the page holds). A hash-list route is backend
+  work; it belongs with B4/B5's control-plane steps, not with any frontend step, and no
+  step of the backend plan currently names it.
+
+The `portal-frontend-r5` and `portal-frontend-s6s7` branches and their worktrees are
+retired at this merge.
