@@ -545,6 +545,10 @@ def instrument_versions() -> dict[str, Any]:
     return out
 
 
+# The credentials the portal reports by presence and the control server may replace (B11).
+CREDENTIAL_NAMES = ("CLAIMSTONE_CONTACT_EMAIL", "OLLAMA_API_KEY", "OPENALEX_API_KEY")
+
+
 def admin_state(root: pathlib.Path | str) -> dict[str, Any]:
     """Presence of credentials, configured backends, instrument versions (spec §4.8).
 
@@ -554,7 +558,7 @@ def admin_state(root: pathlib.Path | str) -> dict[str, Any]:
     from claimstone import cli
     from claimstone import runners
 
-    names = ("CLAIMSTONE_CONTACT_EMAIL", "OLLAMA_API_KEY", "OPENALEX_API_KEY")
+    names = CREDENTIAL_NAMES
     dotenv: dict[str, str] = {}
     env_file = pathlib.Path(root) / ".env"
     if env_file.exists():

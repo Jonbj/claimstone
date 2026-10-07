@@ -74,6 +74,8 @@ INSTRUMENTS = (
     ("claimstone/decisions.py", "DECISION_VERSION", "decision_version"),
     # What counts as "since your last visit" is the marker row (D104).
     ("claimstone/today.py", "SEEN_VERSION", "seen_version"),
+    # Who checked which service, or replaced which credential, and when (D106).
+    ("claimstone/admin.py", "ADMIN_CHECK_VERSION", "admin_check_version"),
 )
 
 # The parser is an instrument too, and a string rather than a number. Measured: lfoppiano/grobid

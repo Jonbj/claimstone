@@ -4277,3 +4277,20 @@ The option enters the export identity only when set, so no existing export id or
 `export_version` stays 1. `verify` checks included copies against their recorded hashes. Portal-made
 exports record the operator as `actor` beside the OS user in `created_by`. Verification never runs
 as a side effect of reading: the list route (BR) only lists.
+
+## D106 — Administration acts only on request, on configured addresses, and never reads a secret back (2026-10-07)
+
+B11 gives the administration view its actions. Opening the view contacts nothing. A reachability
+check is a POST naming one service (`llamacpp`, `ollama-cloud`, `grobid`). The address comes from
+configuration and never from the request, so the route cannot be used to reach an arbitrary host. It
+is one unpaid request with a 5-second timeout, no redirects and the descriptive agent with contact.
+Ollama Cloud is checked through its model list, which proves the key is accepted without spending.
+Every check, failed or not, is recorded in `admin_checks.jsonl` (`admin_check_version 1`, state
+directory, owner-only).
+
+A credential is written into `.env` atomically, keeping every other line, with mode `0600`, and only
+after the operator's password is asked again. A wrong password counts against the login budget,
+so this route is no side door for guessing. Nothing ever returns the value: not the response, not
+the record, which names the variable and the actor only. The paid test call answers 501: it needs
+the model-call boundary and a cost reservation, which belong to the scheduler's authorized
+operations.

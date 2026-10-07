@@ -33,8 +33,8 @@ from typing import Any, Callable
 import urllib.parse
 from urllib.parse import unquote, urlparse
 
-from claimstone import (decisions, drafts, export, flows, intake, operators, portal_state,
-                        scope, synthesize, today)
+from claimstone import (admin, decisions, drafts, export, flows, intake, operators,
+                        portal_state, scope, synthesize, today)
 from claimstone.config import ConfigError, RegistryDrift
 from claimstone.store import LedgerCorrupt, Store
 from claimstone.transport import LOOPBACK_HOSTS, BaseHandler
@@ -254,6 +254,11 @@ ROUTES: tuple[Route, ...] = (
     Route("POST", ("p", "{project}", "flows", "{flow_id}", "exports"), "_export_create"),
     Route("POST", ("p", "{project}", "flows", "{flow_id}", "exports", "{export_id}", "verify"),
           "_export_verify"),
+    # B11: administration. Opening the admin view sends no request anywhere; each check is a POST.
+    Route("GET", ("admin",), "_admin_read"),
+    Route("POST", ("admin", "check"), "_admin_check"),
+    Route("POST", ("admin", "credential"), "_admin_credential"),
+    Route("POST", ("admin", "paid-test"), "_admin_paid_test"),
 )
 
 
@@ -283,6 +288,9 @@ class _Handler(BaseHandler):
     resolver: Any = None
     # Text extraction for the upload identity check. None is `pdftotext`; tests may pass a fake.
     extract_text: Any = None
+    # The reachability check's transport, and the `.env` it may write: test hooks only.
+    http_get: Any = None
+    env_file: Any = None
 
     # --- responses, with the read API's envelope ------------------------------------------------
 
@@ -942,7 +950,62 @@ def _export_verify(self: _Handler, params: dict[str, str], query: Any,
     return {"export_id": export_id, "holds": not problems, "problems": problems}, 200
 
 
-for _name, _function in (("_export_create", _export_create), ("_export_verify", _export_verify),
+def _admin_read(self: _Handler, params: dict[str, str], query: Any,
+                body: dict[str, Any]) -> tuple[Any, int]:
+    """Presence of credentials, configured backends, instruments, and the last recorded check per
+    service. Nothing is contacted to answer this."""
+    self._require_session()
+    state = portal_state.admin_state(pathlib.Path(self.projects_dir).resolve().parent)
+    return {**state, "checks": admin.latest_checks(self.state_dir),
+            "check_targets": admin.targets()}, 200
+
+
+def _admin_check(self: _Handler, params: dict[str, str], query: Any,
+                 body: dict[str, Any]) -> tuple[Any, int]:
+    self._only_keys(body, frozenset({"target"}))
+    session = self._require_session()
+    try:
+        row = admin.check(self.state_dir, target=body.get("target"), actor=session.operator_id,
+                          http_get=self.http_get)
+    except admin.AdminRefused as exc:
+        raise ControlError(422, "VALIDATION", str(exc)) from None
+    return {"check": row}, 201
+
+
+def _admin_credential(self: _Handler, params: dict[str, str], query: Any,
+                      body: dict[str, Any]) -> tuple[Any, int]:
+    """Replace one credential, with the password asked again (spec B11). A wrong password counts
+    against the same budget as a failed login, so this route is no side door for guessing."""
+    self._only_keys(body, frozenset({"name", "value", "password"}))
+    session = self._require_session()
+    password = body.get("password")
+    if self.login_budget.blocked(session.operator_id):
+        raise ControlError(429, "RATE_LIMITED", "too many failed attempts; wait 15 minutes")
+    row = operators.load(self.state_dir).get(session.operator_id)
+    if not isinstance(password, str) or row is None or not operators.verify(row, password):
+        self.login_budget.record_failure(session.operator_id)
+        raise ControlError(403, "REAUTH", "the password is required again, and it did not match")
+    try:
+        recorded = admin.replace_credential(self.env_file, self.state_dir, name=body.get("name"),
+                                            value=body.get("value"), actor=session.operator_id)
+    except admin.AdminRefused as exc:
+        raise ControlError(422, "VALIDATION", str(exc)) from None
+    return {"credential": {"name": recorded["name"], "set": True, "note": recorded["note"]}}, 201
+
+
+def _admin_paid_test(self: _Handler, params: dict[str, str], query: Any,
+                     body: dict[str, Any]) -> tuple[Any, int]:
+    self._require_session()
+    raise ControlError(
+        501, "NOT_IMPLEMENTED",
+        "a paid test call needs the model-call boundary and a cost reservation; it belongs to the "
+        "scheduler's authorized operations, not to a button here")
+
+
+for _name, _function in (("_admin_read", _admin_read), ("_admin_check", _admin_check),
+                         ("_admin_credential", _admin_credential),
+                         ("_admin_paid_test", _admin_paid_test),
+                         ("_export_create", _export_create), ("_export_verify", _export_verify),
                          ("_today", _today), ("_seen", _seen),
                          ("_identity_resolve", _identity_resolve),
                          ("_decisions_list", _decisions_list),
@@ -977,7 +1040,8 @@ def make_server(projects_dir: str | pathlib.Path = "projects",
                 host: str = "127.0.0.1", port: int = 8790,
                 allow_hosts: tuple[str, ...] = (),
                 state_dir: str | pathlib.Path | None = None,
-                resolver: Any = None, extract_text: Any = None) -> ThreadingHTTPServer:
+                resolver: Any = None, extract_text: Any = None, http_get: Any = None,
+                env_file: str | pathlib.Path | None = None) -> ThreadingHTTPServer:
     """The control server. A non-loopback bind is refused outright — this process
     writes, so it does not proceed on a warning the way the read-only servers do —
     unless `--allow-host` names the authority of the proxy that fronts it."""
@@ -1003,6 +1067,9 @@ def make_server(projects_dir: str | pathlib.Path = "projects",
         "idempotency": Idempotency(),
         "resolver": staticmethod(resolver) if resolver is not None else None,
         "extract_text": staticmethod(extract_text) if extract_text is not None else None,
+        "http_get": staticmethod(http_get) if http_get is not None else None,
+        "env_file": pathlib.Path(env_file) if env_file is not None
+        else pathlib.Path(projects_dir).resolve().parent / ".env",
         "started_at": _now_iso(),
     })
     httpd = ThreadingHTTPServer((host, port), handler)

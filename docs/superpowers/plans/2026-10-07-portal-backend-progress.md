@@ -37,7 +37,7 @@ $ .venv/bin/python tools/check_instrument_versions.py
 | **B8** | Identity resolution, retry-campaign record and preview, purchase offers and stages, defer/decline, F13 ordering test | spec B8 tests pass | DONE |
 | **B9** | Seen markers and `/control/v1/today` | spec B9 tests pass | DONE |
 | **B10** | Export create and verify from the control API; exports list in the read API; PDF licence rule | spec B10 tests pass | DONE (list route from BR) |
-| **B11** | Reachability checks, write-only credentials, 501 for the paid test call | spec B11 tests pass | TODO |
+| **B11** | Reachability checks, write-only credentials, 501 for the paid test call | spec B11 tests pass | DONE |
 | **B12** | Scheduler-facing routes, **only if** the operations ledger module exists; otherwise mark `BLOCKED` with the reason and end the session | as spec B12, or `BLOCKED` recorded | TODO |
 | **B13** | `control` service in compose and nginx, version registrations, decision entry completed, `HANDOFF.md` | checks pass; `docker compose config` validates; `api` service unchanged | TODO |
 
@@ -571,3 +571,15 @@ Decisions (D105): licence allow-list; unknown and non-commercial excluded and li
 identity only when set (no `EXPORT_VERSION` bump: existing ids and manifests unchanged); `include_pdfs`
 renamed `include_copies`.
 Checks (final): `1407 passed, 7 skipped`; validate 6× OK; `35 instrument version(s)`.
+
+### B11 — DONE (2026-10-07, Claude Code)
+- [x] B11.1 `claimstone/admin.py`: configured targets, one recorded unpaid check, write-only credential
+      replacement, `admin_check_version 1` (files: `claimstone/admin.py`, `claimstone/portal_state.py`)
+- [x] B11.2 routes `GET admin`, `POST admin/check`, `POST admin/credential`, `POST admin/paid-test` (501)
+      (files: `claimstone/control.py`)
+- [x] B11.3 tests incl. a real local stub server, contract, D106 (files: `tests/test_control_admin.py`, docs)
+
+Decisions (D106): targets are names with configured addresses (no operator-supplied address, so no
+SSRF surface); Ollama Cloud is checked through its unpaid model list; a wrong re-auth password counts
+against the login budget; credential replacements are recorded by name and actor, never value.
+Checks (final): `1418 passed, 7 skipped`; validate 6× OK; `36 instrument version(s)`; web `72 passed`.

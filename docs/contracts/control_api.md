@@ -307,6 +307,29 @@ As built (B10):
   reservation, so it belongs to the scheduler (B12). The route returns 501 with that
   sentence.
 
+As built (B11):
+- **No route contacts a service to answer a read.** `GET /control/v1/admin` returns:
+  - `admin_state` (credential presence, configured backends, instruments);
+  - `checks`, the last recorded check per service;
+  - `check_targets`, the configured address of each service.
+- `POST /control/v1/admin/check` `{target}` → 201.
+  - `target` is a name (`llamacpp`, `ollama-cloud`, `grobid`), never an address. The addresses come
+    from configuration: llama.cpp's `/health`, Ollama Cloud's unpaid model list `/api/tags`, and
+    GROBID's `/api/isalive` at `CLAIMSTONE_GROBID_URL`.
+  - The check is one request, with a 5 s timeout, no redirects, and the descriptive agent with
+    contact. Without `CLAIMSTONE_CONTACT_EMAIL` → 422.
+  - Outcome recorded in `admin_checks.jsonl` (state dir, `0600`, `admin_check_version 1`):
+    `{kind: "reachability", target, url, ok, status, detail, latency_ms, actor, recorded_at}`.
+- `POST /control/v1/admin/credential` `{name, value, password}` → 201.
+  - The password is asked again. A wrong one → 403 `REAUTH`, counted against the login budget, so
+    the fifth failure gives 429.
+  - `name` is one of `portal_state.CREDENTIAL_NAMES`; `value` is one line of at most 4096
+    characters.
+  - `.env` is rewritten atomically with every other line kept, mode `0600`.
+  - The response and the ledger row (`kind: "credential"`, `name`, `actor`) never contain the
+    value.
+- `POST /control/v1/admin/paid-test` → 501 with the reason.
+
 ### B12 — scheduler-facing routes (conditional)
 
 Precondition: the scheduler track has committed an operations ledger module implementing

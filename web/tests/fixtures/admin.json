@@ -24,6 +24,7 @@
  },
  "instruments": {
   "adjudication_version": 2,
+  "admin_check_version": 1,
   "admission_version": 3,
   "annotation_version": 2,
   "audit_version": 2,
