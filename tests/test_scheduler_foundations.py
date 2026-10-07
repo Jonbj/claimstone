@@ -72,3 +72,27 @@ def test_shared_writer_lock_is_reentrant_and_serializes_store_instances(tmp_path
     a.join(2)
     b.join(2)
     assert entered.is_set()
+
+
+def test_worker_finishes_current_tick_on_sigterm(monkeypatch):
+    import argparse
+    import signal
+
+    from claimstone import cli, operations
+
+    project = object()
+    store = object()
+    monkeypatch.setattr(cli, '_flow_open', lambda args: (project, store))
+    monkeypatch.setattr(cli, 'load_project', lambda path: project)
+    called = []
+
+    def tick(actual_project, actual_store, *, max_operations):
+        called.append((actual_project, actual_store, max_operations))
+        signal.getsignal(signal.SIGTERM)(signal.SIGTERM, None)
+        return {'processed': 0}
+
+    monkeypatch.setattr(operations, 'tick', tick)
+    args = argparse.Namespace(scheduler_command='worker', project='example',
+                              poll_seconds=30, max_operations=1)
+    assert cli._scheduler_operation(args) == 0
+    assert called == [(project, store, 1)]

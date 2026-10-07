@@ -1030,20 +1030,27 @@ def _scheduler_operation(args: argparse.Namespace) -> int:
         elif args.scheduler_command == 'tick':
             result = operations.tick(project, store, max_operations=args.max_operations)
         elif args.scheduler_command == 'worker':
-            import time
+            import signal
+            import threading
             if args.poll_seconds < 1:
                 raise operations.OperationError('--poll-seconds must be at least 1')
             print('scheduler worker running; Ctrl-C stops after the current operation',
                   file=sys.stderr)
+            stopping = threading.Event()
+            previous_sigterm = signal.signal(signal.SIGTERM,
+                                             lambda signum, frame: stopping.set())
             try:
-                while True:
+                while not stopping.is_set():
                     tick_result = operations.tick(load_project(args.project), store,
                                                   max_operations=args.max_operations)
                     if tick_result['processed']:
                         print(json.dumps(tick_result, ensure_ascii=False), flush=True)
-                    time.sleep(args.poll_seconds)
+                    stopping.wait(args.poll_seconds)
             except KeyboardInterrupt:
-                return 0
+                pass
+            finally:
+                signal.signal(signal.SIGTERM, previous_sigterm)
+            return 0
         else:
             result = operations.status(store, args.operation_id)
     except (operations.OperationError, LedgerCorrupt, ValueError) as exc:

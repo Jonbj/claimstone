@@ -56,6 +56,9 @@ crash is resumable, and every figure is greppable.
 .venv/bin/claimstone verdicts projects/<name>          # the profiles, and any signature
 ```
 
+For the local Docker Compose trial of the portal, GROBID and the authorized-work
+scheduler, see [the trial runbook](docs/LOCAL_COMPOSE_TRIAL.md).
+
 `normalize` needs the document parser, which runs in a container: use `./claimstone.sh normalize
 projects/<name>` for that one. Scholarly APIs require a contact address and the code refuses to guess one,
 so `.env` must hold `CLAIMSTONE_CONTACT_EMAIL`.

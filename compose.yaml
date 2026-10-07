@@ -99,6 +99,35 @@ services:
     user: "${UID:-1000}:${GID:-1000}"
     networks: [claimstone]
 
+  # Local trial worker. It only runs operations already authorized in the
+  # append-only scheduler ledger; it does not plan research or sign verdicts.
+  scheduler:
+    build:
+      context: .
+      args:
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
+        CLAIMSTONE_CODE_REVISION: ${CLAIMSTONE_CODE_REVISION:-unknown}
+    image: claimstone:local
+    profiles: [trial]
+    command: ["scheduler", "worker", "projects/alembic-s4-lungo", "--store", "store", "--max-operations", "1", "--poll-seconds", "10"]
+    depends_on:
+      grobid:
+        condition: service_healthy
+    environment:
+      CLAIMSTONE_CONTACT_EMAIL: ${CLAIMSTONE_CONTACT_EMAIL:?set it in .env}
+      CLAIMSTONE_GROBID_URL: http://grobid:8070
+      OLLAMA_API_KEY: ${OLLAMA_API_KEY:-}
+      OPENALEX_API_KEY: ${OPENALEX_API_KEY:-}
+      PYTHONDONTWRITEBYTECODE: "1"
+    volumes:
+      - ./store:/app/store
+      - ./projects:/app/projects:ro
+    user: "${UID:-1000}:${GID:-1000}"
+    networks: [claimstone]
+    restart: unless-stopped
+    stop_grace_period: 10m
+
   # The portal (D84, spec 2026-10-06-portal-frontend-docker-design.md §5 and §8). Two services behind a
   # profile, so `up` alone still starts only GROBID: `./portal.sh` brings these up.
   #
