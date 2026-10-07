@@ -1,0 +1,19 @@
+{
+ "api_version": 1,
+ "id": "Q02",
+ "profiles": [
+  {
+   "built_at": "2026-10-06T00:00:00+00:00",
+   "current": true,
+   "profile_sha256": "7056ff48a8e45f615aadc993d51035ac4add9a7686d5190f3fee1703f759f9c5",
+   "provisional": true,
+   "state": "NO_VERIFIED_CLAIM",
+   "usable_results": 0
+  }
+ ],
+ "project": "example-news-and-returns",
+ "selector": {
+  "manifest_only": false,
+  "round": "r1"
+ }
+}

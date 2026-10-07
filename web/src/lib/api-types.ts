@@ -11,6 +11,7 @@ export interface ClaimstonePortalAPIV1 {
   "/meta": Meta;
   "/projects": Projects;
   "/projects/{p}/activity": Activity;
+  "/projects/{p}/flows/{flow_id}/exports": FlowExports;
   "/projects/{p}/integrity": Integrity;
   "/projects/{p}/poll": Poll;
   "/projects/{p}/{sel}/claims/{claim_id}": Lineage;
@@ -18,6 +19,7 @@ export interface ClaimstonePortalAPIV1 {
   "/projects/{p}/{sel}/overview": Overview;
   "/projects/{p}/{sel}/questions/{qid}": QuestionDetail;
   "/projects/{p}/{sel}/questions/{qid}/profile-diff": ProfileDiff;
+  "/projects/{p}/{sel}/questions/{qid}/profiles": StoredProfiles;
   "/projects/{p}/{sel}/sources/{candidate_key}": SourceDossier;
   "/projects/{p}/{sel}/summary": Summary;
 }
@@ -104,6 +106,16 @@ export interface Activity {
     when: string;
   }[];
   api_version: 1;
+  project: string;
+}
+export interface FlowExports {
+  api_version: 1;
+  exports: {
+    actor?: string;
+    created_at: string;
+    export_id: string;
+  }[];
+  flow_id: string;
   project: string;
 }
 export interface Integrity {
@@ -484,6 +496,23 @@ export interface ProfileDiff {
     decision_contract_version: number;
     profile_sha256: string;
     registry_version: number;
+  };
+}
+export interface StoredProfiles {
+  api_version: 1;
+  id: string;
+  profiles: {
+    built_at: string;
+    current: boolean;
+    profile_sha256: string;
+    provisional: boolean;
+    state: string | null;
+    usable_results: number;
+  }[];
+  project: string;
+  selector: {
+    manifest_only: boolean;
+    round: string | null;
   };
 }
 export interface SourceDossier {
