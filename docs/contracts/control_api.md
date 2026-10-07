@@ -370,3 +370,26 @@ registered in `tools/check_instrument_versions.py`.
 | who records "bought externally" | any authenticated operator, recorded with `actor` | — |
 | evidence of possession | only an intake that passes B7b sets `copy_verified` | — |
 | PDFs with unknown licence in exports | excluded and listed | excluded |
+As built (B12):
+- `GET …/operations` → `{flow_id, operations}`. Each operation is read through the scheduler's own
+  replay (`operations._events`), so a damaged ledger is a 409 here as it is a refusal for the worker.
+  Each carries:
+  - `stage`, `state` (the scheduler's words) and `state_note`;
+  - `limits`, `spent_usd`, `units_with_unknown_cost` and `remaining_usd`;
+  - `units_completed`, `last_event_at`, `authorized_by`;
+  - `worker_last_seen: null`: the ledger has no heartbeat, and the last event is not proof of
+    running.
+- `POST …/operations/{operation_id}/authorize` `{limits}` → 201, or 200 if it was already
+  authorized.
+  - `limits` must equal the plan's `{network_requests, model_calls, spend_usd}`, otherwise 409
+    `PLAN_DIFFERS`: an authorization never covers more than what was read.
+  - The `authorized` event records `identity: {signer_auth: "portal-session", operator, name}`
+    through a new optional `identity` argument of `operations.authorize`. The CLI still records
+    the OS login.
+- `POST …/operations/{operation_id}/pause` and `…/resume` → 501. The operation ledger's transition
+  table has no `stopping` event yet, and appending one would make the whole ledger invalid. **Not
+  built**: it belongs to the scheduler track.
+- Planning is not offered: plans come from the scheduler and the CLI.
+- Today (B9) now reports `continues_without_you` per project: the authorized, running or
+  interrupted operations.
+

@@ -33,8 +33,8 @@ from typing import Any, Callable
 import urllib.parse
 from urllib.parse import unquote, urlparse
 
-from claimstone import (admin, decisions, drafts, export, flows, intake, operators,
-                        portal_state, scope, synthesize, today)
+from claimstone import (admin, decisions, drafts, export, flows, intake, operations,
+                        operations_view, operators, portal_state, scope, synthesize, today)
 from claimstone.config import ConfigError, RegistryDrift
 from claimstone.store import LedgerCorrupt, Store
 from claimstone.transport import LOOPBACK_HOSTS, BaseHandler
@@ -259,6 +259,14 @@ ROUTES: tuple[Route, ...] = (
     Route("POST", ("admin", "check"), "_admin_check"),
     Route("POST", ("admin", "credential"), "_admin_credential"),
     Route("POST", ("admin", "paid-test"), "_admin_paid_test"),
+    # B12: the scheduler's operations. Planning stays with the scheduler and the CLI.
+    Route("GET", ("p", "{project}", "flows", "{flow_id}", "operations"), "_operations_list"),
+    Route("POST", ("p", "{project}", "flows", "{flow_id}", "operations", "{operation_id}",
+                   "authorize"), "_operation_authorize"),
+    Route("POST", ("p", "{project}", "flows", "{flow_id}", "operations", "{operation_id}",
+                   "pause"), "_operation_not_built"),
+    Route("POST", ("p", "{project}", "flows", "{flow_id}", "operations", "{operation_id}",
+                   "resume"), "_operation_not_built"),
 )
 
 
@@ -1002,7 +1010,62 @@ def _admin_paid_test(self: _Handler, params: dict[str, str], query: Any,
         "scheduler's authorized operations, not to a button here")
 
 
-for _name, _function in (("_admin_read", _admin_read), ("_admin_check", _admin_check),
+def _operations_list(self: _Handler, params: dict[str, str], query: Any,
+                     body: dict[str, Any]) -> tuple[Any, int]:
+    self._require_session()
+    _project, store, row, _selector = _flow_only(self, params)
+    try:
+        listed = operations_view.for_flow(store, str(row["flow_id"]))
+    except operations.OperationError as exc:
+        raise ControlError(409, "OPERATIONS_LEDGER", str(exc)) from None
+    return {"flow_id": str(row["flow_id"]), "operations": listed}, 200
+
+
+def _operation_authorize(self: _Handler, params: dict[str, str], query: Any,
+                         body: dict[str, Any]) -> tuple[Any, int]:
+    """Authorize one planned operation as the session's operator (spec B12). The request must
+    repeat the limits the operator was shown; a plan that differs is refused, so an
+    authorization can never cover more than what was read."""
+    self._only_keys(body, frozenset({"limits"}))
+    session = self._require_session()
+    _project, store, row, _selector = _flow_only(self, params)
+    operation_id = params["operation_id"]
+    try:
+        grouped = operations._events(store)
+    except operations.OperationError as exc:
+        raise ControlError(409, "OPERATIONS_LEDGER", str(exc)) from None
+    rows = grouped.get(operation_id)
+    if rows is None or rows[0]["plan"].get("flow_id") != str(row["flow_id"]):
+        raise portal_state.NotFound(f"no operation {operation_id} in this flow")
+    shown = body.get("limits")
+    planned = operations_view.summary(store, rows)["limits"]
+    if not isinstance(shown, dict) or shown != planned:
+        raise ControlError(409, "PLAN_DIFFERS",
+                           "the limits sent are not this plan's limits; read the plan again "
+                           "before authorizing it")
+    already = len(rows) > 1 and rows[1]["event"] == "authorized"
+    try:
+        recorded = operations.authorize(store, operation_id, identity={
+            "signer_auth": "portal-session", "operator": session.operator_id,
+            "name": session.operator_name})
+    except operations.OperationError as exc:
+        raise ControlError(409, "REFUSED", str(exc)) from None
+    return {"authorized": recorded, "already_authorized": already}, 200 if already else 201
+
+
+def _operation_not_built(self: _Handler, params: dict[str, str], query: Any,
+                         body: dict[str, Any]) -> tuple[Any, int]:
+    self._require_session()
+    raise ControlError(
+        501, "NOT_IMPLEMENTED",
+        "pause and resume need a stopping event the scheduler's operation ledger does not accept "
+        "yet; appending one would make the ledger invalid. They belong to the scheduler track")
+
+
+for _name, _function in (("_operations_list", _operations_list),
+                         ("_operation_authorize", _operation_authorize),
+                         ("_operation_not_built", _operation_not_built),
+                         ("_admin_read", _admin_read), ("_admin_check", _admin_check),
                          ("_admin_credential", _admin_credential),
                          ("_admin_paid_test", _admin_paid_test),
                          ("_export_create", _export_create), ("_export_verify", _export_verify),

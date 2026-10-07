@@ -23,7 +23,7 @@ def test_a_first_visit_sees_everything_dated_and_says_it_is_a_first_visit(ws):  
     entry = _project(payload, ws["project"].name)
     assert entry["first_visit"] is True and entry["since"] is None
     assert entry["changed"]["counts"]["acquire"] >= 1
-    assert payload["continues_without_you"] is None and "B12" in payload["continues_note"]
+    assert entry["continues_without_you"] == []  # read from the operations ledger, which is empty
 
 
 def test_a_marker_hides_what_came_before_it(ws):  # noqa: F811

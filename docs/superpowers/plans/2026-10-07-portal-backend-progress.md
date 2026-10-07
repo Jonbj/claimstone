@@ -38,7 +38,7 @@ $ .venv/bin/python tools/check_instrument_versions.py
 | **B9** | Seen markers and `/control/v1/today` | spec B9 tests pass | DONE |
 | **B10** | Export create and verify from the control API; exports list in the read API; PDF licence rule | spec B10 tests pass | DONE (list route from BR) |
 | **B11** | Reachability checks, write-only credentials, 501 for the paid test call | spec B11 tests pass | DONE |
-| **B12** | Scheduler-facing routes, **only if** the operations ledger module exists; otherwise mark `BLOCKED` with the reason and end the session | as spec B12, or `BLOCKED` recorded | TODO |
+| **B12** | Scheduler-facing routes, **only if** the operations ledger module exists; otherwise mark `BLOCKED` with the reason and end the session | as spec B12, or `BLOCKED` recorded | DONE (pause/resume NOT DONE: scheduler track) |
 | **B13** | `control` service in compose and nginx, version registrations, decision entry completed, `HANDOFF.md` | checks pass; `docker compose config` validates; `api` service unchanged | TODO |
 
 ## Log entries
@@ -583,3 +583,17 @@ Decisions (D106): targets are names with configured addresses (no operator-suppl
 SSRF surface); Ollama Cloud is checked through its unpaid model list; a wrong re-auth password counts
 against the login budget; credential replacements are recorded by name and actor, never value.
 Checks (final): `1418 passed, 7 skipped`; validate 6× OK; `36 instrument version(s)`; web `72 passed`.
+
+### B12 — DONE with NOT DONE items (2026-10-07, Claude Code)
+- [x] B12.1 `operations.authorize(identity=…)`, additive; CLI behaviour unchanged (37 scheduler tests)
+      (files: `claimstone/operations.py`)
+- [x] B12.2 `claimstone/operations_view.py`: read model over `operations._events` (files: new)
+- [x] B12.3 routes: list, authorize (exact limits), pause/resume 501; Today's continues-without-you
+      (files: `claimstone/control.py`, `claimstone/today.py`, `tests/test_today.py`)
+- [x] B12.4 tests incl. the worker executing a portal-authorized plan, contracts, D107
+      (files: `tests/test_control_operations.py`, docs)
+
+NOT DONE: pause and resume. The operation ledger's transition table has no `stopping`/`stopped`
+event; appending one would make `_events` reject the whole ledger. Heartbeat likewise. Both belong to
+the scheduler track's next ledger version; the routes answer 501 with that sentence.
+Checks (final): `1423 passed, 7 skipped`; validate 6× OK; `36 instrument version(s)` (no new record type: the read model writes nothing).

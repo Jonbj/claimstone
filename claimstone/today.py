@@ -14,7 +14,8 @@ import os
 import pathlib
 from typing import Any
 
-from claimstone import decisions, flows, intake, portal_state, round_state, scope
+from claimstone import (decisions, flows, intake, operations, operations_view, portal_state,
+                        round_state, scope)
 from claimstone.config import ConfigError, check_registry_drift, discover_projects, load_project
 from claimstone.store import LedgerCorrupt, Store
 
@@ -147,14 +148,9 @@ def today(projects_dir: pathlib.Path, store_dir: pathlib.Path, state_dir: pathli
             entry.update({"since": since.isoformat(timespec="seconds") if since else None,
                           "first_visit": since is None,
                           "changed": changes(store, since),
-                          "needs_you": _needs(project, store)})
-        except (ConfigError, LedgerCorrupt) as exc:
+                          "needs_you": _needs(project, store),
+                          "continues_without_you": operations_view.continuing(store)})
+        except (ConfigError, LedgerCorrupt, operations.OperationError) as exc:
             entry.update({"error": f"{type(exc).__name__}: {exc}"})
         projects.append(entry)
-    return {
-        "operator": actor, "projects": projects,
-        # The scheduler's queue is read by B12's routes; until then this says so, and an empty
-        # list is never shown where "nothing continues" would be a claim nobody checked.
-        "continues_without_you": None,
-        "continues_note": "not available here yet: the scheduler-facing routes (B12) report it",
-    }
+    return {"operator": actor, "projects": projects}

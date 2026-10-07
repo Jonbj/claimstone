@@ -143,3 +143,12 @@ The current single-writer executor has tests for scope isolation, crash
 reconciliation, host ceilings across restarts, idempotent replay and changed
 input refusal. It does not authorize an actual campaign; the operator must
 approve its exact plan or batch.
+
+## Portal authorization (B12, D107)
+
+`operations.authorize(store, operation_id, identity=…)` records the identity it is given instead of
+the OS login. The control server passes `{signer_auth: "portal-session", operator, name}` for the
+operator whose session made the request, after checking that the request repeats the plan's limits
+exactly. Without `identity` the OS login is recorded as before. The ledger has no `stopping`,
+`stopped` or `heartbeat` events yet, so the portal offers no pause or resume and reports no worker
+heartbeat.

@@ -385,8 +385,13 @@ def plan(project: Project, store: Store, flow_id: str, stage: str, *,
         return frozen
 
 
-def authorize(store: Store, operation_id: str, *, batch_id: str | None = None) -> dict[str, Any]:
-    """A local logged-in user authorizes exactly one offline plan."""
+def authorize(store: Store, operation_id: str, *, batch_id: str | None = None,
+              identity: dict[str, Any] | None = None) -> dict[str, Any]:
+    """A local logged-in user authorizes exactly one offline plan.
+
+    `identity` is for the control server (portal B12): the authenticated operator who held the
+    session, recorded instead of the server process's OS account, which would name the wrong
+    person. Omitted, the OS login is recorded exactly as before."""
     with store.writer_lock():
         rows = _events(store).get(operation_id)
         if rows is None:
@@ -409,7 +414,8 @@ def authorize(store: Store, operation_id: str, *, batch_id: str | None = None) -
             proposed = plan_row['max_call_cents'] * len(plan_row['call_ids'])
             if reserved + proposed > plan_row['budget_cents']:
                 raise OperationError('cumulative paid reservations exceed budget')
-        identity = {'uid': os.getuid(), 'login': pwd.getpwuid(os.getuid()).pw_name}
+        if identity is None:
+            identity = {'uid': os.getuid(), 'login': pwd.getpwuid(os.getuid()).pw_name}
         return _append(store, operation_id, rows[0]['flow_id'], 'authorized',
                        'operator', identity=identity, approved_limits={
                            'network_requests': rows[0]['plan']['max_network_requests'],

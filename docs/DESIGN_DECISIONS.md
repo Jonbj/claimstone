@@ -4294,3 +4294,22 @@ so this route is no side door for guessing. Nothing ever returns the value: not 
 the record, which names the variable and the actor only. The paid test call answers 501: it needs
 the model-call boundary and a cost reservation, which belong to the scheduler's authorized
 operations.
+
+## D107 — The portal authorizes a scheduler plan as its operator, and only the plan that was read (2026-10-07)
+
+B12 connects the control server to the scheduler's operation ledger without changing its event
+grammar. Operations are read through `operations._events`, the worker's own replay, so the portal
+and the worker cannot disagree about a ledger. The state words are the scheduler's. No heartbeat
+exists, so the portal reports "worker last seen" as unknown rather than inferring it from the last
+event.
+
+Authorizing from the portal records the session's operator. `operations.authorize` gains one
+optional `identity` argument, and without it the OS login is recorded as before, because the
+server process's account would name the wrong person. The request must repeat the plan's limits
+exactly, so an authorization can never cover more than what was shown. A test runs the worker on a
+portal-authorized plan.
+
+Pause and resume are **not built**. They need a `stopping` event that the ledger's transition table
+does not admit yet, and appending one would make the ledger unreadable for every operation. The
+routes answer 501 with that sentence. The change belongs to the scheduler track's next ledger
+version. Planning is not offered from the portal.
