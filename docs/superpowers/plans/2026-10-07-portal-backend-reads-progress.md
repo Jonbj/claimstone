@@ -35,4 +35,25 @@ As in the parallel worktree: only the tracked project instances live here, which
 
 ## Log entries
 
-(none yet — BR starts at the next session action)
+### BR — IN PROGRESS
+
+- [ ] BR.1 payload builders in the read model: `stored_profiles` (every `profiles.jsonl` row of
+      one question inside the flow's selector via `synthesize._scope`, deduped by
+      `profile_sha256` last-appended-wins, newest first, `current` on exactly the
+      `latest_profiles` row) and `flow_exports` (`export.EXPORTS_LEDGER` rows of the flow,
+      newest first, `export_id`/`created_at`/`actor` only — never the server-side `path`)
+      (files: `claimstone/portal_state.py`)
+- [ ] BR.2 the two routes, GET-only: `GET …/flows/{flow_id}/questions/{qid}/profiles`
+      (empty scope → `{"profiles": []}`; unknown question → 404) and
+      `GET …/flows/{flow_id}/exports` (no rows → `{"exports": []}`), with both payloads
+      declared in `api_schema.py` (files: `claimstone/api.py`, `claimstone/api_schema.py`,
+      `docs/contracts/portal-api.schema.json`)
+- [ ] BR.3 tests through the real server: two builds with different hashes → two entries,
+      newest first, one `current`; a same-hash rebuild → one entry; another round's row
+      excluded; empty scope → `[]`; unknown question → 404; two flows' exports kept apart;
+      no `path` key; empty → `[]`; both routes GET-only and in the A1/A2 lists
+      (files: `tests/test_api_reads.py` (new), `tests/test_api.py`)
+- [ ] BR.4 fixtures regenerated, `cd web && npm run gen:types` committed, the B10 note in
+      `docs/contracts/control_api.md`, every check green, step marked DONE
+      (files: `tools/build_portal_fixtures.py` (only if the route list needs it),
+      `web/tests/fixtures/**`, `web/src/lib/api-types.ts`, `docs/contracts/control_api.md`)
