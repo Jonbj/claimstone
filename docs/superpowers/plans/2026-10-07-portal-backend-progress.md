@@ -39,7 +39,7 @@ $ .venv/bin/python tools/check_instrument_versions.py
 | **B10** | Export create and verify from the control API; exports list in the read API; PDF licence rule | spec B10 tests pass | DONE (list route from BR) |
 | **B11** | Reachability checks, write-only credentials, 501 for the paid test call | spec B11 tests pass | DONE |
 | **B12** | Scheduler-facing routes, **only if** the operations ledger module exists; otherwise mark `BLOCKED` with the reason and end the session | as spec B12, or `BLOCKED` recorded | DONE (pause/resume NOT DONE: scheduler track) |
-| **B13** | `control` service in compose and nginx, version registrations, decision entry completed, `HANDOFF.md` | checks pass; `docker compose config` validates; `api` service unchanged | TODO |
+| **B13** | `control` service in compose and nginx, version registrations, decision entry completed, `HANDOFF.md` | checks pass; `docker compose config` validates; `api` service unchanged | DONE (image not rebuilt: needs apt network) |
 
 ## Log entries
 
@@ -597,3 +597,22 @@ NOT DONE: pause and resume. The operation ledger's transition table has no `stop
 event; appending one would make `_events` reject the whole ledger. Heartbeat likewise. Both belong to
 the scheduler track's next ledger version; the routes answer 501 with that sentence.
 Checks (final): `1423 passed, 7 skipped`; validate 6× OK; `36 instrument version(s)` (no new record type: the read model writes nothing).
+
+### B13 — DONE (2026-10-07, Claude Code)
+- [x] B13.1 `claimstone control --state-dir --credentials-file PATH|none`; 409 `CREDENTIALS_READ_ONLY`
+      (files: `claimstone/control.py`, `claimstone/cli.py`, `tests/test_control_admin.py`)
+- [x] B13.2 `control` service, `control_egress` network, `web` depends on it; nginx `/control/`;
+      `poppler-utils` in the image; `.claimstone/` in `.dockerignore`; `portal.sh` up/down/operator
+      (files: `compose.yaml`, `web/nginx/default.conf`, `Dockerfile`, `.dockerignore`, `portal.sh`)
+- [x] B13.3 compose tests; D108 (completes D89, append-only); `HANDOFF.md` paragraph
+      (files: `tests/test_compose.py`, `docs/DESIGN_DECISIONS.md`, `docs/HANDOFF.md`)
+
+Checks (final): `1426 passed, 7 skipped`; validate 6× OK; `36 instrument version(s)`;
+`docker compose --profile portal config -q` ok; `nginx -t` ok in `claimstone-web:local` with the new
+config (no network); `bash -n portal.sh` ok.
+
+NOT DONE: the `claimstone` image rebuild and a live `./portal.sh` run. The rebuild downloads Debian
+packages (`poppler-utils`), and `control` mounts the real store read-write; both are left to the
+operator's first `./portal.sh`.
+
+Decisions: D89 is completed by a new entry D108 rather than edited (the record is append-only).

@@ -1195,7 +1195,8 @@ def _control(args: argparse.Namespace) -> int:
 
     try:
         control.serve(args.projects, args.store, host=args.bind, port=args.port,
-                      allow_hosts=tuple(args.allow_host))
+                      allow_hosts=tuple(args.allow_host), state_dir=args.state_dir,
+                      env_file=args.credentials_file)
     except ValueError as exc:
         # The refused non-loopback bind: this process writes, so unlike the read-only
         # servers it does not proceed on a warning (spec B4).
@@ -1603,6 +1604,12 @@ def build_parser() -> argparse.ArgumentParser:
                              help="an extra Host/Origin authority to answer for, e.g. the "
                                   "name a reverse proxy in front forwards; repeatable. "
                                   "Naming one authorizes the non-loopback bind it fronts")
+    control_cmd.add_argument("--state-dir", default=None,
+                             help="operator accounts and markers; default $CLAIMSTONE_STATE_DIR "
+                                  "or .claimstone/")
+    control_cmd.add_argument("--credentials-file", default=None, metavar="PATH|none",
+                             help="the .env credential writes go to (default: beside the "
+                                  "projects directory); `none` turns credential writes off")
     control_cmd.set_defaults(func=_control)
 
     operator_cmd = sub.add_parser("operator", help="who may hold a control-API session")

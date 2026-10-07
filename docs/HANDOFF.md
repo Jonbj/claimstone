@@ -9,6 +9,24 @@ what order.
 
 ## Where the work stands
 
+2026-10-07 portal backend B0–B13 (D89, D99–D108): `claimstone control` is the authenticated write
+boundary beside the read-only API. It handles operator sessions, signing from the web with drafts, intake
+of DOIs, links and files (quarantine, the engine's own gates, `supplied_copies` policy, default
+`separate`), decisions on identity, retry campaigns and verified purchase offers, Today, export and
+verify, administration checks, and authorizing scheduler operations as the session's operator.
+
+`./portal.sh` now starts `api`, `control` and `web`. The first run rebuilds the image to add
+`poppler-utils`. Before any write, record an operator with `./portal.sh operator add ID --name "Name"`.
+
+Not built, with reasons in the decision entries:
+- intake URL fetch (D102), pause, resume and heartbeat (D107): they wait for the scheduler track;
+- project creation from the web: it writes `projects/` and needs a decision;
+- the React pages for these routes: next.
+
+No real project declares `supplied_copies`, so operator-supplied copies are reported separately from
+the floor until the operator decides otherwise in `sources.yaml`. That would be protocol drift for any
+bound flow, by design.
+
 2026-10-07 L02 arXiv batch: the operator authorized batch
 `5154d5409788a992b69540a2db8054b5b85738f246e56025117d3282f1898562`.
 Both frozen T01 queries completed with HTTP 200 and zero returned records.

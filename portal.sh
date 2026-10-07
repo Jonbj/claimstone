@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # The research portal in containers: the read-only API and the nginx-served frontend (D84).
 #
-#   ./portal.sh          build if needed, start `api` and `web`, wait until healthy, print the URL
-#   ./portal.sh down     stop and remove those two containers (GROBID and the store are untouched)
+#   ./portal.sh                   build if needed, start `api`, `control` and `web`, wait until healthy
+#   ./portal.sh down              stop and remove those three containers (GROBID and the store stay)
+#   ./portal.sh operator add ID --name "Display name"   record an operator; prompts for the password
+#   ./portal.sh operator disable ID
 #
 # The build is always run, as in claimstone.sh: it is cached and costs seconds when nothing changed, and an
 # image older than the working tree is the stale-instrument failure D42 recorded.
@@ -14,14 +16,22 @@ if [[ ! -f .env ]]; then
   exit 2
 fi
 
+# The control server's state (operator accounts, markers, admin records) lives here, owner-only.
+mkdir -p .claimstone && chmod 700 .claimstone
+
 case "${1:-up}" in
   up) ;;
   down)
     # Not `compose down`: that would also remove GROBID, which belongs to the stages, not the portal.
-    exec docker compose --profile portal rm --stop --force web api
+    exec docker compose --profile portal rm --stop --force web control api
+    ;;
+  operator)
+    # Interactive: the password is read by getpass inside the container, never passed as an argument.
+    shift
+    exec docker compose --profile portal run --rm --no-deps control operator "$@"
     ;;
   *)
-    echo "usage: ./portal.sh [up|down]" >&2
+    echo "usage: ./portal.sh [up|down|operator add ID --name NAME|operator disable ID]" >&2
     exit 2
     ;;
 esac
@@ -34,7 +44,7 @@ if [[ "$revision" != unknown ]] && ! { git diff --quiet && git diff --cached --q
 fi
 export CLAIMSTONE_CODE_REVISION="$revision"
 
-docker compose --profile portal up -d --build --wait api web
+docker compose --profile portal up -d --build --wait api control web
 
 port="${CLAIMSTONE_PORTAL_PORT:-8788}"
-echo "claimstone portal — http://127.0.0.1:${port}/  (read-only; ./portal.sh down to stop)"
+echo "claimstone portal — http://127.0.0.1:${port}/  (writes need an operator: ./portal.sh operator add; ./portal.sh down to stop)"

@@ -165,3 +165,36 @@ def test_the_job_waits_on_the_condition_rather_than_on_a_guess():
     code = "\n".join(line for line in text.splitlines()
                      if line.strip() and not line.strip().startswith("#"))
     assert "sleep" not in code
+
+
+def test_the_control_service_writes_only_what_it_must_and_publishes_nothing():
+    """D89/B13: `control` is the write boundary. It shares the image (D42), publishes no port (the browser
+    reaches it through `web`), writes the store and its own state but only reads the projects, cannot
+    write credentials inside the container, and keeps `api` exactly as read-only as before."""
+    import yaml
+
+    document = yaml.safe_load(COMPOSE.read_text(encoding="utf-8"))
+    control = document["services"]["control"]
+    assert control.get("profiles") == ["portal"]
+    assert "ports" not in control
+    assert control["image"] == document["services"]["claimstone"]["image"]
+    assert set(control["volumes"]) == {"./store:/app/store", "./projects:/app/projects:ro",
+                                       "./.claimstone:/app/.claimstone"}
+    assert control.get("read_only") is True
+    assert "portal_internal" in control["networks"]
+    command = control["command"]
+    assert command[command.index("--credentials-file") + 1] == "none"
+    assert control["environment"]["OPENALEX_API_KEY"] == "${OPENALEX_API_KEY:+present}"
+    web = document["services"]["web"]
+    assert web["depends_on"]["control"]["condition"] == "service_healthy"
+    assert ".claimstone/" in pathlib.Path(".dockerignore").read_text(encoding="utf-8")
+
+
+def test_nginx_passes_origin_to_control_and_never_claims_https():
+    conf = pathlib.Path("web/nginx/default.conf").read_text(encoding="utf-8")
+    block = conf[conf.index("location /control/"):]
+    block = block[:block.index("}") + 1]
+    assert "proxy_pass http://control:8790;" in block
+    assert 'proxy_set_header Origin ""' not in block       # the control server checks Origin
+    assert 'proxy_set_header X-Forwarded-Proto "";' in block
+    assert "limit_except GET POST" in block

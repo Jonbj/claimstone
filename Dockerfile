@@ -23,6 +23,12 @@ RUN groupadd --gid "${GID}" claimstone \
 
 WORKDIR /app
 
+# `pdftotext` reads an uploaded copy's first pages for the identity check (B7b, D102), the extraction the
+# L02 inspection used (D80). It is the only system package the engine calls.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends poppler-utils \
+ && rm -rf /var/lib/apt/lists/*
+
 # Dependencies before the source, so editing a module does not reinstall numpy.
 COPY pyproject.toml README.md ./
 COPY claimstone ./claimstone

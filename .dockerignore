@@ -16,3 +16,6 @@ web/build/
 web/.svelte-kit/
 # Every real project instance, not only the one named above: none belongs in any image's build context.
 projects/*/
+# Operator accounts (password hashes), seen markers and admin records: installation state, bind-mounted
+# into `control`, never part of an image.
+.claimstone/

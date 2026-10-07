@@ -159,3 +159,11 @@ def test_the_paid_test_call_is_not_built_and_says_why(env):
     with _served(env) as (base, headers):
         status, _h, body = _post(base, "/paid-test", headers, {})
     assert status == 501 and "scheduler" in body["error"]["message"]
+
+
+def test_a_deployment_can_turn_credential_writes_off(env):
+    env = {**env, "env_file": "none"}
+    with _served(env) as (base, headers):
+        status, _h, body = _post(base, "/credential", headers, {
+            "name": "OPENALEX_API_KEY", "value": SECRET, "password": "correct horse"})
+    assert status == 409 and body["error"]["code"] == "CREDENTIALS_READ_ONLY"

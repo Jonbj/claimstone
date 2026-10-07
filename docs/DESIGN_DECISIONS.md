@@ -4313,3 +4313,52 @@ Pause and resume are **not built**. They need a `stopping` event that the ledger
 does not admit yet, and appending one would make the ledger unreadable for every operation. The
 routes answer 501 with that sentence. The change belongs to the scheduler track's next ledger
 version. Planning is not offered from the portal.
+
+## D108 — The control service is deployed beside the read-only API; D89 completed (2026-10-07)
+
+B13 closes the portal backend that D89 decided. D89's entry said this step would complete it. This
+file is append-only, so the completion is recorded here and D89 is left as written.
+
+`compose.yaml` gains a `control` service in the `portal` profile, on the same image as the job and
+the API (D42). It differs from `api` only where its job needs it:
+- it mounts the store read-write, the projects read-only, and `./.claimstone` for installation state;
+- it publishes no port, and the browser reaches it through `web` at `/control/`;
+- it joins `portal_internal`, the stages' network for GROBID, and a `control_egress` bridge used only
+  by the explicit reachability checks (D106);
+- it runs with `--credentials-file none`: inside a container `.env` belongs to the host, so key
+  rotation stays an edit on the host, as before;
+- it receives the real contact address and Ollama key, because its checks send them, and only the
+  word `present` for the OpenAlex key.
+
+`api` is unchanged and still read-only. nginx passes the browser's Origin to `control`, which checks
+it on every POST beside the session cookie and the CSRF token. Uploads are streamed with
+`client_max_body_size 51m`, so the server's own 413 at 50 MiB answers first, and nginx never claims
+HTTPS. The image installs `poppler-utils` for B7b's `pdftotext`. `./portal.sh operator add ID --name
+NAME` records an operator interactively, and `./portal.sh down` stops all three services.
+
+Measured at this commit: `1426 passed, 7 skipped` over the whole suite. The backend's new test files
+hold 136 tests:
+
+| file | tests |
+|---|---|
+| control | 22 |
+| control_signing | 22 |
+| intake | 21 |
+| intake_files | 11 |
+| decisions | 33 |
+| today | 6 |
+| control_export | 4 |
+| control_admin | 12 |
+| control_operations | 5 |
+
+There are 36 acknowledged instrument versions. `docker compose --profile portal config` validates,
+and `nginx -t` passes in the existing web image with the new configuration. The `claimstone` image
+was **not** rebuilt in this session: installing `poppler-utils` downloads Debian packages, so the
+first `./portal.sh` performs that build.
+
+What D89's backend does not do, recorded with its step:
+- the fetch of an operator-proposed URL (D102), and pause, resume and heartbeat (D107), wait for the
+  scheduler track;
+- project creation and protocol revision from the web need their own decision because they write
+  `projects/`;
+- the frontend pages that use these routes are the next piece of work.

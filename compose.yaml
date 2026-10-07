@@ -178,6 +178,64 @@ services:
       start_period: 10s
     restart: unless-stopped
 
+  # `control` is the authenticated write boundary (D89): sessions, signing, intake, decisions, exports,
+  # administration. The read-only `api` above is unchanged; a defect in a read route still cannot write.
+  # It writes the store (append-only ledgers, quarantine) and its own state (operator accounts), reads the
+  # projects, and reaches nothing on the internet except through `control_egress`, which only the explicit
+  # admin checks use. It publishes no port: the browser reaches it through `web` at /control/.
+  control:
+    build:
+      context: .
+      args:
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
+        CLAIMSTONE_CODE_REVISION: ${CLAIMSTONE_CODE_REVISION:-unknown}
+    image: claimstone:local
+    profiles: [portal]
+    command: ["control", "--bind", "0.0.0.0", "--port", "8790",
+              "--allow-host", "control:8790",
+              "--allow-host", "127.0.0.1:${CLAIMSTONE_PORTAL_PORT:-8788}",
+              "--allow-host", "localhost:${CLAIMSTONE_PORTAL_PORT:-8788}",
+              "--state-dir", "/app/.claimstone",
+              "--credentials-file", "none"]
+    environment:
+      CLAIMSTONE_ROOT: /app
+      PYTHONDONTWRITEBYTECODE: "1"
+      CLAIMSTONE_STATE_DIR: /app/.claimstone
+      CLAIMSTONE_GROBID_URL: http://grobid:8070
+      # Real values, unlike `api`: the admin checks send the contact address in their User-Agent and the
+      # Ollama key to the unpaid model list. Credentials are rotated in `.env` on the host, not from here
+      # (`--credentials-file none`).
+      CLAIMSTONE_CONTACT_EMAIL: ${CLAIMSTONE_CONTACT_EMAIL:-}
+      OLLAMA_API_KEY: ${OLLAMA_API_KEY:-}
+      OPENALEX_API_KEY: ${OPENALEX_API_KEY:+present}
+    volumes:
+      - ./store:/app/store
+      - ./projects:/app/projects:ro
+      - ./.claimstone:/app/.claimstone
+    user: "${UID:-1000}:${GID:-1000}"
+    networks: [portal_internal, claimstone, control_egress]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+    healthcheck:
+      # Anonymous GET of the session: 401 is the answer of a live server that refuses a stranger.
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request,urllib.error,sys\ntry:\n urllib.request.urlopen(urllib.request.Request('http://127.0.0.1:8790/control/v1/session', headers={'Host': 'control:8790'}), timeout=4)\nexcept urllib.error.HTTPError as e:\n sys.exit(0 if e.code == 401 else 1)\nsys.exit(1)"
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
   # `web` is nginx serving the built SPA and proxying /api/ to `api`. It is the only published port, and
   # only on the host's loopback.
   web:
@@ -188,6 +246,8 @@ services:
     profiles: [portal]
     depends_on:
       api:
+        condition: service_healthy
+      control:
         condition: service_healthy
     ports:
       - "127.0.0.1:${CLAIMSTONE_PORTAL_PORT:-8788}:8080"
@@ -207,4 +267,7 @@ networks:
     internal: true
   # Only for publishing web's port on the host's loopback.
   portal_edge:
+    driver: bridge
+  # Egress for `control` alone, used only by the explicit admin reachability checks (D106).
+  control_egress:
     driver: bridge

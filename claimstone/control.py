@@ -993,6 +993,10 @@ def _admin_credential(self: _Handler, params: dict[str, str], query: Any,
     if not isinstance(password, str) or row is None or not operators.verify(row, password):
         self.login_budget.record_failure(session.operator_id)
         raise ControlError(403, "REAUTH", "the password is required again, and it did not match")
+    if self.env_file is None:
+        raise ControlError(409, "CREDENTIALS_READ_ONLY",
+                           "this deployment cannot write credentials: edit .env on the host and "
+                           "restart the services that read it")
     try:
         recorded = admin.replace_credential(self.env_file, self.state_dir, name=body.get("name"),
                                             value=body.get("value"), actor=session.operator_id)
@@ -1131,8 +1135,10 @@ def make_server(projects_dir: str | pathlib.Path = "projects",
         "resolver": staticmethod(resolver) if resolver is not None else None,
         "extract_text": staticmethod(extract_text) if extract_text is not None else None,
         "http_get": staticmethod(http_get) if http_get is not None else None,
-        "env_file": pathlib.Path(env_file) if env_file is not None
-        else pathlib.Path(projects_dir).resolve().parent / ".env",
+        # `none` turns credential writes off: in a container `.env` belongs to the host, and the
+        # deployment says so rather than writing a copy nobody reads.
+        "env_file": (None if str(env_file) == "none" else pathlib.Path(env_file))
+        if env_file is not None else pathlib.Path(projects_dir).resolve().parent / ".env",
         "started_at": _now_iso(),
     })
     httpd = ThreadingHTTPServer((host, port), handler)
@@ -1143,10 +1149,11 @@ def make_server(projects_dir: str | pathlib.Path = "projects",
 def serve(projects_dir: str | pathlib.Path = "projects",
           store_dir: str | pathlib.Path = "store", *, host: str = "127.0.0.1",
           port: int = 8790, allow_hosts: tuple[str, ...] = (),
-          state_dir: str | pathlib.Path | None = None) -> None:
+          state_dir: str | pathlib.Path | None = None,
+          env_file: str | pathlib.Path | None = None) -> None:
     """Block and serve the control API."""
     httpd = make_server(projects_dir, store_dir, host=host, port=port,
-                        allow_hosts=allow_hosts, state_dir=state_dir)
+                        allow_hosts=allow_hosts, state_dir=state_dir, env_file=env_file)
     print(f"claimstone control — http://{host}:{port}/control/v1/session  "
           "(authenticated writes; Ctrl-C to stop)")
     try:
