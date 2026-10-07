@@ -7,9 +7,9 @@ Spec: `docs/superpowers/specs/2026-10-07-portal-frontend-v21-spec.md`. Branch `r
 | F1 | Foundations: shell v2, control client, session, login | DONE |
 | F2 | Today, Projects, Project | DONE |
 | F3 | The flow journey | DONE |
-| F4 | The reading desk | TODO |
+| F4 | The reading desk | DONE |
 | F5 | Decisions and Add material | TODO |
-| F6 | Export, Administration, closing pass | TODO |
+| F6 | Export, Administration, closing pass | IN PROGRESS |
 
 ## F1 — Foundations (DONE)
 
@@ -241,3 +241,18 @@ profile equals current (checked N s ago)" line (no such API field); the design's
 and excluded-interpretations list (existing results table kept as is); the Decisions/Material routes (F5).
 A failed poll reload replaces the page by the error state and drops unsaved text (existing page behaviour;
 the draft is the safeguard). Not checked in a browser (no servers were started).
+
+## F6 — Export, Administration, closing pass (IN PROGRESS)
+
+- [ ] F6.1 Export page `/p/:project/f/:sel/export` (flows only): `api.exports` (GET), list, Create snapshot with the copies checkbox and the `copies` answer, per-row Verify (never on load; disabled while running), route in `App.tsx`.
+  Files: `web/src/lib/api.ts`, `web/src/pages/ExportPage.tsx`, `web/src/App.tsx`, `web/tests/export.test.tsx`.
+- [ ] F6.2 Administration `/admin`: read API presence block, control admin when signed in (last check per target, Check buttons, credential form cleared after every submit, never echoed), Paid test disabled with the 501 reason.
+  Files: `web/src/pages/AdminPage.tsx`, `web/tests/admin.test.tsx`.
+- [ ] F6.3 Reviewer fix A: the reading desk keeps its last good data and the panel state through a failed poll refresh, with a named stale banner; no storage.
+  Files: `web/src/pages/QuestionPage.tsx`, `web/tests/readingdesk.test.tsx`.
+- [ ] F6.4 Reviewer fix B: Today's newest rows as labelled fields, not JSON.
+  Files: `web/src/pages/TodayPage.tsx`, `web/tests/today.test.tsx`.
+- [ ] F6.5 States pass: one failed or empty state test per page (Today, Projects, Project, Flow, Question, Claim, Source, Export, Admin, Login) where none exists, and the fixes they expose.
+  Files: `web/tests/states.test.tsx` and the pages it exposes.
+- [ ] F6.6 Docs: `docs/HANDOFF.md` portal paragraph, a new `D` decision, F6 result in this log.
+  Files: `docs/HANDOFF.md`, `docs/DESIGN_DECISIONS.md`, this log.
