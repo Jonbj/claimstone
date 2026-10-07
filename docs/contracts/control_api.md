@@ -205,7 +205,10 @@ Drafts are never read by the engine, never exported and never count as a signatu
 - `POST …/exports/{export_id}/verify` runs `export.verify` and returns its problems list.
   It is never run as a side effect of a GET.
 - Read API: `GET /api/v1/p/{p}/flows/{flow_id}/exports` lists `exports.jsonl` rows
-  (read-only; the only read-API route in this contract).
+  (read-only; the only read-API route in this contract). Implemented 2026-10-07 (BR), on
+  the read API with the house spelling `GET /api/v1/projects/{p}/flows/{flow_id}/exports`:
+  entries carry `export_id`, `created_at` and `actor` when the row records one, never the
+  server-side `path`.
 
 ### B11 — administration
 

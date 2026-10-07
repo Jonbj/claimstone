@@ -108,6 +108,11 @@ def _schema_for(route: str) -> str:
             return f"/projects/{{p}}/{{sel}}/{rest[4]}/{{{_TAIL_PARAM[rest[4]]}}}"
         if len(rest) == 7 and rest[4] == "questions" and rest[6] == "profile-diff":
             return "/projects/{p}/{sel}/questions/{qid}/profile-diff"
+        if len(rest) == 7 and rest[4] == "questions" and rest[6] == "profiles":
+            return "/projects/{p}/{sel}/questions/{qid}/profiles"
+    if len(rest) == 5 and rest[0] == "projects" and rest[2] == "flows" and rest[4] == "exports":
+        # Exports are keyed by flow id; an unbound selector has no exports route at all.
+        return "/projects/{p}/flows/{flow_id}/exports"
     raise AssertionError(f"no schema route for {route!r}")
 
 

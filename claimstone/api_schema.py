@@ -531,6 +531,49 @@ PROFILE_DIFF = _payload("profile diff", {
 }, ["project", "selector", "id", "from", "to", "reason", "summary", "added", "removed",
     "changed", "counts"])
 
+# One stored profile of one question, as `profiles.jsonl` records it. `usable_results` is
+# the count of the row's own `results` list — exactly the claims whose review said USABLE
+# — and `current` marks the one row `latest_profiles` returns for this scope.
+_STORED_PROFILE = {
+    "type": "object",
+    "required": ["profile_sha256", "built_at", "provisional", "state", "usable_results",
+                 "current"],
+    "properties": {
+        "profile_sha256": _STR,
+        "built_at": _STR,
+        "provisional": _BOOL,
+        "state": _STR_OR_NULL,
+        "usable_results": _INT,
+        "current": _BOOL,
+    },
+    "additionalProperties": False,
+}
+
+STORED_PROFILES = _payload("stored profiles", {
+    "project": _STR,
+    "selector": _SELECTOR,
+    "id": _STR,
+    # Empty when the question has no profile in this scope: a state the panel renders,
+    # never a 404.
+    "profiles": {"type": "array", "items": _STORED_PROFILE},
+}, ["project", "selector", "id", "profiles"])
+
+# One `exports.jsonl` row of a flow. `actor` is present only when the row records one —
+# CLI exports predate it and B10's portal exports carry it — and the server-side `path`
+# is never a property of this payload: the response must not reveal filesystem paths.
+_EXPORT_ENTRY = {
+    "type": "object",
+    "required": ["export_id", "created_at"],
+    "properties": {"export_id": _STR, "created_at": _STR, "actor": _STR},
+    "additionalProperties": False,
+}
+
+FLOW_EXPORTS = _payload("flow exports", {
+    "project": _STR,
+    "flow_id": _STR,
+    "exports": {"type": "array", "items": _EXPORT_ENTRY},
+}, ["project", "flow_id", "exports"])
+
 LINEAGE = _payload("lineage", {
     "project": _STR,
     "selector": _SELECTOR,
@@ -641,7 +684,8 @@ ERROR = _payload("error", {
 }, ["error"])
 
 # The §3.2 routes by name. `flows/{flow_id}` and `unbound/{slug}` serve the same payload
-# shape per tail, so one schema covers both selector kinds.
+# shape per tail, so one schema covers both selector kinds — except exports, which belong
+# to a flow id and have no unbound spelling.
 ROUTES: dict[str, dict[str, Any]] = {
     "/meta": META,
     "/projects": PROJECTS,
@@ -653,9 +697,11 @@ ROUTES: dict[str, dict[str, Any]] = {
     "/projects/{p}/{sel}/overview": OVERVIEW,
     "/projects/{p}/{sel}/inbox": INBOX,
     "/projects/{p}/{sel}/questions/{qid}": QUESTION_DETAIL,
+    "/projects/{p}/{sel}/questions/{qid}/profiles": STORED_PROFILES,
     "/projects/{p}/{sel}/questions/{qid}/profile-diff": PROFILE_DIFF,
     "/projects/{p}/{sel}/claims/{claim_id}": LINEAGE,
     "/projects/{p}/{sel}/sources/{candidate_key}": SOURCE_DOSSIER,
+    "/projects/{p}/flows/{flow_id}/exports": FLOW_EXPORTS,
     "/error": ERROR,
 }
 

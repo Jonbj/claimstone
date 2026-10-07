@@ -94,11 +94,13 @@ def _fixture_name(route: str) -> str:
     path, _, query = route.partition("?")
     parts = [part for part in path.split("/") if part]
     assert parts[:2] == ["api", "v1"], route
-    if len(parts) >= 3 and parts[-1] == "profile-diff" and parts[-3] == "questions":
-        # The question's own fixture is `Q02.json`; the diff must not become a `Q02/`
-        # directory beside the file it extends.
+    if len(parts) >= 3 and parts[-3] == "questions" and parts[-1] in ("profile-diff",
+                                                                     "profiles"):
+        # The question's own fixture is `Q02.json`; a sibling route must not become a
+        # `Q02/` directory beside the file it extends.
+        suffix = parts[-1]
         parts = parts[:-1]
-        parts[-1] = f"{parts[-1]}.profile-diff"
+        parts[-1] = f"{parts[-1]}.{suffix}"
     name = "/".join(parts[2:])
     if query:
         name += "." + query.replace("=", "-")
