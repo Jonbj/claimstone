@@ -6,7 +6,7 @@ Spec: `docs/superpowers/specs/2026-10-07-portal-frontend-v21-spec.md`. Branch `r
 |---|---|---|
 | F1 | Foundations: shell v2, control client, session, login | DONE |
 | F2 | Today, Projects, Project | DONE |
-| F3 | The flow journey | TODO |
+| F3 | The flow journey | IN PROGRESS |
 | F4 | The reading desk | TODO |
 | F5 | Decisions and Add material | TODO |
 | F6 | Export, Administration, closing pass | TODO |
@@ -135,3 +135,14 @@ Not checked in a browser (no servers were started).
 Accepted. Nothing computed in the browser beyond list lengths; `continues_without_you: null` and `[]` are
 told apart. For F6's states pass: Today's "newest rows" render `JSON.stringify(row).slice(0,160)`; render
 the known fields (stage, state, kind, ids) as labelled text instead.
+
+## F3 — The flow journey (IN PROGRESS)
+
+- [ ] F3.1 `OperationsPanel`: "Right now" list from `control.operations` (signed in only; signed out says "Sign in to see and authorize operations"). State word and note verbatim, limits, spent, unknown-cost units said as reserved, completed units, last event, `worker_note`; Pause/Resume disabled with a title. Named error on failure.
+  Files: `web/src/components/OperationsPanel.tsx`, `web/tests/operations.test.tsx`.
+- [ ] F3.2 Authorize for `PLANNED` only: confirmation dialog listing the exact limits, POST them unchanged, disabled while running, the server's 409 sentence as given, reload after success.
+  Files: `web/src/components/OperationsPanel.tsx`, `web/tests/operations.test.tsx`.
+- [ ] F3.3 `FlowOverviewPage` header restyle (serif title, scope and protocol chips, Add material / Decisions / Export / Activity) and the panel mounted for flows only; `/u/` gets no write control and no panel.
+  Files: `web/src/pages/FlowOverviewPage.tsx`.
+- [ ] F3.4 Page tests: header links, unbound selector has no panel or write control, signed out shows no write control.
+  Files: `web/tests/flowpage.test.tsx`.
