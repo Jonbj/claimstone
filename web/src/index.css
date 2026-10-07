@@ -3,6 +3,7 @@
 @import "./styles/shadcn-tailwind.css";
 @import "@fontsource-variable/geist";
 @import "@fontsource-variable/geist-mono";
+@import "@fontsource/instrument-serif";
 
 /* §8.3: light theme first; the dark theme is toggled with a `data-theme` attribute
    on <html>, not the OS media query. */
@@ -12,6 +13,26 @@
     --font-heading: var(--font-sans);
     --font-sans: 'Geist Variable', sans-serif;
     --font-mono: 'Geist Mono Variable', monospace;
+    /* v2.1 (spec §1 rule 9): Instrument Serif for page titles and question statements. */
+    --font-serif: 'Instrument Serif', Georgia, serif;
+    /* v2.1 colour meanings (spec §1 rule 8); every chip also carries its word. */
+    --color-waits: var(--waits);
+    --color-waits-soft: var(--waits-soft);
+    --color-waits-ink: var(--waits-ink);
+    --color-acting: var(--acting);
+    --color-acting-soft: var(--acting-soft);
+    --color-acting-ink: var(--acting-ink);
+    --color-contradicts: var(--contradicts);
+    --color-done: var(--done);
+    --color-provisional: var(--provisional);
+    --color-not-obtained: var(--not-obtained);
+    --color-neutral-soft: var(--neutral-soft);
+    --color-neutral-ink: var(--neutral-ink);
+    --color-rail: var(--rail);
+    --color-rail-foreground: var(--rail-foreground);
+    --color-rail-muted: var(--rail-muted);
+    --color-rail-active: var(--rail-active);
+    --color-rail-border: var(--rail-border);
     --color-sidebar-ring: var(--sidebar-ring);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -85,6 +106,27 @@
     --sidebar-accent-foreground: oklch(0.205 0 0);
     --sidebar-border: oklch(0.922 0 0);
     --sidebar-ring: oklch(0.708 0 0);
+    /* v2.1 meanings: violet waits for you; teal Claimstone acting; blue contradicts;
+       emerald done or supports; amber still being read or provisional; rose not obtained
+       or below floor; slate neutral or qualifies. */
+    --waits: #7c3aed;
+    --waits-soft: #f5f3ff;
+    --waits-ink: #5b21b6;
+    --acting: #0d9488;
+    --acting-soft: #ccfbf1;
+    --acting-ink: #115e59;
+    --contradicts: #0277bd;
+    --done: #059669;
+    --provisional: #d97706;
+    --not-obtained: #e11d48;
+    --neutral-soft: #f1f5f9;
+    --neutral-ink: #334155;
+    /* The dark left rail is dark in both themes. */
+    --rail: #0f172a;
+    --rail-foreground: #f8fafc;
+    --rail-muted: #cbd5e1;
+    --rail-active: #1e293b;
+    --rail-border: #1e293b;
 }
 
 /* §8.3: the dark palette is selected by the same `data-theme` attribute the toggle
@@ -121,6 +163,18 @@
     --sidebar-accent-foreground: oklch(0.985 0 0);
     --sidebar-border: oklch(1 0 0 / 10%);
     --sidebar-ring: oklch(0.556 0 0);
+    --waits: #a78bfa;
+    --waits-soft: #2e1065;
+    --waits-ink: #ddd6fe;
+    --acting: #2dd4bf;
+    --acting-soft: #134e4a;
+    --acting-ink: #99f6e4;
+    --contradicts: #38bdf8;
+    --done: #34d399;
+    --provisional: #fbbf24;
+    --not-obtained: #fb7185;
+    --neutral-soft: #1e293b;
+    --neutral-ink: #cbd5e1;
 }
 
 @layer base {
@@ -135,6 +189,11 @@
     }
   html {
     @apply font-sans;
+    }
+  /* Page titles use the serif; identifiers and counts use `font-mono` where they appear. */
+  h1 {
+    font-family: var(--font-serif);
+    font-weight: 400;
     }
 }
 /* Ported base components (§4.2 rules 1, 3, 5, 7): the class names come from

@@ -13,7 +13,7 @@ Spec: `docs/superpowers/specs/2026-10-07-portal-frontend-v21-spec.md`. Branch `r
 
 ## F1 — Foundations (IN PROGRESS)
 
-- [ ] F1.1 Fonts and theme tokens. Pin `@fontsource/instrument-serif`; v2.1 tokens as CSS variables and Tailwind theme entries.
+- [x] F1.1 Fonts and theme tokens. Pin `@fontsource/instrument-serif`; v2.1 tokens as CSS variables and Tailwind theme entries.
   Files: `web/package.json`, `web/package-lock.json`, `web/src/index.css`.
 - [ ] F1.2 Control client `lib/control.ts` with hand-written types for every control route, `ControlError`, in-memory CSRF; vite dev proxy for `/control`; client tests.
   Files: `web/src/lib/control.ts`, `web/vite.config.ts`, `web/tests/control.test.ts`.
