@@ -64,7 +64,7 @@ Each step ends with all of these passing:
 
 ```bash
 cd web && npm run gen:types && npm run typecheck && npm test && npm run build
-.venv/bin/pytest -q tests/test_api_contract.py tests/test_committed_fixtures.py   # from the repo root
+.venv/bin/pytest -q tests/test_api_contract.py tests/test_portal_fixtures.py   # from the repo root
 ```
 
 `gen:types` must produce no diff unless the step changed the schema. **No step changes Python code.** If a

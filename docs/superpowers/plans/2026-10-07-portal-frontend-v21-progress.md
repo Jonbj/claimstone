@@ -71,3 +71,12 @@ Deviations:
 
 NOT DONE (belongs to later steps): Today page, restyled Projects/Project pages, any write control, the
 `exports` method in `api.ts`. Not testable in a browser here (no control server was started).
+
+### F1 review — 2026-10-07 (reviewer)
+Accepted. Checked: every non-GET request is in `control.ts`; the CSRF token is memory-only; `safeNext`
+refuses `//`, `/\` and control characters; the upload sends no Idempotency-Key and refuses > 50 MiB.
+The spec named a test file that does not exist (`tests/test_committed_fixtures.py`); corrected to
+`tests/test_portal_fixtures.py` in the spec and in the F5 prompt. Note for F4/F5: `Idempotency-Key` is
+fresh per call, so double submission is prevented in the UI by disabling a button while its request
+runs. F5 is delegated to z.ai on branch `portal-frontend-f5` (worktree `claimstone-f5`); F2–F4 and F6
+continue here.
