@@ -83,10 +83,17 @@ Each commit message ends with the line `Co-Authored-By: GLM via opencode`. Commi
 | **B12** | Scheduler-facing routes, **only if** the operations ledger module exists; otherwise mark `BLOCKED` with the reason and end the session | as spec B12, or `BLOCKED` recorded |
 | **B13** | `control` service in compose and nginx, version registrations, decision entry completed, `HANDOFF.md` | checks pass; `docker compose config` validates; `api` service unchanged |
 
-**Parallel steps.** B2 and B6 are built by another session on the branch `portal-backend-parallel` and merged
-into `research-portal` by the reviewer. On this branch, treat them as `PARALLEL`: never pick them, and record
-them in the log table as `PARALLEL (portal-backend-parallel)`. B7a needs `claimstone/urlguard.py` from B2. If
-that file is absent when B7a starts, mark B7a `BLOCKED (waiting for B2 merge)` and end the session.
+**Parallel steps.** B2 and B6 are DONE on the main line. B2's substance lives in `store.py` and `net.py`, not
+in a `urlguard.py`: B7a uses the global-address guard that `net.py` already exposes.
+
+**BR** (two read-API routes) is built by another session on the branch `portal-backend-reads` and merged by the
+reviewer:
+- the stored-profile list of one question;
+- the exports list, which is B10's read-API route.
+
+On this branch BR is `PARALLEL`: never pick it, and do not edit `claimstone/api.py`, `claimstone/api_schema.py`,
+`claimstone/portal_state.py`, the generated schema, `web/` or the fixtures while it is open. When B10 runs,
+its read route already exists.
 
 ## Checks
 

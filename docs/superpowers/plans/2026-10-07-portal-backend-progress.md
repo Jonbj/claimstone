@@ -31,6 +31,7 @@ $ .venv/bin/python tools/check_instrument_versions.py
 | **B4** | `claimstone control`, `claimstone operator add/disable`, sessions, CSRF, rate limit | spec B4 tests pass, including the "every POST refuses anonymous" test | TODO |
 | **B5** | Web signing and drafts | spec B5 tests pass | TODO |
 | **B6** | Profile diff route in the read API; schema and fixtures | spec B6 tests pass | DONE (portal-backend-parallel, merged `3045aa2` 2026-10-07; decisions in the parallel log) |
+| **BR** | Read API: stored-profile list of one question; exports list of one flow (B10's read route) | as `2026-10-07-portal-backend-reads-prompt.md` | PARALLEL (portal-backend-reads) |
 | **B7a** | Intake of DOIs, URLs and references; cohort routing; single explicit fetch | spec B7a tests pass | TODO |
 | **B7b** | File intake, quarantine, engine gates, `operator-supplied` acquisition row, `supplied_copies` policy (F14) | spec B7b tests pass; existing admissibility tests unchanged and passing | TODO |
 | **B8** | Identity resolution, retry-campaign record and preview, purchase offers and stages, defer/decline, F13 ordering test | spec B8 tests pass | TODO |
