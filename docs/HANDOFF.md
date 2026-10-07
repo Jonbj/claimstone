@@ -9,6 +9,17 @@ what order.
 
 ## Where the work stands
 
+2026-10-07 L02 arXiv batch: the operator authorized batch
+`5154d5409788a992b69540a2db8054b5b85738f246e56025117d3282f1898562`.
+Both frozen T01 queries completed with HTTP 200 and zero returned records.
+Each campaign made two physical requests (robots and API), four of six
+authorized in total. The round remains at zero candidates. D66 had already
+measured that the arXiv searcher quotes a whole multiword term as an exact
+phrase and obtained zero across nineteen queries; these two new empty phrase
+searches repeat that known recall limitation. They do not support a claim
+that arXiv or the wider literature lacks relevant work. Do not spend another
+campaign on the same grammar without a separately versioned search design.
+
 2026-10-07 L02 scheduler discovery retry: authorized plan
 `5ff7c4cc24cd05aa0f827a21d8efdbba8bd29aa092e6acb4d541656c8b609ab6`
 ran outside the sandbox. OpenAlex returned HTTP 200 and ten records for
