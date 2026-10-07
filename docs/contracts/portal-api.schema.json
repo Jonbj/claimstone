@@ -1657,6 +1657,207 @@
    "title": "question detail",
    "type": "object"
   },
+  "/projects/{p}/{sel}/questions/{qid}/profile-diff": {
+   "$schema": "https://json-schema.org/draft/2020-12/schema",
+   "additionalProperties": false,
+   "properties": {
+    "added": {
+     "items": {
+      "type": "object"
+     },
+     "type": "array"
+    },
+    "api_version": {
+     "enum": [
+      1
+     ],
+     "type": "integer"
+    },
+    "changed": {
+     "items": {
+      "type": "object"
+     },
+     "type": "array"
+    },
+    "counts": {
+     "additionalProperties": false,
+     "properties": {
+      "from": {
+       "additionalProperties": false,
+       "properties": {
+        "by_class": {
+         "type": "object"
+        },
+        "direction_count": {
+         "additionalProperties": {
+          "type": "integer"
+         },
+         "type": "object"
+        }
+       },
+       "required": [
+        "by_class",
+        "direction_count"
+       ],
+       "type": "object"
+      },
+      "to": {
+       "additionalProperties": false,
+       "properties": {
+        "by_class": {
+         "type": "object"
+        },
+        "direction_count": {
+         "additionalProperties": {
+          "type": "integer"
+         },
+         "type": "object"
+        }
+       },
+       "required": [
+        "by_class",
+        "direction_count"
+       ],
+       "type": "object"
+      }
+     },
+     "required": [
+      "from",
+      "to"
+     ],
+     "type": "object"
+    },
+    "from": {
+     "additionalProperties": false,
+     "properties": {
+      "built_at": {
+       "type": "string"
+      },
+      "claim_gate_version": {
+       "type": "integer"
+      },
+      "decision_contract_version": {
+       "type": "integer"
+      },
+      "profile_sha256": {
+       "type": "string"
+      },
+      "registry_version": {
+       "type": "integer"
+      }
+     },
+     "required": [
+      "profile_sha256",
+      "built_at",
+      "claim_gate_version",
+      "decision_contract_version",
+      "registry_version"
+     ],
+     "type": "object"
+    },
+    "id": {
+     "type": "string"
+    },
+    "project": {
+     "type": "string"
+    },
+    "reason": {
+     "type": [
+      "string",
+      "null"
+     ]
+    },
+    "removed": {
+     "items": {
+      "type": "object"
+     },
+     "type": "array"
+    },
+    "selector": {
+     "additionalProperties": false,
+     "properties": {
+      "manifest_only": {
+       "type": "boolean"
+      },
+      "round": {
+       "type": [
+        "string",
+        "null"
+       ]
+      }
+     },
+     "required": [
+      "round",
+      "manifest_only"
+     ],
+     "type": "object"
+    },
+    "summary": {
+     "additionalProperties": false,
+     "properties": {
+      "added": {
+       "type": "integer"
+      },
+      "changed": {
+       "type": "integer"
+      },
+      "removed": {
+       "type": "integer"
+      }
+     },
+     "required": [
+      "added",
+      "removed",
+      "changed"
+     ],
+     "type": "object"
+    },
+    "to": {
+     "additionalProperties": false,
+     "properties": {
+      "built_at": {
+       "type": "string"
+      },
+      "claim_gate_version": {
+       "type": "integer"
+      },
+      "decision_contract_version": {
+       "type": "integer"
+      },
+      "profile_sha256": {
+       "type": "string"
+      },
+      "registry_version": {
+       "type": "integer"
+      }
+     },
+     "required": [
+      "profile_sha256",
+      "built_at",
+      "claim_gate_version",
+      "decision_contract_version",
+      "registry_version"
+     ],
+     "type": "object"
+    }
+   },
+   "required": [
+    "api_version",
+    "project",
+    "selector",
+    "id",
+    "from",
+    "to",
+    "reason",
+    "summary",
+    "added",
+    "removed",
+    "changed",
+    "counts"
+   ],
+   "title": "profile diff",
+   "type": "object"
+  },
   "/projects/{p}/{sel}/sources/{candidate_key}": {
    "$schema": "https://json-schema.org/draft/2020-12/schema",
    "additionalProperties": false,
@@ -1902,6 +2103,7 @@
   "/projects/{p}/{sel}/inbox",
   "/projects/{p}/{sel}/overview",
   "/projects/{p}/{sel}/questions/{qid}",
+  "/projects/{p}/{sel}/questions/{qid}/profile-diff",
   "/projects/{p}/{sel}/sources/{candidate_key}",
   "/projects/{p}/{sel}/summary"
  ],

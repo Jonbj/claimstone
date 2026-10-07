@@ -826,6 +826,102 @@ def question_detail(project: Project, store: Store, selector: scope.Selector,
     }
 
 
+def _diff_side(row: Mapping[str, Any]) -> dict[str, Any]:
+    """The identity of one side of a diff: the hash the caller asked for, when it was
+    built, and the instrument versions that decided its contents."""
+    return {key: row.get(key) for key in ("profile_sha256", "built_at",
+                                          "claim_gate_version", "decision_contract_version",
+                                          "registry_version")}
+
+
+def _diff_reason(old_row: Mapping[str, Any], new_row: Mapping[str, Any]) -> str | None:
+    """The reason the rows record themselves, when they record one: a changed instrument
+    version means every result was re-extracted under new rules, and the diff must not
+    read as though the literature moved."""
+    parts = []
+    for key in ("claim_gate_version", "decision_contract_version", "registry_version"):
+        if old_row.get(key) != new_row.get(key):
+            parts.append(f"{key} {old_row.get(key)} → {new_row.get(key)}")
+    return "; ".join(parts) or None
+
+
+def _removal_reason(latest_reviews: Mapping[str, Mapping[str, Any]],
+                    claim_id: str) -> str:
+    """Why a result left the profile: what the review ledger last recorded for the claim.
+    The rows record the reason when there is one; there is none invented here."""
+    row = latest_reviews.get(claim_id)
+    if row is None:
+        return "no review recorded"
+    verdict = str(row.get("verdict") or "?")
+    reason = str(row.get("reason") or "").strip()
+    return f"review {verdict}: {reason}" if reason else f"review {verdict}"
+
+
+def profile_diff(project: Project, store: Store, selector: scope.Selector,
+                 question_id: str, from_sha: str, to_sha: str) -> dict[str, Any]:
+    """Two stored profiles of one question, compared result by result (spec B6).
+
+    The hashes address content, not a position in a round, so the lookup has no round
+    scope: comparing a question's profile across rounds is a legitimate question and the
+    sha itself carries the identity. A hash not in the ledger is a 404, never an empty
+    diff — an unknown hash answering "no changes" would fabricate a comparison.
+
+    Results are keyed by `claim_id`: one claim has exactly one review, so one result row
+    per claim is what the profile holds, and `claim_id` is the stable id the diff tracks.
+    """
+    if question_id not in project.question_ids:
+        raise NotFound(f"unknown question id: {question_id}")
+    rows = [row for row in store.read(synthesize.PROFILES)
+            if str(row.get("question_id")) == question_id]
+
+    def _row(sha: str, which: str) -> dict[str, Any]:
+        found = [row for row in rows if str(row.get("profile_sha256")) == sha]
+        if not found:
+            raise NotFound(f"{which} profile {sha} not in the ledger "
+                           f"for question {question_id}")
+        return dict(found[-1])
+
+    old_row, new_row = _row(from_sha, "from"), _row(to_sha, "to")
+    old_results = {str(r["claim_id"]): r for r in old_row.get("results") or []}
+    new_results = {str(r["claim_id"]): r for r in new_row.get("results") or []}
+    latest_reviews = store.latest_by("reviews.jsonl", "claim_id")
+
+    added = [{"result_id": claim_id, "reason": None, "result": new_results[claim_id]}
+             for claim_id in sorted(new_results.keys() - old_results.keys())]
+    removed = [{"result_id": claim_id, "reason": _removal_reason(latest_reviews, claim_id),
+                "result": old_results[claim_id]}
+               for claim_id in sorted(old_results.keys() - new_results.keys())]
+    changed = []
+    for claim_id in sorted(old_results.keys() & new_results.keys()):
+        fields = {key: {"from": old_results[claim_id].get(key),
+                        "to": new_results[claim_id].get(key)}
+                  for key in sorted(set(old_results[claim_id])
+                                    | set(new_results[claim_id]))
+                  if old_results[claim_id].get(key) != new_results[claim_id].get(key)}
+        if fields:
+            changed.append({"result_id": claim_id, "reason": None, "fields": fields})
+
+    return {
+        "project": project.name,
+        "selector": selector.as_dict(),
+        "id": question_id,
+        "from": _diff_side(old_row),
+        "to": _diff_side(new_row),
+        "reason": _diff_reason(old_row, new_row),
+        "summary": {"added": len(added), "removed": len(removed),
+                    "changed": len(changed)},
+        "added": added,
+        "removed": removed,
+        "changed": changed,
+        "counts": {
+            "from": {"by_class": old_row.get("by_class") or {},
+                     "direction_count": old_row.get("direction_count") or {}},
+            "to": {"by_class": new_row.get("by_class") or {},
+                   "direction_count": new_row.get("direction_count") or {}},
+        },
+    }
+
+
 def lineage(project: Project, store: Store, selector: scope.Selector,
             claim_id: str) -> dict[str, Any]:
     """Invariant 1, end to end: claim → review → chunk → document → acquisition → candidate.

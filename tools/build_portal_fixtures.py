@@ -32,7 +32,7 @@ from tempfile import TemporaryDirectory
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 
 from claimstone import api, flows  # noqa: E402
-from tests.test_api import _get_json, _routes  # noqa: E402
+from tests.test_api import _get_json, _q02_sha, _routes  # noqa: E402
 from tests.test_portal_state import build_workspace  # noqa: E402
 
 REPO = pathlib.Path(__file__).resolve().parent.parent
@@ -94,6 +94,11 @@ def _fixture_name(route: str) -> str:
     path, _, query = route.partition("?")
     parts = [part for part in path.split("/") if part]
     assert parts[:2] == ["api", "v1"], route
+    if len(parts) >= 3 and parts[-1] == "profile-diff" and parts[-3] == "questions":
+        # The question's own fixture is `Q02.json`; the diff must not become a `Q02/`
+        # directory beside the file it extends.
+        parts = parts[:-1]
+        parts[-1] = f"{parts[-1]}.profile-diff"
     name = "/".join(parts[2:])
     if query:
         name += "." + query.replace("=", "-")
@@ -118,7 +123,7 @@ def snapshot() -> dict[str, str]:
                 base = f"http://127.0.0.1:{httpd.server_address[1]}"
                 flow_id = next(iter(flows.flows(store)))
                 out: dict[str, str] = {}
-                for route in _routes(flow_id):
+                for route in _routes(flow_id, _q02_sha(store)):
                     status, _headers, payload = _get_json(base + route)
                     assert status == 200, route
                     body = _normalize(payload, str(projects_dir.resolve()))

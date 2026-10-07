@@ -18,7 +18,7 @@ import pytest
 
 from claimstone import flows
 from claimstone.api_schema import ROUTES
-from tests.test_api import PROJECT, _error_json, _get_json, _routes, _served
+from tests.test_api import PROJECT, _error_json, _get_json, _q02_sha, _routes, _served
 from tests.test_portal_state import build_workspace
 
 REPO = pathlib.Path(__file__).resolve().parent.parent
@@ -101,11 +101,13 @@ def _schema_for(route: str) -> str:
     if len(rest) == 3 and rest[0] == "projects" and rest[2] in ("integrity", "activity",
                                                                "poll"):
         return f"/projects/{{p}}/{rest[2]}"
-    if len(rest) in (5, 6) and rest[0] == "projects" and rest[2] in ("flows", "unbound"):
+    if len(rest) in (5, 6, 7) and rest[0] == "projects" and rest[2] in ("flows", "unbound"):
         if len(rest) == 5 and rest[4] in ("summary", "overview", "inbox"):
             return f"/projects/{{p}}/{{sel}}/{rest[4]}"
         if len(rest) == 6 and rest[4] in _TAIL_PARAM:
             return f"/projects/{{p}}/{{sel}}/{rest[4]}/{{{_TAIL_PARAM[rest[4]]}}}"
+        if len(rest) == 7 and rest[4] == "questions" and rest[6] == "profile-diff":
+            return "/projects/{p}/{sel}/questions/{qid}/profile-diff"
     raise AssertionError(f"no schema route for {route!r}")
 
 
@@ -131,7 +133,7 @@ def test_every_route_payload_validates_against_the_schema(workspace):
     the `?limit=` query) validates against its route schema."""
     with _served(workspace) as (_httpd, base, store):
         flow_id = next(iter(flows.flows(store)))
-        for route in _routes(flow_id):
+        for route in _routes(flow_id, _q02_sha(store)):
             status, _headers, payload = _get_json(base + route)
             assert status == 200, route
             problems = validate(payload, ROUTES[_schema_for(route)])

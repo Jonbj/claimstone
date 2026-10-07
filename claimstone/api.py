@@ -37,6 +37,15 @@ CROSS_ORIGIN_TEXT = "the Origin header does not name this server"
 DEFAULT_ACTIVITY_LIMIT = 50
 
 
+def _one_query(query: dict[str, list[str]], name: str) -> str:
+    """The single value of a required query parameter, or 400. A missing end of the diff
+    is the caller's error, never a defaulted or empty comparison."""
+    values = query.get(name)
+    if not values or not values[0]:
+        raise BadRequest(f"query parameter {name!r} is required")
+    return values[0]
+
+
 class BadRequest(ValueError):
     """A malformed query parameter: the caller's error, answered 400 BAD_REQUEST."""
 
@@ -141,6 +150,12 @@ class _Handler(BaseHandler):
                 elif len(tail) == 2 and tail[0] == "questions":
                     self._payload(portal_state.question_detail(project, store, selector,
                                                                tail[1]))
+                elif len(tail) == 3 and tail[0] == "questions" and tail[2] == "profile-diff":
+                    # Both hashes are required: a diff without either end is not a diff.
+                    from_sha = _one_query(query, "from")
+                    to_sha = _one_query(query, "to")
+                    self._payload(portal_state.profile_diff(project, store, selector,
+                                                            tail[1], from_sha, to_sha))
                 elif len(tail) == 2 and tail[0] == "claims":
                     self._payload(portal_state.lineage(project, store, selector, tail[1]))
                 elif len(tail) == 2 and tail[0] == "sources":
