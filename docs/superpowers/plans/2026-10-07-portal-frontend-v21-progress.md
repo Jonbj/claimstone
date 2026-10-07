@@ -5,7 +5,7 @@ Spec: `docs/superpowers/specs/2026-10-07-portal-frontend-v21-spec.md`. Branch `r
 | step | title | status |
 |---|---|---|
 | F1 | Foundations: shell v2, control client, session, login | DONE |
-| F2 | Today, Projects, Project | TODO |
+| F2 | Today, Projects, Project | IN PROGRESS |
 | F3 | The flow journey | TODO |
 | F4 | The reading desk | TODO |
 | F5 | Decisions and Add material | TODO |
@@ -80,3 +80,12 @@ The spec named a test file that does not exist (`tests/test_committed_fixtures.p
 fresh per call, so double submission is prevented in the UI by disabling a button while its request
 runs. F5 is delegated to z.ai on branch `portal-frontend-f5` (worktree `claimstone-f5`); F2–F4 and F6
 continue here.
+
+## F2 — Today, Projects, Project (IN PROGRESS)
+
+- [ ] F2.1 Today page at `/` (`GET /control/v1/today`): per project since/first visit, changed counts per stage with the undated count and newest rows, Needs you (required, then optional) with links, Continues without you, project `error`, Mark as seen (disabled while running; reloads Today). Signed out: explains the need for a session and links to Projects. `/` routes to Today; `/projects` stays the index.
+  Files: `web/src/pages/TodayPage.tsx`, `web/src/App.tsx`, `web/tests/today.test.tsx`.
+- [ ] F2.2 Projects table (`/projects`): the design's table with a client-side name filter, one row per project, its flows and legacy selectors, state words from the API, lazy per-selector summaries kept.
+  Files: `web/src/pages/IndexPage.tsx` (edited in place; no rename, so imports stay), `web/tests/projects.test.tsx`.
+- [ ] F2.3 Project header (`/p/:project`): serif title, registry line, research selector (flows, then legacy rounds labelled "protocol not verified"), integrity, activity; each block fails alone.
+  Files: `web/src/pages/ProjectPage.tsx`, `web/tests/project.test.tsx`.
