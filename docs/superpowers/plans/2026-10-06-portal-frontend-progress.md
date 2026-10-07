@@ -15,8 +15,8 @@ One step per session; markers below are the authority for "what is next".
 | R2 React scaffold replaces the SvelteKit scaffold | DONE |
 | R3 pages, part 1 (index, project, inbox, admin) | DONE |
 | R4 pages, part 2 (flow overview, question, lineage, dossier) + CSP preview check | DONE |
-| S6 Dockerfile, compose services, `portal.sh` | TODO |
-| S7 parity check, D83, docs, instrument registration | TODO |
+| S6 Dockerfile, compose services, `portal.sh` | DONE (substance built by the scheduler session as D84 — form deviation: outside this plan; recorded 2026-10-07) |
+| S7 parity check, D83, docs, instrument registration | DONE (recorded 2026-10-07; the decision is D84 — planned as D83, taken the same day by the parallel L02 entry) |
 
 ## Baseline (2026-10-06, before any work)
 
@@ -795,3 +795,90 @@ acknowledged; 17/17 pages, 0 console lines, **0 CSP violations**.
 - `DESIGN_DECISIONS.md` and `HANDOFF.md` carried a parallel session's uncommitted edits. Only
   the D84 entry and the HANDOFF paragraph were staged, written onto the committed versions, so
   that session's lines stay uncommitted for it to commit.
+
+### S6 closure — DONE (GLM via opencode, 2026-10-07)
+- [x] S6.c1 substance verified on disk (files: `web/Dockerfile`, `web/nginx/default.conf`,
+      `web/nginx/security-headers.conf`, `compose.yaml`, `portal.sh`): the Dockerfile's build
+      stage re-runs the gates (api-types freshness against the committed schema, typecheck,
+      tests, build) and the runtime stage is nginx-unprivileged serving `dist/`, both bases
+      pinned by digest; `compose.yaml` carries `api` and `web` under the `portal` profile
+      beside the pre-existing `grobid`, with `store/`/`projects/` mounted `:ro` on `api`, no
+      egress (`portal_internal` is `internal: true`), `${VAR:+present}` secrets substitution,
+      and `web` the only published port, `127.0.0.1:${CLAIMSTONE_PORTAL_PORT:-8788}:8080`
+      (compose.yaml:139-199); `portal.sh` `up`/`down` start and stop exactly `api`+`web`
+- [x] S6.c2 D84 records the decision (docs/DESIGN_DECISIONS.md:3708), packaging paragraph
+      included (read-only mounts, no-egress network, presence-only secrets, the loopback-only
+      published port, the gates re-run in the image build)
+- [x] S6.c3 `docker compose config -q` validates — validation only; no `up`/`build`/`pull` was
+      run
+- [x] S6.c4 the plan's review-note requirements are met: the "Review of S5" `memory: 2g` hint
+      is `api`'s limit, with the 1024 MB RSS measurement as its comment (compose.yaml:164-168);
+      every named item of the "Review of R4" entry is in the tree — `question_display_state`
+      shared by the matrix rows and the donut counts (claimstone/portal_state.py:622,639,669),
+      `test_a_round_without_profiles_awaits_no_person` (tests/test_portal_state.py:520) and
+      `test_table_and_donut_share_one_displayed_state` (:587), the side card titled "First open
+      item, in server order" (web/src/pages/FlowOverviewPage.tsx:153), and the committed
+      fixtures equal the regeneration (S7.c1 below)
+Checks (this session, in the s6s7 worktree; see Decisions for the worktree baseline):
+```
+$ docker compose config -q
+(no output; exit 0)
+```
+Decisions (spec silent): the worktree had no gitignored `.env` (AGENTS.md's "already present"
+describes the main checkout; a worktree starts without gitignored files), so `docker compose
+config` first refused on the required `CLAIMSTONE_CONTACT_EMAIL`; copied from the main checkout
+— machine configuration, gitignored, never staged. Nothing else was touched outside `docs/**`.
+Deviations: the substance was built outside this plan's session sequence, as D84 by the
+scheduler/portal session (commit `94c8d89`, which itself names S6/S7 and whose log sections
+above record the live acceptance: healthy containers, 421/403 refusals, EROFS on a store write,
+no egress, 0 console messages). This closure verifies and records; it builds nothing.
+NOT DONE:
+
+### S7 closure — DONE (GLM via opencode, 2026-10-07)
+- [x] S7.c1 the parity check exists and runs: `tests/test_portal_fixtures.py` (committed
+      fixtures equal the regeneration) — run, passing (line below)
+- [x] S7.c2 the decision is recorded: the closure prompt names D83, but D83 was taken the same
+      day by the parallel L02 entry (docs/DESIGN_DECISIONS.md:3665) — the frontend/container
+      decision the glm prompt's S7 row names is D84 (docs/DESIGN_DECISIONS.md:3708), as the S7
+      section above already records. Both entries verified present; no gap
+- [x] S7.c3 the docs name the containers and the loopback-only listener: README.md:59-60 names
+      the portal, GROBID and the scheduler containers and defers the listener to the runbook;
+      docs/HANDOFF.md:71-77 (the dated D84 paragraph) names `./portal.sh`,
+      http://127.0.0.1:8788/ and `./portal.sh down`; docs/LOCAL_COMPOSE_TRIAL.md:3-4 names the
+      stack and "The only published listener is `127.0.0.1:8788`". No factual gap; no doc
+      edited
+- [x] S7.c4 `tools/check_instrument_versions.py` exits 0 with 29 acknowledged — the frontend's
+      own instrument `("claimstone/api.py", "API_VERSION", "portal_api_version")` is registered
+      (tools/check_instrument_versions.py:52, commented D84), so nothing the frontend or the
+      container stack introduced is unacknowledged and no DESIGN_DECISIONS.md entry was needed
+Checks (this session, in the s6s7 worktree):
+```
+$ PYTHONPATH=$PWD …/claimstone/.venv/bin/python -m pytest -q
+1176 passed, 13 skipped in 46.40s
+$ PYTHONPATH=$PWD …/claimstone/.venv/bin/python -m claimstone.cli validate --all-projects
+OK   example-news-and-returns: 16 topics, 20 questions (registry v2, frozen 2026-09-25), 6 source classes, acquisition floor 0.80 (v1), registry 85e5fcc44ddc
+OK   pilot-screen-time: 4 topics, 8 questions (registry v1, frozen 2026-09-28), 6 source classes, acquisition floor 0.80 (v1), 28 manifest rows, registry 82007de2b569
+OK   pmc-screen-time: 4 topics, 8 questions (registry v1, frozen 2026-09-28), 6 source classes, acquisition floor 0.80 (v1), 40 manifest rows, registry 82007de2b569
+(exit 0)
+$ PYTHONPATH=$PWD …/claimstone/.venv/bin/python tools/check_instrument_versions.py
+29 instrument version(s) acknowledged in the design record
+(exit 0)
+$ cd web && npm ci && npm run typecheck && npm test
+npm ci: added 304 packages, and audited 305 packages in 3s
+tsc --noEmit -p tsconfig.json                      (no output = clean)
+ Test Files  13 passed (13)
+      Tests  55 passed (55)
+$ PYTHONPATH=$PWD …/claimstone/.venv/bin/python -m pytest tests/test_portal_fixtures.py -q
+1 passed in 1.36s
+```
+Decisions (spec silent): the worktree's own baseline is smaller than the main-checkout lines
+recorded above (1220 passed, 7 skipped there; 1176/13 here; validate 6 OK there, 3 here,
+instruments 26→29 across the later steps and parallel sessions): this worktree carries only the
+three shipped/available project instances — the gitignored `alembic-*` instances live in the
+main checkout — so the project-dependent tests skip or shrink here, the same effect the R4
+entry recorded for the pristine archive run (1128/13 there). Every check passes; the closure
+changed no code, and the counts are this worktree's, copied from the runs above.
+Deviations: none beyond S6's — the step's substance (parity test, D84, docs, registration) was
+already committed (S3's parity test, `94c8d89`'s registration and docs); this closure verified
+each item and closed the markers.
+NOT DONE:
