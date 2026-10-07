@@ -1,15 +1,9 @@
+import { useState } from "react";
 import { Link } from "react-router";
 import Chip from "@/components/Chip";
 import ErrorState from "@/components/ErrorState";
 import Pending from "@/components/Pending";
 import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { useApi } from "@/hooks/useApi";
 import { api, ApiError } from "@/lib/api";
 import type { Projects, Summary } from "@/lib/api-types";
@@ -156,31 +150,30 @@ function SelectorRow({
   );
 }
 
-function ProjectCard({ project }: { project: ProjectCard_ }) {
+function ProjectRow({ project }: { project: ProjectCard_ }) {
+  const ok = project.config === "OK";
   return (
-    <Card data-project={project.name}>
-      <CardHeader>
-        <CardTitle>
-          {project.config === "OK" ? (
-            <Link
-              to={`/p/${encodeURIComponent(project.name)}`}
-              className="hover:underline"
-            >
-              {project.name}
-            </Link>
-          ) : (
-            project.name
-          )}
-        </CardTitle>
-        {project.config !== "OK" ? (
-          <CardDescription className="flex flex-wrap items-baseline gap-2">
-            <Chip text="ConfigError" />
-            <span>{project.config_error}</span>
-          </CardDescription>
+    <tr data-project={project.name} className="border-t border-border align-top">
+      <th scope="row" className="px-4 py-3 text-left font-normal">
+        {ok ? (
+          <Link
+            to={`/p/${encodeURIComponent(project.name)}`}
+            className="font-serif text-xl hover:underline"
+          >
+            {project.name}
+          </Link>
         ) : (
-          <CardDescription>
+          <span className="font-serif text-xl">{project.name}</span>
+        )}
+        {ok ? (
+          <p className="font-mono text-xs text-muted-foreground">
             registry v{project.registry_version} · {project.registry_sha256}
-          </CardDescription>
+          </p>
+        ) : (
+          <p className="flex flex-wrap items-baseline gap-2 text-sm">
+            <Chip text="ConfigError" />
+            <span className="text-muted-foreground">{project.config_error}</span>
+          </p>
         )}
         {project.registry_drift ? (
           <p className="flex flex-wrap items-baseline gap-2 text-sm">
@@ -194,55 +187,93 @@ function ProjectCard({ project }: { project: ProjectCard_ }) {
             <span className="text-muted-foreground">{project.integrity_error}</span>
           </p>
         ) : null}
-      </CardHeader>
-      {project.config === "OK" ? (
-        <CardContent className="flex flex-col gap-2">
-          {(project.flows ?? []).map((flow) => (
-            <SelectorRow
-              key={flow.flow_id}
-              project={project.name}
-              kind="f"
-              sel={flow.flow_id}
-              label={flow.selector_label}
-              bindingState={flow.binding_state}
-              boundAfterData={flow.bound_after_data}
-              title={flow.title}
-            />
-          ))}
-          {(project.unbound_selectors ?? []).map((unbound) => (
-            <SelectorRow
-              key={unbound.slug}
-              project={project.name}
-              kind="u"
-              sel={unbound.slug}
-              label={unbound.label}
-            />
-          ))}
-        </CardContent>
-      ) : null}
-    </Card>
+      </th>
+      <td className="px-4 py-3">
+        {ok ? (
+          <div className="flex flex-col gap-2">
+            {(project.flows ?? []).map((flow) => (
+              <SelectorRow
+                key={flow.flow_id}
+                project={project.name}
+                kind="f"
+                sel={flow.flow_id}
+                label={flow.selector_label}
+                bindingState={flow.binding_state}
+                boundAfterData={flow.bound_after_data}
+                title={flow.title}
+              />
+            ))}
+            {(project.unbound_selectors ?? []).map((unbound) => (
+              <SelectorRow
+                key={unbound.slug}
+                project={project.name}
+                kind="u"
+                sel={unbound.slug}
+                label={unbound.label}
+              />
+            ))}
+            {(project.flows ?? []).length + (project.unbound_selectors ?? []).length === 0 ? (
+              <span className="text-sm text-muted-foreground">no research yet</span>
+            ) : null}
+          </div>
+        ) : (
+          <span className="text-sm text-muted-foreground">—</span>
+        )}
+      </td>
+    </tr>
   );
 }
 
 export default function IndexPage() {
   const projects = useApi(() => api.projects(), []);
+  const [query, setQuery] = useState("");
+  // A client-side filter on the name only; the server's order is kept (rule 6).
+  const needle = query.trim().toLowerCase();
+  const shown = (projects.data?.projects ?? []).filter((project) =>
+    project.name.toLowerCase().includes(needle),
+  );
   return (
     <section className="flex flex-col gap-5">
       <header>
-        <h1 className="text-[22px] font-semibold">Projects</h1>
+        <h1 className="font-serif text-5xl leading-tight font-normal">Projects</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          One server, every project, all of it read-only. A round with candidates and no
-          flow is legacy: protocol not verified.
+          A round with candidates and no flow is legacy: protocol not verified.
         </p>
       </header>
+      <label className="flex max-w-md flex-col gap-1 text-sm">
+        <span className="font-medium">Search projects</span>
+        <input
+          type="search"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="project name"
+          className="min-h-11 rounded-lg border border-border bg-card px-3"
+        />
+      </label>
       {projects.pending ? (
         <Pending label="loading projects…" />
       ) : projects.error ? (
-        <ErrorState error={projects.error} />
+        <ErrorState error={projects.error} context="projects" />
+      ) : shown.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          {needle ? `No project name contains "${query.trim()}".` : "The server lists no project."}
+        </p>
       ) : (
-        projects.data?.projects.map((project) => (
-          <ProjectCard key={project.name} project={project} />
-        ))
+        <div className="overflow-x-auto rounded-2xl bg-card shadow-sm">
+          <table className="w-full min-w-[560px] text-sm">
+            <thead>
+              <tr className="text-left text-xs uppercase text-muted-foreground">
+                <th scope="col" className="px-4 py-3 font-medium">Project</th>
+                <th scope="col" className="px-4 py-3 font-medium">Research</th>
+              </tr>
+            </thead>
+            <tbody>
+              {shown.map((project) => (
+                <ProjectRow key={project.name} project={project} />
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </section>
   );
