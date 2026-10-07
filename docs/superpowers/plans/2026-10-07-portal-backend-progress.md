@@ -335,11 +335,12 @@ NOT DONE: (none)
 - [x] B4.3 CLI: `claimstone operator add ID --name` (getpass twice) and `operator disable ID`;
       `claimstone control` with `--projects/--store/--bind/--port/--allow-host` as the contract
       names them (files: `claimstone/cli.py`, `claimstone/control.py` (serve order))
-- [ ] B4.4 `.claimstone/` gitignored; `operator_version` registered in the instrument checker
+- [x] B4.4 `.claimstone/` gitignored; `operator_version` registered in the instrument checker
       and acknowledged by a dated design-record entry; `control_api.md` gains the decided
       session details (cookie name, error codes, payload shapes) (files: `.gitignore`,
       `tools/check_instrument_versions.py`, `docs/DESIGN_DECISIONS.md`,
-      `docs/contracts/control_api.md`)
+      `docs/contracts/control_api.md`, `web/tests/fixtures/admin.json` + `meta.json` —
+      regenerated, they embed the instrument list, exactly as B3 recorded)
 - [ ] B4.5 tests: login and logout; wrong password; rate limit; CSRF missing or wrong; Origin
       missing or foreign; cookie flags; non-loopback refused; every POST route in the registry
       refuses an anonymous request, covering routes added by later steps automatically

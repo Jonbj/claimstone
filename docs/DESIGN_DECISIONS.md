@@ -4094,3 +4094,28 @@ Both parameters are required with no default, so no caller can omit them silentl
 Rows written before the version existed are read as version 1, `signer_auth:
 "cli-declared"`, in memory only — historical rows are never rewritten. The read API's
 verdict object exposes `signer_auth`; `adjudicated_by` keeps its meaning.
+
+## D99 — Operator sessions are installation state, versioned like an instrument (2026-10-07)
+
+B4 of the portal-backend spec (`2026-10-07-portal-backend-spec.md`, decided by D89)
+builds `claimstone control` and the operator accounts its sessions authenticate. The
+record type this introduces is `operators.jsonl`, an installation-level append-only
+ledger under `CLAIMSTONE_STATE_DIR` (default `.claimstone/`, gitignored) — deliberately
+not per project: who may write is a property of the installation, not of a corpus.
+`operator_version 1` rows carry an id, a display name, the scrypt parameters (n=2^15,
+r=8, p=1), a random salt and the hash; a disable row removes the id. Passwords are
+compared constant-time, one sentence answers an unknown id and a wrong password alike,
+and no password, hash or salt is ever printed, returned or logged — the login route's
+answer is yes or no.
+
+Sessions are in-memory only, expiring after 12 hours of inactivity, so a restart logs
+everyone out by construction and no token ever touches a disk. The session cookie
+(`claimstone_control`) is HttpOnly, SameSite=Strict, Path=/, and Secure on a TLS
+connection or behind a proxy that says `X-Forwarded-Proto: https` — honoring that
+header can only add the flag, never remove it. Five failed logins per id per 15
+minutes answer 429; a success does not clear the window, because the count is of
+failures. A non-loopback bind is refused outright unless `--allow-host` names the
+authority in front: unlike the read-only servers, this process writes, so it does not
+proceed on a warning. The route registry the anonymous-access test enumerates is the
+contract that every POST route later steps add is covered the moment it is registered.
+

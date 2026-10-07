@@ -44,18 +44,31 @@ Operators are declared on the CLI, not the web. `claimstone operator add ID --na
 "Display name"` prompts for a password twice (`getpass`) and appends to `operators.jsonl`
 (in `CLAIMSTONE_STATE_DIR`, default `.claimstone/`, gitignored):
 `{operator_version, id, name, scrypt params, salt, hash, created_at}`, `hashlib.scrypt`
-with n=2^15, r=8, p=1. `operator disable ID` appends a disabling row. No password ever
-appears in arguments, logs or responses.
+with n=2^15, r=8, p=1. `operator disable ID` appends a disabling row; the latest row per
+id is the id's state, and an id with any row at all is refused by `add` — re-enabling is
+a deliberate act this ledger does not silently perform. No password ever appears in
+arguments, logs or responses.
 
 - `POST /control/v1/session` with `{id, password}`: constant-time comparison; 5 failures
-  per id per 15 minutes → 429. On success a 32-byte random token in an HttpOnly,
-  SameSite=Strict, Path=/ cookie (`Secure` behind HTTPS), and a separate CSRF token in the
-  JSON body.
+  per id per 15 minutes → 429 (a success does not clear the window — the count is of
+  failures); an unknown id and a wrong password answer the same 401 sentence. On success
+  a 32-byte random token in the `claimstone_control` cookie — HttpOnly, SameSite=Strict,
+  Path=/, `Secure` on TLS or behind `X-Forwarded-Proto: https` — and the response body
+  `{"operator": {"id", "name"}, "csrf_token"}`.
 - Sessions live in server memory and expire after 12 hours of inactivity; a restart logs
   everyone out.
-- `DELETE` is not used: logout is `POST /control/v1/session/end`.
+- `DELETE` is not used: logout is `POST /control/v1/session/end`, which requires the
+  session and the CSRF header, accepts an empty body, and expires the cookie.
 - `GET /control/v1/session` returns `{operator: {id, name}, csrf_token}` or 401.
+- Every POST — the login included — requires a present, same-origin `Origin` header.
 - Credential writes (B11) require the password again in the request.
+
+The envelope codes B4 answers: `UNAUTHORIZED` (401), `NO_ORIGIN`/`CROSS_ORIGIN`/`CSRF`
+(403), `NOT_FOUND` (404), `METHOD_NOT_ALLOWED` (405), `BAD_REQUEST` (400), `TOO_LARGE`
+(413), `VALIDATION` (422), `RATE_LIMITED` (429), `MISDIRECTED` (421). Every POST route
+the server will ever answer is registered in `control.py`'s `ROUTES`, and the
+anonymous-access test enumerates that registry, so a route added by a later step is
+covered the moment it is registered.
 
 ## Rules for every mutating route
 

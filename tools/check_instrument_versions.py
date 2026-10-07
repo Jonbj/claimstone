@@ -62,6 +62,9 @@ INSTRUMENTS = (
     # The verdict's provenance is part of what was signed: two rows that differ only in signer
     # class are not the same kind of record, so the adjudication row is versioned like the rest.
     ("claimstone/synthesize.py", "ADJUDICATION_VERSION", "adjudication_version"),
+    # The operator ledger decides who may write through the control API: a row shape change
+    # is a change in who can authenticate, so it is versioned like any instrument (D99).
+    ("claimstone/operators.py", "OPERATOR_VERSION", "operator_version"),
 )
 
 # The parser is an instrument too, and a string rather than a number. Measured: lfoppiano/grobid

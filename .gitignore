@@ -7,6 +7,10 @@ __pycache__/
 *.pyc
 .env
 
+# Installation-level state for the control API (operator accounts, D99): credentials
+# live here hashed, and an installation's account list is not a repository artifact.
+.claimstone/
+
 # Project instances may encode a consuming system's internal design. Only the worked
 # example ships; real instances are kept out of a public repository deliberately.
 projects/*

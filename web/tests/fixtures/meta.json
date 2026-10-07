@@ -23,6 +23,7 @@
   "jats_parser_version": 2,
   "model_report_version": 2,
   "operations_version": 3,
+  "operator_version": 1,
   "population_version": 1,
   "portal_api_version": 1,
   "profile_version": 5,
