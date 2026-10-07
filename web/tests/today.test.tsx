@@ -32,14 +32,15 @@ const TODAY = {
   ],
 };
 
-function mount(signedIn: boolean, onSeen?: () => Promise<Response>) {
+function mount(signedIn: boolean, onSeen?: () => Promise<Response>, today: unknown = TODAY,
+               todayStatus = 200) {
   vi.stubGlobal("fetch", (url: string, init?: RequestInit) => {
     if (url.startsWith("/control/v1/session") && !url.includes("end")) {
       return signedIn
         ? json(200, { operator: { id: "o1", name: "Ada" }, csrf_token: "t" })
         : json(401, { error: { code: "UNAUTHORIZED", message: "no session" } });
     }
-    if (url.startsWith("/control/v1/today")) return json(200, TODAY);
+    if (url.startsWith("/control/v1/today")) return json(todayStatus, today);
     if (url.startsWith("/control/v1/seen") && init?.method === "POST") {
       return onSeen ? onSeen() : json(201, { seen: {} });
     }
@@ -88,5 +89,37 @@ describe("F2: Today", () => {
     mount(false);
     expect(await screen.findByText(/Today needs a session/)).toBeTruthy();
     expect(screen.getByRole("link", { name: "Projects" }).getAttribute("href")).toBe("/projects");
+  });
+
+  it("renders the newest rows as labelled fields, never as JSON", async () => {
+    mount(true, undefined, {
+      operator: "o1",
+      projects: [{
+        project: "alpha", since: "2026-10-01T00:00:00", first_visit: false,
+        changed: { counts: { acquire: 1 }, undated_rows: 0, newest: [
+          { when: "2026-10-06T08:00:00", stage: "acquire",
+            row: { source_id: "S-9", acquired: false, failure_class: "HTTP_403", note: "not named" } },
+          { when: "2026-10-06T07:00:00", stage: "discover", row: { nothing: "known" } },
+        ] },
+        needs_you: { required: [], optional: [] }, continues_without_you: [],
+      }],
+    });
+    const failure = await screen.findByText("HTTP_403");
+    const line = failure.closest("li")!.textContent!;
+    expect(line).toContain("source S-9");
+    expect(line).toContain("acquired false");
+    expect(line).toContain("failure class HTTP_403");
+    expect(line).not.toContain("{");
+    expect(line).not.toContain("not named");
+    expect(screen.getByText("no field the portal names")).toBeTruthy();
+  });
+
+  it("names a failed Today read and says when no project is listed", async () => {
+    mount(true, undefined, { error: { code: "INTERNAL", message: "today unreadable" } }, 500);
+    expect(await screen.findByText("INTERNAL")).toBeTruthy();
+    expect(screen.getByText("today unreadable")).toBeTruthy();
+    cleanup();
+    mount(true, undefined, { operator: "o1", projects: [] });
+    expect(await screen.findByText("The server lists no project.")).toBeTruthy();
   });
 });

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router";
 import Chip from "@/components/Chip";
+import RowFields from "@/components/RowFields";
 import ErrorState from "@/components/ErrorState";
 import Pending from "@/components/Pending";
 import { useApi } from "@/hooks/useApi";
@@ -196,9 +197,7 @@ function ProjectBlock({ entry, onSeen }: { entry: TodayProject; onSeen: () => vo
                 <li key={i} className="flex flex-wrap items-baseline gap-2 text-xs">
                   <span className="font-mono text-muted-foreground">{row.when}</span>
                   <span>{row.stage}</span>
-                  <span className="break-all text-muted-foreground">
-                    {JSON.stringify(row.row).slice(0, 160)}
-                  </span>
+                  <RowFields row={row.row} />
                 </li>
               ))}
             </ul>
