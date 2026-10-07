@@ -299,6 +299,47 @@ def test_body_rules(tmp_path, state):
         assert bare[0] == 200
 
 
+def test_negative_content_length_is_refused_without_reading_the_stream(tmp_path, state):
+    """`rfile.read(-1)` would read until the client closes: unbounded, past MAX_BODY."""
+    import socket
+
+    with _served(tmp_path, state) as (httpd, base):
+        port = httpd.server_address[1]
+        with socket.create_connection(("127.0.0.1", port), timeout=5) as sock:
+            sock.sendall(
+                b"POST /control/v1/session HTTP/1.1\r\n"
+                b"Host: 127.0.0.1:" + str(port).encode() + b"\r\n"
+                b"Origin: " + base.encode() + b"\r\n"
+                b"Content-Type: application/json\r\n"
+                b"Content-Length: -1\r\n\r\n")
+            # The client keeps the connection open: an answer proves nothing was read to EOF.
+            head = sock.recv(4096)
+        assert head.startswith(b"HTTP/1.0 400") or head.startswith(b"HTTP/1.1 400")
+
+
+def test_unknown_id_pays_for_one_scrypt_like_a_known_id(tmp_path, state, monkeypatch):
+    """No timing oracle on which ids exist: both paths derive exactly once."""
+    calls = []
+    real = operators.verify
+    monkeypatch.setattr(operators, "verify",
+                        lambda row, password: calls.append(row) or real(row, password))
+    with _served(tmp_path, state) as (_httpd, base):
+        assert _login(base, operator_id="nobody", password="x")[0] == 401
+        assert _login(base, operator_id="op1", password="wrong")[0] == 401
+    assert len(calls) == 2
+    assert calls[0] is operators.DUMMY_ROW
+
+
+def test_operator_ledger_is_owner_only(tmp_path):
+    import os
+    import stat
+
+    directory = tmp_path / "fresh"
+    operators.add_operator(directory, "a", "Alpha", "pw")
+    assert stat.S_IMODE(os.stat(directory / operators.LEDGER).st_mode) == 0o600
+    assert stat.S_IMODE(os.stat(directory).st_mode) == 0o700
+
+
 # --- routing edges ---------------------------------------------------------------------------------
 
 

@@ -325,6 +325,9 @@ class _Handler(BaseHandler):
             size = int(length) if length is not None else 0
         except ValueError:
             raise ControlError(400, "BAD_REQUEST", "malformed Content-Length") from None
+        if size < 0:
+            # rfile.read(-n) reads to end of stream: unbounded, and past the size limit.
+            raise ControlError(400, "BAD_REQUEST", "malformed Content-Length") from None
         if size > MAX_BODY:
             raise ControlError(413, "TOO_LARGE",
                                f"body over {MAX_BODY} bytes: {size}")
@@ -384,7 +387,10 @@ class _Handler(BaseHandler):
             raise ControlError(429, "RATE_LIMITED",
                                "too many failed logins for this id; wait 15 minutes")
         row = operators.load(self.state_dir).get(operator_id)
-        if row is None or not operators.verify(row, password):
+        # An unknown id still pays for one scrypt derivation, so response time does not
+        # reveal which ids exist.
+        verified = operators.verify(row if row is not None else operators.DUMMY_ROW, password)
+        if row is None or not verified:
             # One sentence for an unknown id and a wrong password alike: which of the
             # two failed is not the caller's business.
             self.login_budget.record_failure(operator_id)

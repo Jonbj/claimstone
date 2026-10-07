@@ -400,3 +400,16 @@ naming follows the contract's own text over `api`'s, recorded as a decision abov
 
 NOT DONE: (none)
 
+
+### B4 review — 2026-10-07 (reviewer session)
+
+Accepted, with three defects fixed on the main line and pinned by tests that fail against `8d30d93`
+(`3 failed` with the pre-fix `control.py`/`operators.py`, `22 passed` after):
+- **Negative `Content-Length`** passed the size check and reached `rfile.read(-1)`, which reads to the
+  end of the stream: unbounded, past `MAX_BODY`, and a held connection blocks a worker thread. Now 400.
+- **Login timing oracle:** an unknown id returned before any scrypt derivation, so response time told
+  which ids exist. An unknown id now verifies against a fixed `operators.DUMMY_ROW`; both paths derive
+  exactly once.
+- **Ledger permissions:** `operators.jsonl` holds offline-attackable password hashes and was created
+  under the default umask. It is now `0600` in a `0700` directory, and an older file is tightened on
+  the next append.

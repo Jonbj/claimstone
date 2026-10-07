@@ -64,9 +64,12 @@ def _rows(directory: pathlib.Path) -> list[dict[str, Any]]:
 
 
 def _append(directory: pathlib.Path, row: dict[str, Any]) -> None:
+    """Owner-only: the ledger holds password hashes, which are offline-attackable."""
     path = pathlib.Path(directory) / LEDGER
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("a", encoding="utf-8") as handle:
+    path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    fd = os.open(path, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o600)
+    os.chmod(path, 0o600)  # a file created earlier under a looser umask is tightened too
+    with os.fdopen(fd, "a", encoding="utf-8") as handle:
         handle.write(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n")
 
 
@@ -140,6 +143,12 @@ def load(directory: str | pathlib.Path) -> dict[str, dict[str, Any]]:
         elif "hash" in row:
             active[operator_id] = row
     return active
+
+
+# Verified against when the id is unknown, so a login costs one scrypt either way. No
+# password hashes to this value: the salt and hash are fixed, not derived from any input.
+DUMMY_ROW: dict[str, Any] = {"salt": "00" * SALT_LENGTH, "hash": "00" * KEY_LENGTH,
+                             "scrypt": dict(SCRYPT)}
 
 
 def verify(row: dict[str, Any], password: str) -> bool:
