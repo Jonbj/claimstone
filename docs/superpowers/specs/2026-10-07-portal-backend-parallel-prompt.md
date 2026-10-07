@@ -1,8 +1,12 @@
-You are implementing **steps B2 and B6** of the portal backend, in a **parallel** session. Another session
+You are implementing **step B6** of the portal backend, in a **parallel** session. Another session
 builds the other steps on `research-portal` at the same time.
 
-**STOP RULE: do exactly one step per session: B2 first, then B6 in the next session. When both are DONE,
-reply "parallel steps complete" and do nothing else.** Do not ask questions. When something is unspecified,
+**Amendment (2026-10-07, operator):** B2 was implemented on the main line by the scheduler session
+(writer lock in `store.py`, persistent host budget and URL guard in `net.py`, `FETCH_VERSION` 5 —
+committed on `research-portal`). **B2 is no longer this session's work. Do not redo it.**
+
+**STOP RULE: do exactly one step per session: B6 only. When it is DONE,
+reply "parallel step complete" and do nothing else.** Do not ask questions. When something is unspecified,
 make the smallest decision that keeps every existing test passing and the seven invariants in `CLAUDE.md`
 intact. Record it in the log.
 
@@ -27,12 +31,10 @@ All of the following are in the worktree:
 
 | step | spec | done when |
 |---|---|---|
-| **B2** | host failure budget rebuilt from `requests.jsonl`; `claimstone/urlguard.py`; manual redirects checked on every hop | spec B2 tests pass; checks pass |
+| ~~B2~~ | done on the main line (see amendment above) — not this session's work | — |
 | **B6** | `profile-diff` route in the read API; `api_schema.py`; regenerated schema and fixtures | spec B6 tests pass; checks pass |
 
 Scope limits, because the other session edits other files at the same time:
-- B2 touches only `claimstone/net.py`, the new `claimstone/urlguard.py`, their tests and
-  `docs/contracts/requests.md` if needed.
 - B6 touches only `claimstone/api.py`, `claimstone/api_schema.py`, the generated schema and fixtures, and
   their tests.
 - Do not edit `cli.py`, `synthesize.py`, `acquire.py` or `DESIGN_DECISIONS.md`.
@@ -42,7 +44,7 @@ Scope limits, because the other session edits other files at the same time:
 
 1. `cd /home/stefano/Documents/Projects/claimstone-parallel` and check the branch.
 2. Read `CLAUDE.md` and the progress log. If the log does not exist, create it:
-   - add a table with B2 and B6 `TODO`;
+   - add a table with B6 `TODO` (B2 is done on the main line);
    - run the checks and record their output as the baseline;
    - commit it alone.
 3. `git status --short`: uncommitted files here can only be from an interrupted session of yours. Finish or
