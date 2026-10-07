@@ -31,7 +31,7 @@ $ .venv/bin/python tools/check_instrument_versions.py
 | **B4** | `claimstone control`, `claimstone operator add/disable`, sessions, CSRF, rate limit | spec B4 tests pass, including the "every POST refuses anonymous" test | DONE |
 | **B5** | Web signing and drafts | spec B5 tests pass | TODO |
 | **B6** | Profile diff route in the read API; schema and fixtures | spec B6 tests pass | DONE (portal-backend-parallel, merged `3045aa2` 2026-10-07; decisions in the parallel log) |
-| **BR** | Read API: stored-profile list of one question; exports list of one flow (B10's read route) | as `2026-10-07-portal-backend-reads-prompt.md` | PARALLEL (portal-backend-reads) |
+| **BR** | Read API: stored-profile list of one question; exports list of one flow (B10's read route) | as `2026-10-07-portal-backend-reads-prompt.md` | DONE (portal-backend-reads, merged 2026-10-07; decisions in the reads log) |
 | **B7a** | Intake of DOIs, URLs and references; cohort routing; single explicit fetch | spec B7a tests pass | TODO |
 | **B7b** | File intake, quarantine, engine gates, `operator-supplied` acquisition row, `supplied_copies` policy (F14) | spec B7b tests pass; existing admissibility tests unchanged and passing | TODO |
 | **B8** | Identity resolution, retry-campaign record and preview, purchase offers and stages, defer/decline, F13 ordering test | spec B8 tests pass | TODO |
@@ -413,3 +413,11 @@ Accepted, with three defects fixed on the main line and pinned by tests that fai
 - **Ledger permissions:** `operators.jsonl` holds offline-attackable password hashes and was created
   under the default umask. It is now `0600` in a `0700` directory, and an older file is tightened on
   the next append.
+
+### BR merge — 2026-10-07 (reviewer session)
+
+Merged `portal-backend-reads` with `--no-ff`. `control_api.md` merged without conflict. Checks at the merge:
+`1310 passed, 7 skipped`; validate 6× OK; `31 instrument version(s)`; fixtures and `gen:types`
+regenerate with no diff; web `72 passed`, build and check-csp ok. Reviewed: scope rule is
+`synthesize._scope` (same as `latest_profiles`); no `path` leaves the process; nothing verifies
+on GET. From here the backend steps run on the main line only, one at a time (no parallel worktree).
