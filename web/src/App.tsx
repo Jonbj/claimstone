@@ -11,6 +11,7 @@ import NotFoundPage from "@/pages/NotFoundPage";
 import ProjectPage from "@/pages/ProjectPage";
 import QuestionPage from "@/pages/QuestionPage";
 import SourcePage from "@/pages/SourcePage";
+import TodayPage from "@/pages/TodayPage";
 
 // §8.2: client-side routing with `createBrowserRouter`; nginx `try_files … /index.html`.
 // `f`/`u` are a prop so no page ever guesses the selector kind; the question, claim and
@@ -26,9 +27,8 @@ const router = createBrowserRouter([
       </SessionProvider>
     ),
     children: [
-      // F1: `/` is still the projects index; Today replaces it in F2. `/projects` is the
-      // sidebar's Projects link.
-      { index: true, element: <IndexPage /> },
+      // F2: Today is `/`; `/projects` is the projects index.
+      { index: true, element: <TodayPage /> },
       { path: "projects", element: <IndexPage /> },
       { path: "login", element: <LoginPage /> },
       { path: "inbox", element: <InboxPage /> },

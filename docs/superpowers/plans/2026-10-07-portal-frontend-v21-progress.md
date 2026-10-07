@@ -83,7 +83,7 @@ continue here.
 
 ## F2 — Today, Projects, Project (IN PROGRESS)
 
-- [ ] F2.1 Today page at `/` (`GET /control/v1/today`): per project since/first visit, changed counts per stage with the undated count and newest rows, Needs you (required, then optional) with links, Continues without you, project `error`, Mark as seen (disabled while running; reloads Today). Signed out: explains the need for a session and links to Projects. `/` routes to Today; `/projects` stays the index.
+- [x] F2.1 Today page at `/` (`GET /control/v1/today`): per project since/first visit, changed counts per stage with the undated count and newest rows, Needs you (required, then optional) with links, Continues without you, project `error`, Mark as seen (disabled while running; reloads Today). Signed out: explains the need for a session and links to Projects. `/` routes to Today; `/projects` stays the index.
   Files: `web/src/pages/TodayPage.tsx`, `web/src/App.tsx`, `web/tests/today.test.tsx`.
 - [ ] F2.2 Projects table (`/projects`): the design's table with a client-side name filter, one row per project, its flows and legacy selectors, state words from the API, lazy per-selector summaries kept.
   Files: `web/src/pages/IndexPage.tsx` (edited in place; no rename, so imports stay), `web/tests/projects.test.tsx`.
