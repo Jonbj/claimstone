@@ -4078,3 +4078,19 @@ plan hashes the prior query row; a changed outcome invalidates it. Tests
 exercise a successful named retry with fake transport and refusal when an
 earlier physical request exists. This rule does not turn the sandbox failure
 into an empty literature result and does not authorize the retry by itself.
+
+## D98 — A verdict's provenance is a recorded field, not free text (2026-10-07)
+
+`adjudication_version 2` adds `signer_auth` and `actor` to every new
+`adjudications.jsonl` row (F16). The review that produced the portal plan found the
+defect this closes: `adjudicated_by` is free text, so nothing in a signed verdict can
+distinguish a person signing from the CLI — where the name is declared, not
+authenticated — from a signature written by a portal operator session. Once B4 exists,
+both will write verdicts; the row must say which produced it, or the one channel an
+auditor has is the signer's own word. `signer_auth` is one of `cli-declared` or
+`portal-session`; `actor` is the portal operator id and `null` from the CLI; the class
+and the actor must agree, and a mismatched pairing is refused rather than recorded.
+Both parameters are required with no default, so no caller can omit them silently.
+Rows written before the version existed are read as version 1, `signer_auth:
+"cli-declared"`, in memory only — historical rows are never rewritten. The read API's
+verdict object exposes `signer_auth`; `adjudicated_by` keeps its meaning.

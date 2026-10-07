@@ -924,6 +924,7 @@ def _adjudicate(args: argparse.Namespace) -> int:
         row = synthesize.adjudicate(store, args.question, project=project, verdict=args.verdict,
                                     round_name=args.round, manifest_only=args.manifest_only,
                                     rationale=rationale, by=args.by,
+                                    signer_auth="cli-declared", actor=None,
                                     profile_sha256=args.profile_sha256 or "")
     except (synthesize.NotAdmissible, synthesize.Provisional, synthesize.StaleProfile, ValueError, KeyError) as exc:
         print(str(exc).strip("'"), file=sys.stderr)

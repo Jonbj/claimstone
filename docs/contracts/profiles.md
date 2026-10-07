@@ -39,9 +39,20 @@ completeness; versions 1–4 require rebuilding and reading again under version 
 
 ## Adjudication
 
-The row contains `question_id`, `round`, `manifest_only`, `verdict`, `rationale`, `profile_sha256`,
-`decision_contract_version`, `registry_version`, `registry_sha256`, `adjudicated_by`, `adjudicated_at`.
+The row contains `question_id`, `round`, `manifest_only`, `adjudication_version`, `signer_auth`,
+`actor`, `verdict`, `rationale`, `profile_sha256`, `decision_contract_version`, `registry_version`,
+`registry_sha256`, `adjudicated_by`, `adjudicated_at`.
 The five verdicts and minimum rationale length retain their existing meaning.
+
+`adjudication_version 2` (D98) adds the signature's provenance as recorded fact (F16):
+`signer_auth` is `"cli-declared"` from the CLI or `"portal-session"` from the control server, and
+`actor` is the portal operator id, `null` from the CLI. The class and the actor must agree — the
+engine refuses a cli-declared row carrying an actor and a portal-session row carrying none.
+`adjudicated_by` keeps its meaning: the CLI's free text, or the operator's display name.
+Both parameters are required with no default, so no caller can omit them silently.
+Rows written before `adjudication_version` existed have none; they are **read** as version 1 with
+`signer_auth: "cli-declared"` and `actor: null`, in memory only — historical rows are never
+rewritten.
 
 The shown hash is mandatory. Before appending, the engine recomputes a profile under the current project
 and the exact same selector, checks admission, finality and equality with the saved and shown hashes.

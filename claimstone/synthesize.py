@@ -46,6 +46,13 @@ MIN_RATIONALE_CHARS = 120
 
 PROFILE_VERSION = 5
 
+# F16: a verdict's provenance is a recorded fact, not free text. `adjudicated_by` stays the
+# human-readable name; the class of the signature and the operator id are machine-checkable,
+# and the two travel with the row so the CLI's word about itself can never impersonate a
+# portal session's (D98).
+ADJUDICATION_VERSION = 2
+SIGNER_AUTHS = ("cli-declared", "portal-session")
+
 PROFILES = "profiles.jsonl"
 ADJUDICATIONS = "adjudications.jsonl"
 
@@ -166,8 +173,24 @@ def latest_profiles(store: Store, *, round_name: str | None = None,
 
 def adjudications(store: Store, *, round_name: str | None = None,
                   manifest_only: bool = False) -> dict[str, dict[str, Any]]:
-    return {str(row["question_id"]): dict(row) for row in store.read(ADJUDICATIONS)
-            if _scope(row, round_name, manifest_only)}
+    """Every recorded adjudication in scope, old rows read as what they were.
+
+    A row written before `adjudication_version` existed has no version, no signer class and
+    no actor. It is read as version 1 with `signer_auth: "cli-declared"` — the class every
+    pre-B3 signature was — in memory only. The ledger's bytes are never rewritten: what was
+    signed stays exactly as it was signed.
+    """
+    rows: dict[str, dict[str, Any]] = {}
+    for row in store.read(ADJUDICATIONS):
+        if not _scope(row, round_name, manifest_only):
+            continue
+        row = dict(row)
+        if row.get("adjudication_version") is None:
+            row["adjudication_version"] = 1
+            row.setdefault("signer_auth", "cli-declared")
+            row.setdefault("actor", None)
+        rows[str(row["question_id"])] = row
+    return rows
 
 
 def adjudicate(
@@ -180,9 +203,18 @@ def adjudicate(
     verdict: str,
     rationale: str,
     by: str,
+    signer_auth: str,
+    actor: str | None,
     profile_sha256: str = "",
 ) -> dict[str, Any]:
     """Record one person's judgement about one profile. The only verdict-producing call in the project.
+
+    `signer_auth` and `actor` are required with no default (F16): a caller cannot record a
+    signature without saying which class of signer produced it, and the two travel with the row.
+    The CLI declares `cli-declared` with no actor; the control server (B4) will record
+    `portal-session` with the operator id that held the session. The class and the actor must
+    agree — a CLI signature claiming an operator id, or a portal signature with none, is a
+    row whose provenance is a lie, and it is refused rather than recorded.
 
     The whole transaction — read the stored profile, compare it against the live preview, append
     the signature — holds the project writer lock (F5): a synthesize racing this call either
@@ -194,6 +226,16 @@ def adjudicate(
     """
     if verdict not in VERDICTS:
         raise ValueError(f"{verdict!r} is not one of {list(VERDICTS)}")
+    if signer_auth not in SIGNER_AUTHS:
+        raise ValueError(f"{signer_auth!r} is not one of {list(SIGNER_AUTHS)}")
+    if signer_auth == "cli-declared":
+        if actor is not None:
+            raise ValueError(
+                "a cli-declared signature carries no operator id: the signer class and the "
+                "actor are one fact, recorded together or refused together")
+    elif not actor:
+        raise ValueError(
+            "a portal-session signature requires the operator id that held the session")
     with store.writer_lock():
         profiles = latest_profiles(store, round_name=round_name, manifest_only=manifest_only)
         profile = profiles.get(str(question_id))
@@ -226,6 +268,9 @@ def adjudicate(
             "question_id": str(question_id),
             "round": round_name,
             "manifest_only": manifest_only,
+            "adjudication_version": ADJUDICATION_VERSION,
+            "signer_auth": signer_auth,
+            "actor": actor,
             "verdict": verdict,
             "rationale": text,
             # What makes this auditable: if the evidence changes, the judgement is stale and the report says

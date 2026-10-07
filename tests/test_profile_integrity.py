@@ -112,7 +112,7 @@ def test_cached_profile_cannot_be_signed_after_floor_failure(tmp_path):
     add_source(store, 'failed', 'one', acquired=False)
     with pytest.raises(synthesize.NotAdmissible):
         synthesize.adjudicate(store, 'H02', project=project, verdict='SUPPORTED', rationale=RATIONALE,
-                             by='synthetic operator', profile_sha256=held)
+                             by='synthetic operator', signer_auth='cli-declared', actor=None, profile_sha256=held)
     assert not list(store.read(synthesize.ADJUDICATIONS))
 
 
@@ -122,9 +122,9 @@ def test_signature_requires_hash_and_detects_changes_without_rebuilding(tmp_path
     held = synthesize.latest_profiles(store)['H02']['profile_sha256']
     with pytest.raises(ValueError, match='hash'):
         synthesize.adjudicate(store, 'H02', project=project, verdict='SUPPORTED', rationale=RATIONALE,
-                             by='synthetic operator')
+                             by='synthetic operator', signer_auth='cli-declared', actor=None)
     synthesize.adjudicate(store, 'H02', project=project, verdict='SUPPORTED', rationale=RATIONALE,
-                         by='synthetic operator', profile_sha256=held)
+                         by='synthetic operator', signer_auth='cli-declared', actor=None, profile_sha256=held)
     store.append('claims.jsonl', claim(registry_version=project.registry_version))
     store.append('reviews.jsonl', review())
     shown = synthesize.verdicts(store, project=project)
@@ -132,7 +132,7 @@ def test_signature_requires_hash_and_detects_changes_without_rebuilding(tmp_path
     assert shown['rows'][0]['profile']['profile_sha256'] != held
     with pytest.raises(synthesize.StaleProfile):
         synthesize.adjudicate(store, 'H02', project=project, verdict='SUPPORTED', rationale=RATIONALE,
-                             by='synthetic operator', profile_sha256=held)
+                             by='synthetic operator', signer_auth='cli-declared', actor=None, profile_sha256=held)
 
 
 def test_reopening_a_previously_recorded_registry_is_still_a_rollback(tmp_path):
@@ -201,7 +201,7 @@ def test_verdict_display_marks_floor_failure_stale_without_rebuild(tmp_path):
     project, store = corpus(tmp_path)
     synthesize.build(project, store)
     synthesize.adjudicate(store, 'H02', project=project, verdict='SUPPORTED', rationale=RATIONALE,
-                         by='synthetic operator', profile_sha256=synthesize.latest_profiles(store)['H02']['profile_sha256'])
+                         by='synthetic operator', signer_auth='cli-declared', actor=None, profile_sha256=synthesize.latest_profiles(store)['H02']['profile_sha256'])
     add_source(store, 'failed', 'one', acquired=False)
     result = synthesize.verdicts(store, project=project)
     assert result['adjudicated'] == 0
@@ -242,7 +242,7 @@ def test_a_class_floor_flip_makes_a_signed_verdict_stale_at_unchanged_counts(tmp
     assert admissibility.admit(project, store)['status'] == admissibility.OK
     synthesize.build(project, store)
     synthesize.adjudicate(store, 'H02', project=project, verdict='SUPPORTED', rationale=RATIONALE,
-                         by='synthetic operator',
+                         by='synthetic operator', signer_auth='cli-declared', actor=None,
                          profile_sha256=synthesize.latest_profiles(store)['H02']['profile_sha256'])
     # The reclassify re-reads `assign_when` and the paywalled vendor page is a refereed one.
     store.append('candidates.jsonl', {'candidate_key': 'IND004', 'source_id': 'IND004',
@@ -271,7 +271,7 @@ def test_signatures_are_separate_per_scope(tmp_path):
     synthesize.build(project, store, round_name='one')
     held = synthesize.latest_profiles(store, round_name='one')['H02']['profile_sha256']
     synthesize.adjudicate(store, 'H02', project=project, round_name='one', verdict='SUPPORTED',
-                         rationale=RATIONALE, by='synthetic operator', profile_sha256=held)
+                         rationale=RATIONALE, by='synthetic operator', signer_auth='cli-declared', actor=None, profile_sha256=held)
     synthesize.build(project, store)
     assert synthesize.verdicts(store, project=project)['adjudicated'] == 0
     assert synthesize.verdicts(store, project=project, round_name='one')['adjudicated'] == 1

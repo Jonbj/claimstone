@@ -1563,11 +1563,20 @@
     "verdict": {
      "additionalProperties": false,
      "properties": {
+      "actor": {
+       "type": [
+        "string",
+        "null"
+       ]
+      },
       "adjudicated_at": {
        "type": "string"
       },
       "adjudicated_by": {
        "type": "string"
+      },
+      "adjudication_version": {
+       "type": "integer"
       },
       "decision_contract_version": {
        "type": [
@@ -1605,6 +1614,13 @@
         "null"
        ]
       },
+      "signer_auth": {
+       "enum": [
+        "cli-declared",
+        "portal-session"
+       ],
+       "type": "string"
+      },
       "verdict": {
        "enum": [
         "SUPPORTED",
@@ -1620,6 +1636,9 @@
       "question_id",
       "round",
       "manifest_only",
+      "adjudication_version",
+      "signer_auth",
+      "actor",
       "verdict",
       "rationale",
       "profile_sha256",

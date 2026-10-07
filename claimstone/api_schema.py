@@ -30,6 +30,10 @@ API_VERSION = 1
 VERDICTS = ("SUPPORTED", "CONTRADICTED", "CONTESTED_IN_LITERATURE",
             "UNANSWERED_IN_LITERATURE", "NEVER_ASKED")
 
+# synthesize.SIGNER_AUTHS: the two classes a signature can come from (F16). Restated here
+# rather than imported, like every vocabulary above — the schema is the promise.
+SIGNER_AUTHS = ("cli-declared", "portal-session")
+
 # portal_state.CATEGORY_ORDER, the inbox card categories.
 CATEGORIES = ("INTEGRITY", "PROTOCOL", "ACQUISITION", "CLASSIFICATION", "NORMALIZE",
               "EXTRACT", "REVIEW", "ADJUDICATION", "ADVISORY")
@@ -434,15 +438,21 @@ QUESTION_DETAIL = _payload("question detail", {
     "verdict": {
         "type": ["object", "null"],
         # Every field of an adjudications.jsonl row (docs/contracts/profiles.md). Measured: a real
-        # signature carries all eleven, and listing six under additionalProperties: false made
-        # the first signed verdict fail the contract.
-        "required": ["question_id", "round", "manifest_only", "verdict", "rationale",
+        # signature carries all fourteen, and listing six under additionalProperties: false made
+        # the first signed verdict fail the contract. The three B3 fields are required because
+        # the read path normalizes old rows to version 1 — a served verdict always names its
+        # signer class (F16).
+        "required": ["question_id", "round", "manifest_only", "adjudication_version",
+                     "signer_auth", "actor", "verdict", "rationale",
                      "profile_sha256", "decision_contract_version", "registry_version",
                      "registry_sha256", "adjudicated_by", "adjudicated_at"],
         "properties": {
             "question_id": _STR,
             "round": _STR_OR_NULL,
             "manifest_only": _BOOL,
+            "adjudication_version": _INT,
+            "signer_auth": {"type": "string", "enum": list(SIGNER_AUTHS)},
+            "actor": _STR_OR_NULL,
             "verdict": {"type": "string", "enum": list(VERDICTS)},
             "rationale": _STR,
             "profile_sha256": _STR,

@@ -107,7 +107,8 @@ def test_adjudicate_holds_the_lock_across_the_check_and_the_signature(tmp_path, 
 
     monkeypatch.setattr(synthesize, "preview", watched_preview)
     synthesize.adjudicate(store, "H02", project=project, verdict="SUPPORTED",
-                          rationale=RATIONALE, by="an operator", profile_sha256=profile_sha256)
+                          rationale=RATIONALE, by="an operator", signer_auth="cli-declared",
+                          actor=None, profile_sha256=profile_sha256)
     assert observed["lock_held"] is True
     # Blocked on the same hold adjudicate has not released yet — the third window is closed.
     assert observed["competing_append_finished"] is False

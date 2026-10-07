@@ -5,6 +5,7 @@
   "revision": null
  },
  "instruments": {
+  "adjudication_version": 2,
   "admission_version": 2,
   "annotation_version": 2,
   "audit_version": 2,

@@ -27,7 +27,7 @@ $ .venv/bin/python tools/check_instrument_versions.py
 | **B0** | Decision entry (next free `D` number at the time you write it) and `docs/contracts/control_api.md` | files exist; checks pass; no code changed | DONE |
 | **B1** | Project writer lock adopted by every writer; re-read under the lock in acquire and adjudicate (F5) | spec B1 tests pass; checks pass | DONE (main line, reviewer session 2026-10-07 — reduced scope per the triage; form deviation: no `locks.py`) |
 | **B2** | Host failure budget rebuilt from `requests.jsonl`; `urlguard.py`; manual redirects checked per hop (F6, F15) | spec B2 tests pass; checks pass | DONE (main line, scheduler session `67ca0a4` — substance in `store.py`/`net.py`, form deviation: no `locks.py`/`urlguard.py`) |
-| **B3** | `adjudication_version 2`, `signer_auth`, `actor`; required parameters; read API field, schema, fixtures (F16) | spec B3 tests pass; checks pass | IN PROGRESS |
+| **B3** | `adjudication_version 2`, `signer_auth`, `actor`; required parameters; read API field, schema, fixtures (F16) | spec B3 tests pass; checks pass | DONE (main line, reviewer session 2026-10-07) |
 | **B4** | `claimstone control`, `claimstone operator add/disable`, sessions, CSRF, rate limit | spec B4 tests pass, including the "every POST refuses anonymous" test | TODO |
 | **B5** | Web signing and drafts | spec B5 tests pass | TODO |
 | **B6** | Profile diff route in the read API; schema and fixtures | spec B6 tests pass | DONE (portal-backend-parallel, merged `3045aa2` 2026-10-07; decisions in the parallel log) |
@@ -228,7 +228,7 @@ Deviations:
 
 NOT DONE: (none)
 
-### B3 — IN PROGRESS (2026-10-07, reviewer session)
+### B3 — DONE (2026-10-07, reviewer session)
 
 Scope read against the main line first: `synthesize.adjudications()` is the single read
 path for adjudication rows (`verdicts`, the read API and the CLI all go through it), so
@@ -237,7 +237,7 @@ signed verdict (Q02's `verdict` is null, and every other `adjudicat*` match is t
 awaiting count), so the fixture regeneration should prove a no-op; that is recorded at
 B3.4 rather than assumed.
 
-- [ ] B3.1 Engine: `ADJUDICATION_VERSION = 2` and the two signer classes as constants;
+- [x] B3.1 Engine: `ADJUDICATION_VERSION = 2` and the two signer classes as constants;
       `adjudicate` gains required keyword-only `signer_auth` and `actor` (no default, so
       omitting them is a TypeError, never a silent row); `signer_auth` outside the two
       classes and a mismatched pairing (cli-declared with an actor, portal-session
@@ -245,26 +245,78 @@ B3.4 rather than assumed.
       `actor`; `adjudications()` reads rows without `adjudication_version` as version 1
       with `signer_auth: "cli-declared"` and `actor: null`, in memory, never rewriting
       the ledger (files: `claimstone/synthesize.py`)
-- [ ] B3.2 CLI: `_adjudicate` passes `signer_auth="cli-declared"`, `actor=None`; no new
+- [x] B3.2 CLI: `_adjudicate` passes `signer_auth="cli-declared"`, `actor=None`; no new
       flag — the spec assigns the CLI its one class (files: `claimstone/cli.py`)
-- [ ] B3.3 Read API: the `verdict` object in `api_schema.py` gains `adjudication_version`,
+- [x] B3.3 Read API: the `verdict` object in `api_schema.py` gains `adjudication_version`,
       `signer_auth`, `actor` — required, because the read path normalizes; regenerate
       `docs/contracts/portal-api.schema.json`; no `API_VERSION` bump: every served payload
       that exists today is byte-identical, the change is additive inside an object no
       committed fixture carries (files: `claimstone/api_schema.py`,
       `docs/contracts/portal-api.schema.json`)
-- [ ] B3.4 Fixtures: regenerate through `tools/build_portal_fixtures.py` and record the
+- [x] B3.4 Fixtures: regenerate through `tools/build_portal_fixtures.py` and record the
       outcome — expected no-op, since a null verdict is untouched by the new fields
       (files: `web/tests/fixtures/**` only if the regeneration differs)
-- [ ] B3.5 Contract and instrument: `docs/contracts/profiles.md` adjudication section
+- [x] B3.5 Contract and instrument: `docs/contracts/profiles.md` adjudication section
       gains the three fields and the v1 read rule; `ADJUDICATION_VERSION` registered in
       `tools/check_instrument_versions.py`; a dated D98 entry in `DESIGN_DECISIONS.md`
       acknowledges `adjudication_version 2` (files: `docs/contracts/profiles.md`,
       `tools/check_instrument_versions.py`, `docs/DESIGN_DECISIONS.md`)
-- [ ] B3.6 Tests: every `adjudicate` call site gains the two parameters
+- [x] B3.6 Tests: every `adjudicate` call site gains the two parameters
       (`test_adjudicate.py`, `test_profile_integrity.py`, `test_api_contract.py`,
       `test_b1_writer_lock.py`); new tests: an old row read as v1 with the ledger bytes
       untouched on disk; a CLI-written row says `cli-declared` with a null actor; the
       parameters are required; the pairing is refused; the read API payload carries
       `signer_auth` (files: `tests/test_adjudicate.py`, `tests/test_api_contract.py`,
       `tests/test_profile_integrity.py`, `tests/test_b1_writer_lock.py`)
+
+Checks (final, in the main checkout):
+
+```
+$ .venv/bin/pytest -q
+1279 passed, 7 skipped in 50.00s
+$ .venv/bin/claimstone validate --all-projects
+OK   alembic-s4: 16 topics, 28 questions (registry v3, frozen 2026-09-25), 6 source classes, acquisition floor 0.80 (v1), 25 manifest rows, registry 9c3f265069c6
+OK   alembic-s4-breve: 12 topics, 17 questions (registry v1, frozen 2026-09-28), 6 source classes, acquisition floor 0.80 (v1), 18 manifest rows, registry 3fdb5aea634d
+OK   alembic-s4-lungo: 12 topics, 18 questions (registry v1, frozen 2026-09-28), 6 source classes, acquisition floor 0.80 (v1), 19 manifest rows, registry ee040e0c3cfc
+OK   example-news-and-returns: 16 topics, 20 questions (registry v2, frozen 2026-09-25), 6 source classes, acquisition floor 0.80 (v1), registry 85e5fcc44ddc
+OK   pilot-screen-time: 4 topics, 8 questions (registry v1, frozen 2026-09-28), 6 source classes, acquisition floor 0.80 (v1), 28 manifest rows, registry 82007de2b569
+OK   pmc-screen-time: 4 topics, 8 questions (registry v1, frozen 2026-09-28), 6 source classes, acquisition floor 0.80 (v1), 40 manifest rows, registry 82007de2b569
+$ .venv/bin/python tools/check_instrument_versions.py
+30 instrument version(s) acknowledged in the design record
+$ cd web && npm run gen:types && npm run typecheck && npm test && npm run build
+Tests  55 passed (55)
+check-csp: ok (no inline script, no style attribute)
+```
+
+Verified inside the step, not assumed: the plan's fixture prediction was **half right**.
+Run *before* the instrument registration, the regeneration was a byte-identical no-op (every
+committed verdict is null). Run *after* it, `admin.json` and `meta.json` changed — the admin
+fixture embeds the instrument list, so `adjudication_version 2` belongs to it. The parity
+test caught the first attempt's stale fixtures (`test_committed_fixtures.py` failing on
+`admin.json`); both fixtures are regenerated and committed.
+
+Decisions (spec silent):
+- The class and the actor are **refused as a pair** when they disagree: a cli-declared row
+  carrying an operator id, or a portal-session row carrying none, is a row whose provenance
+  is a lie, and `adjudicate` raises before writing. The spec names the two values; the
+  enforcement is this step's decision.
+- Version-1 normalization lives in `adjudications()` and nowhere else: it is the single read
+  path (`verdicts`, the CLI display and the read API all pass through it), so every reader
+  agrees and no second normalization site can drift.
+- No `API_VERSION` bump: every payload served today is byte-identical (no committed fixture
+  carries a signed verdict), the change is additive inside an object no existing consumer
+  enumerates, and the schema's `verdict: null` shape is untouched. The three fields are
+  `required` because the read path guarantees them by normalization.
+- `SIGNER_AUTHS` is restated in `api_schema.py` rather than imported, like every vocabulary
+  there (`VERDICTS`, `CATEGORIES`, `BINDING_STATES`) — the schema file is the standalone
+  promise.
+- New test file `tests/test_cli_adjudicate.py` follows the house `test_cli_<command>.py`
+  naming; its second test (the CLI refusing a stale hash, exit 2, nothing written) was not
+  asked for — it pins that the CLI adds no rule of its own beside the engine's.
+- The v1-read test asserts the ledger's last line on disk still contains no `signer_auth`
+  and no `adjudication_version`: normalization is in memory, and the append-only rule is
+  part of what the test proves.
+
+Deviations: (none — B3 follows the spec's form as written)
+
+NOT DONE: (none)

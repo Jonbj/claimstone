@@ -413,8 +413,10 @@ export interface QuestionDetail {
   };
   text: string;
   verdict: {
+    actor: string | null;
     adjudicated_at: string;
     adjudicated_by: string;
+    adjudication_version: number;
     decision_contract_version: number | null;
     manifest_only: boolean;
     profile_sha256: string;
@@ -423,6 +425,7 @@ export interface QuestionDetail {
     registry_sha256: string | null;
     registry_version: number | null;
     round: string | null;
+    signer_auth: "cli-declared" | "portal-session";
     verdict: "SUPPORTED" | "CONTRADICTED" | "CONTESTED_IN_LITERATURE" | "UNANSWERED_IN_LITERATURE" | "NEVER_ASKED";
   } | null;
   verdict_stale: boolean;
