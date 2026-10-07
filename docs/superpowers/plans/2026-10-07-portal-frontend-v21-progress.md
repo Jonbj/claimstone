@@ -130,3 +130,8 @@ sentence (only the API's `since` string), the scheduler status in the rail, mone
 bar and "N decisions waiting" on the project header, flow start dates and "needs you / running" in the
 selector (only `binding_state` is returned). The Decisions route is not created here (F5, parallel branch).
 Not checked in a browser (no servers were started).
+
+### F2 review — 2026-10-07 (reviewer)
+Accepted. Nothing computed in the browser beyond list lengths; `continues_without_you: null` and `[]` are
+told apart. For F6's states pass: Today's "newest rows" render `JSON.stringify(row).slice(0,160)`; render
+the known fields (stage, state, kind, ids) as labelled text instead.
