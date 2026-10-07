@@ -5,7 +5,7 @@ Spec: `docs/superpowers/specs/2026-10-07-portal-frontend-v21-spec.md`. Branch `r
 | step | title | status |
 |---|---|---|
 | F1 | Foundations: shell v2, control client, session, login | DONE |
-| F2 | Today, Projects, Project | IN PROGRESS |
+| F2 | Today, Projects, Project | DONE |
 | F3 | The flow journey | TODO |
 | F4 | The reading desk | TODO |
 | F5 | Decisions and Add material | TODO |
@@ -81,11 +81,52 @@ fresh per call, so double submission is prevented in the UI by disabling a butto
 runs. F5 is delegated to z.ai on branch `portal-frontend-f5` (worktree `claimstone-f5`); F2–F4 and F6
 continue here.
 
-## F2 — Today, Projects, Project (IN PROGRESS)
+## F2 — Today, Projects, Project (DONE)
 
 - [x] F2.1 Today page at `/` (`GET /control/v1/today`): per project since/first visit, changed counts per stage with the undated count and newest rows, Needs you (required, then optional) with links, Continues without you, project `error`, Mark as seen (disabled while running; reloads Today). Signed out: explains the need for a session and links to Projects. `/` routes to Today; `/projects` stays the index.
   Files: `web/src/pages/TodayPage.tsx`, `web/src/App.tsx`, `web/tests/today.test.tsx`.
 - [x] F2.2 Projects table (`/projects`): the design's table with a client-side name filter, one row per project, its flows and legacy selectors, state words from the API, lazy per-selector summaries kept.
   Files: `web/src/pages/IndexPage.tsx` (edited in place; no rename, so imports stay), `web/tests/projects.test.tsx`.
-- [ ] F2.3 Project header (`/p/:project`): serif title, registry line, research selector (flows, then legacy rounds labelled "protocol not verified"), integrity, activity; each block fails alone.
+- [x] F2.3 Project header (`/p/:project`): serif title, registry line, research selector (flows, then legacy rounds labelled "protocol not verified"), integrity, activity; each block fails alone.
   Files: `web/src/pages/ProjectPage.tsx`, `web/tests/project.test.tsx`.
+
+### F2 result
+
+Final checks (web/, then repo root):
+
+```
+gen:types unchanged            (git diff --exit-code web/src/lib/api-types.ts: clean)
+typecheck: tsc --noEmit -p tsconfig.json   (no errors)
+ Test Files  22 passed (22)
+      Tests  111 passed (111)
+✓ built in 3.94s
+check-csp: ok (no inline script, no style attribute)
+7 passed in 3.89s              (.venv/bin/pytest -q tests/test_api_contract.py tests/test_portal_fixtures.py)
+```
+
+Files: `web/src/pages/TodayPage.tsx` (new), `web/src/pages/IndexPage.tsx`, `web/src/pages/ProjectPage.tsx`,
+`web/src/App.tsx`, tests `today`, `projects`, `project`.
+
+Decisions where the spec was silent:
+- Today needs a session (the control API is authenticated); `TodayBody` fetches only when signed in.
+- Links from Today: `identity` and every optional item go to `/p/:project/f/:flow/decisions` (the route is
+  wired when F5 merges; until then it falls to the 404 page); `adjudication` goes to the reading desk
+  `/p/:project/f/:flow/q/:subject` (the card's subject is the question id); `integrity` and `protocol`
+  cards go to the project page.
+- `continues_without_you` is typed `OperationSummary[] | null`; `null` is shown as "— not reported", an empty
+  list as "No operation is authorized or running". The contract note says the field is a list since B12.
+- Timestamps (`since`, `when`) are shown as the API's ISO strings; no date formatting or relative time.
+- Mark as seen sends `{project}` only (the marker then covers that project), then reloads Today; the button is
+  disabled while the request runs.
+- The Projects table's search filters on name only, case-insensitively, and keeps the server's order.
+- `IndexPage.tsx` keeps its name (edited in place) to keep imports and `r3review.test.tsx` stable.
+- Project page: the research selector is a list of links (not ARIA tabs), because selecting a flow navigates.
+
+Deviations: none from the spec.
+
+NOT DONE (no API data, or later step): project descriptions and the design's project counts line (drafts,
+running, finished), pinned projects in the rail, the Decisions badge count, the "your last visit was ..."
+sentence (only the API's `since` string), the scheduler status in the rail, money figures, the journey step
+bar and "N decisions waiting" on the project header, flow start dates and "needs you / running" in the
+selector (only `binding_state` is returned). The Decisions route is not created here (F5, parallel branch).
+Not checked in a browser (no servers were started).

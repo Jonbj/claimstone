@@ -33,89 +33,92 @@ export default function ProjectPage() {
 
   return (
     <section className="flex flex-col gap-5">
-      <header>
-        <h1 className="text-[22px] font-semibold">
+      <header className="flex flex-col gap-2">
+        <nav aria-label="Breadcrumb" className="text-sm text-muted-foreground">
+          <Link to="/projects" className="hover:underline">Projects</Link> / {project}
+        </nav>
+        <h1 className="font-serif text-5xl leading-tight font-normal">
           {project}
           {refreshing ? (
-            <span className="pending ml-3" role="status">
+            <span className="pending ml-3 font-sans text-sm" role="status">
               refreshing…
             </span>
           ) : null}
         </h1>
+        {card && card.config === "OK" ? (
+          <p className="font-mono text-xs text-muted-foreground">
+            registry v{card.registry_version} · {card.registry_sha256}
+          </p>
+        ) : null}
       </header>
 
-      {integrity.pending ? (
-        <Pending label="loading integrity…" />
-      ) : integrity.error ? (
-        <ErrorState error={integrity.error} context="integrity" />
-      ) : integrity.data ? (
-        <IntegrityPanel integrity={integrity.data} />
-      ) : null}
-
-      {index.pending ? (
-        <Pending label="loading selectors…" />
-      ) : index.error ? (
-        <ErrorState error={index.error} context="projects" />
-      ) : card ? (
-        <>
-          <section>
-            <h2 className="mb-2 text-sm font-semibold">flows</h2>
+      <section aria-label="Research" className="flex flex-col gap-3">
+        <h2 className="text-sm font-semibold">Research</h2>
+        {index.pending ? (
+          <Pending label="loading selectors…" />
+        ) : index.error ? (
+          <ErrorState error={index.error} context="projects" />
+        ) : card ? (
+          <ul className="flex flex-wrap gap-3">
             {(card.flows ?? []).map((flow) => (
-              <p
-                key={flow.flow_id}
-                className="flex flex-wrap items-baseline gap-2 py-0.5 text-sm"
-              >
+              <li key={flow.flow_id} className="rounded-xl border border-border bg-card px-4 py-2">
                 <Link
                   to={`/p/${encodeURIComponent(project)}/f/${encodeURIComponent(flow.flow_id)}`}
-                  className="font-mono text-[13px] text-blue-600 hover:underline dark:text-blue-400"
+                  className="flex min-h-11 flex-col justify-center hover:underline"
                 >
-                  flow {flow.flow_id.slice(0, 12)}
+                  <b>{flow.title ?? `flow ${flow.flow_id.slice(0, 12)}`}</b>
+                  <span className="text-xs text-muted-foreground">{flow.selector_label}</span>
                 </Link>
-                <span>· {flow.selector_label} ·</span>
-                <Chip text={flow.binding_state} />
-                {flow.title ? <span>· {flow.title}</span> : null}
-                {flow.bound_after_data ? (
-                  <span className="text-xs text-muted-foreground">
-                    · bound after data existed: rows written before binding are not
-                    verified against this protocol
-                  </span>
-                ) : null}
-              </p>
+                <div className="flex flex-wrap items-baseline gap-2">
+                  <Chip text={flow.binding_state} />
+                  {flow.bound_after_data ? (
+                    <span className="text-xs text-muted-foreground">
+                      bound after data existed: rows written before binding are not verified
+                      against this protocol
+                    </span>
+                  ) : null}
+                </div>
+              </li>
             ))}
-            {(card.flows ?? []).length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                no flows; rounds with candidates are legacy
-              </p>
-            ) : null}
-          </section>
-
-          <section>
-            <h2 className="mb-2 text-sm font-semibold">legacy rounds</h2>
             {(card.unbound_selectors ?? []).map((entry) => (
-              <p key={entry.slug} className="flex flex-wrap items-baseline gap-2 py-0.5 text-sm">
+              <li
+                key={entry.slug}
+                className="rounded-xl border border-dashed border-border bg-card px-4 py-2"
+              >
                 <Link
                   to={`/p/${encodeURIComponent(project)}/u/${encodeURIComponent(entry.slug)}`}
-                  className="font-mono text-[13px] text-blue-600 hover:underline dark:text-blue-400"
+                  className="flex min-h-11 flex-col justify-center hover:underline"
                 >
-                  {entry.label}
+                  <b>{entry.label}</b>
+                  <span className="text-xs text-muted-foreground">legacy round</span>
                 </Link>
                 <Chip text="protocol not verified" />
-              </p>
+              </li>
             ))}
-            {(card.unbound_selectors ?? []).length === 0 ? (
-              <p className="text-sm text-muted-foreground">none</p>
+            {(card.flows ?? []).length + (card.unbound_selectors ?? []).length === 0 ? (
+              <li className="text-sm text-muted-foreground">No flows and no legacy rounds.</li>
             ) : null}
-          </section>
-        </>
-      ) : (
-        <ErrorState
-          error={new Error("the API's project list does not name this project")}
-          context="projects"
-        />
-      )}
+          </ul>
+        ) : (
+          <ErrorState
+            error={new Error("the API's project list does not name this project")}
+            context="projects"
+          />
+        )}
+      </section>
+
+      <section aria-label="Integrity">
+        {integrity.pending ? (
+          <Pending label="loading integrity…" />
+        ) : integrity.error ? (
+          <ErrorState error={integrity.error} context="integrity" />
+        ) : integrity.data ? (
+          <IntegrityPanel integrity={integrity.data} />
+        ) : null}
+      </section>
 
       <section>
-        <h2 className="mb-2 text-sm font-semibold">activity — whole project</h2>
+        <h2 className="mb-2 text-sm font-semibold">Activity — whole project</h2>
         {activity.pending ? (
           <Pending label="loading activity…" />
         ) : activity.error ? (
