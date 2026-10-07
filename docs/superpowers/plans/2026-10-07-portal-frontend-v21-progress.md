@@ -254,5 +254,5 @@ the draft is the safeguard). Not checked in a browser (no servers were started).
   Files: `web/src/pages/TodayPage.tsx`, `web/tests/today.test.tsx`.
 - [x] F6.5 States pass: one failed or empty state test per page (Today, Projects, Project, Flow, Question, Claim, Source, Export, Admin, Login) where none exists, and the fixes they expose.
   Files: `web/tests/states.test.tsx` and the pages it exposes.
-- [ ] F6.6 Docs: `docs/HANDOFF.md` portal paragraph, a new `D` decision, F6 result in this log.
+- [x] F6.6 Docs: `docs/HANDOFF.md` portal paragraph, a new `D` decision, F6 result in this log.
   Files: `docs/HANDOFF.md`, `docs/DESIGN_DECISIONS.md`, this log.

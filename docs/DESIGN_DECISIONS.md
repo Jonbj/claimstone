@@ -4362,3 +4362,29 @@ What D89's backend does not do, recorded with its step:
 - project creation and protocol revision from the web need their own decision because they write
   `projects/`;
 - the frontend pages that use these routes are the next piece of work.
+
+## D109 — The portal frontend renders only what an API returned, and writes through one module (2026-10-07)
+
+The frontend for the control routes (v2.1, steps F1–F6) is built on four rules. **First**, a design
+element whose data no API provides is left out or shown as "not available yet", never computed in the
+browser: the journey bar, project topic text, money figures per project and the worker heartbeat are
+absent, and an unknown value is "—" or a pending state, never 0. **Second**, every non-GET request is in
+`web/src/lib/control.ts`; it adds the CSRF token (held in memory, never in storage), a fresh
+`Idempotency-Key` per POST except login, logout and the file upload, and maps the server's envelope to
+`ControlError`. `web/tests/writes.test.ts` fails if another file sends a non-GET request or a `<form>`
+lacks an `onSubmit`. Because the key is fresh per call, double submission is prevented by disabling the
+button while its request runs. **Third**, a verdict is never preselected: the five radios start
+unchecked and the signature binds to the profile hash shown when the panel appeared, so a newer profile
+blocks signing until the operator takes it. **Fourth**, a failed refresh does not discard what a person
+typed: the reading desk keeps its last good answer under a banner naming the failure and both times,
+and the panel's text, verdict and attestation stay in memory only. Export verification and
+administration checks run on a button and never on page load; a credential value and the password are
+cleared after every submit and never rendered back.
+
+Routes: `/`, `/projects`, `/p/:project`, `/p/:project/f/:sel` and `.../q/:qid`, `.../claim/:cid`,
+`.../source/:key`, `.../export`, `/admin`, `/login`; `/u/` selectors are read-only. The F5 pages
+(Decisions, Add material) were built on a parallel branch and are wired in on merge.
+
+What decided it: the vitest suite (`cd web && npm test`) holds 167 tests in 29 files at this commit and
+covers each rule above; `npm run build` runs `check-csp`, which finds no inline script and no `style`
+attribute. Not measured: any behaviour in a browser, since no server was started.

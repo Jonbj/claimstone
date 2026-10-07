@@ -23,6 +23,18 @@ Not built, with reasons in the decision entries:
 - project creation from the web: it writes `projects/` and needs a decision;
 - the React pages for these routes: next.
 
+2026-10-07 portal frontend v2.1 (D109): the React pages for the control routes exist in `web/`. Routes:
+`/` Today, `/projects`, `/p/:project`, `/p/:project/f/:sel` (the flow journey with "Right now" and
+Authorize), `.../q/:qid` (the reading desk with the signature panel and drafts), `.../claim/:cid`,
+`.../source/:key`, `.../export`, `/admin`, `/login`; `/u/` selectors are read-only. Every write goes
+through `web/src/lib/control.ts`, the only file allowed a non-GET request (a test enforces it); the CSRF
+token is held in memory only. Left out because no API gives the data: the 8-step journey bar, topic
+descriptions, money figures per project, worker heartbeat, "opened N of M" on the reading desk, and
+pause, resume and the paid test call (shown disabled with the server's 501 reason). The F5 pages
+(Decisions and Add material, `/decisions` and `/material`) come from the parallel branch
+`portal-frontend-f5` and their routes are wired when it merges; until then those links reach the 404 page.
+Nothing was checked in a browser: no server was started, only the vitest suite and the build.
+
 No real project declares `supplied_copies`, so operator-supplied copies are reported separately from
 the floor until the operator decides otherwise in `sources.yaml`. That would be protocol drift for any
 bound flow, by design.
