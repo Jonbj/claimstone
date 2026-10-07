@@ -48,11 +48,12 @@ As in the parallel worktree: only the tracked project instances live here, which
       `GET …/flows/{flow_id}/exports` (no rows → `{"exports": []}`), with both payloads
       declared in `api_schema.py` (files: `claimstone/api.py`, `claimstone/api_schema.py`,
       `docs/contracts/portal-api.schema.json`)
-- [ ] BR.3 tests through the real server: two builds with different hashes → two entries,
+- [x] BR.3 tests through the real server: two builds with different hashes → two entries,
       newest first, one `current`; a same-hash rebuild → one entry; another round's row
       excluded; empty scope → `[]`; unknown question → 404; two flows' exports kept apart;
       no `path` key; empty → `[]`; both routes GET-only and in the A1/A2 lists
-      (files: `tests/test_api_reads.py` (new), `tests/test_api.py`)
+      (files: `tests/test_api_reads.py` (new), `tests/test_api.py`,
+      `tests/test_api_contract.py`)
 - [ ] BR.4 fixtures regenerated, `cd web && npm run gen:types` committed, the B10 note in
       `docs/contracts/control_api.md`, every check green, step marked DONE
       (files: `tools/build_portal_fixtures.py` (only if the route list needs it),
