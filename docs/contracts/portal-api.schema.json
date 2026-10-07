@@ -378,6 +378,54 @@
    "title": "activity",
    "type": "object"
   },
+  "/projects/{p}/flows/{flow_id}/exports": {
+   "$schema": "https://json-schema.org/draft/2020-12/schema",
+   "additionalProperties": false,
+   "properties": {
+    "api_version": {
+     "enum": [
+      1
+     ],
+     "type": "integer"
+    },
+    "exports": {
+     "items": {
+      "additionalProperties": false,
+      "properties": {
+       "actor": {
+        "type": "string"
+       },
+       "created_at": {
+        "type": "string"
+       },
+       "export_id": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "export_id",
+       "created_at"
+      ],
+      "type": "object"
+     },
+     "type": "array"
+    },
+    "flow_id": {
+     "type": "string"
+    },
+    "project": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "api_version",
+    "project",
+    "flow_id",
+    "exports"
+   ],
+   "title": "flow exports",
+   "type": "object"
+  },
   "/projects/{p}/integrity": {
    "$schema": "https://json-schema.org/draft/2020-12/schema",
    "additionalProperties": false,
@@ -1877,6 +1925,90 @@
    "title": "profile diff",
    "type": "object"
   },
+  "/projects/{p}/{sel}/questions/{qid}/profiles": {
+   "$schema": "https://json-schema.org/draft/2020-12/schema",
+   "additionalProperties": false,
+   "properties": {
+    "api_version": {
+     "enum": [
+      1
+     ],
+     "type": "integer"
+    },
+    "id": {
+     "type": "string"
+    },
+    "profiles": {
+     "items": {
+      "additionalProperties": false,
+      "properties": {
+       "built_at": {
+        "type": "string"
+       },
+       "current": {
+        "type": "boolean"
+       },
+       "profile_sha256": {
+        "type": "string"
+       },
+       "provisional": {
+        "type": "boolean"
+       },
+       "state": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "usable_results": {
+        "type": "integer"
+       }
+      },
+      "required": [
+       "profile_sha256",
+       "built_at",
+       "provisional",
+       "state",
+       "usable_results",
+       "current"
+      ],
+      "type": "object"
+     },
+     "type": "array"
+    },
+    "project": {
+     "type": "string"
+    },
+    "selector": {
+     "additionalProperties": false,
+     "properties": {
+      "manifest_only": {
+       "type": "boolean"
+      },
+      "round": {
+       "type": [
+        "string",
+        "null"
+       ]
+      }
+     },
+     "required": [
+      "round",
+      "manifest_only"
+     ],
+     "type": "object"
+    }
+   },
+   "required": [
+    "api_version",
+    "project",
+    "selector",
+    "id",
+    "profiles"
+   ],
+   "title": "stored profiles",
+   "type": "object"
+  },
   "/projects/{p}/{sel}/sources/{candidate_key}": {
    "$schema": "https://json-schema.org/draft/2020-12/schema",
    "additionalProperties": false,
@@ -2116,6 +2248,7 @@
   "/meta",
   "/projects",
   "/projects/{p}/activity",
+  "/projects/{p}/flows/{flow_id}/exports",
   "/projects/{p}/integrity",
   "/projects/{p}/poll",
   "/projects/{p}/{sel}/claims/{claim_id}",
@@ -2123,6 +2256,7 @@
   "/projects/{p}/{sel}/overview",
   "/projects/{p}/{sel}/questions/{qid}",
   "/projects/{p}/{sel}/questions/{qid}/profile-diff",
+  "/projects/{p}/{sel}/questions/{qid}/profiles",
   "/projects/{p}/{sel}/sources/{candidate_key}",
   "/projects/{p}/{sel}/summary"
  ],

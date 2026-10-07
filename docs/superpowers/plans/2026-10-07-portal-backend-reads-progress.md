@@ -43,7 +43,7 @@ As in the parallel worktree: only the tracked project instances live here, which
       `latest_profiles` row) and `flow_exports` (`export.EXPORTS_LEDGER` rows of the flow,
       newest first, `export_id`/`created_at`/`actor` only — never the server-side `path`)
       (files: `claimstone/portal_state.py`)
-- [ ] BR.2 the two routes, GET-only: `GET …/flows/{flow_id}/questions/{qid}/profiles`
+- [x] BR.2 the two routes, GET-only: `GET …/flows/{flow_id}/questions/{qid}/profiles`
       (empty scope → `{"profiles": []}`; unknown question → 404) and
       `GET …/flows/{flow_id}/exports` (no rows → `{"exports": []}`), with both payloads
       declared in `api_schema.py` (files: `claimstone/api.py`, `claimstone/api_schema.py`,

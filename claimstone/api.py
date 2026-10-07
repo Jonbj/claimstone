@@ -150,6 +150,9 @@ class _Handler(BaseHandler):
                 elif len(tail) == 2 and tail[0] == "questions":
                     self._payload(portal_state.question_detail(project, store, selector,
                                                                tail[1]))
+                elif len(tail) == 3 and tail[0] == "questions" and tail[2] == "profiles":
+                    self._payload(portal_state.stored_profiles(project, store, selector,
+                                                               tail[1]))
                 elif len(tail) == 3 and tail[0] == "questions" and tail[2] == "profile-diff":
                     # Both hashes are required: a diff without either end is not a diff.
                     from_sha = _one_query(query, "from")
@@ -161,6 +164,10 @@ class _Handler(BaseHandler):
                 elif len(tail) == 2 and tail[0] == "sources":
                     self._payload(portal_state.source_dossier(project, store, selector,
                                                               tail[1]))
+                elif tail == ["exports"] and section == "flows":
+                    # Exports belong to a flow, never to an unbound selector: the rows
+                    # are keyed by flow id, and a legacy round has none.
+                    self._payload(portal_state.flow_exports(project, store, flow_row))
                 else:
                     raise portal_state.NotFound("no such api route")
                 return
