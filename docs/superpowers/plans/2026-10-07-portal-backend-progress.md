@@ -25,7 +25,7 @@ $ .venv/bin/python tools/check_instrument_versions.py
 | step | content (spec section) | done when | marker |
 |---|---|---|---|
 | **B0** | Decision entry (next free `D` number at the time you write it) and `docs/contracts/control_api.md` | files exist; checks pass; no code changed | DONE |
-| **B1** | Project writer lock adopted by every writer; re-read under the lock in acquire and adjudicate (F5) | spec B1 tests pass; checks pass | TODO (triaged 2026-10-07: lock primitive already on the main line; the re-read scope remains — see the triage entry) |
+| **B1** | Project writer lock adopted by every writer; re-read under the lock in acquire and adjudicate (F5) | spec B1 tests pass; checks pass | IN PROGRESS (triaged 2026-10-07: lock primitive already on the main line; the re-read scope is the step) |
 | **B2** | Host failure budget rebuilt from `requests.jsonl`; `urlguard.py`; manual redirects checked per hop (F6, F15) | spec B2 tests pass; checks pass | DONE (main line, scheduler session `67ca0a4` — substance in `store.py`/`net.py`, form deviation: no `locks.py`/`urlguard.py`) |
 | **B3** | `adjudication_version 2`, `signer_auth`, `actor`; required parameters; read API field, schema, fixtures (F16) | spec B3 tests pass; checks pass | TODO |
 | **B4** | `claimstone control`, `claimstone operator add/disable`, sessions, CSRF, rate limit | spec B4 tests pass, including the "every POST refuses anonymous" test | TODO |
@@ -157,3 +157,22 @@ spec's `urlguard.py`. The spec's form may be amended at B13's cleanup or left re
 here as the deviation it is.
 
 Next: B1 (reduced scope above), then B3.
+
+### B1 — IN PROGRESS (2026-10-07, reviewer session, after the triage above)
+
+- [ ] B1.1 `synthesize.adjudicate` holds `store.writer_lock()` across the profile check and the
+      append: `latest_profiles`, the `preview` comparison and the `store.append` become one
+      transaction, so a profile change can no longer land between the check and the signature (F5)
+      (files: `claimstone/synthesize.py`)
+- [ ] B1.2 `acquire.run` and `acquire.reuse_cached` re-read the candidate's latest attempt under
+      `store.writer_lock()` immediately before appending and assign `attempt_no` from that re-read;
+      the fetch itself stays outside the lock (the spec's network rule)
+      (files: `claimstone/acquire.py`)
+- [ ] B1.3 the spec's three tests, deterministic: two processes appending through the writer →
+      no duplicate ids and a clean tail; a concurrent acquisition landing between the prior read
+      and the append → no duplicate `attempt_no`; adjudicate's check and append under one hold,
+      a competing append provably cannot interleave; the flows lock is the project lock by
+      construction (files: `tests/test_b1_writer_lock.py` (new))
+- [ ] B1.4 checks pass; DONE recorded with the triage's form deviation (no `locks.py`:
+      `Store.writer_lock` is the one lock, `flows._flows_lock` delegates to it, so the lock-order
+      rule holds by construction — there is no second lock to invert)
