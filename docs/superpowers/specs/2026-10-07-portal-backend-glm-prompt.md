@@ -35,7 +35,8 @@ Background you will need:
      of yours was interrupted. Inspect them, then either finish that sub-task or discard **only those
      files** with `git restore`/`git clean` on the named paths.
    - Any other uncommitted file belongs to someone else: do not edit, stage, restore or delete it.
-4. Pick the step: the one marked `IN PROGRESS`, or else the first in the table that is `TODO`.
+4. Pick the step: the one marked `IN PROGRESS`, or else the first in the table that is `TODO`. Steps marked
+   `PARALLEL` are never yours (see "Parallel steps" below).
 
 ## Working method inside a step
 
@@ -81,6 +82,11 @@ Each commit message ends with the line `Co-Authored-By: GLM via opencode`. Commi
 | **B11** | Reachability checks, write-only credentials, 501 for the paid test call | spec B11 tests pass |
 | **B12** | Scheduler-facing routes, **only if** the operations ledger module exists; otherwise mark `BLOCKED` with the reason and end the session | as spec B12, or `BLOCKED` recorded |
 | **B13** | `control` service in compose and nginx, version registrations, decision entry completed, `HANDOFF.md` | checks pass; `docker compose config` validates; `api` service unchanged |
+
+**Parallel steps.** B2 and B6 are built by another session on the branch `portal-backend-parallel` and merged
+into `research-portal` by the reviewer. On this branch, treat them as `PARALLEL`: never pick them, and record
+them in the log table as `PARALLEL (portal-backend-parallel)`. B7a needs `claimstone/urlguard.py` from B2. If
+that file is absent when B7a starts, mark B7a `BLOCKED (waiting for B2 merge)` and end the session.
 
 ## Checks
 
