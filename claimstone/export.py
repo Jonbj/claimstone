@@ -238,12 +238,46 @@ def _report(project: Project, selector: scope.Selector, flow_row: dict[str, Any]
     return ("\n".join(lines) + "\n").encode("utf-8")
 
 
-def export(project: Project, store: Store, flow_id: str) -> tuple[pathlib.Path, bool]:
+# Licences whose terms allow passing an unmodified copy on (B10). Anything else, including an
+# unknown licence and a non-commercial clause, is left out of an export and listed with the reason:
+# whether a particular use is non-commercial is not something this code can know.
+REDISTRIBUTABLE = frozenset({"cc0", "cc-by", "cc-by-sa", "cc-by-nd", "pd", "public-domain"})
+
+
+def copy_selection(store: Store, selector: scope.Selector) -> dict[str, list[dict[str, Any]]]:
+    """Which held copies of the flow's candidates an export may include, and why the rest may not.
+    One entry per candidate: its collapsed acquisition row, the one the floor reads."""
+    included: list[dict[str, Any]] = []
+    excluded: list[dict[str, Any]] = []
+    collapsed = admissibility.collapse(store)
+    for key in sorted(scope.candidates(store, selector)):
+        row = collapsed.get(key)
+        if not row or not row.get("acquired") or not row.get("stored_path"):
+            continue
+        licence = str(row.get("licence") or "").strip().lower() or None
+        entry = {"candidate_key": key, "source_id": row.get("source_id"),
+                 "sha256": row.get("sha256"), "licence": licence,
+                 "provenance": row.get("provenance")}
+        if licence in REDISTRIBUTABLE:
+            included.append({**entry, "file": f"copies/{pathlib.Path(str(row['stored_path'])).name}",
+                             "stored_path": str(row["stored_path"])})
+        else:
+            excluded.append({**entry, "reason": "licence unknown" if licence is None else
+                             f"licence {licence} does not clearly allow passing a copy on"})
+    return {"included": included, "excluded": excluded}
+
+
+def export(project: Project, store: Store, flow_id: str, *, include_copies: bool = False,
+           actor: str | None = None) -> tuple[pathlib.Path, bool]:
     """Freeze one flow's ledgers and derive every output from the frozen bytes.
 
     Returns (directory, created_now). An existing identical export is returned untouched.
     Only flows can be exported: a legacy selector must be bound with `flow create` first,
     because an export is a claim about a protocol as well as about bytes.
+
+    `include_copies` adds the held copies whose licence allows it (`REDISTRIBUTABLE`) under
+    `copies/`, and lists every other held copy with its reason. It is part of the export's
+    identity only when set, so every export made without it keeps the id it always had.
     """
     flow_row = flows.flows(store).get(str(flow_id))
     if flow_row is None:
@@ -259,6 +293,9 @@ def export(project: Project, store: Store, flow_id: str) -> tuple[pathlib.Path, 
     # The same bytes read by a different instrument or under a different live protocol are a
     # different export: without these, a re-export after a gate change answered "exists" with
     # outputs the current code would no longer produce.
+    copies = copy_selection(store, selector) if include_copies else None
+    if copies is not None:
+        identity_payload["copies"] = [[c["candidate_key"], c["sha256"]] for c in copies["included"]]
     export_id = hashlib.sha256(_canonical({
         **identity_payload, "export_version": EXPORT_VERSION, "instrument_versions": instruments,
         "protocol_sha256": flows.protocol_digest(project),
@@ -295,13 +332,32 @@ def export(project: Project, store: Store, flow_id: str) -> tuple[pathlib.Path, 
             "created_at": _dt.datetime.now(_dt.timezone.utc).isoformat(timespec="seconds"),
             "created_by": getpass.getuser(),
         }
+        if actor is not None:
+            manifest["actor"] = actor  # the operator whose portal session asked for it
+        if copies is not None:
+            manifest["copies"] = {
+                "rule": "included only when the recorded licence is one of "
+                        + ", ".join(sorted(REDISTRIBUTABLE)) + "; every other held copy is listed",
+                "included": [{k: c[k] for k in c if k != "stored_path"}
+                             for c in copies["included"]],
+                "excluded": copies["excluded"]}
         directory.mkdir(parents=True, exist_ok=True)
         (directory / "manifest.json").write_bytes(_dump(manifest))
         for name, payload in outputs.items():
             (directory / name).write_bytes(payload)
+        for copy in (copies or {}).get("included", []):
+            source = store.root / "raw" / pathlib.Path(copy["stored_path"]).name
+            data = source.read_bytes()
+            if hashlib.sha256(data).hexdigest() != copy["sha256"]:
+                raise ValueError(f"held copy {source.name} no longer matches its recorded hash")
+            target = directory / copy["file"]
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(data)
 
     row = {"export_id": export_id, "flow_id": str(flow_id), "path": str(directory),
            "created_at": _dt.datetime.now(_dt.timezone.utc).isoformat(timespec="seconds")}
+    if actor is not None:
+        row["actor"] = actor
     with flows._flows_lock(store):
         store.append(EXPORTS_LEDGER, row)
     return directory, True
@@ -359,4 +415,8 @@ def verify(directory: pathlib.Path | str, projects_dir: pathlib.Path | str) -> l
             held = directory / name
             if not held.exists() or held.read_bytes() != payload:
                 problems.append(f"OUTPUT_DIFFERS {name}")
+    for copy in (manifest.get("copies") or {}).get("included") or []:
+        held = directory / str(copy.get("file"))
+        if not held.exists() or hashlib.sha256(held.read_bytes()).hexdigest() != copy.get("sha256"):
+            problems.append(f"COPY_DIFFERS {copy.get('file')}")
     return problems

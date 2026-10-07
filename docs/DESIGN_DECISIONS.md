@@ -4265,3 +4265,15 @@ optional ones:
 "Continues without you" is reported as unavailable, not as an empty list, until the
 scheduler-facing routes (B12) can read the queue: an empty list there would be a claim nobody
 checked.
+
+## D105 — An export carries copies only under a licence that allows it, and only when asked (2026-10-07)
+
+B10 makes export and verification explicit control-server actions. A snapshot may include held
+copies, but only those whose recorded licence clearly allows passing an unmodified copy on:
+`cc0`, `cc-by`, `cc-by-sa`, `cc-by-nd`, `pd` and `public-domain`. Every other held copy is listed in
+the manifest with its reason. That includes an unknown licence and any non-commercial or
+publisher-specific one, because whether a use is non-commercial is not something the code can know.
+The option enters the export identity only when set, so no existing export id or manifest changes and
+`export_version` stays 1. `verify` checks included copies against their recorded hashes. Portal-made
+exports record the operator as `actor` beside the OS user in `created_by`. Verification never runs
+as a side effect of reading: the list route (BR) only lists.

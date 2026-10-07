@@ -284,6 +284,14 @@ As built (B9):
   entries carry `export_id`, `created_at` and `actor` when the row records one, never the
   server-side `path`.
 
+As built (B10):
+- `POST …/exports` `{include_copies?: bool}` → 201 on creation, or 200 with `created_now: false`
+  for an identical snapshot. Answers `{export_id, created_now, copies}`.
+- `POST …/exports/{export_id}/verify` `{}` → 200 `{export_id, holds, problems}`. An export id not
+  in this flow's ledger → 404.
+- The spec's `include_pdfs` is named `include_copies`, because held copies are not only PDFs (HTML
+  and JATS too). Rules in `docs/contracts/exports.md`.
+
 ### B11 — administration
 
 - `POST /control/v1/admin/check` with `{target: "llamacpp"|"ollama-cloud"|"grobid"}`: a

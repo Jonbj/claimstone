@@ -81,3 +81,20 @@ A `PROJECT_NOT_FOUND` line means the verifier cannot see the project the export 
 
 After a successful export, one row `{"export_id", "flow_id", "path", "created_at"}` is appended
 to `store/<project>/exports.jsonl` under the same `.flows.lock`.
+
+## Copies and the operator (B10, D105)
+
+`export(…, include_copies=True)` adds the held copies of the flow's candidates whose recorded
+licence is one of `cc0`, `cc-by`, `cc-by-sa`, `cc-by-nd`, `pd` or `public-domain`. They go under
+`copies/`. One copy per candidate: the collapsed acquisition row the floor reads. Every other held
+copy is listed in `manifest.copies.excluded` with its reason:
+- an unknown licence is excluded;
+- a non-commercial or publisher-specific licence is excluded, because whether a use is
+  non-commercial is not something this code can know.
+
+The option enters the export identity **only when set**: every export made without it keeps the id
+it always had, and `export_version` stays 1. `verify` checks each included copy against its recorded
+hash (`COPY_DIFFERS`). No filesystem path appears in the manifest's `copies` section.
+
+An export requested through the control server carries `actor` (the operator id) in its manifest and
+in its `exports.jsonl` row. `created_by` keeps its meaning: the OS user of the process.

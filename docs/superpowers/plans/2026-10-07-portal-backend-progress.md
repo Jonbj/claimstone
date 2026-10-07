@@ -36,7 +36,7 @@ $ .venv/bin/python tools/check_instrument_versions.py
 | **B7b** | File intake, quarantine, engine gates, `operator-supplied` acquisition row, `supplied_copies` policy (F14) | spec B7b tests pass; existing admissibility tests unchanged and passing | DONE (URL fetch deferred to B12) |
 | **B8** | Identity resolution, retry-campaign record and preview, purchase offers and stages, defer/decline, F13 ordering test | spec B8 tests pass | DONE |
 | **B9** | Seen markers and `/control/v1/today` | spec B9 tests pass | DONE |
-| **B10** | Export create and verify from the control API; exports list in the read API; PDF licence rule | spec B10 tests pass | TODO |
+| **B10** | Export create and verify from the control API; exports list in the read API; PDF licence rule | spec B10 tests pass | DONE (list route from BR) |
 | **B11** | Reachability checks, write-only credentials, 501 for the paid test call | spec B11 tests pass | TODO |
 | **B12** | Scheduler-facing routes, **only if** the operations ledger module exists; otherwise mark `BLOCKED` with the reason and end the session | as spec B12, or `BLOCKED` recorded | TODO |
 | **B13** | `control` service in compose and nginx, version registrations, decision entry completed, `HANDOFF.md` | checks pass; `docker compose config` validates; `api` service unchanged | TODO |
@@ -560,3 +560,14 @@ NOT DONE: (none in scope)
 Decisions (recorded as D104): markers are installation state, not per project (deviation from spec
 §1.4's table); continues-without-you is `null` with a note until B12.
 Checks (final): `1403 passed, 7 skipped`; validate 6× OK; `35 instrument version(s)`; web `72 passed`.
+
+### B10 — DONE (2026-10-07, Claude Code)
+- [x] B10.1 `export.copy_selection` and `export(…, include_copies, actor)`; `verify` checks copies
+      (files: `claimstone/export.py`)
+- [x] B10.2 routes `POST …/exports`, `POST …/exports/{export_id}/verify` (files: `claimstone/control.py`)
+- [x] B10.3 tests, contracts, D105 (files: `tests/test_control_export.py`, docs)
+
+Decisions (D105): licence allow-list; unknown and non-commercial excluded and listed; the option in the
+identity only when set (no `EXPORT_VERSION` bump: existing ids and manifests unchanged); `include_pdfs`
+renamed `include_copies`.
+Checks (final): `1407 passed, 7 skipped`; validate 6× OK; `35 instrument version(s)`.

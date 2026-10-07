@@ -33,8 +33,8 @@ from typing import Any, Callable
 import urllib.parse
 from urllib.parse import unquote, urlparse
 
-from claimstone import (decisions, drafts, flows, intake, operators, portal_state, scope,
-                        synthesize, today)
+from claimstone import (decisions, drafts, export, flows, intake, operators, portal_state,
+                        scope, synthesize, today)
 from claimstone.config import ConfigError, RegistryDrift
 from claimstone.store import LedgerCorrupt, Store
 from claimstone.transport import LOOPBACK_HOSTS, BaseHandler
@@ -250,6 +250,10 @@ ROUTES: tuple[Route, ...] = (
     # B9: Today, and the operator's "seen up to" markers.
     Route("GET", ("today",), "_today"),
     Route("POST", ("seen",), "_seen"),
+    # B10: export from the web. The list is the read API's (BR); these two are actions.
+    Route("POST", ("p", "{project}", "flows", "{flow_id}", "exports"), "_export_create"),
+    Route("POST", ("p", "{project}", "flows", "{flow_id}", "exports", "{export_id}", "verify"),
+          "_export_verify"),
 )
 
 
@@ -899,7 +903,47 @@ def _seen(self: _Handler, params: dict[str, str], query: Any,
     return {"seen": row}, 201
 
 
-for _name, _function in (("_today", _today), ("_seen", _seen),
+EXPORT_ID = re.compile(r"^[0-9a-f]{64}$")
+
+
+def _export_create(self: _Handler, params: dict[str, str], query: Any,
+                   body: dict[str, Any]) -> tuple[Any, int]:
+    """Freeze this flow's ledgers into a snapshot (spec B10). The same bytes, instruments and
+    protocol give the same export, so asking twice answers `created_now: false`."""
+    self._only_keys(body, frozenset({"include_copies"}))
+    session = self._require_session()
+    include = body.get("include_copies", False)
+    if type(include) is not bool:
+        raise ControlError(422, "VALIDATION", "include_copies must be true or false")
+    project, store, row, _selector = _flow_only(self, params)
+    try:
+        directory, created = export.export(project, store, str(row["flow_id"]),
+                                           include_copies=include, actor=session.operator_id)
+    except ValueError as exc:
+        raise ControlError(409, "REFUSED", str(exc)) from None
+    manifest = json.loads((directory / "manifest.json").read_text(encoding="utf-8"))
+    return {"export_id": directory.name, "created_now": created,
+            "copies": manifest.get("copies")}, 201 if created else 200
+
+
+def _export_verify(self: _Handler, params: dict[str, str], query: Any,
+                   body: dict[str, Any]) -> tuple[Any, int]:
+    """Check one export against the live store and project, on request only: the same check
+    as `claimstone export-verify`. An empty list means the export still holds."""
+    self._only_keys(body, frozenset())
+    self._require_session()
+    _project, store, row, _selector = _flow_only(self, params)
+    export_id = params["export_id"]
+    held = {str(r.get("export_id")) for r in store.read(export.EXPORTS_LEDGER)
+            if str(r.get("flow_id")) == str(row["flow_id"])}
+    if not EXPORT_ID.match(export_id) or export_id not in held:
+        raise portal_state.NotFound(f"no export {export_id} for this flow")
+    problems = export.verify(store.root / "exports" / export_id, self.projects_dir)
+    return {"export_id": export_id, "holds": not problems, "problems": problems}, 200
+
+
+for _name, _function in (("_export_create", _export_create), ("_export_verify", _export_verify),
+                         ("_today", _today), ("_seen", _seen),
                          ("_identity_resolve", _identity_resolve),
                          ("_decisions_list", _decisions_list),
                          ("_retry_preview", _retry_preview), ("_retry_approve", _retry_approve),
