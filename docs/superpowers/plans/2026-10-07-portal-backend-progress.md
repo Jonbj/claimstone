@@ -341,7 +341,7 @@ NOT DONE: (none)
       `tools/check_instrument_versions.py`, `docs/DESIGN_DECISIONS.md`,
       `docs/contracts/control_api.md`, `web/tests/fixtures/admin.json` + `meta.json` —
       regenerated, they embed the instrument list, exactly as B3 recorded)
-- [ ] B4.5 tests: login and logout; wrong password; rate limit; CSRF missing or wrong; Origin
+- [x] B4.5 tests: login and logout; wrong password; rate limit; CSRF missing or wrong; Origin
       missing or foreign; cookie flags; non-loopback refused; every POST route in the registry
       refuses an anonymous request, covering routes added by later steps automatically
       (files: `tests/test_control.py` (new))
