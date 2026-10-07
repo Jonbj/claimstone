@@ -236,3 +236,49 @@ describe("R5.4: ProfileDiffPanel", () => {
     expect(container.textContent).toContain("query parameter 'from' is required");
   });
 });
+// F4.1: the stored-profile list feeds the choices; pasting remains only as the empty-list fallback.
+describe("F4.1: ProfileDiffPanel with the stored-profile list", () => {
+  const A = "aaaa0000000000000000000000000000000000000000000000000000000000aa";
+  const stored = [
+    { built_at: "2026-10-05T10:00:00+00:00", current: false, profile_sha256: A,
+      provisional: false, state: "FINAL", usable_results: 3 },
+    { built_at: "2026-10-06T10:00:00+00:00", current: true, profile_sha256: CURRENT_SHA,
+      provisional: false, state: null, usable_results: 4 },
+  ];
+  function renderWith(profiles: typeof stored | null, request?: { from: string; to: string; nonce: number }) {
+    return render(
+      <MemoryRouter>
+        <ProfileDiffPanel project="p" kind="f" sel="s" qid="Q02"
+          currentProfileSha256={CURRENT_SHA} profiles={profiles} request={request} />
+      </MemoryRouter>,
+    );
+  }
+
+  it("offers the stored profiles as choices, marks the current one, and compares the chosen pair", async () => {
+    renderWith(stored);
+    expect(screen.queryAllByRole("textbox").length).toBe(0);
+    const [from, to] = screen.getAllByRole("combobox") as HTMLSelectElement[];
+    expect(from.value).toBe(CURRENT_SHA);
+    expect(to.options.length).toBe(3);
+    expect(to.textContent).toContain("current");
+    expect(to.textContent).toContain("FINAL");
+    fireEvent.change(from, { target: { value: A } });
+    fireEvent.change(to, { target: { value: CURRENT_SHA } });
+    fireEvent.click(screen.getByRole("button", { name: "compare" }));
+    await waitFor(() => expect(profileDiff).toHaveBeenCalledWith("p", "f", "s", "Q02", A, CURRENT_SHA));
+  });
+
+  it("falls back to pasting when the list is empty or missing", () => {
+    renderWith([]);
+    expect(screen.getAllByRole("textbox").length).toBe(2);
+    cleanup();
+    renderWith(null);
+    expect(screen.getAllByRole("textbox").length).toBe(2);
+  });
+
+  it("an outside request opens the panel and compares that pair", async () => {
+    const { container } = renderWith(stored, { from: A, to: CURRENT_SHA, nonce: 1 });
+    await waitFor(() => expect(profileDiff).toHaveBeenCalledWith("p", "f", "s", "Q02", A, CURRENT_SHA));
+    expect(container.querySelector("details")!.hasAttribute("open")).toBe(true);
+  });
+});

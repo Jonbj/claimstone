@@ -1,10 +1,18 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import ErrorState from "@/components/ErrorState";
 import Pending from "@/components/Pending";
 import { useApi } from "@/hooks/useApi";
 import { api } from "@/lib/api";
-import type { ProfileDiff } from "@/lib/api-types";
+import type { ProfileDiff, StoredProfiles } from "@/lib/api-types";
+
+export type StoredProfileList = StoredProfiles["profiles"];
+/** An outside request to compare two hashes; `nonce` makes a repeat request count again. */
+export interface DiffRequest {
+  from: string;
+  to: string;
+  nonce: number;
+}
 
 // R5 (spec §8.3 question page): compare two stored profiles of this question,
 // result by result. An **audit view** — it carries no verdict word and concludes
@@ -69,12 +77,17 @@ export default function ProfileDiffPanel({
   sel,
   qid,
   currentProfileSha256,
+  profiles,
+  request,
 }: {
   project: string;
   kind: "f" | "u";
   sel: string;
   qid: string;
   currentProfileSha256: string | null;
+  /** The stored profiles of this question (BR). Empty, null or undefined: the hashes are pasted. */
+  profiles?: StoredProfileList | null;
+  request?: DiffRequest | null;
 }) {
   // `from` prefilled with the question's current stored hash when the page has
   // one; an empty prefill stays empty — a hash the page does not hold is not
@@ -82,6 +95,17 @@ export default function ProfileDiffPanel({
   const [fromSha, setFromSha] = useState(currentProfileSha256 ?? "");
   const [toSha, setToSha] = useState("");
   const [compare, setCompare] = useState<{ from: string; to: string } | null>(null);
+
+  const [open, setOpen] = useState(false);
+  const listed = profiles && profiles.length > 0 ? profiles : null;
+
+  useEffect(() => {
+    if (!request) return;
+    setFromSha(request.from);
+    setToSha(request.to);
+    setCompare({ from: request.from, to: request.to });
+    setOpen(true);
+  }, [request?.nonce]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const diff = useApi(
     () =>
@@ -100,33 +124,17 @@ export default function ProfileDiffPanel({
   }
 
   return (
-    <details className={card}>
+    <details className={card} open={open} onToggle={(e) => setOpen(e.currentTarget.open)}>
       <summary className="cursor-pointer text-base font-semibold">profile diff</summary>
       <p className="mt-1 text-xs text-muted-foreground">
-        Compare two stored profiles of this question by their hashes — the read
-        API lists no hashes, so paste both; the <span>from</span> field is
-        prefilled with the profile this page holds. This is an audit view and
-        carries no verdict.
+        {listed
+          ? "Compare two stored profiles of this question. "
+          : "The read API listed no stored profiles for this question, so paste both hashes. "}
+        This is an audit view and carries no verdict.
       </p>
       <div className="mt-2 grid gap-2 sm:grid-cols-2">
-        <label className="block">
-          <span className="text-xs font-semibold">from (profile_sha256)</span>
-          <input
-            className={`${input} mt-1`}
-            value={fromSha}
-            onChange={(e) => setFromSha(e.target.value)}
-            spellCheck={false}
-          />
-        </label>
-        <label className="block">
-          <span className="text-xs font-semibold">to (profile_sha256)</span>
-          <input
-            className={`${input} mt-1`}
-            value={toSha}
-            onChange={(e) => setToSha(e.target.value)}
-            spellCheck={false}
-          />
-        </label>
+        <HashChoice label="from (profile_sha256)" value={fromSha} onChange={setFromSha} profiles={listed} />
+        <HashChoice label="to (profile_sha256)" value={toSha} onChange={setToSha} profiles={listed} />
       </div>
       <button
         type="button"
@@ -151,6 +159,50 @@ export default function ProfileDiffPanel({
         </div>
       ) : null}
     </details>
+  );
+}
+
+function HashChoice({
+  label,
+  value,
+  onChange,
+  profiles,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  profiles: StoredProfileList | null;
+}) {
+  if (!profiles) {
+    return (
+      <label className="block">
+        <span className="text-xs font-semibold">{label}</span>
+        <input
+          className={`${input} mt-1`}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          spellCheck={false}
+        />
+      </label>
+    );
+  }
+  return (
+    <label className="block">
+      <span className="text-xs font-semibold">{label}</span>
+      <select
+        className={`${input} mt-1`}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      >
+        <option value="">— choose a stored profile</option>
+        {profiles.map((p) => (
+          <option key={p.profile_sha256} value={p.profile_sha256}>
+            {`${p.profile_sha256.slice(0, 12)} · built ${p.built_at} · ${p.state ?? "—"}` +
+              `${p.provisional ? " · provisional" : ""}${p.current ? " · current" : ""}`}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }
 

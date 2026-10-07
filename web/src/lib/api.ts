@@ -12,6 +12,7 @@ import type {
   Overview,
   Poll,
   ProfileDiff,
+  StoredProfiles,
   Projects,
   QuestionDetail,
   SourceDossier,
@@ -83,6 +84,10 @@ export const api = {
       `/projects/${encodeURIComponent(project)}/${selectorPath(kind, sel)}` +
       `/questions/${encodeURIComponent(qid)}/profile-diff` +
       `?from=${encodeURIComponent(fromSha)}&to=${encodeURIComponent(toSha)}`),
+  profiles: (project: string, kind: "f" | "u", sel: string, qid: string) =>
+    get<StoredProfiles>(
+      `/projects/${encodeURIComponent(project)}/${selectorPath(kind, sel)}` +
+      `/questions/${encodeURIComponent(qid)}/profiles`),
   claim: (project: string, kind: "f" | "u", sel: string, claimId: string) =>
     get<Lineage>(
       `/projects/${encodeURIComponent(project)}/${selectorPath(kind, sel)}/claims/${encodeURIComponent(claimId)}`),

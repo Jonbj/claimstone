@@ -185,7 +185,7 @@ Material, Decisions and Export routes (F5 branch, F6; the links 404 until merged
 
 ## F4 — The reading desk (IN PROGRESS)
 
-- [ ] F4.1 `api.profiles` (GET only) and the diff panel's from/to choices from the stored-profile list (a select per side, the current profile marked); pasted hashes stay only when the list is empty or unavailable. The panel can be opened from outside with a from/to request (used by the stale banner).
+- [x] F4.1 `api.profiles` (GET only) and the diff panel's from/to choices from the stored-profile list (a select per side, the current profile marked); pasted hashes stay only when the list is empty or unavailable. The panel can be opened from outside with a from/to request (used by the stale banner).
   Files: `web/src/lib/api.ts`, `web/src/components/ProfileDiffPanel.tsx`, `web/tests/profilediff.test.tsx`.
 - [ ] F4.2 `QuestionPage` restyle and the gate that decides what the verdict section shows: operational (the API's `not_applicable_state`), provisional, no profile or `unavailable`, unbound `/u/`, signed out ("Sign in to sign"), or the signature panel. Stored profiles feed the diff panel.
   Files: `web/src/pages/QuestionPage.tsx`, `web/tests/readingdesk.test.tsx`.
