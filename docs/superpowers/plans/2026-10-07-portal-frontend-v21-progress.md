@@ -6,7 +6,7 @@ Spec: `docs/superpowers/specs/2026-10-07-portal-frontend-v21-spec.md`. Branch `r
 |---|---|---|
 | F1 | Foundations: shell v2, control client, session, login | DONE |
 | F2 | Today, Projects, Project | DONE |
-| F3 | The flow journey | IN PROGRESS |
+| F3 | The flow journey | DONE |
 | F4 | The reading desk | TODO |
 | F5 | Decisions and Add material | TODO |
 | F6 | Export, Administration, closing pass | TODO |
@@ -136,7 +136,7 @@ Accepted. Nothing computed in the browser beyond list lengths; `continues_withou
 told apart. For F6's states pass: Today's "newest rows" render `JSON.stringify(row).slice(0,160)`; render
 the known fields (stage, state, kind, ids) as labelled text instead.
 
-## F3 — The flow journey (IN PROGRESS)
+## F3 — The flow journey (DONE)
 
 - [x] F3.1 `OperationsPanel`: "Right now" list from `control.operations` (signed in only; signed out says "Sign in to see and authorize operations"). State word and note verbatim, limits, spent, unknown-cost units said as reserved, completed units, last event, `worker_note`; Pause/Resume disabled with a title. Named error on failure.
   Files: `web/src/components/OperationsPanel.tsx`, `web/tests/operations.test.tsx`.
@@ -144,5 +144,41 @@ the known fields (stage, state, kind, ids) as labelled text instead.
   Files: `web/src/components/OperationsPanel.tsx`, `web/tests/operations.test.tsx`.
 - [x] F3.3 `FlowOverviewPage` header restyle (serif title, scope and protocol chips, Add material / Decisions / Export / Activity) and the panel mounted for flows only; `/u/` gets no write control and no panel.
   Files: `web/src/pages/FlowOverviewPage.tsx`, `web/src/pages/ProjectPage.tsx` (`id="activity"` on the activity section, the Activity button's target).
-- [ ] F3.4 Page tests: header links, unbound selector has no panel or write control, signed out shows no write control.
+- [x] F3.4 Page tests: header links, unbound selector has no panel or write control, signed out shows no write control.
   Files: `web/tests/flowpage.test.tsx`.
+
+### F3 result
+
+Final checks (web/, then repo root):
+
+```
+gen:types unchanged            (git diff --exit-code web/src/lib/api-types.ts: clean)
+typecheck: tsc --noEmit -p tsconfig.json   (no errors)
+ Test Files  24 passed (24)
+      Tests  119 passed (119)
+✓ built in 3.98s
+check-csp: ok (no inline script, no style attribute)
+7 passed in 3.88s              (.venv/bin/pytest -q tests/test_api_contract.py tests/test_portal_fixtures.py)
+```
+
+Files: `web/src/components/OperationsPanel.tsx` (new), `web/src/pages/FlowOverviewPage.tsx`,
+`web/src/pages/ProjectPage.tsx` (one `id`), tests `operations`, `flowpage`.
+
+Decisions where the spec was silent:
+- F3.1 and F3.2 were written together in one component and committed together.
+- The authorize confirmation is an inline `role="dialog"` block under the list, not a modal overlay.
+- Title is `flow.title` when present, else the selector label; scope chip is the selector label, protocol is
+  the first 12 characters of the flow id plus the binding state chip.
+- Header links and the panel appear for `/f/` only. Signed out the links still show (they are navigation; the
+  destination pages ask for a session) and the panel says "Sign in to see and authorize operations".
+- A null limit is shown "— (none set)". Spent is labelled "Spent, as reported"; unknown-cost units say
+  "reserved at their limit, not counted as 0" (the contract: a paid unit whose cost was not reported).
+- Activity links to `/p/:project#activity`; the project page's activity section gained `id="activity"`.
+  Browser hash scrolling after a client-side navigation is not tested.
+- The operations list is fetched once and reloaded after a successful authorize; it does not poll.
+
+Deviations: F3.1 and F3.2 share a commit.
+
+NOT DONE (no API data, or later step): the 8-step journey bar, topic text and budget figures; a worker
+heartbeat (the API gives `worker_note` only); Pause/Resume (disabled, ledger has no stopping event); the
+Material, Decisions and Export routes (F5 branch, F6; the links 404 until merged). Not checked in a browser.
