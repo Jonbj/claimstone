@@ -826,6 +826,51 @@ def question_detail(project: Project, store: Store, selector: scope.Selector,
     }
 
 
+def stored_profiles(project: Project, store: Store, selector: scope.Selector,
+                    question_id: str) -> dict[str, Any]:
+    """Every stored profile of one question inside the selector, newest first (spec BR).
+
+    The list is what the question page's diff panel offers instead of a pasted hash. The
+    scope rule is `synthesize._scope`'s — the same one `latest_profiles` uses — so a row
+    of another round or of the manifest-only variant of this one never enters a flow's
+    list. Rows are collapsed by `profile_sha256` (a rebuild appends; the last row that
+    holds a content wins) and ordered by that row's ledger position: `built_at` has
+    second resolution and two builds can share a second, but append order is the history.
+
+    `usable_results` is the count the profile itself records: its `results` list holds
+    exactly the claims whose review said USABLE, and recounting anything here would be a
+    second opinion the engine never asked for.
+    """
+    if question_id not in project.question_ids:
+        raise NotFound(f"unknown question id: {question_id}")
+    scoped = [row for row in store.read(synthesize.PROFILES)
+              if str(row.get("question_id")) == question_id
+              and synthesize._scope(row, selector.round, selector.manifest_only)]
+    latest: dict[str, tuple[int, dict[str, Any]]] = {}
+    for index, row in enumerate(scoped):
+        latest[str(row.get("profile_sha256"))] = (index, dict(row))
+    current = (synthesize.latest_profiles(store, round_name=selector.round,
+                                          manifest_only=selector.manifest_only)
+               .get(question_id) or {}).get("profile_sha256")
+    entries = [{
+        "profile_sha256": sha,
+        "built_at": row.get("built_at"),
+        "provisional": bool(row.get("provisional")),
+        "state": row.get("state"),
+        "usable_results": len(row.get("results") or []),
+        "current": sha == str(current),
+    } for sha, (_index, row) in sorted(latest.items(),
+                                       key=lambda item: item[1][0], reverse=True)]
+    # A question the registry knows with no profile in this scope is an empty list, not a
+    # 404: nothing was built here yet, which is a state the panel renders, not an error.
+    return {
+        "project": project.name,
+        "selector": selector.as_dict(),
+        "id": question_id,
+        "profiles": entries,
+    }
+
+
 def _diff_side(row: Mapping[str, Any]) -> dict[str, Any]:
     """The identity of one side of a diff: the hash the caller asked for, when it was
     built, and the instrument versions that decided its contents."""
@@ -920,6 +965,29 @@ def profile_diff(project: Project, store: Store, selector: scope.Selector,
                    "direction_count": new_row.get("direction_count") or {}},
         },
     }
+
+
+def flow_exports(project: Project, store: Store, flow_row: dict[str, Any]) -> dict[str, Any]:
+    """The exports ledger's rows for one flow, newest first (spec BR; B10's read route).
+
+    Listing is not verifying: `export.verify` is an explicit action nothing here runs.
+    The server-side `path` never leaves the process — it would tell a browser where this
+    machine keeps its store — and `actor` appears only when the row records one, which
+    portal-made exports (B10) will and CLI ones do not. Append order reversed is the
+    newest-first rule: `created_at` has second resolution, the ledger's order does not.
+    """
+    from claimstone import export as export_module
+
+    flow_id = str(flow_row["flow_id"])
+    rows = [row for row in store.read(export_module.EXPORTS_LEDGER)
+            if str(row.get("flow_id")) == flow_id]
+    entries: list[dict[str, Any]] = []
+    for row in reversed(rows):
+        entry = {"export_id": row.get("export_id"), "created_at": row.get("created_at")}
+        if row.get("actor") is not None:
+            entry["actor"] = row.get("actor")
+        entries.append(entry)
+    return {"project": project.name, "flow_id": flow_id, "exports": entries}
 
 
 def lineage(project: Project, store: Store, selector: scope.Selector,

@@ -37,7 +37,7 @@ As in the parallel worktree: only the tracked project instances live here, which
 
 ### BR — IN PROGRESS
 
-- [ ] BR.1 payload builders in the read model: `stored_profiles` (every `profiles.jsonl` row of
+- [x] BR.1 payload builders in the read model: `stored_profiles` (every `profiles.jsonl` row of
       one question inside the flow's selector via `synthesize._scope`, deduped by
       `profile_sha256` last-appended-wins, newest first, `current` on exactly the
       `latest_profiles` row) and `flow_exports` (`export.EXPORTS_LEDGER` rows of the flow,
