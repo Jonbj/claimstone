@@ -28,7 +28,7 @@ $ .venv/bin/python tools/check_instrument_versions.py
 | **B1** | Project writer lock adopted by every writer; re-read under the lock in acquire and adjudicate (F5) | spec B1 tests pass; checks pass | DONE (main line, reviewer session 2026-10-07 — reduced scope per the triage; form deviation: no `locks.py`) |
 | **B2** | Host failure budget rebuilt from `requests.jsonl`; `urlguard.py`; manual redirects checked per hop (F6, F15) | spec B2 tests pass; checks pass | DONE (main line, scheduler session `67ca0a4` — substance in `store.py`/`net.py`, form deviation: no `locks.py`/`urlguard.py`) |
 | **B3** | `adjudication_version 2`, `signer_auth`, `actor`; required parameters; read API field, schema, fixtures (F16) | spec B3 tests pass; checks pass | DONE (main line, reviewer session 2026-10-07) |
-| **B4** | `claimstone control`, `claimstone operator add/disable`, sessions, CSRF, rate limit | spec B4 tests pass, including the "every POST refuses anonymous" test | TODO |
+| **B4** | `claimstone control`, `claimstone operator add/disable`, sessions, CSRF, rate limit | spec B4 tests pass, including the "every POST refuses anonymous" test | IN PROGRESS |
 | **B5** | Web signing and drafts | spec B5 tests pass | TODO |
 | **B6** | Profile diff route in the read API; schema and fixtures | spec B6 tests pass | DONE (portal-backend-parallel, merged `3045aa2` 2026-10-07; decisions in the parallel log) |
 | **BR** | Read API: stored-profile list of one question; exports list of one flow (B10's read route) | as `2026-10-07-portal-backend-reads-prompt.md` | PARALLEL (portal-backend-reads) |
@@ -321,3 +321,28 @@ Decisions (spec silent):
 Deviations: (none — B3 follows the spec's form as written)
 
 NOT DONE: (none)
+
+### B4 — IN PROGRESS
+- [ ] B4.1 `claimstone/operators.py`: the operators ledger — scrypt n=2^15, r=8, p=1, salted,
+      `add`/`disable` append-only rows, constant-time verify, `operator_version 1`, in
+      `CLAIMSTONE_STATE_DIR` (default `.claimstone/`) (files: `claimstone/operators.py`)
+- [ ] B4.2 `claimstone/control.py`: the server — `transport.py`'s Host/Origin checks and
+      headers reused without inheriting GET-only; the §1.3 session/CSRF/body rules; the three
+      session routes (`POST /session`, `POST /session/end`, `GET /session`); in-memory sessions
+      expiring after 12 h of inactivity; 5 failures per id per 15 min → 429; a route registry
+      later steps extend and the anonymous test enumerates; non-loopback bind refused without
+      `--allow-host` (files: `claimstone/control.py`)
+- [ ] B4.3 CLI: `claimstone operator add ID --name` (getpass twice) and `operator disable ID`;
+      `claimstone control` with `--projects/--store/--bind/--port/--allow-host` as the contract
+      names them (files: `claimstone/cli.py`)
+- [ ] B4.4 `.claimstone/` gitignored; `operator_version` registered in the instrument checker
+      and acknowledged by a dated design-record entry; `control_api.md` gains the decided
+      session details (cookie name, error codes, payload shapes) (files: `.gitignore`,
+      `tools/check_instrument_versions.py`, `docs/DESIGN_DECISIONS.md`,
+      `docs/contracts/control_api.md`)
+- [ ] B4.5 tests: login and logout; wrong password; rate limit; CSRF missing or wrong; Origin
+      missing or foreign; cookie flags; non-loopback refused; every POST route in the registry
+      refuses an anonymous request, covering routes added by later steps automatically
+      (files: `tests/test_control.py` (new))
+- [ ] B4.6 checks pass; DONE recorded
+
