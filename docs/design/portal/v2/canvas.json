@@ -1,0 +1,377 @@
+{
+  "v": 3,
+  "attachments": {},
+  "boards": {
+    "Main.dc.html": {
+      "expand": "fill",
+      "h": 1360,
+      "title": "v1 · Home — superseded by Today and Decisions",
+      "w": 1440,
+      "x": 0,
+      "y": 0,
+      "page": "v1"
+    },
+    "Question.dc.html": {
+      "expand": "fill",
+      "h": 1640,
+      "title": "v1 · Question — superseded by the reading desk",
+      "w": 1440,
+      "x": 1520,
+      "y": 0,
+      "page": "v1"
+    },
+    "Inbox.dc.html": {
+      "expand": "fill",
+      "h": 1300,
+      "title": "v1 · Inbox — superseded by Decisions",
+      "w": 1440,
+      "x": 3040,
+      "y": 0,
+      "page": "v1"
+    },
+    "V2Today.dc.html": {
+      "expand": "fill",
+      "h": 1500,
+      "title": "1 · Today — since your last visit",
+      "w": 1440,
+      "x": 0,
+      "y": 0,
+      "page": "v21"
+    },
+    "V2Projects.dc.html": {
+      "expand": "fill",
+      "h": 1250,
+      "title": "2 · Projects — search, not a menu",
+      "w": 1440,
+      "x": 1520,
+      "y": 0,
+      "page": "v21"
+    },
+    "V2NewProject.dc.html": {
+      "expand": "fill",
+      "h": 1650,
+      "title": "3 · New project — steps 1–2: topic and questions",
+      "w": 1440,
+      "x": 3040,
+      "y": 0,
+      "page": "v21"
+    },
+    "V2NewStart.dc.html": {
+      "expand": "fill",
+      "h": 1750,
+      "title": "4 · New project — steps 3–4: rigour, plan, start",
+      "w": 1440,
+      "x": 4560,
+      "y": 0,
+      "page": "v21"
+    },
+    "V2Journey.dc.html": {
+      "expand": "fill",
+      "h": 2300,
+      "title": "5 · Project — the guided journey",
+      "w": 1440,
+      "x": 0,
+      "y": 2400,
+      "page": "v21"
+    },
+    "V2Activity.dc.html": {
+      "expand": "fill",
+      "h": 1300,
+      "title": "6 · Project — activity history",
+      "w": 1440,
+      "x": 1520,
+      "y": 2400,
+      "page": "v21"
+    },
+    "V2Decisions.dc.html": {
+      "expand": "fill",
+      "h": 2300,
+      "title": "7 · Decisions — act in place",
+      "w": 1440,
+      "x": 3040,
+      "y": 2400,
+      "page": "v21"
+    },
+    "V2AddMaterial.dc.html": {
+      "expand": "fill",
+      "h": 1500,
+      "title": "8 · Add material — references, files, versions",
+      "w": 1440,
+      "x": 4560,
+      "y": 2400,
+      "page": "v21"
+    },
+    "V2Desk.dc.html": {
+      "expand": "fill",
+      "h": 2200,
+      "title": "9 · Reading desk — Q04, results and signature",
+      "w": 1440,
+      "x": 0,
+      "y": 5300,
+      "page": "v21"
+    },
+    "V2DeskZero.dc.html": {
+      "expand": "fill",
+      "h": 1700,
+      "title": "10 · Reading desk — zero usable results; profile changed",
+      "w": 1440,
+      "x": 1520,
+      "y": 5300,
+      "page": "v21"
+    },
+    "Flow.dc.html": {
+      "expand": "fill",
+      "h": 1700,
+      "title": "11 · Evidence path — copies, then evidence",
+      "w": 1440,
+      "x": 3040,
+      "y": 5300,
+      "page": "v21"
+    },
+    "Lineage.dc.html": {
+      "expand": "fill",
+      "h": 1300,
+      "title": "12 · Claim provenance",
+      "w": 1440,
+      "x": 4560,
+      "y": 5300,
+      "page": "v21"
+    },
+    "V2Export.dc.html": {
+      "expand": "fill",
+      "h": 1600,
+      "title": "13 · Export — snapshots of a research flow",
+      "w": 1440,
+      "x": 0,
+      "y": 8000,
+      "page": "v21"
+    },
+    "V2Admin.dc.html": {
+      "expand": "fill",
+      "h": 1800,
+      "title": "14 · Administration",
+      "w": 1440,
+      "x": 1520,
+      "y": 8000,
+      "page": "v21"
+    },
+    "V2States.dc.html": {
+      "expand": "fill",
+      "h": 1900,
+      "title": "15 · States and scenarios",
+      "w": 1440,
+      "x": 3040,
+      "y": 8000,
+      "page": "v21"
+    }
+  },
+  "createdOnFiles": {
+    "at": "2026-10-06T19:30:00Z",
+    "v": 1
+  },
+  "designSystems": [],
+  "launch": {
+    "view": "canvas",
+    "page": "v21"
+  },
+  "pages": [
+    {
+      "id": "v21",
+      "name": "v2.1 — revised"
+    },
+    {
+      "id": "v1",
+      "name": "v1 — superseded"
+    }
+  ],
+  "notes": {
+    "heading": {
+      "kind": "title1",
+      "maxW": 4480,
+      "text": "v1 — superseded boards, kept for comparison",
+      "w": 240,
+      "x": 0,
+      "y": -300,
+      "page": "v1"
+    },
+    "v21": {
+      "kind": "title1",
+      "maxW": 6000,
+      "text": "v2.1 — one dataset, a guided journey, decisions in the page",
+      "x": 0,
+      "y": -300,
+      "page": "v21"
+    },
+    "nToday": {
+      "page": "v21",
+      "x": 0,
+      "y": 1540,
+      "w": 1440,
+      "maxH": 420,
+      "size": "s",
+      "fill": "teal",
+      "text": "NEW · S4. Problem: Today was in the menu but had no page.\nIt answers three questions: what changed since my last visit, what needs me now, what continues without me.\nAVAILABLE NOW: decisions and changes derived from the ledgers through the read-only API (no 'since' cut-off).\nNEEDS BACKEND: 'since your last visit' needs a per-user seen-marker (authentication); 'continues without you' and next planned runs need the scheduler's queue and plan API."
+    },
+    "nProjects": {
+      "page": "v21",
+      "x": 1520,
+      "y": 1290,
+      "w": 1440,
+      "maxH": 420,
+      "size": "s",
+      "fill": "teal",
+      "text": "REVISED · R5, §6. Problem: the archive said step 7 while the project page said step 6, and its counts did not add up to 128.\nNow: the same sentence as the journey ('Review partly complete · 2 ready to sign'); status counts are a partition (draft, running, paused, finished = 128); 'needs you' is a separate filter, labelled as overlapping; finished is split into signed and closed without verdicts.\nAVAILABLE NOW: project list, names, current state words from the API.\nNEEDS BACKEND: drafts, pinning, per-user sort, scheduler run states."
+    },
+    "nNew": {
+      "page": "v21",
+      "x": 3040,
+      "y": 1690,
+      "w": 1440,
+      "maxH": 420,
+      "size": "s",
+      "fill": "teal",
+      "text": "REVISED · R3, R1, R4. Problem: the page promised a verdict for every question, but operational questions receive none; the floor was described as reading; the side rail put annotation before its budget.\nNow: the promise is qualified; an operational question shows 'Tracked in this project; no literature verdict applies'; the side rail shows authorization at Start, before any paid call.\nAVAILABLE NOW: none (projects are YAML files today).\nNEEDS BACKEND: drafts and project creation; freezing writes the registry (invariant 5)."
+    },
+    "nStart": {
+      "page": "v21",
+      "x": 4560,
+      "y": 1790,
+      "w": 1440,
+      "maxH": 460,
+      "size": "s",
+      "fill": "teal",
+      "text": "NEW · wizard steps 3–4 · R1, R4, S3. Problem: rigour, scope and the first authorization were not designed, so Start's consent was undefined.\nStep 3: source classes, floor with the corrected wording (a confirmed usable copy, not a reading), and an explicit search scope.\nStep 4: protocol summary, the exact search plan (indexes, queries, request limits, destinations), and one model-work authorization covering extraction and the first review, with cap, estimate and unknown-cost reservation shown separately. Start covers exactly this plan.\nAVAILABLE NOW: flow binding exists via the CLI (`claimstone flow create`); search-plan previews exist as tools.\nNEEDS BACKEND: drafts, authorization record, scheduler plan API."
+    },
+    "nJourney": {
+      "page": "v21",
+      "x": 0,
+      "y": 4740,
+      "w": 1440,
+      "maxH": 520,
+      "size": "s",
+      "fill": "teal",
+      "text": "REVISED · R1, R4, R5, R6, S1, P1, P3. Problems fixed:\n- R1: copies are not reading. Step 4 is 'Prepare the documents'; 'Confirmed copies 37 of 40'; readings are measured separately.\n- R4: the start authorization is shown as granted; step 6 is a conditional checkpoint (the cap is reached). Cap, spent, reserved and estimate are kept apart.\n- R5: steps overlap truthfully: review partly done, 2 questions ready, an update flow obtaining copies.\n- R6: research/update selector and history; scope and protocol on every page.\n- S1: Right now gains next, waiting, worker last seen, last completed, Pause, Resume and View plan.\n- P1/P3: permanent Add material and Export entries.\nAVAILABLE NOW: states, counts, floor, profiles and cards from the read API.\nNEEDS BACKEND: scheduler state and heartbeat, pause and resume, approvals, update flows from the web."
+    },
+    "nActivity": {
+      "page": "v21",
+      "x": 1520,
+      "y": 3740,
+      "w": 1440,
+      "maxH": 420,
+      "size": "s",
+      "fill": "teal",
+      "text": "NEW · S4. Problem: no way to see what happened, or to tell an old event from live work.\nReadable events linked to sources and questions, with technical detail on demand. Started, completed, interrupted and retried are told apart. '4 new events' is a button; the page never scrolls under the reader.\nAVAILABLE NOW: ledger rows (activity API), but only completed writes.\nNEEDS BACKEND: started, interrupted and retried come from scheduler operation events."
+    },
+    "nDecisions": {
+      "page": "v21",
+      "x": 3040,
+      "y": 4740,
+      "w": 1440,
+      "maxH": 520,
+      "size": "s",
+      "fill": "teal",
+      "text": "REVISED · S2, S3, P2. Problems: 'the scheduler waits on each one' was too broad; plans were partial; purchases were missing; declining had no visible consequence.\nNow:\n- every card shows what it blocks, what continues and what it enables, and is marked required or optional;\n- it is the same decision object as the journey's checkpoint;\n- retry and route previews refresh from the server when the selection changes;\n- a verified purchase offer keeps approval, external payment, copy provided and copy verified apart;\n- a history lists declined, deferred and obsolete decisions with their consequence.\nNEEDS BACKEND: every action (decision, offer and campaign records; writer lock; authentication)."
+    },
+    "nMaterial": {
+      "page": "v21",
+      "x": 4560,
+      "y": 3940,
+      "w": 1440,
+      "maxH": 460,
+      "size": "s",
+      "fill": "teal",
+      "text": "NEW · P1. Problem: the only way to add a source was a decision card for a project below its floor.\nA permanent entry accepts a reference, DOI, URL, PDF or supplement. Each item moves through received → checks → possible duplicate or version → rejected or ready for controlled use. The target scope is explicit, and a cohort preview shows whether the item joins the frozen cohort or needs a new round. A relationship is recorded with a reason, never merged. The same PDF uploaded twice is recognised by its hash.\nNEEDS BACKEND: intake record, quarantine, identity checks, URL guard, and the operator's floor policy for supplied copies."
+    },
+    "nDesk": {
+      "page": "v21",
+      "x": 0,
+      "y": 7540,
+      "w": 1440,
+      "maxH": 520,
+      "size": "s",
+      "fill": "teal",
+      "text": "REVISED · R2, R7. Problems: an overstated interpretation sat among usable results; signing eligibility was incomplete; the signer lacked context.\nNow:\n- only results whose interpretation check passed are 'usable' (evidence.USABLE_REVIEW). Overstated and not-applicable annotations sit in 'Not used in this profile', with the reviewer's reasons;\n- each card labels two dimensions: relation to the question, and the interpretation check;\n- context fields per kind (method: support type) plus class, linked versions and limitations;\n- results, annotations and distinct sources are counted per class;\n- the initial state has no verdict selected; the eligibility list covers verdict, rationale ≥120 trimmed characters, identity and server checks; 'opened' is navigation and is kept apart from the reading attestation.\nAVAILABLE NOW: profile, results, review labels and adjudication card (read).\nNEEDS BACKEND: web signing (authentication, signer field, write path)."
+    },
+    "nZero": {
+      "page": "v21",
+      "x": 1520,
+      "y": 7040,
+      "w": 1440,
+      "maxH": 420,
+      "size": "s",
+      "fill": "teal",
+      "text": "NEW · R7 variants. Problem: zero results and changed evidence were not designed.\nQ06 is complete and eligible with zero usable results. Coverage, readings, gate losses and review exclusions stay inspectable; no verdict is suggested; NEVER_ASKED is defined as established by screening, never inferred from zero.\nSecond variant: the profile changed while you read. The draft reasoning is kept, the changes are listed, and signing is blocked until they are reviewed.\nNEEDS BACKEND: draft persistence; the profile change list (evidence diff)."
+    },
+    "nFlow": {
+      "page": "v21",
+      "x": 3040,
+      "y": 7040,
+      "w": 1440,
+      "maxH": 420,
+      "size": "s",
+      "fill": "teal",
+      "text": "REVISED · §6. Problem: one funnel changed units (sources → annotations → profiles) and read like one retention rate.\nNow there are two funnels with their units: copies (sources) and evidence (annotations → usable results). v2 navigation, scope and protocol banner, a return path to the journey.\nAVAILABLE NOW: every figure here exists in the read API, except 'usable results' per question, which comes from the profile."
+    },
+    "nLineage": {
+      "page": "v21",
+      "x": 4560,
+      "y": 6640,
+      "w": 1440,
+      "maxH": 360,
+      "size": "s",
+      "fill": "teal",
+      "text": "REVISED. v2 navigation; scope and protocol; 'Back to Q04 · result 1 of 4' returns to the exact result; the interpretation check is labelled as such.\nAVAILABLE NOW: the lineage API provides all six steps."
+    },
+    "nExport": {
+      "page": "v21",
+      "x": 0,
+      "y": 9640,
+      "w": 1440,
+      "maxH": 420,
+      "size": "s",
+      "fill": "teal",
+      "text": "NEW · P3. Problem: export was not reachable from the interface.\nEach snapshot shows scope, protocol, snapshot time, provisional or final status and signature freshness, with a history of earlier exports. PDFs are excluded by default (rights).\nAVAILABLE NOW: `claimstone export` and `export-verify` (JSON, CSV, report.md) on the CLI.\nNEEDS BACKEND: a web trigger; the PDF and DOCX report formats are proposed, not built."
+    },
+    "nAdmin": {
+      "page": "v21",
+      "x": 1520,
+      "y": 9840,
+      "w": 1440,
+      "maxH": 420,
+      "size": "s",
+      "fill": "teal",
+      "text": "NEW · P3. Problem: Administration was in the menu without a page.\nModel backends and their verification, secret presence (never values), credential actions, service health, limits and cost accounting. Health checks and paid tests are explicit buttons.\nAVAILABLE NOW: secret presence, configured backends, instrument versions, integrity.\nNEEDS BACKEND: credential management, health probes, cost records."
+    },
+    "nStates": {
+      "page": "v21",
+      "x": 3040,
+      "y": 9940,
+      "w": 1440,
+      "maxH": 420,
+      "size": "s",
+      "fill": "teal",
+      "text": "NEW · §6, §7. Problem: pages showed only the happy path, so a missing number could read as zero and an old event as running work.\nEmpty, loading, failed, stale and unknown states ('—' with a reason, never 0), and the §7 scenarios not drawn elsewhere: new flow with no candidates; expired heartbeat; one blocked route while other work continues; a paused plan resumed with its completed work and budget; a declined cap and its consequence; duplicate PDF and earlier version; protocol v2 and the monthly update with explicit scope. A last tile points to the boards that draw the other scenarios.\nAVAILABLE NOW: unknown-as-dash, stale/failed handling in the frontend (useApi refreshing).\nNEEDS BACKEND: heartbeat, plans, pause/resume, decline records, protocol v2 flows."
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "Question.dc.html",
+    "Inbox.dc.html",
+    "V2Today.dc.html",
+    "V2Projects.dc.html",
+    "V2NewProject.dc.html",
+    "V2NewStart.dc.html",
+    "V2Journey.dc.html",
+    "V2Activity.dc.html",
+    "V2Decisions.dc.html",
+    "V2AddMaterial.dc.html",
+    "V2Desk.dc.html",
+    "V2DeskZero.dc.html",
+    "Flow.dc.html",
+    "Lineage.dc.html",
+    "V2Export.dc.html",
+    "V2Admin.dc.html",
+    "V2States.dc.html"
+  ],
+  "title": "Claimstone portal — redesign"
+}

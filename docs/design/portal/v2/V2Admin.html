@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Administration</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=Geist+Mono:wght@400;500&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<style>
+body{margin:0;background:#f4f5f7}
+a{color:#1d4ed8;text-decoration:none}a:hover{color:#1e40af;text-decoration:underline}
+</style>
+</helmet>
+<div style="min-height: 1800px; display: flex; flex-wrap: wrap; background: #f4f5f7; color: #0f172a; font-family: 'Geist', system-ui, sans-serif; font-size: 14px; line-height: 1.5">
+
+  <nav aria-label="Main" style="flex: 1 1 232px; max-width: 232px; background: #0f172a; color: #cbd5e1; padding: 22px 14px; display: flex; flex-direction: column; gap: 4px">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 0 8px 20px"><svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><rect x="1" y="1" width="26" height="26" rx="7" fill="none" stroke="#60a5fa" stroke-width="2"></rect><path d="M8 18l4-8 4 6 4-4" fill="none" stroke="#e2e8f0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg><span style="color: #f8fafc; font-weight: 600; font-size: 15px">Claimstone</span></div>
+    <a href="V2Today.html" style="padding: 9px 10px; border-radius: 8px; color: #cbd5e1; text-decoration: none">Today</a>
+    <a href="V2Projects.html" style="padding: 9px 10px; border-radius: 8px; color: #cbd5e1; text-decoration: none">Projects</a>
+    <a href="V2Decisions.html" style="display: flex; padding: 9px 10px; border-radius: 8px; color: #cbd5e1; text-decoration: none">Decisions<span style="margin-left: auto; font-family: 'Geist Mono', monospace; font-size: 12px; background: #7c3aed; color: #ffffff; border-radius: 999px; padding: 0 8px">6</span></a>
+    <a href="#" style="padding: 9px 10px; border-radius: 8px; background: #1e293b; color: #f8fafc; text-decoration: none">Administration</a>
+  </nav>
+
+  <main style="flex: 999 1 640px; min-width: 0; padding: 32px 40px 56px; display: flex; flex-direction: column; gap: 20px; max-width: 1180px">
+    <header>
+      <h1 style="margin: 0; font-family: 'Instrument Serif', Georgia, serif; font-weight: 400; font-size: 44px">Administration</h1>
+      <p style="margin: 6px 0 0; color: #64748b">What this installation can use, and what it has spent. Opening this page sends no request to any service; every check below is a button.</p>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; font-size: 12px"><span style="background: #dcfce7; color: #166534; border-radius: 999px; padding: 2px 10px">available now = read from configuration, no network</span><span style="background: #e2e8f0; color: #334155; border-radius: 999px; padding: 2px 10px">needs backend = an action endpoint not yet built</span></div>
+    </header>
+
+    <section aria-label="Model backends" style="background: #ffffff; border-radius: 18px; padding: 22px 24px; box-shadow: 0 1px 2px rgba(15,23,42,.06)">
+      <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; align-items: baseline"><h2 style="margin: 0; font-size: 17px; font-weight: 600">Model backends</h2><span style="font-size: 12px; color: #64748b">which backend serves which lane is a measurement, not a setting here</span></div>
+      <table style="width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 12px">
+        <thead><tr style="text-align: left; color: #64748b; font-size: 12px"><th style="padding: 6px 8px; font-weight: 500">Backend</th><th style="padding: 6px 8px; font-weight: 500">Configured</th><th style="padding: 6px 8px; font-weight: 500">Runner present</th><th style="padding: 6px 8px; font-weight: 500">Last check</th><th style="padding: 6px 8px; font-weight: 500"></th></tr></thead>
+        <tbody>
+          <tr style="border-top: 1px solid #f1f5f9"><td style="padding: 8px; font-family: 'Geist Mono', monospace">llamacpp</td><td style="padding: 8px">yes</td><td style="padding: 8px">yes</td><td style="padding: 8px"><span style="background: #dcfce7; color: #166534; border-radius: 999px; padding: 1px 9px; font-size: 12px">reachable · 6 Oct 08:12</span></td><td style="padding: 8px; text-align: right"><button type="button" style="font-family: inherit; font-size: 12px; border: 1px solid #cbd5e1; background: #ffffff; border-radius: 8px; padding: 0 10px; min-height: 32px">Check reachability</button></td></tr>
+          <tr style="border-top: 1px solid #f1f5f9"><td style="padding: 8px; font-family: 'Geist Mono', monospace">ollama-cloud</td><td style="padding: 8px">yes</td><td style="padding: 8px">yes</td><td style="padding: 8px"><span style="background: #f1f5f9; color: #334155; border-radius: 999px; padding: 1px 9px; font-size: 12px">never checked from here</span></td><td style="padding: 8px; text-align: right"><button type="button" style="font-family: inherit; font-size: 12px; border: 1px solid #cbd5e1; background: #ffffff; border-radius: 8px; padding: 0 10px; min-height: 32px">Check reachability</button> <button type="button" style="font-family: inherit; font-size: 12px; border: 1px solid #fcd34d; background: #fffbeb; color: #92400e; border-radius: 8px; padding: 0 10px; min-height: 32px">Paid test call…</button></td></tr>
+          <tr style="border-top: 1px solid #f1f5f9"><td style="padding: 8px; font-family: 'Geist Mono', monospace">claude-cli</td><td style="padding: 8px">yes</td><td style="padding: 8px; color: #64748b">no runner yet</td><td style="padding: 8px">—</td><td style="padding: 8px"></td></tr>
+          <tr style="border-top: 1px solid #f1f5f9"><td style="padding: 8px; font-family: 'Geist Mono', monospace">codex-cli</td><td style="padding: 8px">yes</td><td style="padding: 8px; color: #64748b">no runner yet</td><td style="padding: 8px">—</td><td style="padding: 8px"></td></tr>
+          <tr style="border-top: 1px solid #f1f5f9"><td style="padding: 8px; font-family: 'Geist Mono', monospace">opencode-cli</td><td style="padding: 8px">yes</td><td style="padding: 8px; color: #64748b">no runner yet</td><td style="padding: 8px">—</td><td style="padding: 8px"></td></tr>
+        </tbody>
+      </table>
+      <p style="margin: 10px 0 0; font-size: 12px; color: #64748b"><b>Available now:</b> the configured list and which runners exist. <b>Needs backend:</b> both buttons. "Paid test call…" opens a confirmation stating the model, the expected cost and which budget pays it; it is never run automatically. Subscription plans are not batch infrastructure: the page says which lanes they may serve, it does not drive them.</p>
+    </section>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start">
+      <section aria-label="Credentials" style="flex: 1 1 420px; background: #ffffff; border-radius: 18px; padding: 22px 24px; box-shadow: 0 1px 2px rgba(15,23,42,.06)">
+        <h2 style="margin: 0 0 10px; font-size: 17px; font-weight: 600">Credentials</h2>
+        <ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; font-size: 13px">
+          <li style="display: flex; gap: 10px; align-items: center"><span style="font-family: 'Geist Mono', monospace; flex: 1">CLAIMSTONE_CONTACT_EMAIL</span><span style="background: #dcfce7; color: #166534; border-radius: 999px; padding: 1px 9px; font-size: 12px">set</span><button type="button" style="font-family: inherit; font-size: 12px; border: 1px solid #cbd5e1; background: #ffffff; border-radius: 8px; padding: 0 10px; min-height: 32px">Replace…</button></li>
+          <li style="display: flex; gap: 10px; align-items: center"><span style="font-family: 'Geist Mono', monospace; flex: 1">OLLAMA_API_KEY</span><span style="background: #dcfce7; color: #166534; border-radius: 999px; padding: 1px 9px; font-size: 12px">set</span><button type="button" style="font-family: inherit; font-size: 12px; border: 1px solid #cbd5e1; background: #ffffff; border-radius: 8px; padding: 0 10px; min-height: 32px">Replace…</button></li>
+          <li style="display: flex; gap: 10px; align-items: center"><span style="font-family: 'Geist Mono', monospace; flex: 1">OPENALEX_API_KEY</span><span style="background: #fff1f2; color: #9f1239; border-radius: 999px; padding: 1px 9px; font-size: 12px">not set</span><button type="button" style="font-family: inherit; font-size: 12px; border: 1px solid #cbd5e1; background: #ffffff; border-radius: 8px; padding: 0 10px; min-height: 32px">Add…</button></li>
+        </ul>
+        <p style="margin: 12px 0 0; font-size: 12px; color: #64748b"><b>Available now:</b> presence only — the value is never read back, shown or sent to the browser. <b>Needs backend:</b> Replace / Add (write-only field; containers pick the value up on restart). Until then the page says: edit <span style="font-family: 'Geist Mono', monospace">.env</span> and restart.</p>
+      </section>
+
+      <section aria-label="Services" style="flex: 1 1 420px; background: #ffffff; border-radius: 18px; padding: 22px 24px; box-shadow: 0 1px 2px rgba(15,23,42,.06)">
+        <h2 style="margin: 0 0 10px; font-size: 17px; font-weight: 600">Services</h2>
+        <dl style="margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 8px 14px; font-size: 13px">
+          <dt style="color: #64748b">Scheduler</dt><dd style="margin: 0">worker last seen 20 s ago · 2 flows running</dd>
+          <dt style="color: #64748b">Parser (GROBID)</dt><dd style="margin: 0">pinned image <span style="font-family: 'Geist Mono', monospace">0.8.x</span> · <span style="color: #64748b">health not checked</span> <a href="#" style="font-size: 12px">Check</a></dd>
+          <dt style="color: #64748b">Portal API</dt><dd style="margin: 0">read-only · memory limit 2 GB</dd>
+          <dt style="color: #64748b">Code revision</dt><dd style="margin: 0; font-family: 'Geist Mono', monospace">b4e52b9 · clean</dd>
+          <dt style="color: #64748b">Instruments</dt><dd style="margin: 0">27 versions acknowledged · <a href="#">list</a></dd>
+        </dl>
+        <p style="margin: 12px 0 0; font-size: 12px; color: #64748b"><b>Available now:</b> revision, instrument versions. <b>Needs backend:</b> scheduler heartbeat (scheduler in development), parser health action.</p>
+      </section>
+    </div>
+
+    <section aria-label="Limits" style="background: #ffffff; border-radius: 18px; padding: 22px 24px; box-shadow: 0 1px 2px rgba(15,23,42,.06)">
+      <h2 style="margin: 0 0 10px; font-size: 17px; font-weight: 600">Acquisition conduct</h2>
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; font-size: 13px">
+        <div style="background: #f8fafc; border-radius: 10px; padding: 10px 12px"><div style="color: #64748b; font-size: 12px">robots.txt</div><b>always honoured</b><div style="font-size: 11px; color: #64748b">not a setting</div></div>
+        <div style="background: #f8fafc; border-radius: 10px; padding: 10px 12px"><div style="color: #64748b; font-size: 12px">Failure budget per host</div><b>5</b><div style="font-size: 11px; color: #64748b">a host that returned 403 is not retried outside a named campaign</div></div>
+        <div style="background: #f8fafc; border-radius: 10px; padding: 10px 12px"><div style="color: #64748b; font-size: 12px">Excluded hosts</div><b>per project</b><div style="font-size: 11px; color: #64748b">from sources.yaml; shown, not editable here</div></div>
+      </div>
+    </section>
+
+    <section aria-label="Spending" style="background: #ffffff; border-radius: 18px; padding: 22px 24px; box-shadow: 0 1px 2px rgba(15,23,42,.06)">
+      <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; align-items: baseline"><h2 style="margin: 0; font-size: 17px; font-weight: 600">Spending by authorization</h2><span style="font-size: 12px; color: #64748b">needs backend: the cost ledger is part of the scheduler</span></div>
+      <table style="width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 12px">
+        <thead><tr style="text-align: left; color: #64748b; font-size: 12px"><th style="padding: 6px 8px; font-weight: 500">Project · flow</th><th style="padding: 6px 8px; font-weight: 500; text-align: right">Cap</th><th style="padding: 6px 8px; font-weight: 500; text-align: right">Spent</th><th style="padding: 6px 8px; font-weight: 500; text-align: right">Reserved, unknown cost</th><th style="padding: 6px 8px; font-weight: 500; text-align: right">Remaining</th><th style="padding: 6px 8px; font-weight: 500">State</th></tr></thead>
+        <tbody style="font-family: 'Geist Mono', monospace">
+          <tr style="border-top: 1px solid #f1f5f9"><td style="padding: 8px; font-family: 'Geist', sans-serif">News tone and returns · initial</td><td style="padding: 8px; text-align: right">12.00</td><td style="padding: 8px; text-align: right">11.42</td><td style="padding: 8px; text-align: right">0.34</td><td style="padding: 8px; text-align: right">0.24</td><td style="padding: 8px; font-family: 'Geist', sans-serif"><a href="V2Decisions.html">cap reached · your decision</a></td></tr>
+          <tr style="border-top: 1px solid #f1f5f9"><td style="padding: 8px; font-family: 'Geist', sans-serif">News tone and returns · October update</td><td style="padding: 8px; text-align: right">0.00</td><td style="padding: 8px; text-align: right">0.00</td><td style="padding: 8px; text-align: right">0.00</td><td style="padding: 8px; text-align: right">—</td><td style="padding: 8px; font-family: 'Geist', sans-serif">copies only · no paid work authorized</td></tr>
+          <tr style="border-top: 1px solid #f1f5f9"><td style="padding: 8px; font-family: 'Geist', sans-serif">Screen time and wellbeing</td><td style="padding: 8px; text-align: right">9.00</td><td style="padding: 8px; text-align: right">3.10</td><td style="padding: 8px; text-align: right">0.20</td><td style="padding: 8px; text-align: right">5.70</td><td style="padding: 8px; font-family: 'Geist', sans-serif">annotating</td></tr>
+        </tbody>
+      </table>
+      <p style="margin: 10px 0 0; font-size: 12px; color: #64748b">USD. Subscription and local backends show call counts instead of money; their cost is not invented. An unknown cost is reserved, never counted as zero.</p>
+    </section>
+    <p style="margin: 0; font-size: 12px; color: #94a3b8">Illustrative values, consistent across the v2.1 boards.</p>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1800}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

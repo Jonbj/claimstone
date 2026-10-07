@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>New project — describe, ask, start</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=Geist+Mono:wght@400;500&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<style>
+body{margin:0;background:#f4f5f7}
+a{color:#1d4ed8;text-decoration:none}a:hover{color:#1e40af;text-decoration:underline}
+</style>
+</helmet>
+<div style="min-height: 1600px; display: flex; flex-wrap: wrap; background: #f4f5f7; color: #0f172a; font-family: 'Geist', system-ui, sans-serif; font-size: 14px; line-height: 1.5">
+
+  <nav aria-label="New project steps" style="flex: 1 1 260px; max-width: 260px; background: #0f172a; color: #cbd5e1; padding: 22px 18px; display: flex; flex-direction: column; gap: 6px">
+    <a href="V2Projects.dc.html" style="color: #94a3b8; font-size: 13px; padding: 0 6px 18px; text-decoration: none">← All projects</a>
+    <div style="color: #f8fafc; font-family: 'Instrument Serif', Georgia, serif; font-size: 26px; padding: 0 6px 16px">New project</div>
+    <ol style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px">
+      <li style="display: flex; gap: 12px; padding: 10px 8px; border-radius: 10px"><span style="width: 26px; height: 26px; border-radius: 50%; background: #059669; color: #ffffff; display: grid; place-items: center; font-size: 13px; flex: none">✓</span><div><div style="color: #f8fafc; font-weight: 500">Describe the topic</div><div style="font-size: 12px; color: #94a3b8">what you need to know, and why</div></div></li>
+      <li style="display: flex; gap: 12px; padding: 10px 8px; border-radius: 10px; background: #1e293b"><span style="width: 26px; height: 26px; border-radius: 50%; background: #f8fafc; color: #0f172a; display: grid; place-items: center; font-size: 13px; font-weight: 600; flex: none">2</span><div><div style="color: #f8fafc; font-weight: 500">Ask the questions</div><div style="font-size: 12px; color: #94a3b8">each one gets its own verdict</div></div></li>
+      <li style="display: flex; gap: 12px; padding: 10px 8px; border-radius: 10px"><span style="width: 26px; height: 26px; border-radius: 50%; border: 1px solid #475569; display: grid; place-items: center; font-size: 13px; flex: none">3</span><div><div style="font-weight: 500">Sources and rigour</div><div style="font-size: 12px; color: #94a3b8">what counts, how much is enough</div></div></li>
+      <li style="display: flex; gap: 12px; padding: 10px 8px; border-radius: 10px"><span style="width: 26px; height: 26px; border-radius: 50%; border: 1px solid #475569; display: grid; place-items: center; font-size: 13px; flex: none">4</span><div><div style="font-weight: 500">Review and start</div><div style="font-size: 12px; color: #94a3b8">the protocol is frozen, then Claimstone works</div></div></li>
+    </ol>
+    <div style="margin-top: auto; font-size: 12px; color: #94a3b8; padding: 0 6px">Draft saved automatically · nothing runs until you start</div>
+  </nav>
+
+  <main style="flex: 999 1 640px; min-width: 0; padding: 32px 40px 56px; display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start">
+    <div style="flex: 3 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 20px">
+      <section aria-label="The topic" style="background: #ffffff; border-radius: 18px; padding: 22px 24px; box-shadow: 0 1px 2px rgba(15,23,42,.06)">
+        <div style="display: flex; justify-content: space-between; align-items: baseline"><h2 style="margin: 0; font-size: 15px; font-weight: 600">1 · The topic</h2><a href="#" style="font-size: 13px">Edit</a></div>
+        <p style="margin: 10px 0 4px; font-family: 'Instrument Serif', Georgia, serif; font-size: 28px; line-height: 1.15">News tone and returns</p>
+        <p style="margin: 0; color: #475569">Do financial news items carry information about subsequent stock returns, and under what conditions does any such effect survive? Scope: firm-level news and equity returns; horizons from days to months; text sentiment and event content. Out of scope: macro announcements and crypto assets.</p>
+      </section>
+
+      <section aria-label="The questions" style="background: #ffffff; border-radius: 18px; padding: 22px 24px; box-shadow: 0 1px 2px rgba(15,23,42,.06); display: flex; flex-direction: column; gap: 14px">
+        <div><h2 style="margin: 0; font-size: 20px; font-weight: 600">2 · Ask the questions</h2><p style="margin: 4px 0 0; color: #64748b">Write each question as a statement the literature can support or contradict. Each one receives its own verdict, signed by you.</p></div>
+
+        <div style="border: 1px solid #e2e8f0; border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px">
+          <div style="display: flex; gap: 10px; align-items: center"><span style="font-family: 'Geist Mono', monospace; font-size: 12px; color: #64748b">Q01</span><label style="margin-left: auto; display: flex; gap: 6px; align-items: center; font-size: 13px; color: #475569">Kind <select style="font-family: inherit; font-size: 13px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px 8px; min-height: 36px; background: #ffffff"><option>effect</option><option>heterogeneity</option><option>method</option><option>premise</option><option>operational</option></select></label></div>
+          <label><span style="position: absolute; left: -9999px">Question 1</span><textarea rows="2" style="width: 100%; box-sizing: border-box; font-family: 'Instrument Serif', Georgia, serif; font-size: 19px; border: 0; resize: vertical; outline: 0">The sentiment or event content of news carries information about future returns beyond what prices already reflect.</textarea></label>
+          <div style="font-size: 12px; color: #64748b">effect — judged by direction counts and coverage of results that test it</div>
+        </div>
+
+        <div style="border: 1px solid #e2e8f0; border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px">
+          <div style="display: flex; gap: 10px; align-items: center"><span style="font-family: 'Geist Mono', monospace; font-size: 12px; color: #64748b">Q02</span><label style="margin-left: auto; display: flex; gap: 6px; align-items: center; font-size: 13px; color: #475569">Kind <select style="font-family: inherit; font-size: 13px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px 8px; min-height: 36px; background: #ffffff"><option>heterogeneity</option></select></label></div>
+          <label><span style="position: absolute; left: -9999px">Question 2</span><textarea rows="2" style="width: 100%; box-sizing: border-box; font-family: 'Instrument Serif', Georgia, serif; font-size: 19px; border: 0; resize: vertical; outline: 0">Novelty and staleness of a news item change the size of the price reaction.</textarea></label>
+        </div>
+
+        <div style="border: 1px solid #fde68a; background: #fffbeb; border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px">
+          <div style="display: flex; gap: 10px; align-items: center"><span style="font-family: 'Geist Mono', monospace; font-size: 12px; color: #92400e">Q03</span><span style="margin-left: auto; font-size: 12px; color: #92400e">needs a look</span></div>
+          <p style="margin: 0; font-family: 'Instrument Serif', Georgia, serif; font-size: 19px">News works.</p>
+          <p style="margin: 0; font-size: 13px; color: #92400e">Too vague to be supported or contradicted. Say what works, for whom, and how you would know — for example a horizon and an outcome.</p>
+        </div>
+
+        <button type="button" style="align-self: flex-start; font-family: inherit; font-size: 14px; border: 1px dashed #94a3b8; background: transparent; border-radius: 10px; padding: 0 16px; min-height: 44px; color: #334155">+ Add a question</button>
+      </section>
+      <div style="display: flex; justify-content: space-between; gap: 12px"><button type="button" style="font-family: inherit; font-size: 14px; border: 1px solid #e2e8f0; background: #ffffff; border-radius: 10px; padding: 0 18px; min-height: 44px">Back</button><button type="button" style="font-family: inherit; font-size: 14px; font-weight: 600; border: 0; background: #0f172a; color: #ffffff; border-radius: 10px; padding: 0 22px; min-height: 44px">Continue to sources</button></div>
+    </div>
+
+    <aside style="flex: 1 1 320px; display: flex; flex-direction: column; gap: 16px">
+      <section aria-label="What happens when you start" style="background: #ffffff; border-radius: 18px; padding: 22px; box-shadow: 0 1px 2px rgba(15,23,42,.06)">
+        <h2 style="margin: 0 0 4px; font-size: 16px; font-weight: 600">What happens when you start</h2>
+        <p style="margin: 0 0 14px; font-size: 13px; color: #64748b">Claimstone does the reading. You decide at a few marked points.</p>
+        <ol style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; font-size: 13px">
+          <li style="display: flex; gap: 10px"><span style="width: 20px; height: 20px; border-radius: 6px; background: #ede9fe; color: #6d28d9; display: grid; place-items: center; font-size: 11px; font-weight: 700; flex: none">Y</span><span><b>Freeze the protocol.</b> Topic and questions become version 1, dated. Later changes are a new version.</span></li>
+          <li style="display: flex; gap: 10px"><span style="width: 20px; height: 20px; border-radius: 6px; background: #dbeafe; color: #1e40af; display: grid; place-items: center; font-size: 11px; font-weight: 700; flex: none">C</span><span><b>Search</b> scholarly indexes and citations.</span></li>
+          <li style="display: flex; gap: 10px"><span style="width: 20px; height: 20px; border-radius: 6px; background: #dbeafe; color: #1e40af; display: grid; place-items: center; font-size: 11px; font-weight: 700; flex: none">C</span><span><b>Obtain legal copies.</b> You approve any retry of a refused source, and may upload a copy you hold.</span></li>
+          <li style="display: flex; gap: 10px"><span style="width: 20px; height: 20px; border-radius: 6px; background: #dbeafe; color: #1e40af; display: grid; place-items: center; font-size: 11px; font-weight: 700; flex: none">C</span><span><b>Read and annotate</b> every passage; each claim is checked against its quote.</span></li>
+          <li style="display: flex; gap: 10px"><span style="width: 20px; height: 20px; border-radius: 6px; background: #ede9fe; color: #6d28d9; display: grid; place-items: center; font-size: 11px; font-weight: 700; flex: none">Y</span><span><b>Approve the reading budget</b> before paid model work starts.</span></li>
+          <li style="display: flex; gap: 10px"><span style="width: 20px; height: 20px; border-radius: 6px; background: #dbeafe; color: #1e40af; display: grid; place-items: center; font-size: 11px; font-weight: 700; flex: none">C</span><span><b>Independent review</b> by a second model, then one evidence profile per question.</span></li>
+          <li style="display: flex; gap: 10px"><span style="width: 20px; height: 20px; border-radius: 6px; background: #ede9fe; color: #6d28d9; display: grid; place-items: center; font-size: 11px; font-weight: 700; flex: none">Y</span><span><b>Read and sign</b> a verdict for each question.</span></li>
+        </ol>
+        <div style="display: flex; gap: 14px; margin-top: 14px; font-size: 12px; color: #64748b"><span><b style="color: #1e40af">C</b> Claimstone</span><span><b style="color: #6d28d9">Y</b> you</span></div>
+      </section>
+      <section style="background: #f5f3ff; border-radius: 16px; padding: 18px 20px; font-size: 13px; color: #4c1d95">One rule that will not move: if Claimstone cannot obtain at least the share of sources you set in step 3, it will not produce verdicts. It will tell you what is missing instead.</section>
+    </aside>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1600}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

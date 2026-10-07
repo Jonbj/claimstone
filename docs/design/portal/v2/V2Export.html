@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Export</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=Geist+Mono:wght@400;500&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<style>
+body{margin:0;background:#f4f5f7}
+a{color:#1d4ed8;text-decoration:none}a:hover{color:#1e40af;text-decoration:underline}
+</style>
+</helmet>
+<div style="min-height: 1600px; display: flex; flex-wrap: wrap; background: #f4f5f7; color: #0f172a; font-family: 'Geist', system-ui, sans-serif; font-size: 14px; line-height: 1.5">
+
+  <nav aria-label="Main" style="flex: 1 1 232px; max-width: 232px; background: #0f172a; color: #cbd5e1; padding: 22px 14px; display: flex; flex-direction: column; gap: 4px">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 0 8px 20px"><svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><rect x="1" y="1" width="26" height="26" rx="7" fill="none" stroke="#60a5fa" stroke-width="2"></rect><path d="M8 18l4-8 4 6 4-4" fill="none" stroke="#e2e8f0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg><span style="color: #f8fafc; font-weight: 600; font-size: 15px">Claimstone</span></div>
+    <a href="V2Journey.html" style="padding: 9px 10px; border-radius: 8px; color: #cbd5e1; text-decoration: none">← News tone and returns</a>
+    <a href="V2Today.html" style="padding: 9px 10px; border-radius: 8px; color: #cbd5e1; text-decoration: none">Today</a>
+    <a href="V2Decisions.html" style="display: flex; padding: 9px 10px; border-radius: 8px; color: #cbd5e1; text-decoration: none">Decisions<span style="margin-left: auto; font-family: 'Geist Mono', monospace; font-size: 12px; background: #7c3aed; color: #ffffff; border-radius: 999px; padding: 0 8px">6</span></a>
+    <a href="V2Admin.html" style="padding: 9px 10px; border-radius: 8px; color: #cbd5e1; text-decoration: none">Administration</a>
+  </nav>
+
+  <main style="flex: 999 1 640px; min-width: 0; padding: 32px 40px 56px; display: flex; flex-direction: column; gap: 20px; max-width: 1180px">
+    <header>
+      <nav aria-label="Breadcrumb" style="font-size: 13px; color: #64748b"><a href="V2Journey.html">News tone and returns</a> / Export</nav>
+      <h1 style="margin: 6px 0 0; font-family: 'Instrument Serif', Georgia, serif; font-weight: 400; font-size: 44px">Export</h1>
+      <p style="margin: 6px 0 0; color: #64748b">A snapshot freezes the ledgers of one research flow and derives every file from the frozen bytes. It can be checked later against the live store.</p>
+    </header>
+
+    <section aria-label="New snapshot" style="background: #ffffff; border-radius: 18px; padding: 22px 24px; box-shadow: 0 1px 2px rgba(15,23,42,.06); display: flex; flex-direction: column; gap: 16px">
+      <h2 style="margin: 0; font-size: 17px; font-weight: 600">What this snapshot would contain</h2>
+      <label style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; max-width: 520px">Research flow<select style="font-family: inherit; font-size: 14px; font-weight: 400; border: 1px solid #cbd5e1; border-radius: 10px; padding: 0 12px; min-height: 44px; background: #ffffff"><option>Initial research · protocol v1 · bound</option><option>October update · protocol v1 · in progress</option><option disabled>Legacy round r0 · not bound — bind it before exporting</option></select></label>
+      <dl style="margin: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; font-size: 13px">
+        <div style="background: #f8fafc; border-radius: 10px; padding: 10px 12px"><dt style="color: #64748b; font-size: 12px">Scope</dt><dd style="margin: 0"><b>40 candidates</b> · frozen 28 Sep</dd></div>
+        <div style="background: #f8fafc; border-radius: 10px; padding: 10px 12px"><dt style="color: #64748b; font-size: 12px">Protocol</dt><dd style="margin: 0"><b>v1</b> · registry v1 · bound</dd></div>
+        <div style="background: #fffbeb; border-radius: 10px; padding: 10px 12px"><dt style="color: #92400e; font-size: 12px">Status</dt><dd style="margin: 0; color: #78350f"><b>Provisional</b> · reviews still waiting for the cap</dd></div>
+        <div style="background: #f8fafc; border-radius: 10px; padding: 10px 12px"><dt style="color: #64748b; font-size: 12px">Signatures</dt><dd style="margin: 0"><b>0 of 7</b> signed · 2 ready · Q08 has none</dd></div>
+      </dl>
+      <table style="width: 100%; border-collapse: collapse; font-size: 13px">
+        <thead><tr style="text-align: left; color: #64748b; font-size: 12px"><th style="padding: 6px 8px; font-weight: 500">Question</th><th style="padding: 6px 8px; font-weight: 500">In the snapshot</th><th style="padding: 6px 8px; font-weight: 500">Signature</th></tr></thead>
+        <tbody>
+          <tr style="border-top: 1px solid #f1f5f9"><td style="padding: 8px; font-family: 'Geist Mono', monospace">Q04</td><td style="padding: 8px">evidence profile 9340389c · 4 usable results</td><td style="padding: 8px; color: #6d28d9">not signed · ready to sign</td></tr>
+          <tr style="border-top: 1px solid #f1f5f9"><td style="padding: 8px; font-family: 'Geist Mono', monospace">Q06</td><td style="padding: 8px">evidence profile · 0 usable results</td><td style="padding: 8px; color: #6d28d9">not signed · ready to sign</td></tr>
+          <tr style="border-top: 1px solid #f1f5f9"><td style="padding: 8px; font-family: 'Geist Mono', monospace">Q01–Q03, Q05, Q07</td><td style="padding: 8px">provisional profiles — marked as such in every file</td><td style="padding: 8px; color: #92400e">not eligible yet</td></tr>
+          <tr style="border-top: 1px solid #f1f5f9"><td style="padding: 8px; font-family: 'Geist Mono', monospace">Q08</td><td style="padding: 8px">operational · tracked, no profile</td><td style="padding: 8px; color: #475569">no verdict applies</td></tr>
+        </tbody>
+      </table>
+      <fieldset style="border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px">
+        <legend style="font-size: 13px; font-weight: 600; margin-bottom: 6px">Files</legend>
+        <label style="display: flex; gap: 10px; align-items: center; font-size: 13px"><input type="checkbox" checked disabled> manifest, questions, claims, rejections and acquisition (JSON / CSV) <span style="font-size: 11px; background: #dcfce7; color: #166534; border-radius: 999px; padding: 0 8px">available now</span></label>
+        <label style="display: flex; gap: 10px; align-items: center; font-size: 13px"><input type="checkbox" checked disabled> report.md — profiles, counts labelled as counts, coverage <span style="font-size: 11px; background: #dcfce7; color: #166534; border-radius: 999px; padding: 0 8px">available now</span></label>
+        <label style="display: flex; gap: 10px; align-items: center; font-size: 13px; color: #64748b"><input type="checkbox" disabled> PDF / DOCX report <span style="font-size: 11px; background: #e2e8f0; color: #334155; border-radius: 999px; padding: 0 8px">proposed · needs backend</span></label>
+        <label style="display: flex; gap: 10px; align-items: center; font-size: 13px"><input type="checkbox"> include the source PDFs (31 of 37 have a licence that allows it; 6 would be left out and listed) <span style="font-size: 11px; background: #e2e8f0; color: #334155; border-radius: 999px; padding: 0 8px">needs backend</span></label>
+      </fieldset>
+      <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center">
+        <button type="button" style="font-family: inherit; font-size: 14px; font-weight: 600; border: 0; background: #7c3aed; color: #ffffff; border-radius: 10px; padding: 0 20px; min-height: 44px">Create provisional snapshot</button>
+        <span style="font-size: 12px; color: #64748b">Today: <span style="font-family: 'Geist Mono', monospace">claimstone export</span> does this · from the portal it needs a write endpoint (backend).</span>
+      </div>
+    </section>
+
+    <section aria-label="Earlier snapshots" style="background: #ffffff; border-radius: 18px; padding: 22px 24px; box-shadow: 0 1px 2px rgba(15,23,42,.06)">
+      <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; align-items: baseline"><h2 style="margin: 0; font-size: 17px; font-weight: 600">Earlier snapshots</h2><span style="font-size: 12px; color: #64748b">listed from the exports ledger · available now (read-only)</span></div>
+      <table style="width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 12px">
+        <thead><tr style="text-align: left; color: #64748b; font-size: 12px"><th style="padding: 6px 8px; font-weight: 500">Snapshot</th><th style="padding: 6px 8px; font-weight: 500">Flow</th><th style="padding: 6px 8px; font-weight: 500">Created</th><th style="padding: 6px 8px; font-weight: 500">Status</th><th style="padding: 6px 8px; font-weight: 500">Still holds?</th></tr></thead>
+        <tbody>
+          <tr style="border-top: 1px solid #f1f5f9"><td style="padding: 8px; font-family: 'Geist Mono', monospace">e7b0c4…</td><td style="padding: 8px">Initial research · v1</td><td style="padding: 8px">3 Oct 18:02</td><td style="padding: 8px">provisional</td><td style="padding: 8px"><span style="background: #fff7ed; color: #9a3412; border-radius: 999px; padding: 1px 9px; font-size: 12px">newer data since · verified 6 Oct 09:00 · still holds</span></td></tr>
+          <tr style="border-top: 1px solid #f1f5f9"><td style="padding: 8px; font-family: 'Geist Mono', monospace">2a91f3…</td><td style="padding: 8px">Initial research · v1</td><td style="padding: 8px">30 Sep 09:40</td><td style="padding: 8px">provisional</td><td style="padding: 8px"><span style="background: #f1f5f9; color: #334155; border-radius: 999px; padding: 1px 9px; font-size: 12px">not checked yet</span> <a href="#" style="font-size: 12px">Verify</a></td></tr>
+        </tbody>
+      </table>
+      <p style="margin: 10px 0 0; font-size: 12px; color: #64748b">"Verify" runs the same check as <span style="font-family: 'Geist Mono', monospace">claimstone export-verify</span>: the live ledgers must begin with the recorded bytes and every file must recompute identically. It is an explicit action, never a side effect of opening this page (needs backend). A superseded snapshot stays downloadable; it is a record of what was true then.</p>
+    </section>
+    <p style="margin: 0; font-size: 12px; color: #94a3b8">Illustrative values, consistent across the v2.1 boards.</p>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1600}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Project — activity history</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=Geist+Mono:wght@400;500&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<style>
+body{margin:0;background:#f4f5f7}
+a{color:#1d4ed8;text-decoration:none}a:hover{color:#1e40af;text-decoration:underline}
+</style>
+</helmet>
+<div style="min-height: 1300px; display: flex; flex-wrap: wrap; background: #f4f5f7; color: #0f172a; font-family: 'Geist', system-ui, sans-serif; font-size: 14px; line-height: 1.5">
+
+  <nav aria-label="Main" style="flex: 1 1 232px; max-width: 232px; background: #0f172a; color: #cbd5e1; padding: 22px 14px; display: flex; flex-direction: column; gap: 4px">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 0 8px 20px"><svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><rect x="1" y="1" width="26" height="26" rx="7" fill="none" stroke="#60a5fa" stroke-width="2"></rect><path d="M8 18l4-8 4 6 4-4" fill="none" stroke="#e2e8f0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg><span style="color: #f8fafc; font-weight: 600; font-size: 15px">Claimstone</span></div>
+    <a href="V2Journey.html" style="padding: 9px 10px; border-radius: 8px; color: #cbd5e1; text-decoration: none">← News tone and returns</a>
+    <a href="V2Today.html" style="padding: 9px 10px; border-radius: 8px; color: #cbd5e1; text-decoration: none">Today</a>
+    <a href="V2Decisions.html" style="display: flex; padding: 9px 10px; border-radius: 8px; color: #cbd5e1; text-decoration: none">Decisions<span style="margin-left: auto; font-family: 'Geist Mono', monospace; font-size: 12px; background: #7c3aed; color: #ffffff; border-radius: 999px; padding: 0 8px">6</span></a>
+  </nav>
+
+  <main style="flex: 999 1 640px; min-width: 0; padding: 32px 40px 56px; display: flex; flex-direction: column; gap: 18px; max-width: 1060px">
+    <header>
+      <nav aria-label="Breadcrumb" style="font-size: 13px; color: #64748b"><a href="V2Projects.html">Projects</a> / <a href="V2Journey.html">News tone and returns</a> / Activity</nav>
+      <h1 style="margin: 6px 0 0; font-family: 'Instrument Serif', Georgia, serif; font-weight: 400; font-size: 44px">Activity</h1>
+    </header>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center">
+      <div role="group" aria-label="Research flow" style="display: flex; gap: 6px"><button type="button" style="font-family: inherit; font-size: 13px; border: 0; border-radius: 999px; padding: 0 14px; min-height: 40px; background: #0f172a; color: #ffffff">Both flows</button><button type="button" style="font-family: inherit; font-size: 13px; border: 1px solid #e2e8f0; border-radius: 999px; padding: 0 14px; min-height: 40px; background: #ffffff">Initial research</button><button type="button" style="font-family: inherit; font-size: 13px; border: 1px solid #e2e8f0; border-radius: 999px; padding: 0 14px; min-height: 40px; background: #ffffff">October update</button></div>
+      <label style="display: flex; gap: 6px; align-items: center; font-size: 13px; margin-left: 8px"><input type="checkbox" checked>Decisions</label>
+      <label style="display: flex; gap: 6px; align-items: center; font-size: 13px"><input type="checkbox" checked>Work</label>
+      <label style="display: flex; gap: 6px; align-items: center; font-size: 13px"><input type="checkbox">Technical detail</label>
+    </div>
+
+    <button type="button" style="align-self: center; font-family: inherit; font-size: 13px; font-weight: 600; border: 0; background: #0f172a; color: #ffffff; border-radius: 999px; padding: 0 16px; min-height: 36px">4 new events — show</button>
+
+    <section aria-label="Events" style="background: #ffffff; border-radius: 18px; padding: 8px 24px; box-shadow: 0 1px 2px rgba(15,23,42,.06)">
+      <ol style="list-style: none; margin: 0; padding: 0">
+        <li style="display: grid; grid-template-columns: 74px 110px minmax(0, 1fr); gap: 14px; padding: 14px 0; border-bottom: 1px solid #f1f5f9"><span style="font-family: 'Geist Mono', monospace; font-size: 12px; color: #64748b">14:02</span><span style="font-size: 11px; font-weight: 600; background: #ccfbf1; color: #115e59; border-radius: 999px; padding: 1px 8px; justify-self: start">running</span><div><b>October update · obtaining copies</b> <span style="color: #64748b">started 13:40 · 12 of 25 so far</span></div></li>
+        <li style="display: grid; grid-template-columns: 74px 110px minmax(0, 1fr); gap: 14px; padding: 14px 0; border-bottom: 1px solid #f1f5f9"><span style="font-family: 'Geist Mono', monospace; font-size: 12px; color: #64748b">13:58</span><span style="font-size: 11px; font-weight: 600; background: #dcfce7; color: #166534; border-radius: 999px; padding: 1px 8px; justify-self: start">completed</span><div><b><a href="#">S27</a> copy confirmed</b> <span style="color: #64748b">open repository · cc-by</span><div style="font-family: 'Geist Mono', monospace; font-size: 12px; color: #94a3b8; margin-top: 2px">▸ technical detail</div></div></li>
+        <li style="display: grid; grid-template-columns: 74px 110px minmax(0, 1fr); gap: 14px; padding: 14px 0; border-bottom: 1px solid #f1f5f9"><span style="font-family: 'Geist Mono', monospace; font-size: 12px; color: #64748b">13:51</span><span style="font-size: 11px; font-weight: 600; background: #fef3c7; color: #92400e; border-radius: 999px; padding: 1px 8px; justify-self: start">retried</span><div><b><a href="#">S29</a> copy request retried</b> <span style="color: #64748b">first attempt timed out; the retry is inside the authorized plan</span></div></li>
+        <li style="display: grid; grid-template-columns: 74px 110px minmax(0, 1fr); gap: 14px; padding: 14px 0; border-bottom: 1px solid #f1f5f9"><span style="font-family: 'Geist Mono', monospace; font-size: 12px; color: #64748b">13:40</span><span style="font-size: 11px; font-weight: 600; background: #fee2e2; color: #991b1b; border-radius: 999px; padding: 1px 8px; justify-self: start">interrupted</span><div><b>Worker restarted</b> <span style="color: #64748b">the previous run stopped at 13:22 without finishing; resumed from the last completed copy, nothing repeated</span><div style="font-family: 'Geist Mono', monospace; font-size: 12px; color: #94a3b8; margin-top: 2px">▾ operation 7f2c… · 11 of 25 candidates done before the stop · 14 remaining · same plan</div></div></li>
+        <li style="display: grid; grid-template-columns: 74px 110px minmax(0, 1fr); gap: 14px; padding: 14px 0; border-bottom: 1px solid #f1f5f9"><span style="font-family: 'Geist Mono', monospace; font-size: 12px; color: #64748b">Mon 18:02</span><span style="font-size: 11px; font-weight: 600; background: #ede9fe; color: #6d28d9; border-radius: 999px; padding: 1px 8px; justify-self: start">needs you</span><div><b>Initial research paused at the budget checkpoint</b> <span style="color: #64748b">cap USD 12.00 reached · <a href="V2Decisions.html">decide</a></span></div></li>
+        <li style="display: grid; grid-template-columns: 74px 110px minmax(0, 1fr); gap: 14px; padding: 14px 0; border-bottom: 1px solid #f1f5f9"><span style="font-family: 'Geist Mono', monospace; font-size: 12px; color: #64748b">Mon 17:55</span><span style="font-size: 11px; font-weight: 600; background: #dcfce7; color: #166534; border-radius: 999px; padding: 1px 8px; justify-self: start">completed</span><div><b><a href="V2DeskZero.html">Q06</a> profile ready</b> <span style="color: #64748b">18 annotations reviewed · 0 usable results · eligible to sign</span></div></li>
+        <li style="display: grid; grid-template-columns: 74px 110px minmax(0, 1fr); gap: 14px; padding: 14px 0"><span style="font-family: 'Geist Mono', monospace; font-size: 12px; color: #64748b">1 Oct</span><span style="font-size: 11px; font-weight: 600; background: #f1f5f9; color: #334155; border-radius: 999px; padding: 1px 8px; justify-self: start">declined</span><div><b>You declined a retry of S09</b> <span style="color: #64748b">S09 stays not obtained; the floor was already met</span></div></li>
+      </ol>
+    </section>
+    <p style="margin: 0; font-size: 12px; color: #94a3b8">New events never move the page while you read. Illustrative values, consistent across the v2.1 boards.</p>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1300}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>States and scenarios</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=Geist+Mono:wght@400;500&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<style>
+body{margin:0;background:#f4f5f7}
+a{color:#1d4ed8;text-decoration:none}a:hover{color:#1e40af;text-decoration:underline}
+.t{background:#ffffff;border-radius:16px;padding:18px 20px;box-shadow:0 1px 2px rgba(15,23,42,.06);display:flex;flex-direction:column;gap:10px}
+.k{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#64748b}
+.w{font-size:12px;color:#475569;border-top:1px dashed #e2e8f0;padding-top:8px}
+</style>
+</helmet>
+<div style="min-height: 1900px; background: #f4f5f7; color: #0f172a; font-family: 'Geist', system-ui, sans-serif; font-size: 14px; line-height: 1.5; padding: 36px 40px 56px; display: flex; flex-direction: column; gap: 26px">
+  <header>
+    <h1 style="margin: 0; font-family: 'Instrument Serif', Georgia, serif; font-weight: 400; font-size: 44px">States and scenarios</h1>
+    <p style="margin: 6px 0 0; color: #64748b; max-width: 860px">Component states every page must handle, and the §7 scenarios not already drawn on another board. Each tile says what the operator must understand. Same dataset as the other v2.1 boards.</p>
+  </header>
+
+  <section aria-label="Data states">
+    <h2 style="margin: 0 0 12px; font-size: 18px; font-weight: 600">1 · Data states — an unavailable count is not zero</h2>
+    <div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px">
+      <div class="t"><span class="k">Loading</span><div style="height: 12px; width: 70%; background: #e2e8f0; border-radius: 6px"></div><div style="height: 28px; width: 40%; background: #e2e8f0; border-radius: 6px"></div><div class="w">Skeleton keeps the layout. No number is shown until one arrives.</div></div>
+      <div class="t"><span class="k">Empty</span><b>No decisions waiting</b><span style="font-size: 13px; color: #475569">Nothing needs you now. This does not mean reading is complete — see the journey.</span><div class="w">An empty queue never stands in for finished scientific work.</div></div>
+      <div class="t"><span class="k">Unknown</span><div style="font-size: 12px; color: #64748b">Copies obtained</div><b style="font-size: 26px">—</b><span style="font-size: 12px; color: #64748b">not computed for this scope</span><div class="w">"—" with a reason, never 0.</div></div>
+      <div class="t"><span class="k">Failed</span><div role="alert" style="background: #fff1f2; border-radius: 10px; padding: 10px 12px; font-size: 13px; color: #9f1239"><b>Could not load the question table.</b> The API answered 500 at 14:02.</div><button type="button" style="font-family: inherit; font-size: 13px; border: 1px solid #cbd5e1; background: #ffffff; border-radius: 8px; min-height: 36px">Try again</button><div class="w">The rest of the page stays usable; the failed block says what failed.</div></div>
+      <div class="t"><span class="k">Stale</span><div style="background: #fffbeb; border-radius: 10px; padding: 10px 12px; font-size: 13px; color: #78350f">Last refreshed 14:02 · refresh failed at 14:07. Values shown are from 14:02.</div><div class="w">Old values stay visible, labelled with their time.</div></div>
+    </div>
+  </section>
+
+  <section aria-label="Scenarios">
+    <h2 style="margin: 0 0 12px; font-size: 18px; font-weight: 600">2 · Scenarios</h2>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px">
+
+      <div class="t"><span class="k">New research, no candidates yet</span>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap; font-size: 12px"><span style="background: #f1f5f9; border-radius: 999px; padding: 2px 10px">December update · protocol v1</span><span style="background: #f1f5f9; border-radius: 999px; padding: 2px 10px">scope: 2025-11-01 → 2025-12-31 · ACA, WP</span></div>
+        <div style="font-size: 13px">Candidates <b>0 so far</b> · search 1 of 4 sources done</div>
+        <div style="font-size: 13px">Copies obtained <b>—</b> <span style="color: #64748b">(no denominator yet)</span></div>
+        <div class="w">Scope is declared before anything is found. Coverage is not a percentage until candidates exist.</div></div>
+
+      <div class="t"><span class="k">Scheduler heartbeat expired</span>
+        <div style="display: flex; align-items: center; gap: 8px"><span style="width: 10px; height: 10px; border-radius: 999px; background: #94a3b8"></span><b>Status being checked</b></div>
+        <div style="font-size: 13px; color: #475569">Worker last seen <b>9 min ago</b> (expected every 30 s). Last event: 14:21 copy requested for S29.</div>
+        <div style="font-size: 13px; color: #475569">Nothing is claimed as running. Work already recorded is safe.</div>
+        <div class="w">An old event is not proof that work is running. The teal "running" mark disappears until the worker reports again.</div></div>
+
+      <div class="t"><span class="k">One copy route blocked</span>
+        <div style="font-size: 13px"><span style="color: #9f1239">●</span> publisher host <span style="font-family: 'Geist Mono', monospace">pub.example</span> — 403 twice · <b>paused for this host</b></div>
+        <div style="font-size: 13px"><span style="color: #0d9488">●</span> open repositories — continuing · 12 of 25</div>
+        <div style="font-size: 13px"><span style="color: #0d9488">●</span> annotation of confirmed copies — continuing</div>
+        <div class="w">A blocked route stops only itself. Independent authorized work goes on; the host is not retried outside a named campaign.</div></div>
+
+      <div class="t"><span class="k">A paused plan is resumed</span>
+        <div style="font-size: 13px">October update · copy plan · resumed 6 Oct 11:40 after a pause</div>
+        <ul style="margin: 0; padding-left: 18px; font-size: 13px; color: #475569"><li>Done before the stop: 11 of 25 candidates — kept, not repeated</li><li>Authorized request budget: what was not used still stands</li><li>Now: 12 of 25 · same plan, no new authorization asked</li></ul>
+        <div class="w">Resuming keeps completed requests and the approved budget; bytes already held are never re-fetched. A retry plan for S14/S31, once you authorize it, resumes the same way.</div></div>
+
+      <div class="t"><span class="k">You decline or defer · variant</span>
+        <div style="font-size: 13px"><b>If declined</b> · raise the review cap to USD 18.00 · 6 Oct 12:05</div>
+        <div style="font-size: 13px; color: #475569">Consequence: review of Q01, Q02, Q03, Q05, Q07 does not run. Those questions stay <span style="background: #fef3c7; color: #92400e; border-radius: 999px; padding: 0 8px">still being read</span>. Q04, Q06 and the October update are unaffected.</div>
+        <div style="font-size: 13px; color: #475569"><b>Deferred</b> items return to Decisions on the date you chose; <b>obsolete</b> ones say what made them so.</div>
+        <div class="w">Declined work never executes; the consequence is stated where you declined it and on the journey.</div></div>
+
+      <div class="t"><span class="k">PDF twice, or an earlier version</span>
+        <div style="font-size: 13px">s23-fulltext (1).pdf — <b>same bytes</b> as 10:05 · nothing added</div>
+        <div style="font-size: 13px">wp-2017-14 → S33 · <b>possible earlier version of S12</b> · waits for your identity answer</div>
+        <div style="font-size: 13px; color: #475569">If you answer "a version of it": both records stay, the relation is recorded with your reason, and the count of independent studies does not change.</div>
+        <div class="w">Neither becomes a second independent study. Detail on Add material and Decisions.</div></div>
+
+      <div class="t"><span class="k">Protocol revision or scheduled update</span>
+        <div style="font-size: 13px"><b>Variant · protocol v2</b> proposed: adds question Q09 · dated bump 2026-10-06</div>
+        <ul style="margin: 0; padding-left: 18px; font-size: 13px; color: #475569"><li>Initial research stays bound to v1; its history and any signatures keep their meaning</li><li>New work under v2 is a new flow with its own scope</li><li>Monthly update, next run 1 Nov: scope 2025-10-01 → 2025-10-31, protocol v1 unless you switch</li></ul>
+        <div class="w">New work always shows its scope and protocol before it starts; nothing already signed is silently re-scoped.</div></div>
+
+      <div class="t"><span class="k">Q04 ready while others wait for budget</span>
+        <div style="font-size: 13px"><span style="background: #7c3aed; color: #ffffff; border-radius: 999px; padding: 0 8px; font-size: 12px">ready to sign</span> Q04, Q06</div>
+        <div style="font-size: 13px"><span style="background: #fef3c7; color: #92400e; border-radius: 999px; padding: 0 8px; font-size: 12px">waiting for the cap</span> Q01, Q02, Q03, Q05, Q07</div>
+        <div class="w">Signing one question and blocked work on others coexist; the cap decision blocks only its dependants. Drawn in full on the journey.</div></div>
+
+      <div class="t"><span class="k">Where the other scenarios are</span>
+        <ul style="margin: 0; padding-left: 18px; font-size: 13px; color: #475569">
+          <li>Paid extraction authorized first → <a href="V2NewStart.html">New research, step 4</a></li>
+          <li>Verified purchase offer → <a href="V2Decisions.html">Decisions</a></li>
+          <li>Zero usable results; profile changed → <a href="V2DeskZero.html">Desk variants</a></li>
+          <li>Interrupted, retried, declined events → <a href="V2Activity.html">Activity</a></li>
+        </ul></div>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>New project — scope, rigour, plan and start</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=Geist+Mono:wght@400;500&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<style>
+body{margin:0;background:#f4f5f7}
+a{color:#1d4ed8;text-decoration:none}a:hover{color:#1e40af;text-decoration:underline}
+</style>
+</helmet>
+<div style="min-height: 1750px; display: flex; flex-wrap: wrap; background: #f4f5f7; color: #0f172a; font-family: 'Geist', system-ui, sans-serif; font-size: 14px; line-height: 1.5">
+
+  <nav aria-label="New project steps" style="flex: 1 1 260px; max-width: 260px; background: #0f172a; color: #cbd5e1; padding: 22px 18px; display: flex; flex-direction: column; gap: 6px">
+    <a href="V2Projects.html" style="color: #94a3b8; font-size: 13px; padding: 0 6px 18px; text-decoration: none">← All projects</a>
+    <div style="color: #f8fafc; font-family: 'Instrument Serif', Georgia, serif; font-size: 26px; padding: 0 6px 16px">New project</div>
+    <ol style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px">
+      <li style="display: flex; gap: 12px; padding: 10px 8px"><span style="width: 26px; height: 26px; border-radius: 50%; background: #059669; color: #ffffff; display: grid; place-items: center; font-size: 13px; flex: none">✓</span><span style="color: #f8fafc">Describe the topic</span></li>
+      <li style="display: flex; gap: 12px; padding: 10px 8px"><span style="width: 26px; height: 26px; border-radius: 50%; background: #059669; color: #ffffff; display: grid; place-items: center; font-size: 13px; flex: none">✓</span><span style="color: #f8fafc">Ask the questions · 8</span></li>
+      <li style="display: flex; gap: 12px; padding: 10px 8px"><span style="width: 26px; height: 26px; border-radius: 50%; background: #059669; color: #ffffff; display: grid; place-items: center; font-size: 13px; flex: none">✓</span><span style="color: #f8fafc">Scope and rigour</span></li>
+      <li style="display: flex; gap: 12px; padding: 10px 8px; border-radius: 10px; background: #1e293b"><span style="width: 26px; height: 26px; border-radius: 50%; background: #f8fafc; color: #0f172a; display: grid; place-items: center; font-size: 13px; font-weight: 600; flex: none">4</span><span style="color: #f8fafc; font-weight: 500">Plan and start</span></li>
+    </ol>
+    <div style="margin-top: auto; font-size: 12px; color: #94a3b8; padding: 0 6px">Draft saved · nothing runs until you start</div>
+  </nav>
+
+  <main style="flex: 999 1 640px; min-width: 0; padding: 32px 40px 56px; display: flex; flex-direction: column; gap: 20px; max-width: 1100px">
+    <section aria-label="Step 3, scope and rigour" style="background: #ffffff; border-radius: 18px; padding: 22px 24px; box-shadow: 0 1px 2px rgba(15,23,42,.06); display: flex; flex-direction: column; gap: 14px">
+      <div style="display: flex; justify-content: space-between; align-items: baseline"><h2 style="margin: 0; font-size: 18px; font-weight: 600">3 · Scope and rigour</h2><a href="#" style="font-size: 13px">Edit</a></div>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px">
+        <div style="background: #f8fafc; border-radius: 12px; padding: 14px 16px"><div style="font-size: 12px; color: #64748b">Where to search</div><div style="font-weight: 500">OpenAlex, Crossref, arXiv · citations one level deep</div><div style="font-size: 13px; color: #475569">2000–2026 · English</div></div>
+        <div style="background: #f8fafc; border-radius: 12px; padding: 14px 16px"><div style="font-size: 12px; color: #64748b">Which sources count</div><div style="font-weight: 500">Peer-reviewed (ACA) · working papers (WP)</div><div style="font-size: 13px; color: #475569">vendor research excluded · each class judged on its own</div></div>
+      </div>
+      <div style="background: #f8fafc; border-radius: 12px; padding: 14px 16px">
+        <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: baseline"><div style="font-size: 12px; color: #64748b">Acquisition floor</div><div style="font-size: 22px; font-weight: 600">80%</div></div>
+        <p style="margin: 4px 0 0; color: #334155">At least 80% of the candidates in this declared search scope must have a confirmed usable copy. Reading and independent review are checked separately before a verdict can be signed.</p>
+        <p style="margin: 6px 0 0; font-size: 13px; color: #64748b">The search finds what the declared scope finds; how much literature exists in the world is not knowable, so no coverage percentage is shown until candidates exist.</p>
+      </div>
+      <fieldset style="border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 16px; margin: 0">
+        <legend style="font-size: 13px; font-weight: 600; padding: 0 6px">Copies you supply yourself</legend>
+        <label style="display: flex; gap: 8px; align-items: center; font-size: 13px"><input type="radio" name="supplied">Count toward the floor once verified</label>
+        <label style="display: flex; gap: 8px; align-items: center; font-size: 13px; margin-top: 4px"><input type="radio" name="supplied">Read them, but report them separately from the floor</label>
+        <p style="margin: 6px 0 0; font-size: 12px; color: #64748b">Declared now, before any copy exists; it cannot change under this protocol.</p>
+      </fieldset>
+    </section>
+
+    <section aria-label="Step 4, plan and start" style="background: #ffffff; border-radius: 18px; padding: 22px 24px; box-shadow: 0 8px 24px rgba(15,23,42,.08); display: flex; flex-direction: column; gap: 16px">
+      <div><h2 style="margin: 0; font-family: 'Instrument Serif', Georgia, serif; font-weight: 400; font-size: 34px">Plan and start</h2><p style="margin: 4px 0 0; color: #64748b">Start freezes the protocol as version 1 and authorizes exactly this plan. Claimstone asks again only if the work outgrows it.</p></div>
+
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px">
+        <div style="border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px"><div style="font-size: 12px; color: #64748b">Protocol v1</div><div style="font-weight: 600">News tone and returns</div><div style="font-size: 13px; color: #475569">8 questions: 7 literature, 1 operational</div></div>
+        <div style="border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px"><div style="font-size: 12px; color: #64748b">Search · network</div><div style="font-weight: 600">28 queries · at most 25 results each</div><div style="font-size: 13px; color: #475569">≤ 120 index requests · citations ≤ 400 · counts include redirects and robots checks</div></div>
+        <div style="border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px"><div style="font-size: 12px; color: #64748b">Copies · network</div><div style="font-weight: 600">Legal open copies only</div><div style="font-size: 13px; color: #475569">robots.txt honoured · 5 failures stop a host · excluded hosts never contacted</div></div>
+      </div>
+
+      <div style="border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px">
+        <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: baseline"><b>Model work (paid)</b><span style="font-size: 13px; color: #64748b">annotation by reader A, independent review by reader B</span></div>
+        <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 12px">
+          <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: #64748b">Spending cap<input type="text" value="USD 12.00" style="font-family: 'Geist Mono', monospace; font-size: 15px; color: #0f172a; border: 1px solid #cbd5e1; border-radius: 10px; padding: 0 10px; min-height: 44px"></label>
+          <div style="background: #f8fafc; border-radius: 10px; padding: 8px 10px"><div style="font-size: 12px; color: #64748b">Estimated cost</div><div style="font-weight: 600">not yet known</div><div style="font-size: 11px; color: #64748b">measured once passages exist</div></div>
+          <div style="background: #f8fafc; border-radius: 10px; padding: 8px 10px"><div style="font-size: 12px; color: #64748b">Unknown-cost calls</div><div style="font-weight: 600">reserved</div><div style="font-size: 11px; color: #64748b">counted against the cap</div></div>
+          <div style="background: #f8fafc; border-radius: 10px; padding: 8px 10px"><div style="font-size: 12px; color: #64748b">Readers</div><div style="font-weight: 600">[backend / model] ×2</div><div style="font-size: 11px; color: #64748b">different models</div></div>
+        </div>
+        <p style="margin: 10px 0 0; font-size: 13px; color: #475569">Covers annotation and review. If the measured work needs more than the cap, the journey stops at a checkpoint and asks you; nothing beyond the cap is spent.</p>
+      </div>
+
+      <label style="display: flex; gap: 10px; align-items: flex-start; font-size: 14px"><input type="checkbox" style="margin-top: 3px">I authorize this plan: the searches, copy requests and model work above, up to USD 12.00.</label>
+      <div style="display: flex; gap: 10px; justify-content: flex-end"><button type="button" style="font-family: inherit; font-size: 14px; border: 1px solid #e2e8f0; background: #ffffff; border-radius: 10px; padding: 0 18px; min-height: 48px">Save as draft</button><button type="button" disabled style="font-family: inherit; font-size: 16px; font-weight: 600; border: 0; background: #94a3b8; color: #ffffff; border-radius: 10px; padding: 0 28px; min-height: 48px">Start</button></div>
+      <p style="margin: 0; font-size: 12px; color: #64748b; text-align: right">Start is enabled once the box is ticked. The plan shown is the server's exact preview.</p>
+    </section>
+    <p style="margin: 0; font-size: 12px; color: #94a3b8">Illustrative values, consistent across the v2.1 boards.</p>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1750}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Add material</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=Geist+Mono:wght@400;500&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<style>
+body{margin:0;background:#f4f5f7}
+a{color:#1d4ed8;text-decoration:none}a:hover{color:#1e40af;text-decoration:underline}
+</style>
+</helmet>
+<div style="min-height: 1500px; display: flex; flex-wrap: wrap; background: #f4f5f7; color: #0f172a; font-family: 'Geist', system-ui, sans-serif; font-size: 14px; line-height: 1.5">
+
+  <nav aria-label="Main" style="flex: 1 1 232px; max-width: 232px; background: #0f172a; color: #cbd5e1; padding: 22px 14px; display: flex; flex-direction: column; gap: 4px">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 0 8px 20px"><svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><rect x="1" y="1" width="26" height="26" rx="7" fill="none" stroke="#60a5fa" stroke-width="2"></rect><path d="M8 18l4-8 4 6 4-4" fill="none" stroke="#e2e8f0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg><span style="color: #f8fafc; font-weight: 600; font-size: 15px">Claimstone</span></div>
+    <a href="V2Journey.html" style="padding: 9px 10px; border-radius: 8px; color: #cbd5e1; text-decoration: none">← News tone and returns</a>
+    <a href="V2Decisions.html" style="display: flex; padding: 9px 10px; border-radius: 8px; color: #cbd5e1; text-decoration: none">Decisions<span style="margin-left: auto; font-family: 'Geist Mono', monospace; font-size: 12px; background: #7c3aed; color: #ffffff; border-radius: 999px; padding: 0 8px">6</span></a>
+  </nav>
+
+  <main style="flex: 999 1 640px; min-width: 0; padding: 32px 40px 56px; display: flex; flex-direction: column; gap: 18px; max-width: 1100px">
+    <header>
+      <nav aria-label="Breadcrumb" style="font-size: 13px; color: #64748b"><a href="V2Journey.html">News tone and returns</a> / Add material</nav>
+      <h1 style="margin: 6px 0 0; font-family: 'Instrument Serif', Georgia, serif; font-weight: 400; font-size: 44px">Add material</h1>
+      <p style="margin: 6px 0 0; color: #64748b">A reference, DOI, link, PDF or supplement you think belongs here. Nothing is counted until it passes the same checks as anything Claimstone finds.</p>
+    </header>
+
+    <section aria-label="What to add" style="background: #ffffff; border-radius: 18px; padding: 22px 24px; box-shadow: 0 1px 2px rgba(15,23,42,.06); display: flex; flex-direction: column; gap: 14px">
+      <label style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600">Add to<select style="font-family: inherit; font-size: 14px; font-weight: 400; border: 1px solid #cbd5e1; border-radius: 10px; padding: 0 12px; min-height: 44px; background: #ffffff"><option>Initial research · protocol v1 · frozen cohort of 40</option><option>October update · protocol v1 · open, 25 so far</option></select></label>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+        <label style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600">Reference, DOI or link<input type="text" placeholder="10.xxxx/… or https://…" style="font-family: 'Geist Mono', monospace; font-size: 13px; font-weight: 400; border: 1px solid #cbd5e1; border-radius: 10px; padding: 0 12px; min-height: 44px"></label>
+        <label style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; border: 2px dashed #cbd5e1; border-radius: 12px; padding: 12px; text-align: center; color: #475569; cursor: pointer"><b>Drop a PDF or supplement</b><span style="font-size: 12px; color: #64748b">or choose files</span><input type="file" multiple style="position: absolute; left: -9999px"></label>
+      </div>
+      <div style="background: #fffbeb; border-radius: 12px; padding: 12px 14px; font-size: 13px; color: #78350f"><b>The initial research has a frozen cohort.</b> A new work cannot join its 40 candidates; it can be a copy or version of one of them, or start a new round in the October update. Claimstone shows which before anything is recorded.</div>
+      <p style="margin: 0; font-size: 12px; color: #64748b">This project declared at the start: copies you supply <b>count toward the floor once verified</b>. Links are checked before any request: no private or local addresses.</p>
+    </section>
+
+    <section aria-label="Recent material" style="background: #ffffff; border-radius: 18px; padding: 22px 24px; box-shadow: 0 1px 2px rgba(15,23,42,.06)">
+      <h2 style="margin: 0 0 12px; font-size: 16px; font-weight: 600">Your recent material</h2>
+      <div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; font-size: 11px; color: #64748b; text-align: center; margin-bottom: 10px"><span>received</span><span>file checks</span><span>identity</span><span>duplicate / version</span><span>outcome</span></div>
+      <ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px">
+        <li style="border-top: 1px solid #f1f5f9; padding-top: 12px">
+          <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline"><b>s23-fulltext.pdf</b><span style="font-size: 12px; color: #64748b">for S23 · Initial research · 6 Oct 10:05</span><span style="margin-left: auto; font-size: 12px; font-weight: 600; background: #ccfbf1; color: #115e59; border-radius: 999px; padding: 1px 9px">checks passed · being prepared</span></div>
+          <div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; margin-top: 8px"><span style="height: 6px; border-radius: 999px; background: #059669"></span><span style="height: 6px; border-radius: 999px; background: #059669"></span><span style="height: 6px; border-radius: 999px; background: #059669"></span><span style="height: 6px; border-radius: 999px; background: #059669"></span><span style="height: 6px; border-radius: 999px; background: linear-gradient(90deg, #0d9488 50%, #e2e8f0 50%)"></span></div>
+          <div style="font-size: 12px; color: #64748b; margin-top: 4px">readable PDF · title, authors and DOI match S23 · the stored copy was a landing page · counts toward the floor only once confirmed as a document (still 37 of 40 now)</div>
+        </li>
+        <li style="border-top: 1px solid #f1f5f9; padding-top: 12px">
+          <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline"><b>s23-fulltext (1).pdf</b><span style="font-size: 12px; color: #64748b">6 Oct 10:07</span><span style="margin-left: auto; font-size: 12px; font-weight: 600; background: #f1f5f9; color: #334155; border-radius: 999px; padding: 1px 9px">same file as 10:05 · nothing added</span></div>
+          <div style="font-size: 12px; color: #64748b; margin-top: 4px">identical bytes (sha256 4e1a…) — recognised, not stored twice, not a second study</div>
+        </li>
+        <li style="border-top: 1px solid #f1f5f9; padding-top: 12px">
+          <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline"><b>10.xxxx/wp-2017-14</b><span style="font-size: 12px; color: #64748b">for October update · 6 Oct 10:12</span><span style="margin-left: auto; font-size: 12px; font-weight: 600; background: #fffbeb; color: #92400e; border-radius: 999px; padding: 1px 9px">possible earlier version of S12</span></div>
+          <div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; margin-top: 8px"><span style="height: 6px; border-radius: 999px; background: #059669"></span><span style="height: 6px; border-radius: 999px; background: #059669"></span><span style="height: 6px; border-radius: 999px; background: #059669"></span><span style="height: 6px; border-radius: 999px; background: #d97706"></span><span style="height: 6px; border-radius: 999px; background: #e2e8f0"></span></div>
+          <div style="font-size: 12px; color: #64748b; margin-top: 4px">became candidate S33 · waits for <a href="V2Decisions.html">your identity answer</a>; it will never count as a separate study if it is a version</div>
+        </li>
+        <li style="border-top: 1px solid #f1f5f9; padding-top: 12px">
+          <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline"><b>slides-2020.pdf</b><span style="font-size: 12px; color: #64748b">6 Oct 10:20</span><span style="margin-left: auto; font-size: 12px; font-weight: 600; background: #fee2e2; color: #991b1b; border-radius: 999px; padding: 1px 9px">rejected · not a document</span></div>
+          <div style="font-size: 12px; color: #64748b; margin-top: 4px">24 short slides with no reference list; kept for inspection, not counted</div>
+        </li>
+      </ul>
+    </section>
+    <p style="margin: 0; font-size: 12px; color: #94a3b8">Illustrative values, consistent across the v2.1 boards.</p>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1500}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

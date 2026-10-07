@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Decisions — act in place</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=Geist+Mono:wght@400;500&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<style>
+body{margin:0;background:#f4f5f7}
+a{color:#1d4ed8;text-decoration:none}a:hover{color:#1e40af;text-decoration:underline}
+</style>
+</helmet>
+<div style="min-height: 2300px; display: flex; flex-wrap: wrap; background: #f4f5f7; color: #0f172a; font-family: 'Geist', system-ui, sans-serif; font-size: 14px; line-height: 1.5">
+
+  <nav aria-label="Main" style="flex: 1 1 232px; max-width: 232px; background: #0f172a; color: #cbd5e1; padding: 22px 14px; display: flex; flex-direction: column; gap: 4px">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 0 8px 20px"><svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><rect x="1" y="1" width="26" height="26" rx="7" fill="none" stroke="#60a5fa" stroke-width="2"></rect><path d="M8 18l4-8 4 6 4-4" fill="none" stroke="#e2e8f0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg><span style="color: #f8fafc; font-weight: 600; font-size: 15px">Claimstone</span></div>
+    <a href="V2NewProject.html" style="display: flex; justify-content: center; margin: 0 4px 14px; background: #f8fafc; color: #0f172a; border-radius: 10px; padding: 10px; font-weight: 600; text-decoration: none">+ New project</a>
+    <a href="V2Today.html" style="padding: 9px 10px; border-radius: 8px; color: #cbd5e1; text-decoration: none">Today</a>
+    <a href="V2Projects.html" style="padding: 9px 10px; border-radius: 8px; color: #cbd5e1; text-decoration: none">Projects</a>
+    <a href="#" style="display: flex; padding: 9px 10px; border-radius: 8px; background: #1e293b; color: #f8fafc; text-decoration: none">Decisions<span style="margin-left: auto; font-family: 'Geist Mono', monospace; font-size: 12px; background: #7c3aed; color: #ffffff; border-radius: 999px; padding: 0 8px">6</span></a>
+    <a href="V2Admin.html" style="margin-top: auto; padding: 9px 10px; border-radius: 8px; color: #cbd5e1; text-decoration: none">Administration</a>
+  </nav>
+
+  <main style="flex: 999 1 640px; min-width: 0; padding: 32px 40px 56px; display: flex; flex-direction: column; gap: 18px; max-width: 1140px">
+    <header>
+      <h1 style="margin: 0; font-family: 'Instrument Serif', Georgia, serif; font-weight: 400; font-size: 46px; line-height: 1.05">Decisions</h1>
+      <p style="margin: 6px 0 0; color: #64748b">6 open: 4 required, 2 optional. Each card says what it holds back and what keeps going without it.</p>
+    </header>
+
+    <section aria-label="Raise the review cap" style="background: #ffffff; border-radius: 18px; padding: 22px 24px; box-shadow: 0 1px 2px rgba(15,23,42,.06); display: flex; flex-direction: column; gap: 12px">
+      <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline"><span style="font-size: 12px; font-weight: 600; background: #fffbeb; color: #92400e; border-radius: 999px; padding: 2px 10px">Required · budget</span><span style="font-size: 13px; color: #64748b">News tone and returns · Initial research · step 6</span><span style="margin-left: auto; font-size: 12px; color: #94a3b8">open since Mon 18:02</span></div>
+      <p style="margin: 0; font-size: 17px; font-weight: 500">Raise the cap from USD 12.00 to finish annotation and review</p>
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; font-size: 13px">
+        <div style="background: #fef2f2; border-radius: 10px; padding: 10px 12px"><div style="font-weight: 600; color: #991b1b">Holds back</div>review of Q01, Q02, Q03, Q05, Q07; 33 open readings</div>
+        <div style="background: #f0fdf4; border-radius: 10px; padding: 10px 12px"><div style="font-weight: 600; color: #166534">Keeps going</div>the October update; signing Q04 and Q06</div>
+        <div style="background: #f5f3ff; border-radius: 10px; padding: 10px 12px"><div style="font-weight: 600; color: #5b21b6">Enables</div>1,661 reviews and 33 readings, estimated USD 6.05</div>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end">
+        <span style="font-size: 13px; color: #475569; flex: 1 1 280px">Spent USD 11.42 · reserved USD 0.34 for unknown-cost calls · remaining USD 0.24</span>
+        <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: #64748b">New cap<input type="text" value="USD 18.00" style="font-family: 'Geist Mono', monospace; font-size: 14px; border: 1px solid #cbd5e1; border-radius: 10px; padding: 0 12px; min-height: 44px; width: 140px"></label>
+        <button type="button" style="font-family: inherit; font-size: 14px; font-weight: 600; border: 0; background: #0f172a; color: #ffffff; border-radius: 10px; padding: 0 18px; min-height: 44px">Approve</button>
+        <button type="button" style="font-family: inherit; font-size: 14px; border: 1px solid #e2e8f0; background: #ffffff; border-radius: 10px; padding: 0 16px; min-height: 44px">Decline</button>
+      </div>
+      <p style="margin: 0; font-size: 12px; color: #64748b">The same decision appears as step 6 of the journey; deciding here resolves it there.</p>
+    </section>
+
+    <section aria-label="Resolve an identity" style="background: #ffffff; border-radius: 18px; padding: 22px 24px; box-shadow: 0 1px 2px rgba(15,23,42,.06); display: flex; flex-direction: column; gap: 12px">
+      <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline"><span style="font-size: 12px; font-weight: 600; background: #fffbeb; color: #92400e; border-radius: 999px; padding: 2px 10px">Required for one source · identity</span><span style="font-size: 13px; color: #64748b">October update · S33</span></div>
+      <p style="margin: 0; font-size: 17px; font-weight: 500">Is S33 the same work as S12 from the initial research?</p>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+        <div style="background: #f8fafc; border-radius: 12px; padding: 12px 14px"><div style="font-size: 12px; color: #64748b">S12 · confirmed copy · journal</div><div style="font-weight: 500">[title of the journal article]</div><div style="font-size: 12px; color: #64748b">[authors] · 2019 · DOI [doi]</div></div>
+        <div style="background: #f8fafc; border-radius: 12px; padding: 12px 14px"><div style="font-size: 12px; color: #64748b">S33 · new candidate · working paper</div><div style="font-weight: 500">[title of the working paper]</div><div style="font-size: 12px; color: #64748b">[authors] · 2017 · repository record</div></div>
+      </div>
+      <div style="font-size: 13px; color: #475569">Holds back: S33 only. Keeps going: the other 24 October candidates.</div>
+      <div role="group" aria-label="Your answer" style="display: flex; flex-wrap: wrap; gap: 8px"><button type="button" style="font-family: inherit; font-size: 14px; border: 1px solid #e2e8f0; background: #ffffff; border-radius: 10px; padding: 0 16px; min-height: 44px">Same work</button><button type="button" style="font-family: inherit; font-size: 14px; border: 2px solid #0f172a; background: #ffffff; border-radius: 10px; padding: 0 16px; min-height: 44px">An earlier version of it</button><button type="button" style="font-family: inherit; font-size: 14px; border: 1px solid #e2e8f0; background: #ffffff; border-radius: 10px; padding: 0 16px; min-height: 44px">Different works</button><button type="button" style="font-family: inherit; font-size: 14px; border: 0; background: transparent; color: #64748b; padding: 0 12px; min-height: 44px">Not sure — keep pending</button></div>
+      <label style="display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 600">Your reason (required)<input type="text" value="Same authors and tables; the 2017 paper is the pre-print of the 2019 article." style="font-family: inherit; font-size: 14px; font-weight: 400; border: 1px solid #cbd5e1; border-radius: 10px; padding: 0 12px; min-height: 44px"></label>
+      <p style="margin: 0; font-size: 12px; color: #64748b">Recorded as a relationship. Both records are kept; nothing is merged or moved, and S33 is never counted as an additional independent study.</p>
+    </section>
+
+    <section aria-label="Authorize a retry campaign" style="background: #ffffff; border-radius: 18px; padding: 22px 24px; box-shadow: 0 1px 2px rgba(15,23,42,.06); display: flex; flex-direction: column; gap: 12px">
+      <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline"><span style="font-size: 12px; font-weight: 600; background: #f1f5f9; color: #334155; border-radius: 999px; padding: 2px 10px">Optional · network</span><span style="font-size: 13px; color: #64748b">Initial research · the floor is already met</span></div>
+      <p style="margin: 0; font-size: 17px; font-weight: 500">Retry two refused sources once</p>
+      <label style="display: flex; gap: 12px; align-items: center; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 12px"><input type="checkbox" checked><span style="font-family: 'Geist Mono', monospace; font-size: 13px; width: 50px">S14</span><span style="color: #475569">HTTP 403 — access refused, not proof of a paywall</span></label>
+      <label style="display: flex; gap: 12px; align-items: center; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 12px"><input type="checkbox" checked><span style="font-family: 'Geist Mono', monospace; font-size: 13px; width: 50px">S31</span><span style="color: #475569">bot challenge — a fact about our crawler, not the source</span></label>
+      <div style="background: #f8fafc; border-radius: 12px; padding: 12px 14px; font-size: 13px; color: #334155"><b>Exact plan, from the server</b> · updates when you change the selection<br>Destinations: [publisher host A], [publisher host B] · at most 6 transfers, including redirects and robots checks · robots.txt honoured · campaign <span style="font-family: 'Geist Mono', monospace">retry-2026-10-06</span>. A redirect to any other host stops that route and needs a new proposal.</div>
+      <div style="display: flex; gap: 8px; justify-content: flex-end"><button type="button" style="font-family: inherit; font-size: 14px; border: 1px solid #e2e8f0; background: #ffffff; border-radius: 10px; padding: 0 16px; min-height: 44px">Not now</button><button type="button" style="font-family: inherit; font-size: 14px; font-weight: 600; border: 0; background: #0f172a; color: #ffffff; border-radius: 10px; padding: 0 18px; min-height: 44px">Authorize 2 sources</button></div>
+    </section>
+
+    <section aria-label="Verified purchase offer" style="background: #ffffff; border-radius: 18px; padding: 22px 24px; box-shadow: 0 1px 2px rgba(15,23,42,.06); display: flex; flex-direction: column; gap: 12px">
+      <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline"><span style="font-size: 12px; font-weight: 600; background: #f1f5f9; color: #334155; border-radius: 999px; padding: 2px 10px">Optional · purchase offer</span><span style="font-size: 13px; color: #64748b">Initial research · S14</span><span style="margin-left: auto; font-size: 12px; color: #94a3b8">offer verified 6 Oct 09:12</span></div>
+      <p style="margin: 0; font-size: 17px; font-weight: 500">A verified offer for the journal version of S14</p>
+      <dl style="margin: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; font-size: 13px">
+        <div style="background: #f8fafc; border-radius: 10px; padding: 10px 12px"><dt style="color: #64748b; font-size: 12px">Work and version</dt><dd style="margin: 0">[title] · journal version, 2018</dd></div>
+        <div style="background: #f8fafc; border-radius: 10px; padding: 10px 12px"><dt style="color: #64748b; font-size: 12px">Vendor · price</dt><dd style="margin: 0">[vendor] · [amount] [currency] · tax [known / unknown]</dd></div>
+        <div style="background: #f8fafc; border-radius: 10px; padding: 10px 12px"><dt style="color: #64748b; font-size: 12px">Terms</dt><dd style="margin: 0">[access duration, download, use terms]</dd></div>
+      </dl>
+      <p style="margin: 0; font-size: 13px; color: #475569">Why it might help: S14 is one of 30 ACA candidates in scope; a copy would let its passages be read. It does not promise a usable result or any particular verdict.</p>
+      <ol aria-label="Offer progress" style="list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; font-size: 12px; text-align: center">
+        <li style="border: 2px solid #0f172a; border-radius: 10px; padding: 8px"><b>1 · You approve</b><br>this exact offer</li>
+        <li style="border: 1px solid #e2e8f0; border-radius: 10px; padding: 8px; color: #64748b">2 · You buy it<br>outside Claimstone</li>
+        <li style="border: 1px solid #e2e8f0; border-radius: 10px; padding: 8px; color: #64748b">3 · You add the copy</li>
+        <li style="border: 1px solid #e2e8f0; border-radius: 10px; padding: 8px; color: #64748b">4 · Copy verified</li>
+      </ol>
+      <div style="display: flex; gap: 8px; justify-content: flex-end"><button type="button" style="font-family: inherit; font-size: 14px; border: 1px solid #e2e8f0; background: #ffffff; border-radius: 10px; padding: 0 16px; min-height: 44px">Decline</button><button type="button" style="font-family: inherit; font-size: 14px; font-weight: 600; border: 0; background: #0f172a; color: #ffffff; border-radius: 10px; padding: 0 18px; min-height: 44px">Approve this offer</button></div>
+      <p style="margin: 0; font-size: 12px; color: #64748b">Approving is permission to buy this exact offer, not a purchase. A changed price or terms creates a new decision. Sources are offered in the order of the frozen candidate list, never by how their findings might look.</p>
+    </section>
+
+    <section aria-label="Sign" style="background: #0f172a; color: #e2e8f0; border-radius: 18px; padding: 20px 24px; display: flex; flex-direction: column; gap: 10px">
+      <div style="display: flex; flex-wrap: wrap; gap: 14px; align-items: center"><span style="font-size: 12px; font-weight: 600; background: #7c3aed; color: #ffffff; border-radius: 999px; padding: 2px 10px">Required · sign</span><span style="flex: 1 1 320px; font-family: 'Instrument Serif', Georgia, serif; font-size: 20px; color: #f8fafc">Q04 · The event is the unit of inference</span><a href="V2Desk.html" style="background: #f8fafc; color: #0f172a; border-radius: 10px; padding: 10px 16px; font-weight: 600; text-decoration: none">Read and sign</a></div>
+      <div style="display: flex; flex-wrap: wrap; gap: 14px; align-items: center"><span style="font-size: 12px; font-weight: 600; background: #7c3aed; color: #ffffff; border-radius: 999px; padding: 2px 10px">Required · sign</span><span style="flex: 1 1 320px; font-family: 'Instrument Serif', Georgia, serif; font-size: 20px; color: #f8fafc">Q06 · Abnormal return is the better outcome · 0 usable results</span><a href="V2DeskZero.html" style="background: #f8fafc; color: #0f172a; border-radius: 10px; padding: 10px 16px; font-weight: 600; text-decoration: none">Read and sign</a></div>
+    </section>
+
+    <section aria-label="Decided" style="background: #ffffff; border-radius: 18px; padding: 20px 24px; box-shadow: 0 1px 2px rgba(15,23,42,.06)">
+      <h2 style="margin: 0 0 10px; font-size: 16px; font-weight: 600">Decided recently</h2>
+      <ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; font-size: 13px">
+        <li style="display: grid; grid-template-columns: 96px minmax(0, 1fr) auto; gap: 10px"><span style="font-weight: 600; color: #475569">Declined</span><span>Retry S09 · <span style="color: #64748b">S09 stays not obtained; nothing was requested</span></span><span style="color: #94a3b8">1 Oct</span></li>
+        <li style="display: grid; grid-template-columns: 96px minmax(0, 1fr) auto; gap: 10px"><span style="font-weight: 600; color: #475569">Deferred</span><span>Offer for S31 · <span style="color: #64748b">returns to the open list on 13 Oct, or earlier if the offer changes</span></span><span style="color: #94a3b8">3 Oct</span></li>
+        <li style="display: grid; grid-template-columns: 96px minmax(0, 1fr) auto; gap: 10px"><span style="font-weight: 600; color: #475569">Obsolete</span><span>Add a copy of S19 · <span style="color: #64748b">resolved: an open copy was found by the authorized plan</span></span><span style="color: #94a3b8">2 Oct</span></li>
+      </ul>
+    </section>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":2300}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

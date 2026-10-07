@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Project — the guided journey</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=Geist+Mono:wght@400;500&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<style>
+body{margin:0;background:#f4f5f7}
+a{color:#1d4ed8;text-decoration:none}a:hover{color:#1e40af;text-decoration:underline}
+</style>
+</helmet>
+<div style="min-height: 2300px; display: flex; flex-wrap: wrap; background: #f4f5f7; color: #0f172a; font-family: 'Geist', system-ui, sans-serif; font-size: 14px; line-height: 1.5">
+
+  <nav aria-label="Main" style="flex: 1 1 232px; max-width: 232px; background: #0f172a; color: #cbd5e1; padding: 22px 14px; display: flex; flex-direction: column; gap: 4px">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 0 8px 20px"><svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><rect x="1" y="1" width="26" height="26" rx="7" fill="none" stroke="#60a5fa" stroke-width="2"></rect><path d="M8 18l4-8 4 6 4-4" fill="none" stroke="#e2e8f0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg><span style="color: #f8fafc; font-weight: 600; font-size: 15px">Claimstone</span></div>
+    <a href="V2NewProject.html" style="display: flex; justify-content: center; margin: 0 4px 14px; background: #f8fafc; color: #0f172a; border-radius: 10px; padding: 10px; font-weight: 600; text-decoration: none">+ New project</a>
+    <a href="V2Today.html" style="padding: 9px 10px; border-radius: 8px; color: #cbd5e1; text-decoration: none">Today</a>
+    <a href="V2Projects.html" style="padding: 9px 10px; border-radius: 8px; background: #1e293b; color: #f8fafc; text-decoration: none">Projects</a>
+    <a href="V2Decisions.html" style="display: flex; padding: 9px 10px; border-radius: 8px; color: #cbd5e1; text-decoration: none">Decisions<span style="margin-left: auto; font-family: 'Geist Mono', monospace; font-size: 12px; background: #7c3aed; color: #ffffff; border-radius: 999px; padding: 0 8px">6</span></a>
+    <a href="V2Admin.html" style="margin-top: auto; padding: 9px 10px; border-radius: 8px; color: #cbd5e1; text-decoration: none">Administration</a>
+    <div style="border-top: 1px solid #1e293b; padding: 12px 10px 0; font-size: 12px; color: #94a3b8">[operator name] · scheduler running</div>
+  </nav>
+
+  <main style="flex: 999 1 640px; min-width: 0; padding: 32px 40px 56px; display: flex; flex-direction: column; gap: 22px">
+    <header style="display: flex; flex-direction: column; gap: 12px">
+      <nav aria-label="Breadcrumb" style="font-size: 13px; color: #64748b"><a href="V2Projects.html">Projects</a> / News tone and returns</nav>
+      <div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px; align-items: flex-end">
+        <div><h1 style="margin: 0; font-family: 'Instrument Serif', Georgia, serif; font-weight: 400; font-size: 50px; line-height: 1.02">News tone and returns</h1><p style="margin: 6px 0 0; color: #475569">2 active research flows · 6 decisions waiting for you</p></div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap"><a href="V2AddMaterial.html" style="border: 1px solid #e2e8f0; background: #ffffff; border-radius: 10px; padding: 9px 14px; color: #0f172a; text-decoration: none">+ Add material</a><a href="V2Export.html" style="border: 1px solid #e2e8f0; background: #ffffff; border-radius: 10px; padding: 9px 14px; color: #0f172a; text-decoration: none">Export</a><a href="V2Activity.html" style="border: 1px solid #e2e8f0; background: #ffffff; border-radius: 10px; padding: 9px 14px; color: #0f172a; text-decoration: none">Activity</a></div>
+      </div>
+      <div role="tablist" aria-label="Research flow" style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center">
+        <button type="button" role="tab" aria-selected="true" style="font-family: inherit; text-align: left; border: 2px solid #0f172a; background: #ffffff; border-radius: 12px; padding: 8px 14px; min-height: 44px"><b>Initial research</b><span style="display: block; font-size: 12px; color: #64748b">protocol v1 · started 28 Sep · needs you</span></button>
+        <button type="button" role="tab" aria-selected="false" style="font-family: inherit; text-align: left; border: 1px solid #e2e8f0; background: #ffffff; border-radius: 12px; padding: 8px 14px; min-height: 44px"><b>October update</b><span style="display: block; font-size: 12px; color: #64748b">protocol v1 · started 5 Oct · running</span></button>
+        <a href="#" style="font-size: 13px; padding: 0 8px">History (incl. 1 legacy round, protocol not verified)</a>
+      </div>
+    </header>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start">
+      <section aria-label="The journey of the initial research" style="flex: 3 1 560px; min-width: 0; background: #ffffff; border-radius: 18px; padding: 24px 26px; box-shadow: 0 1px 2px rgba(15,23,42,.06)">
+        <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 8px"><h2 style="margin: 0; font-size: 18px; font-weight: 600">Initial research · the journey</h2><span style="font-size: 12px"><span style="background: #ccfbf1; color: #115e59; border-radius: 6px; padding: 1px 6px; font-weight: 600">Claimstone</span> runs the steps · <span style="background: #ede9fe; color: #6d28d9; border-radius: 6px; padding: 1px 6px; font-weight: 600">you</span> decide at checkpoints</span></div>
+        <div role="img" aria-label="Steps 1 to 4 done; step 5 nearly done; step 6 is a checkpoint waiting for you; steps 7 and 8 partly done: 2 questions are ready to sign while the rest wait for step 6" style="display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 4px; margin-top: 14px"><span style="height: 6px; border-radius: 999px; background: #059669"></span><span style="height: 6px; border-radius: 999px; background: #059669"></span><span style="height: 6px; border-radius: 999px; background: #059669"></span><span style="height: 6px; border-radius: 999px; background: #059669"></span><span style="height: 6px; border-radius: 999px; background: linear-gradient(90deg, #059669 95%, #e2e8f0 95%)"></span><span style="height: 6px; border-radius: 999px; background: #7c3aed"></span><span style="height: 6px; border-radius: 999px; background: linear-gradient(90deg, #0d9488 15%, #e2e8f0 15%)"></span><span style="height: 6px; border-radius: 999px; background: linear-gradient(90deg, #7c3aed 28%, #e2e8f0 28%)"></span></div>
+        <ol style="list-style: none; margin: 20px 0 0; padding: 0; display: flex; flex-direction: column">
+          <li style="display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 14px; padding-bottom: 18px"><span style="width: 30px; height: 30px; border-radius: 50%; background: #059669; color: #ffffff; display: grid; place-items: center">✓</span><div><div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: baseline"><b>1 · Protocol frozen, plan authorized</b><span style="font-size: 11px; font-weight: 600; background: #ede9fe; color: #6d28d9; border-radius: 6px; padding: 0 6px">you</span><span style="margin-left: auto; font-size: 12px; color: #64748b">28 Sep</span></div><div style="font-size: 13px; color: #475569">8 questions (7 literature, 1 operational). Authorized: search, copies, and annotation plus review up to USD 12.00. <a href="#">View plan</a></div></div></li>
+          <li style="display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 14px; padding-bottom: 18px"><span style="width: 30px; height: 30px; border-radius: 50%; background: #059669; color: #ffffff; display: grid; place-items: center">✓</span><div><div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: baseline"><b>2 · Search the declared scope</b><span style="font-size: 11px; font-weight: 600; background: #ccfbf1; color: #115e59; border-radius: 6px; padding: 0 6px">Claimstone</span></div><div style="font-size: 13px; color: #475569">40 candidates: ACA 30, WP 10. This is what the declared scope found, not all literature in existence.</div></div></li>
+          <li style="display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 14px; padding-bottom: 18px"><span style="width: 30px; height: 30px; border-radius: 50%; background: #059669; color: #ffffff; display: grid; place-items: center">✓</span><div><div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: baseline"><b>3 · Obtain legal copies</b><span style="font-size: 11px; font-weight: 600; background: #ccfbf1; color: #115e59; border-radius: 6px; padding: 0 6px">Claimstone</span></div><div style="font-size: 13px; color: #475569">Confirmed copies: <b>37 of 40</b> — floor met (0.93 ≥ 0.80). ACA 28 of 30 · WP 9 of 10. Not obtained: S14 (HTTP 403, access refused), S31 (bot challenge). S23 obtained but not a document.</div><div style="font-size: 13px; margin-top: 4px">Optional: <a href="V2Decisions.html">retry S14 and S31</a> · <a href="V2Decisions.html">purchase offer for S14</a> · <a href="V2AddMaterial.html">add a copy you hold</a></div></div></li>
+          <li style="display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 14px; padding-bottom: 18px"><span style="width: 30px; height: 30px; border-radius: 50%; background: #059669; color: #ffffff; display: grid; place-items: center">✓</span><div><div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: baseline"><b>4 · Prepare the documents</b><span style="font-size: 11px; font-weight: 600; background: #ccfbf1; color: #115e59; border-radius: 6px; padding: 0 6px">Claimstone</span></div><div style="font-size: 13px; color: #475569">37 copies parsed into 734 passages.</div></div></li>
+          <li style="display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 14px; padding-bottom: 18px"><span style="width: 30px; height: 30px; border-radius: 50%; border: 2px solid #059669; color: #047857; display: grid; place-items: center; font-size: 13px">5</span><div><div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: baseline"><b>5 · Annotate every passage</b><span style="font-size: 11px; font-weight: 600; background: #ccfbf1; color: #115e59; border-radius: 6px; padding: 0 6px">Claimstone</span><span style="font-size: 12px; color: #b45309">33 readings wait for step 6</span></div><div style="font-size: 13px; color: #475569">Readings answered: 2,903 of 2,936 (33 open: Q01 5, Q05 28). 1,721 annotations kept; 271 rejected because their quote or numbers did not check out.</div></div></li>
+
+          <li style="display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 14px; padding-bottom: 18px"><span style="width: 30px; height: 30px; border-radius: 50%; background: #7c3aed; color: #ffffff; display: grid; place-items: center; font-size: 13px; font-weight: 700">6</span><div style="background: #f5f3ff; border-radius: 14px; padding: 16px"><div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: baseline"><b>6 · Checkpoint: the authorized cap is reached</b><span style="font-size: 11px; font-weight: 600; background: #ede9fe; color: #6d28d9; border-radius: 6px; padding: 0 6px">you · since 5 Oct</span></div>
+            <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 12px 0">
+              <div style="background: #ffffff; border-radius: 10px; padding: 8px 10px"><div style="font-size: 12px; color: #64748b">Cap</div><div style="font-weight: 600">USD 12.00</div></div>
+              <div style="background: #ffffff; border-radius: 10px; padding: 8px 10px"><div style="font-size: 12px; color: #64748b">Spent</div><div style="font-weight: 600">USD 11.42</div></div>
+              <div style="background: #ffffff; border-radius: 10px; padding: 8px 10px"><div style="font-size: 12px; color: #64748b">Reserved, unknown cost</div><div style="font-weight: 600">USD 0.34</div></div>
+              <div style="background: #ffffff; border-radius: 10px; padding: 8px 10px"><div style="font-size: 12px; color: #64748b">Remaining</div><div style="font-weight: 600">USD 0.24</div></div>
+            </div>
+            <div style="font-size: 13px; color: #334155">Remaining work, measured: 33 readings and review of 1,661 annotations, <b>estimated USD 6.05</b>. Proposed new cap: <b>USD 18.00</b>.</div>
+            <div style="font-size: 13px; color: #475569; margin-top: 4px">Blocks: review of Q01, Q02, Q03, Q05, Q07. Continues: the October update; signing Q04 and Q06. If you decline: those five questions stay provisional and nothing more is spent here.</div>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px"><button type="button" style="font-family: inherit; font-size: 14px; font-weight: 600; border: 0; background: #7c3aed; color: #ffffff; border-radius: 10px; padding: 0 18px; min-height: 44px">Raise cap to USD 18.00</button><button type="button" style="font-family: inherit; font-size: 14px; border: 1px solid #ddd6fe; background: #ffffff; color: #5b21b6; border-radius: 10px; padding: 0 16px; min-height: 44px">Choose another cap</button><button type="button" style="font-family: inherit; font-size: 14px; border: 0; background: transparent; color: #64748b; padding: 0 12px; min-height: 44px">Decline</button></div></div></li>
+
+          <li style="display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 14px; padding-bottom: 18px"><span style="width: 30px; height: 30px; border-radius: 50%; border: 2px solid #0d9488; color: #0f766e; display: grid; place-items: center; font-size: 13px">7</span><div><div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: baseline"><b>7 · Independent review and profiles</b><span style="font-size: 11px; font-weight: 600; background: #ccfbf1; color: #115e59; border-radius: 6px; padding: 0 6px">Claimstone</span><span style="font-size: 12px; color: #0f766e">partly complete</span></div><div style="font-size: 13px; color: #475569">Q04 and Q06 complete: 60 of 1,721 annotations reviewed. The remaining batch waits for step 6.</div></div></li>
+          <li style="display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 14px"><span style="width: 30px; height: 30px; border-radius: 50%; border: 2px solid #7c3aed; color: #6d28d9; display: grid; place-items: center; font-size: 13px">8</span><div><div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: baseline"><b>8 · Read and sign</b><span style="font-size: 11px; font-weight: 600; background: #ede9fe; color: #6d28d9; border-radius: 6px; padding: 0 6px">you</span><span style="font-size: 12px; color: #6d28d9">2 of 7 ready</span></div><div style="font-size: 13px; color: #475569">The others become ready when their remaining checks pass. Q08 is operational and receives no verdict.</div><div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px"><a href="V2Desk.html" style="background: #0f172a; color: #ffffff; border-radius: 10px; padding: 10px 16px; font-weight: 600; text-decoration: none">Read and sign Q04</a><a href="V2DeskZero.html" style="border: 1px solid #e2e8f0; color: #0f172a; border-radius: 10px; padding: 10px 16px; font-weight: 600; text-decoration: none">Read and sign Q06</a></div></div></li>
+        </ol>
+      </section>
+
+      <aside style="flex: 2 1 380px; display: flex; flex-direction: column; gap: 16px">
+        <section aria-label="Right now" style="background: #0f172a; color: #e2e8f0; border-radius: 18px; padding: 20px 22px">
+          <div style="display: flex; gap: 8px; align-items: center; font-size: 12px; color: #94a3b8"><span style="width: 8px; height: 8px; border-radius: 50%; background: #2dd4bf"></span>Right now · project running</div>
+          <dl style="margin: 12px 0 0; display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; font-size: 13px">
+            <dt style="color: #94a3b8">Now</dt><dd style="margin: 0; color: #f8fafc">October update · obtaining copies, 12 of 25</dd>
+            <dt style="color: #94a3b8">Next</dt><dd style="margin: 0">prepare the new copies into passages</dd>
+            <dt style="color: #94a3b8">Waiting</dt><dd style="margin: 0">Initial research · your decision on the review cap</dd>
+            <dt style="color: #94a3b8">Worker</dt><dd style="margin: 0">last seen 20 s ago</dd>
+            <dt style="color: #94a3b8">Last completed</dt><dd style="margin: 0">4 min ago · S27 copy confirmed</dd>
+          </dl>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px"><button type="button" style="font-family: inherit; font-size: 13px; border: 1px solid #334155; background: transparent; color: #e2e8f0; border-radius: 10px; padding: 0 14px; min-height: 40px">Pause project</button><button type="button" style="font-family: inherit; font-size: 13px; border: 1px solid #334155; background: transparent; color: #e2e8f0; border-radius: 10px; padding: 0 14px; min-height: 40px">View authorized plans</button></div>
+          <p style="margin: 10px 0 0; font-size: 12px; color: #94a3b8">Pause lets the request in flight finish, then stops. Resume continues the same plan; completed work and remaining authorization are kept.</p>
+        </section>
+
+        <section aria-label="About this project" style="background: #ffffff; border-radius: 18px; padding: 20px 22px; box-shadow: 0 1px 2px rgba(15,23,42,.06)">
+          <div style="display: flex; justify-content: space-between; align-items: baseline"><h2 style="margin: 0; font-size: 15px; font-weight: 600">The topic</h2><span style="font-size: 12px; color: #64748b">protocol v1 · frozen 28 Sep</span></div>
+          <p style="margin: 10px 0 0; color: #334155">Do financial news items carry information about subsequent stock returns, and under what conditions does any such effect survive?</p>
+          <p style="margin: 8px 0 0; font-size: 13px; color: #64748b"><b style="color: #334155">In scope:</b> firm-level news, equity returns, days to months. <b style="color: #334155">Out:</b> macro announcements, crypto assets.</p>
+          <a href="#" style="display: inline-block; margin-top: 8px; font-size: 13px">Propose a change → preview differences, then a linked research flow under v2</a>
+        </section>
+
+        <section aria-label="Questions" style="background: #ffffff; border-radius: 18px; padding: 20px 22px; box-shadow: 0 1px 2px rgba(15,23,42,.06)">
+          <h2 style="margin: 0 0 12px; font-size: 15px; font-weight: 600">The questions · initial research</h2>
+          <ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 9px; font-size: 13px">
+            <li style="display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 8px; align-items: baseline"><span style="font-family: 'Geist Mono', monospace; color: #64748b">Q01</span><span>Returns are not ground truth about news</span><span style="font-size: 11px; font-weight: 600; background: #fef3c7; color: #92400e; border-radius: 999px; padding: 1px 8px">still being read</span></li>
+            <li style="display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 8px; align-items: baseline"><span style="font-family: 'Geist Mono', monospace; color: #64748b">Q02</span><span>Sentiment carries information beyond prices</span><span style="font-size: 11px; font-weight: 600; background: #fef3c7; color: #92400e; border-radius: 999px; padding: 1px 8px">still being read</span></li>
+            <li style="display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 8px; align-items: baseline"><span style="font-family: 'Geist Mono', monospace; color: #64748b">Q04</span><span>The event is the unit of inference</span><span style="font-size: 11px; font-weight: 600; background: #7c3aed; color: #ffffff; border-radius: 999px; padding: 1px 8px">ready to sign</span></li>
+            <li style="display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 8px; align-items: baseline"><span style="font-family: 'Geist Mono', monospace; color: #64748b">Q06</span><span>Abnormal return is the better outcome</span><span style="font-size: 11px; font-weight: 600; background: #7c3aed; color: #ffffff; border-radius: 999px; padding: 1px 8px">ready · 0 usable</span></li>
+            <li style="display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 8px; align-items: baseline"><span style="font-family: 'Geist Mono', monospace; color: #64748b">Q08</span><span>News datasets back to 2000</span><span style="font-size: 11px; font-weight: 600; background: #f1f5f9; color: #334155; border-radius: 999px; padding: 1px 8px">operational · no verdict</span></li>
+          </ul>
+          <a href="Flow.html" style="display: inline-block; margin-top: 10px; font-size: 13px">All 8 questions and the evidence path →</a>
+        </section>
+      </aside>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":2300}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>
