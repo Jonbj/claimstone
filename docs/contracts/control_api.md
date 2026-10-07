@@ -186,6 +186,24 @@ As built (B7a):
 - **Not done here:** normalising the new copy. It is listed as ready for the next scoped
   normalize run.
 
+As built (B7b):
+- `POST /control/v1/p/{p}/flows/{flow_id}/intake/file?target={candidate_key}` answers 201
+  `{"intake": <row>}`.
+- Refusals before any byte is read:
+  - 411: no `Content-Length`;
+  - 413: over 50 MiB;
+  - 415: not `application/pdf`;
+  - 422: no target;
+  - 404: a target that is not in the flow.
+- Outcomes and states: `docs/contracts/intake.md`; the acquisition row:
+  `docs/contracts/acquisitions.md`.
+- The policy key is in the protocol digest only when declared, so flows bound before this step
+  stay `CURRENT`.
+- The single explicit fetch of an intake URL is **not built**. B7b needs no fetch: an operator who
+  holds a copy uploads it. Fetching an operator-supplied URL is a network campaign, so it waits for
+  the scheduler's authorized operations (B12) rather than becoming a side door around them.
+- The control container needs `pdftotext` (poppler-utils): B13.
+
 ### B8 — operator decisions
 
 - `POST …/identity/{observation_id}/resolve` with `{answer:

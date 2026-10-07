@@ -4180,3 +4180,36 @@ Two dependencies are named rather than invented:
 - `discover` does not read `intake.jsonl` yet, so `READY` means recorded and routed, not admitted;
 - the spec's single explicit fetch moves to B7b, which builds the quarantine its bytes need, so
   B7a sends no request.
+
+## D102 — Supplied copies are counted only by declaration; a file earns its row through the engine's gates (2026-10-07)
+
+B7b lets an authenticated operator upload a PDF for one candidate. Review F14 left one question
+open: whether such a copy may raise the acquisition rate that gates verdicts. That is scientific
+policy, and this step does not decide it. It is declared once per project as
+`sources.yaml: supplied_copies` (`count` | `separate`). The default is `separate`: `admissibility.rate`
+reads the ledger as if operator-supplied rows were absent, falling back to the candidate's other
+rows, and lists them in `supplied_separately`. Under `count` they enter the numerator like any copy.
+The denominator never changes. Because the numerator rule now depends on provenance,
+**`admission_version 3`**.
+
+The output is identical for every existing store, since none holds an operator-supplied row, and
+no profile hash moves: profiles carry only named keys of the admission result, and the new keys are
+not among them. The key enters the protocol digest **only when declared**, so every flow bound
+before this step stays `CURRENT`. This was checked read-only against the real stores, including the
+L02 flow. Declaring the key later, even as `separate`, is protocol drift, as it should be.
+
+A file becomes an `acquisitions.jsonl` row with `provenance: operator-supplied` only after three
+checks, all the engine's own and none new:
+- its hash is not already held;
+- `fulltext.classify` accepts it under the candidate's class policy;
+- the candidate's folded title appears in the first three pages extracted by `pdftotext -layout`,
+  the extraction the L02 identity inspection used (D80).
+
+A missing title is `POSSIBLE_VERSION` for a person (B8), never a merge. A candidate that already
+holds a confirmed copy, or one awaiting the document check, needs none. Refused files stay in
+`quarantine/` for inspection. Identical bytes are one file and never a second study.
+
+Correction to D101: the single explicit fetch of an operator-proposed URL was **not** built in
+B7b. An operator who holds a copy uploads it. Fetching a URL someone proposed is a network request
+on their behalf, so it waits for the scheduler's authorized operations (B12) rather than becoming a
+route around them.

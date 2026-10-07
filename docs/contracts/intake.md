@@ -43,5 +43,24 @@ Resolving a name is not a request to the host; nothing is fetched in B7a.
 
 `READY` is "recorded and routed". Discover does not read `intake.jsonl` yet, so a `READY` item enters
 no candidate set until it does. When it does, discover applies the round's population predicate:
-the intake never decides admission. `REJECTED`, `READY` after file checks, `COUNTED` and
-`REPORTED_SEPARATELY` are set by B7b.
+the intake never decides admission. `REJECTED`, `COUNTED` and `REPORTED_SEPARATELY` are set by B7b.
+
+## Files (B7b)
+
+`POST …/intake/file?target={candidate_key}`: the body is the PDF itself, `Content-Type:
+application/pdf`, at most 50 MiB, and the declared length is required. The file is hashed while
+streamed into `quarantine/<sha256>.pdf`. A file row has `kind: "file"`, `value` = the sha256 and
+`submitted` = the target candidate key. `links` carries `candidate_key`, `sha256` and, after
+identity, `identity: {title_found, doi_found, text_sha256}`.
+
+| state | stage | when |
+|---|---|---|
+| `DUPLICATE` | `file_checks` | identical bytes already in `quarantine/` or `raw/`: not stored twice, not a second study |
+| `REJECTED` | `file_checks` | the content gate refused it (`NOT_TEXT`, `CORRUPT_PDF`, `TOO_SHORT`) |
+| `REJECTED` | `identity` | `pdftotext` could not extract its text |
+| `POSSIBLE_VERSION` | `identity` | the candidate's folded title is not in the first three pages: a person decides (B8) |
+| `DUPLICATE` | `identity` | the candidate already holds a copy confirmed as a document, or one awaiting that check |
+| `COUNTED` / `REPORTED_SEPARATELY` | `accepted` | all checks passed; moved to `raw/`, one `operator-supplied` acquisition row, listed for the next scoped normalize |
+
+A refused or undecided file stays in `quarantine/` for inspection, as refused downloads stay in
+`raw/`. Idempotency is by hash: `Idempotency-Key` is ignored on this route.

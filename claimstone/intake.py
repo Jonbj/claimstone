@@ -22,11 +22,16 @@ curated manifest (`manifest_only`) has a fixed candidate set. So:
 from __future__ import annotations
 
 import datetime as _dt
+import hashlib
+import os
+import pathlib
 import secrets
+import subprocess
+import tempfile
 import urllib.parse
-from typing import Any, Callable, Iterable
+from typing import Any, BinaryIO, Callable, Iterable
 
-from claimstone import flows, ids, net, scope
+from claimstone import admissibility, flows, fulltext, ids, net, scope
 from claimstone.store import Store
 
 INTAKE_VERSION = 1
@@ -41,9 +46,23 @@ STATES = ("RECEIVED", "CHECKING", "DUPLICATE", "POSSIBLE_VERSION", "NEEDS_NEW_RO
 MAX_VALUE_CHARS = 2_000
 MAX_NOTE_CHARS = 2_000
 
+MAX_FILE_BYTES = 50 * 1024 * 1024
+QUARANTINE = "quarantine"
+CAMPAIGN = "operator-intake"
+TEXT_PAGES = 3          # identity is read from the first pages, where title and DOI are printed
+TEXT_TIMEOUT_SECONDS = 60
+
 
 class IntakeRefused(ValueError):
     """The item cannot be recorded at all: a malformed value or a forbidden destination."""
+
+
+class TooLarge(IntakeRefused):
+    """A file over MAX_FILE_BYTES: nothing is kept."""
+
+
+class UnknownTarget(LookupError):
+    """The candidate a file is for is not in the flow's scope."""
 
 
 def _now() -> str:
@@ -191,3 +210,176 @@ def for_flow(store: Store, flow_id: str) -> list[dict[str, Any]]:
     """Every item proposed for one flow with its latest state, newest first."""
     rows = [row for row in latest(store).values() if row.get("flow_id") == str(flow_id)]
     return list(reversed(rows))
+
+
+# --- files (B7b) ------------------------------------------------------------------------------------
+
+
+def quarantine_stream(store: Store, stream: BinaryIO, length: int) -> tuple[str, pathlib.Path, bool]:
+    """(sha256, path, already_held) for `length` bytes read from `stream` into `quarantine/`.
+
+    Hashed while streamed; never more than MAX_FILE_BYTES read. The bytes land under their own
+    hash, so the same upload twice is one file. `already_held` is True when identical bytes were
+    already in `quarantine/` or in `raw/` — the second upload adds nothing."""
+    if length < 0 or length > MAX_FILE_BYTES:
+        raise TooLarge(f"a file must be at most {MAX_FILE_BYTES} bytes")
+    directory = store.root / QUARANTINE
+    directory.mkdir(parents=True, exist_ok=True)
+    digest = hashlib.sha256()
+    remaining = length
+    handle, temp_name = tempfile.mkstemp(dir=directory, suffix=".part")
+    try:
+        with os.fdopen(handle, "wb") as out:
+            while remaining:
+                chunk = stream.read(min(remaining, 1024 * 1024))
+                if not chunk:
+                    raise IntakeRefused("the upload ended before its declared length")
+                digest.update(chunk)
+                out.write(chunk)
+                remaining -= len(chunk)
+        sha = digest.hexdigest()
+        target = directory / f"{sha}.pdf"
+        held = target.exists() or any((store.root / "raw").glob(f"{sha}.*"))
+        if held:
+            os.unlink(temp_name)  # identical bytes are already kept; a second copy adds nothing
+        else:
+            os.replace(temp_name, target)
+        return sha, target, held
+    except BaseException:
+        if os.path.exists(temp_name):
+            os.unlink(temp_name)
+        raise
+
+
+def pdf_text(path: pathlib.Path) -> str:
+    """The first pages' text, by `pdftotext -layout` — the extraction the L02 identity inspection
+    used (D80). An unreadable PDF raises: identity cannot be read from what cannot be read."""
+    completed = subprocess.run(
+        ["pdftotext", "-layout", "-l", str(TEXT_PAGES), str(path), "-"],
+        capture_output=True, check=True, timeout=TEXT_TIMEOUT_SECONDS)
+    return completed.stdout.decode("utf-8", "replace")
+
+
+def _row(flow_id: str, *, kind: str, value: str, submitted: str, state: str, stage: str,
+         reason: str, links: dict[str, Any], actor: str, code_revision: str | None,
+         intake_id: str | None = None) -> dict[str, Any]:
+    return {
+        "intake_version": INTAKE_VERSION, "intake_id": intake_id or secrets.token_hex(12),
+        "flow_id": flow_id, "kind": kind, "value": value, "submitted": submitted, "note": None,
+        "state": state, "stage": stage, "reason": reason, "links": links, "actor": actor,
+        "signer_auth": "portal-session", "code_revision": code_revision, "recorded_at": _now(),
+    }
+
+
+def _holds_copy(store: Store, candidate: dict[str, Any]) -> str | None:
+    """Why this candidate needs no supplied copy, or None when it does.
+
+    A copy is not needed when Claimstone already holds one that is confirmed as a document, or
+    one still awaiting that check. A copy the normalizer refuted (`fulltext_confirmed` false) is
+    exactly what a supplied copy can replace."""
+    held = admissibility.collapse(store).get(str(candidate["candidate_key"]))
+    if not held or not held.get("acquired"):
+        return None
+    identifier = str(held.get("source_id") or candidate["candidate_key"])
+    document = admissibility.confirmations(store).get(identifier)
+    if document is None:
+        return "this candidate already has a copy awaiting the document check"
+    if document.get("fulltext_confirmed"):
+        return "this candidate already has a copy confirmed as a document"
+    return None
+
+
+def receive_file(store: Store, project: Any, flow_row: dict[str, Any], selector: scope.Selector,
+                 *, target: str, sha: str, path: pathlib.Path, already_held: bool, actor: str,
+                 code_revision: str | None,
+                 extract_text: Callable[[pathlib.Path], str] = pdf_text) -> dict[str, Any]:
+    """Check one quarantined file against the candidate it is for, and record the outcome.
+
+    The checks are the engine's own, in order: identical bytes already held; the content gate
+    downloads pass (`fulltext.classify`, the candidate's class policy); identity read from the
+    first pages against the candidate's title and DOI. Only a file that passes all three leaves
+    quarantine, becomes an `operator-supplied` acquisition row, and is listed for the next scoped
+    normalize. Whether it then counts toward the floor is the project's declared policy."""
+    flow_id = str(flow_row["flow_id"])
+    candidate = scope.candidates(store, selector).get(str(target))
+    if candidate is None:
+        raise UnknownTarget(f"no candidate {target} in this flow")
+    common = {"kind": "file", "value": sha, "submitted": str(target), "actor": actor,
+              "code_revision": code_revision}
+    links: dict[str, Any] = {"candidate_key": str(target), "sha256": sha}
+
+    def record(state: str, stage: str, reason: str, extra: dict[str, Any] | None = None):
+        row = _row(flow_id, state=state, stage=stage, reason=reason,
+                   links={**links, **(extra or {})}, **common)
+        store.append(LEDGER, row)
+        return row
+
+    with store.writer_lock():
+        earlier = [row for row in latest(store).values()
+                   if row.get("kind") == "file" and row.get("value") == sha]
+    if already_held or earlier:
+        extra = {"intake_id": earlier[0]["intake_id"]} if earlier else {}
+        return record("DUPLICATE", "file_checks",
+                      "identical bytes are already held; nothing added, not a second study", extra)
+
+    payload = path.read_bytes()
+    thresholds = {**fulltext.DEFAULT_THRESHOLDS, **(project.gate_thresholds or {})}
+    from claimstone.config import resolve_gate_policy
+    policy = resolve_gate_policy(project.gate_policy or {}, project.classes,
+                                 candidate.get("source_class"))
+    judged = fulltext.classify(payload, "application/pdf", "upload.pdf", thresholds, policy=policy)
+    if not judged.accepted:
+        return record("REJECTED", "file_checks",
+                      f"not a document by the content gate: {judged.kind} ({judged.reason})")
+
+    try:
+        text = extract_text(path)
+    except (OSError, subprocess.SubprocessError) as exc:
+        return record("REJECTED", "identity",
+                      f"the PDF's text cannot be extracted ({type(exc).__name__}); identity "
+                      "cannot be read from it")
+    folded = ids.normalize_title(text)
+    title = ids.normalize_title(candidate.get("title"))
+    doi = ids.normalize_doi(candidate.get("doi"))
+    title_found = bool(title) and title in folded
+    doi_found = bool(doi) and doi in text.lower()
+    evidence = {"title_found": title_found, "doi_found": doi_found,
+                "text_sha256": hashlib.sha256(text.encode("utf-8")).hexdigest()}
+    if not title_found:
+        return record("POSSIBLE_VERSION", "identity",
+                      "the candidate's title is not in the first pages"
+                      + (" (its DOI is)" if doi_found else "")
+                      + "; whether this is the same work, a version or another work is a "
+                      "person's decision", {"identity": evidence})
+
+    reason_held = _holds_copy(store, candidate)
+    if reason_held:
+        return record("DUPLICATE", "identity", reason_held + "; nothing added",
+                      {"identity": evidence})
+
+    _digest, stored = store.store_bytes(payload, ".pdf")
+    counted = getattr(project, "supplied_copies", "separate") == "count"
+    with store.writer_lock():
+        held = store.latest_by("acquisitions.jsonl", "candidate_key").get(str(target))
+        intake_row = _row(
+            flow_id, state="COUNTED" if counted else "REPORTED_SEPARATELY", stage="accepted",
+            reason=("accepted; counts toward the floor (declared policy: count)" if counted else
+                    "accepted; reported separately from the floor (policy: separate)")
+            + "; listed for the next scoped normalize",
+            links={**links, "identity": evidence}, **common)
+        store.append("acquisitions.jsonl", {
+            "candidate_key": str(target), "source_id": candidate.get("source_id"),
+            "source_class": candidate.get("source_class"), "campaign": CAMPAIGN,
+            "attempt_no": int((held or {}).get("attempt_no") or 0) + 1,
+            "acquired": True, "sha256": sha, "stored_path": str(stored),
+            "url": str(candidate.get("url") or ""), "provenance": admissibility.OPERATOR_SUPPLIED,
+            "version": "", "licence": None, "oa_status": None, "host_type": None,
+            "content_type": "application/pdf", "bytes": len(payload),
+            "gate": judged.as_row(thresholds, policy), "failure_class": None, "attempts": [],
+            "fetched_at": None, "supplied_at": intake_row["recorded_at"], "supplied_by": actor,
+            "intake_id": intake_row["intake_id"], "intake_version": INTAKE_VERSION,
+        })
+        store.append(LEDGER, intake_row)
+    if path.exists():
+        path.unlink()
+    return intake_row

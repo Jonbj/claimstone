@@ -14,7 +14,11 @@ from claimstone import net
 from claimstone.config import Project
 from claimstone.store import Store
 
-ADMISSION_VERSION = 2
+ADMISSION_VERSION = 3
+
+# The provenance an operator-supplied copy carries (spec B7b). Whether such a copy counts toward the
+# floor is the project's declared `supplied_copies` policy, never decided per copy (F14).
+OPERATOR_SUPPLIED = "operator-supplied"
 
 OK = "OK"
 INSUFFICIENT = "INSUFFICIENT_ACQUISITION"
@@ -25,7 +29,8 @@ def confirmations(store: Store) -> dict[str, dict[str, Any]]:
     return store.latest_by("documents.jsonl", "source_id")
 
 
-def collapse(store: Store) -> dict[str, dict[str, Any]]:
+def collapse(store: Store, *, exclude_provenance: frozenset[str] = frozenset()
+             ) -> dict[str, dict[str, Any]]:
     """One row per candidate: the latest re-gate, else the latest success, else the latest row.
 
     Two rules that both sound right pull in opposite directions here, and the order between them
@@ -45,6 +50,8 @@ def collapse(store: Store) -> dict[str, dict[str, Any]]:
         key = row.get("candidate_key")
         if key is None:
             continue
+        if row.get("provenance") in exclude_provenance:
+            continue  # read as if never recorded: the numerator falls back to the other rows
         key = str(key)
         held = best.get(key)
         if (
@@ -58,7 +65,8 @@ def collapse(store: Store) -> dict[str, dict[str, Any]]:
 
 
 def rate(
-    store: Store, *, round_name: str | None = None, manifest_only: bool = False
+    store: Store, *, round_name: str | None = None, manifest_only: bool = False,
+    supplied_copies: str = "separate",
 ) -> dict[str, Any]:
     """Acquisition accounting. The denominator is what was **found**, not what was attempted.
 
@@ -87,7 +95,17 @@ def rate(
         # floor over that round would divide by 199. A manifest row declares itself with a `source_id`.
         and (not manifest_only or row.get("source_id"))
     }
-    rows = {key: row for key, row in collapse(store).items() if key in candidates}
+    # Copies an operator supplied count only where the project declared they do (B7b, F14). Under
+    # `separate` the numerator is computed as if they did not exist, and they are reported on their
+    # own line: the floor then says what Claimstone obtained, and the supplied copies stay visible.
+    excluded = frozenset() if supplied_copies == "count" else frozenset({OPERATOR_SUPPLIED})
+    rows = {key: row for key, row in collapse(store, exclude_provenance=excluded).items()
+            if key in candidates}
+    with_supplied = {key: row for key, row in collapse(store).items() if key in candidates}
+    supplied_separately = sorted(
+        str(row.get("source_id") or key) for key, row in with_supplied.items()
+        if excluded and row.get("provenance") == OPERATOR_SUPPLIED and row.get("acquired")
+        and not (rows.get(key) or {}).get("acquired"))
 
     found = len(candidates)
     classified = sum(1 for row in candidates.values() if row.get("source_class"))
@@ -199,6 +217,8 @@ def rate(
         "awaiting_normalize": awaiting,
         "not_a_document": sorted(not_a_document),
         "orphan_acquisitions": orphans,
+        "supplied_copies": supplied_copies,
+        "supplied_separately": supplied_separately,
         "blocking": blocking,
         "final": not blocking,
         "basis": "confirmed" if started else "obtained",
@@ -220,7 +240,8 @@ def admit(
     manifest_only: bool = False,
 ) -> dict[str, Any]:
     """Whether this round may produce verdicts. Invariant 3: nothing waives the floor."""
-    measured = rate(store, round_name=round_name, manifest_only=manifest_only)
+    measured = rate(store, round_name=round_name, manifest_only=manifest_only,
+                    supplied_copies=getattr(project, "supplied_copies", "separate"))
     achieved = measured["rate"]
     status = OK if achieved is not None and achieved >= project.acquisition_floor else INSUFFICIENT
 

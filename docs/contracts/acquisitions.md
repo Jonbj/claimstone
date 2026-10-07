@@ -71,6 +71,26 @@ bytes and cached TEI, rechecks normalization, and creates fresh extraction reque
 scientific answers, calls a model, or requests a new parse. Its content-addressed audit includes
 acquisition coverage and checks that every original byte was preserved.
 
+## Operator-supplied copies (B7b, D102)
+
+`provenance: operator-supplied` records a file an authenticated operator uploaded for one candidate
+through the control server. It follows the `store-reuse` precedent: there is no HTTP request, so
+`attempts` is empty and `fetched_at` is null. Unknown licence, OA status and version are kept
+unknown. The row is written only after the file passed three checks:
+- its hash is not already held;
+- the content gate `fulltext.classify` accepts it under the candidate's class policy;
+- the candidate's folded title appears in the first three pages extracted by `pdftotext -layout`.
+
+The row carries:
+- `campaign: "operator-intake"`;
+- `supplied_at`, `supplied_by` (the operator id), `intake_id` and `intake_version`;
+- the `gate` row, as any acquisition does.
+
+Whether these rows count toward the floor is `sources.yaml: supplied_copies`. Under `separate`, the
+default, `admissibility.rate` reads the ledger as if they were absent, falling back to the
+candidate's other rows, and lists them in `supplied_separately`. Under `count` they count like any
+copy. The denominator never changes.
+
 ## Failure classes
 
 Terminal — retrying changes nothing until the world changes, so a retry needs a named campaign:

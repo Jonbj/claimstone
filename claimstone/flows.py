@@ -84,6 +84,10 @@ def protocol_digest(project: Project) -> str:
         "extraction": project.extraction, "citation_channel": project.citation_channel,
         "population": project.population,
     }
+    # Declared only: a project that never names the key keeps the digest it had before the key
+    # existed, so no flow bound earlier drifts. Declaring it, or changing it, is drift (B7b).
+    if project.supplied_copies_declared:
+        semantic["supplied_copies"] = project.supplied_copies
     return hashlib.sha256(_canonical(semantic).encode("utf-8")).hexdigest()
 
 

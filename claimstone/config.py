@@ -128,6 +128,11 @@ class Project:
     floor_version: int = 1
     floor_set_at: str = ""
     floor_rationale: str = ""
+    # Whether copies an operator supplies count toward the acquisition floor (spec B7b, F14). A
+    # scientific policy, declared once per project and never decided per copy. `separate` until
+    # declared: supplied copies are read and reported on their own line, outside the numerator.
+    supplied_copies: str = "separate"
+    supplied_copies_declared: bool = False
 
     @property
     def question_ids(self) -> frozenset[str]:
@@ -251,6 +256,22 @@ def load_sources(root: pathlib.Path) -> tuple[tuple[SourceClass, ...], float, tu
         raise ConfigError("sources.yaml: 'excluded_hosts' must be a list of hostnames")
 
     return tuple(classes), float(floor), tuple(hosts)
+
+
+SUPPLIED_COPIES = ("count", "separate")
+
+
+def load_supplied_copies(root: pathlib.Path) -> tuple[str, bool]:
+    """(policy, declared). Absent means `separate`, and `declared` False keeps the protocol
+    digest of every project that never mentions it exactly what it was before the key existed."""
+    raw = _read_yaml(root / "sources.yaml").get("supplied_copies")
+    if raw is None:
+        return "separate", False
+    if raw not in SUPPLIED_COPIES:
+        raise ConfigError(
+            "sources.yaml: 'supplied_copies' must be 'count' or 'separate' — whether copies an "
+            "operator supplies count toward the floor is declared, never decided per copy")
+    return str(raw), True
 
 
 def load_topics(root: pathlib.Path) -> tuple[Topic, ...]:
@@ -714,6 +735,7 @@ def load_project(root: str | pathlib.Path) -> Project:
     normalize_thresholds = load_normalize_thresholds(path)
     citation_channel = load_citation_channel(path)
     floor_version, floor_set_at, floor_rationale = load_floor_provenance(path)
+    supplied_copies, supplied_declared = load_supplied_copies(path)
 
     project = Project(
         name=path.name,
@@ -735,6 +757,8 @@ def load_project(root: str | pathlib.Path) -> Project:
         floor_version=floor_version,
         floor_set_at=floor_set_at,
         floor_rationale=floor_rationale,
+        supplied_copies=supplied_copies,
+        supplied_copies_declared=supplied_declared,
     )
     project.population  # Validate the optional metadata selector before any requests.
     return project

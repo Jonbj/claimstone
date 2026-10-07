@@ -30,6 +30,7 @@ from datetime import datetime, timezone
 from http.cookies import SimpleCookie
 from http.server import ThreadingHTTPServer
 from typing import Any, Callable
+import urllib.parse
 from urllib.parse import unquote, urlparse
 
 from claimstone import drafts, flows, intake, operators, portal_state, scope, synthesize
@@ -211,6 +212,7 @@ class Route:
     template: tuple[str, ...]  # segments below /control/v1; "{name}" marks a parameter
     handler: str               # the _Handler method name
     public: bool = False       # True only for the session-create route
+    raw: bool = False          # the handler reads the body stream itself (B7b's file upload)
 
 
 ROUTES: tuple[Route, ...] = (
@@ -228,6 +230,9 @@ ROUTES: tuple[Route, ...] = (
     # B7a: material intake (references, DOIs, links). Recording and routing only.
     Route("POST", ("p", "{project}", "flows", "{flow_id}", "intake"), "_intake_submit"),
     Route("GET", ("p", "{project}", "flows", "{flow_id}", "intake"), "_intake_list"),
+    # B7b: a file for one candidate; the body is the file itself, not JSON.
+    Route("POST", ("p", "{project}", "flows", "{flow_id}", "intake", "file"), "_intake_file",
+          raw=True),
 )
 
 
@@ -255,6 +260,8 @@ class _Handler(BaseHandler):
     # Name resolution for the intake URL check. None is the system resolver; tests pass a
     # fake one so no real name is ever looked up (the hook exists for nothing else).
     resolver: Any = None
+    # Text extraction for the upload identity check. None is `pdftotext`; tests may pass a fake.
+    extract_text: Any = None
 
     # --- responses, with the read API's envelope ------------------------------------------------
 
@@ -343,7 +350,7 @@ class _Handler(BaseHandler):
                 self._require_session()  # §1.3 order: session first, then CSRF
                 self._require_origin()
                 self._require_csrf()
-            body = self._read_body()
+            body = {} if route.raw else self._read_body()
             if route.public:
                 getattr(self, route.handler)(params, None, body)  # writes its own answer
                 return
@@ -359,6 +366,10 @@ class _Handler(BaseHandler):
         that answer for themselves (the session routes) return None and are not replayed."""
         session = self._require_session()
         key = self.headers.get("Idempotency-Key")
+        if route.raw:
+            # A raw body is not part of the fingerprint, so a key could not tell two files apart.
+            # A file is idempotent by its hash instead: the same bytes twice are a DUPLICATE.
+            key = None
         if key is None:
             result = getattr(self, route.handler)(params, None, body)
             if result is not None:
@@ -707,6 +718,47 @@ def _intake_list(self: _Handler, params: dict[str, str], query: Any,
             "items": intake.for_flow(store, str(row["flow_id"]))}, 200
 
 
+def _intake_file(self: _Handler, params: dict[str, str], query: Any,
+                 body: dict[str, Any]) -> tuple[Any, int]:
+    """Receive one file for one candidate (spec B7b): quarantined, checked by the engine's own
+    gates, and recorded with its outcome. Only a file that passes every check leaves quarantine."""
+    session = self._require_session()
+    target = (urllib.parse.parse_qs(urlparse(self.path).query).get("target") or [""])[0]
+    if not target:
+        raise ControlError(422, "VALIDATION", "target must name the candidate this file is for")
+    content_type = (self.headers.get("Content-Type") or "").split(";", 1)[0].strip().lower()
+    if content_type != "application/pdf":
+        self.close_connection = True  # the body is not read; the connection cannot be reused
+        raise ControlError(415, "UNSUPPORTED_MEDIA_TYPE", "a file must be sent as application/pdf")
+    raw_length = self.headers.get("Content-Length")
+    try:
+        length = int(raw_length) if raw_length is not None else -1
+    except ValueError:
+        length = -1
+    if length < 0:
+        self.close_connection = True
+        raise ControlError(411, "LENGTH_REQUIRED", "a file upload needs a Content-Length")
+    if length > intake.MAX_FILE_BYTES:
+        self.close_connection = True
+        raise ControlError(413, "TOO_LARGE", f"a file must be at most {intake.MAX_FILE_BYTES} bytes")
+    project, store, row, selector = _flow_only(self, params)
+    if str(target) not in scope.candidates(store, selector):
+        self.close_connection = True
+        raise portal_state.NotFound(f"no candidate {target} in this flow")
+    try:
+        sha, path, held = intake.quarantine_stream(store, self.rfile, length)
+        recorded = intake.receive_file(store, project, row, selector, target=target, sha=sha,
+                                       path=path, already_held=held, actor=session.operator_id,
+                                       code_revision=self.code_revision,
+                                       extract_text=self.extract_text or intake.pdf_text)
+    except intake.UnknownTarget as exc:
+        raise portal_state.NotFound(str(exc)) from None
+    except intake.IntakeRefused as exc:
+        raise ControlError(422, "VALIDATION", str(exc)) from None
+    return {"intake": recorded}, 201
+
+
+_Handler._intake_file = _intake_file      # type: ignore[attr-defined]
 _Handler._intake_submit = _intake_submit  # type: ignore[attr-defined]
 _Handler._intake_list = _intake_list      # type: ignore[attr-defined]
 _Handler._adjudicate = _adjudicate      # type: ignore[attr-defined]
@@ -731,7 +783,7 @@ def make_server(projects_dir: str | pathlib.Path = "projects",
                 host: str = "127.0.0.1", port: int = 8790,
                 allow_hosts: tuple[str, ...] = (),
                 state_dir: str | pathlib.Path | None = None,
-                resolver: Any = None) -> ThreadingHTTPServer:
+                resolver: Any = None, extract_text: Any = None) -> ThreadingHTTPServer:
     """The control server. A non-loopback bind is refused outright — this process
     writes, so it does not proceed on a warning the way the read-only servers do —
     unless `--allow-host` names the authority of the proxy that fronts it."""
@@ -756,6 +808,7 @@ def make_server(projects_dir: str | pathlib.Path = "projects",
         "login_budget": LoginBudget(),
         "idempotency": Idempotency(),
         "resolver": staticmethod(resolver) if resolver is not None else None,
+        "extract_text": staticmethod(extract_text) if extract_text is not None else None,
         "started_at": _now_iso(),
     })
     httpd = ThreadingHTTPServer((host, port), handler)

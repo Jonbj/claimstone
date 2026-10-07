@@ -33,7 +33,7 @@ $ .venv/bin/python tools/check_instrument_versions.py
 | **B6** | Profile diff route in the read API; schema and fixtures | spec B6 tests pass | DONE (portal-backend-parallel, merged `3045aa2` 2026-10-07; decisions in the parallel log) |
 | **BR** | Read API: stored-profile list of one question; exports list of one flow (B10's read route) | as `2026-10-07-portal-backend-reads-prompt.md` | DONE (portal-backend-reads, merged 2026-10-07; decisions in the reads log) |
 | **B7a** | Intake of DOIs, URLs and references; cohort routing; single explicit fetch | spec B7a tests pass | DONE (fetch moved to B7b) |
-| **B7b** | File intake, quarantine, engine gates, `operator-supplied` acquisition row, `supplied_copies` policy (F14) | spec B7b tests pass; existing admissibility tests unchanged and passing | TODO |
+| **B7b** | File intake, quarantine, engine gates, `operator-supplied` acquisition row, `supplied_copies` policy (F14) | spec B7b tests pass; existing admissibility tests unchanged and passing | DONE (URL fetch deferred to B12) |
 | **B8** | Identity resolution, retry-campaign record and preview, purchase offers and stages, defer/decline, F13 ordering test | spec B8 tests pass | TODO |
 | **B9** | Seen markers and `/control/v1/today` | spec B9 tests pass | TODO |
 | **B10** | Export create and verify from the control API; exports list in the read API; PDF licence rule | spec B10 tests pass | TODO |
@@ -489,3 +489,36 @@ Deviations: the single explicit fetch moves to B7b (no quarantine exists for its
 `discover` does not read `intake.jsonl`: `READY` is recorded and routed, not admitted (named in D101).
 
 NOT DONE: (none in scope)
+
+### B7b — DONE (2026-10-07, Claude Code)
+- [x] B7b.1 `sources.yaml: supplied_copies` (`count` | `separate`, default `separate`) in `config.py`;
+      in the protocol digest **only when declared**, so every flow bound before this step stays
+      `CURRENT` (files: `claimstone/config.py`, `claimstone/flows.py`)
+- [x] B7b.2 admissibility: `operator-supplied` rows leave the numerator under `separate` and are reported
+      on their own line; `ADMISSION_VERSION 3`; profile hashes unaffected (only named keys enter them)
+      (files: `claimstone/admissibility.py`)
+- [x] B7b.3 `intake.receive_file`: streamed hashing into `quarantine/`, duplicate by hash, the engine's
+      content gate, identity by `pdftotext` against the target candidate's title/DOI, the
+      `operator-supplied` acquisition row on pass (files: `claimstone/intake.py`)
+- [x] B7b.4 control: raw-body route `POST …/intake/file?target=…` (≤ 50 MiB) (files: `claimstone/control.py`)
+- [x] B7b.5 tests, contracts (`acquisitions.md`, `intake.md`, `control_api.md`), D entry, checks
+
+Checks (final): `1364 passed, 7 skipped`; validate 6× OK; `33 instrument version(s)` (admission_version
+bumped, not added); web `72 passed`, build and check-csp ok; fixtures: admin/meta only.
+
+Verified read-only against the real stores before writing D102: every project loads with
+`supplied_copies: separate` undeclared, and the one bound real flow (L02) stays `CURRENT`.
+
+Decisions (spec silent), recorded as D102: `admission_version 3`; the policy key enters the protocol
+digest only when declared; identity = folded candidate title in the first three `pdftotext -layout`
+pages (DOI recorded as supporting evidence only); a candidate already holding a confirmed or
+awaiting copy needs none; refused files stay in `quarantine/`; `Idempotency-Key` ignored on the raw
+route (idempotent by hash).
+
+Deviations: POSSIBLE_VERSION files are recorded in `intake.jsonl` with their identity evidence; no
+`source_identity.jsonl` observation is written, because that ledger's rows belong to screening scopes
+and need metadata hashes an upload does not have. B8 resolves POSSIBLE_VERSION intake items directly.
+The explicit fetch of an intake URL is not built (D102 corrects D101): it waits for B12's authorized
+operations. B13 must install `pdftotext` in the control image.
+
+NOT DONE: the intake URL fetch (deferred to B12, reasoned above).
