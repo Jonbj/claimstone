@@ -25,12 +25,12 @@ $ .venv/bin/python tools/check_instrument_versions.py
 | step | content (spec section) | done when | marker |
 |---|---|---|---|
 | **B0** | Decision entry (next free `D` number at the time you write it) and `docs/contracts/control_api.md` | files exist; checks pass; no code changed | DONE |
-| **B1** | Project writer lock adopted by every writer; re-read under the lock in acquire and adjudicate (F5) | spec B1 tests pass; checks pass | TODO |
-| **B2** | Host failure budget rebuilt from `requests.jsonl`; `urlguard.py`; manual redirects checked per hop (F6, F15) | spec B2 tests pass; checks pass | PARALLEL (portal-backend-parallel) |
+| **B1** | Project writer lock adopted by every writer; re-read under the lock in acquire and adjudicate (F5) | spec B1 tests pass; checks pass | TODO (triaged 2026-10-07: lock primitive already on the main line; the re-read scope remains — see the triage entry) |
+| **B2** | Host failure budget rebuilt from `requests.jsonl`; `urlguard.py`; manual redirects checked per hop (F6, F15) | spec B2 tests pass; checks pass | DONE (main line, scheduler session `67ca0a4` — substance in `store.py`/`net.py`, form deviation: no `locks.py`/`urlguard.py`) |
 | **B3** | `adjudication_version 2`, `signer_auth`, `actor`; required parameters; read API field, schema, fixtures (F16) | spec B3 tests pass; checks pass | TODO |
 | **B4** | `claimstone control`, `claimstone operator add/disable`, sessions, CSRF, rate limit | spec B4 tests pass, including the "every POST refuses anonymous" test | TODO |
 | **B5** | Web signing and drafts | spec B5 tests pass | TODO |
-| **B6** | Profile diff route in the read API; schema and fixtures | spec B6 tests pass | PARALLEL (portal-backend-parallel) |
+| **B6** | Profile diff route in the read API; schema and fixtures | spec B6 tests pass | DONE (portal-backend-parallel, merged `3045aa2` 2026-10-07; decisions in the parallel log) |
 | **B7a** | Intake of DOIs, URLs and references; cohort routing; single explicit fetch | spec B7a tests pass | TODO |
 | **B7b** | File intake, quarantine, engine gates, `operator-supplied` acquisition row, `supplied_copies` policy (F14) | spec B7b tests pass; existing admissibility tests unchanged and passing | TODO |
 | **B8** | Identity resolution, retry-campaign record and preview, purchase offers and stages, defer/decline, F13 ordering test | spec B8 tests pass | TODO |
@@ -104,3 +104,56 @@ Deviations:
   files.
 
 NOT DONE: (none)
+
+### Merge and triage — 2026-10-07 (reviewer session)
+
+B6 merged from `portal-backend-parallel` as `3045aa2` (`--no-ff`, no conflicts: the two
+branches' changed-file lists were disjoint since base `00d19b1`). The parallel log
+(`2026-10-07-portal-backend-parallel-progress.md`) moves with the merge and holds B6's
+decisions and deviations. Nothing to register at merge.
+
+Checks at the merge commit:
+
+```
+$ .venv/bin/pytest -q
+1268 passed, 7 skipped in 44.72s
+$ .venv/bin/claimstone validate --all-projects
+OK   alembic-s4: 16 topics, 28 questions (registry v3, frozen 2026-09-25), 6 source classes, acquisition floor 0.80 (v1), 25 manifest rows, registry 9c3f265069c6
+OK   alembic-s4-breve: 12 topics, 17 questions (registry v1, frozen 2026-09-28), 6 source classes, acquisition floor 0.80 (v1), 18 manifest rows, registry 3fdb5aea634d
+OK   alembic-s4-lungo: 12 topics, 18 questions (registry v1, frozen 2026-09-28), 6 source classes, acquisition floor 0.80 (v1), 19 manifest rows, registry ee040e0c3cfc
+OK   example-news-and-returns: 16 topics, 20 questions (registry v2, frozen 2026-09-25), 6 source classes, acquisition floor 0.80 (v1), registry 85e5fcc44ddc
+OK   pilot-screen-time: 4 topics, 8 questions (registry v1, frozen 2026-09-28), 6 source classes, acquisition floor 0.80 (v1), 28 manifest rows, registry 82007de2b569
+OK   pmc-screen-time: 4 topics, 8 questions (registry v1, frozen 2026-09-28), 6 source classes, acquisition floor 0.80 (v1), 40 manifest rows, registry 82007de2b569
+$ .venv/bin/python tools/check_instrument_versions.py
+29 instrument version(s) acknowledged in the design record
+$ cd web && npm run typecheck && npm test
+13 test files passed, 55 tests passed
+```
+
+**B1 triage** (the reviewer session read the spec against the main line, 2026-10-07):
+already on the main line — the project-wide exclusive lock as `Store.writer_lock`
+(`fcntl.flock` on `<store>/<project>/.writer.lock`, re-entrant per thread, serialized
+per process, adopted **inside `store.append` itself** so every append is a critical
+section, and held across read-modify-write in `flows`, `source_selection` and
+`operations`). Still missing, and B1's remaining scope:
+- `synthesize.adjudicate` checks the profile and appends **outside one hold**: the
+  `latest_profiles` read, the `preview` comparison and the `store.append` (which takes
+  the lock internally) are three windows. A synthesize racing the append can leave a
+  signature on the old hash — exactly what F5 exists to prevent.
+- `acquire` computes `attempt_no` from a prior read outside the lock
+  (`acquire.py:67`, `acquire.py:376`): two concurrent writers can append duplicate
+  attempt numbers.
+- The spec's three tests (two-process append, adjudicate-races-synthesize, lock order)
+  do not exist.
+- Form deviation to carry into B1: the lock is `Store.writer_lock`, not the spec's
+  `claimstone/locks.py::project_lock`; `flows._flows_lock` already delegates to it, so
+  the order rule is satisfied by construction (one lock, no second to invert) —
+  B1 should record that instead of building the module the spec names.
+
+B2's table row is closed as DONE on the main line by the same triage: the host budget
+rebuilt from `requests.jsonl`, the global-address URL guard and per-hop redirect checks
+landed in `net.py`/`store.py` at `FETCH_VERSION` 5 (scheduler session), not as the
+spec's `urlguard.py`. The spec's form may be amended at B13's cleanup or left recorded
+here as the deviation it is.
+
+Next: B1 (reduced scope above), then B3.
