@@ -117,7 +117,7 @@ export default function ProjectPage() {
         ) : null}
       </section>
 
-      <section>
+      <section id="activity">
         <h2 className="mb-2 text-sm font-semibold">Activity — whole project</h2>
         {activity.pending ? (
           <Pending label="loading activity…" />

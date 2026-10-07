@@ -142,7 +142,7 @@ the known fields (stage, state, kind, ids) as labelled text instead.
   Files: `web/src/components/OperationsPanel.tsx`, `web/tests/operations.test.tsx`.
 - [x] F3.2 Authorize for `PLANNED` only: confirmation dialog listing the exact limits, POST them unchanged, disabled while running, the server's 409 sentence as given, reload after success.
   Files: `web/src/components/OperationsPanel.tsx`, `web/tests/operations.test.tsx`.
-- [ ] F3.3 `FlowOverviewPage` header restyle (serif title, scope and protocol chips, Add material / Decisions / Export / Activity) and the panel mounted for flows only; `/u/` gets no write control and no panel.
-  Files: `web/src/pages/FlowOverviewPage.tsx`.
+- [x] F3.3 `FlowOverviewPage` header restyle (serif title, scope and protocol chips, Add material / Decisions / Export / Activity) and the panel mounted for flows only; `/u/` gets no write control and no panel.
+  Files: `web/src/pages/FlowOverviewPage.tsx`, `web/src/pages/ProjectPage.tsx` (`id="activity"` on the activity section, the Activity button's target).
 - [ ] F3.4 Page tests: header links, unbound selector has no panel or write control, signed out shows no write control.
   Files: `web/tests/flowpage.test.tsx`.

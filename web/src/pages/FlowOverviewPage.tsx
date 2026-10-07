@@ -1,8 +1,9 @@
-import { useParams } from "react-router";
+import { Link, useParams } from "react-router";
 import Chip from "@/components/Chip";
 import ErrorState from "@/components/ErrorState";
 import FloorPanel from "@/components/FloorPanel";
 import InboxCards from "@/components/InboxCards";
+import OperationsPanel from "@/components/OperationsPanel";
 import OverviewKpis from "@/components/OverviewKpis";
 import Pending from "@/components/Pending";
 import QuestionMatrix from "@/components/QuestionMatrix";
@@ -36,25 +37,55 @@ export default function FlowOverviewPage({ kind }: { kind: "f" | "u" }) {
     data.state.rejections_by_reason as Record<string, number>,
   ).map(([name, value]) => ({ name, value }));
   const next = data.inbox.find((card) => card.command !== null) ?? null;
+  const flowTitle = data.flow ? String((data.flow as { title?: unknown }).title ?? "") : "";
   const flowId = data.flow ? String((data.flow as { flow_id?: unknown }).flow_id ?? "") : "";
 
   return (
     <section className="flex flex-col gap-5">
-      <header>
-        <h1 className="text-[22px] font-semibold">
-          {data.selector_label}
+      <header className="flex flex-col gap-2">
+        <nav aria-label="Breadcrumb" className="text-sm text-muted-foreground">
+          <Link to="/projects" className="hover:underline">Projects</Link> /{" "}
+          <Link to={`/p/${encodeURIComponent(project)}`} className="hover:underline">{data.project}</Link>
+        </nav>
+        <h1 className="font-serif text-4xl leading-tight font-normal">
+          {flowTitle || data.selector_label}
           {data.legacy ? " — legacy" : ""}
           {overview.refreshing ? (
-            <span className="pending ml-3" role="status">
+            <span className="pending ml-3 font-sans text-sm" role="status">
               refreshing…
             </span>
           ) : null}
         </h1>
-        <p className="mt-0.5 text-sm text-muted-foreground">
-          {data.project}
-          {flowId ? ` · protocol ${flowId.slice(0, 12)}` : ""}
+        <p className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+          <span>scope</span>
+          <Chip text={data.selector_label} />
+          {flowId ? (
+            <>
+              <span>protocol</span>
+              <span className="font-mono text-xs">{flowId.slice(0, 12)}</span>
+            </>
+          ) : null}
+          {data.binding_state ? <Chip text={data.binding_state.state} /> : null}
+          {data.legacy ? <Chip text="legacy: protocol not verified" /> : null}
         </p>
+        {kind === "f" ? (
+          <nav aria-label="Flow actions" className="flex flex-wrap gap-2">
+            {[
+              ["Add material", `${base}/material`],
+              ["Decisions", `${base}/decisions`],
+              ["Export", `${base}/export`],
+              ["Activity", `/p/${encodeURIComponent(project)}#activity`],
+            ].map(([label, to]) => (
+              <Link key={label} to={to}
+                    className="inline-flex min-h-11 items-center rounded-md px-4 text-sm font-medium ring-1 ring-gray-300 hover:bg-gray-50 dark:ring-gray-700 dark:hover:bg-gray-900">
+                {label}
+              </Link>
+            ))}
+          </nav>
+        ) : null}
       </header>
+
+      {kind === "f" && flowId ? <OperationsPanel project={project} flowId={flowId} /> : null}
 
       {data.legacy ? (
         <section className="rounded-lg bg-card p-5 shadow-sm ring-1 ring-gray-200 dark:ring-gray-800">
