@@ -27,7 +27,7 @@ $ .venv/bin/python tools/check_instrument_versions.py
 | **B0** | Decision entry (next free `D` number at the time you write it) and `docs/contracts/control_api.md` | files exist; checks pass; no code changed | DONE |
 | **B1** | Project writer lock adopted by every writer; re-read under the lock in acquire and adjudicate (F5) | spec B1 tests pass; checks pass | DONE (main line, reviewer session 2026-10-07 — reduced scope per the triage; form deviation: no `locks.py`) |
 | **B2** | Host failure budget rebuilt from `requests.jsonl`; `urlguard.py`; manual redirects checked per hop (F6, F15) | spec B2 tests pass; checks pass | DONE (main line, scheduler session `67ca0a4` — substance in `store.py`/`net.py`, form deviation: no `locks.py`/`urlguard.py`) |
-| **B3** | `adjudication_version 2`, `signer_auth`, `actor`; required parameters; read API field, schema, fixtures (F16) | spec B3 tests pass; checks pass | TODO |
+| **B3** | `adjudication_version 2`, `signer_auth`, `actor`; required parameters; read API field, schema, fixtures (F16) | spec B3 tests pass; checks pass | IN PROGRESS |
 | **B4** | `claimstone control`, `claimstone operator add/disable`, sessions, CSRF, rate limit | spec B4 tests pass, including the "every POST refuses anonymous" test | TODO |
 | **B5** | Web signing and drafts | spec B5 tests pass | TODO |
 | **B6** | Profile diff route in the read API; schema and fixtures | spec B6 tests pass | DONE (portal-backend-parallel, merged `3045aa2` 2026-10-07; decisions in the parallel log) |
@@ -227,3 +227,44 @@ Deviations:
   the operation whose duplicate the spec's F5 text names.
 
 NOT DONE: (none)
+
+### B3 — IN PROGRESS (2026-10-07, reviewer session)
+
+Scope read against the main line first: `synthesize.adjudications()` is the single read
+path for adjudication rows (`verdicts`, the read API and the CLI all go through it), so
+version-1 normalization lands there and nowhere else. No committed fixture carries a
+signed verdict (Q02's `verdict` is null, and every other `adjudicat*` match is the
+awaiting count), so the fixture regeneration should prove a no-op; that is recorded at
+B3.4 rather than assumed.
+
+- [ ] B3.1 Engine: `ADJUDICATION_VERSION = 2` and the two signer classes as constants;
+      `adjudicate` gains required keyword-only `signer_auth` and `actor` (no default, so
+      omitting them is a TypeError, never a silent row); `signer_auth` outside the two
+      classes and a mismatched pairing (cli-declared with an actor, portal-session
+      without one) are refused; the row carries `adjudication_version`, `signer_auth`,
+      `actor`; `adjudications()` reads rows without `adjudication_version` as version 1
+      with `signer_auth: "cli-declared"` and `actor: null`, in memory, never rewriting
+      the ledger (files: `claimstone/synthesize.py`)
+- [ ] B3.2 CLI: `_adjudicate` passes `signer_auth="cli-declared"`, `actor=None`; no new
+      flag — the spec assigns the CLI its one class (files: `claimstone/cli.py`)
+- [ ] B3.3 Read API: the `verdict` object in `api_schema.py` gains `adjudication_version`,
+      `signer_auth`, `actor` — required, because the read path normalizes; regenerate
+      `docs/contracts/portal-api.schema.json`; no `API_VERSION` bump: every served payload
+      that exists today is byte-identical, the change is additive inside an object no
+      committed fixture carries (files: `claimstone/api_schema.py`,
+      `docs/contracts/portal-api.schema.json`)
+- [ ] B3.4 Fixtures: regenerate through `tools/build_portal_fixtures.py` and record the
+      outcome — expected no-op, since a null verdict is untouched by the new fields
+      (files: `web/tests/fixtures/**` only if the regeneration differs)
+- [ ] B3.5 Contract and instrument: `docs/contracts/profiles.md` adjudication section
+      gains the three fields and the v1 read rule; `ADJUDICATION_VERSION` registered in
+      `tools/check_instrument_versions.py`; a dated D98 entry in `DESIGN_DECISIONS.md`
+      acknowledges `adjudication_version 2` (files: `docs/contracts/profiles.md`,
+      `tools/check_instrument_versions.py`, `docs/DESIGN_DECISIONS.md`)
+- [ ] B3.6 Tests: every `adjudicate` call site gains the two parameters
+      (`test_adjudicate.py`, `test_profile_integrity.py`, `test_api_contract.py`,
+      `test_b1_writer_lock.py`); new tests: an old row read as v1 with the ledger bytes
+      untouched on disk; a CLI-written row says `cli-declared` with a null actor; the
+      parameters are required; the pairing is refused; the read API payload carries
+      `signer_auth` (files: `tests/test_adjudicate.py`, `tests/test_api_contract.py`,
+      `tests/test_profile_integrity.py`, `tests/test_b1_writer_lock.py`)
