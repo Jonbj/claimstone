@@ -42,4 +42,5 @@ why `validate` reads three project lines and pytest skips 13 tests that read rea
       stage 5 (`review.build`, answered call, `review.harvest`) and the real stage 6, never hand-written
       profile rows
       (files: `tests/test_api_profile_diff.py` (new), `tests/test_api.py`, `tests/test_api_contract.py`)
-- [ ] B6.4 fixtures regenerated; all checks and web checks pass; step marked DONE
+- [x] B6.4 fixtures regenerated; all checks and web checks pass; step marked DONE
+      (files: `tools/build_portal_fixtures.py`, `web/tests/fixtures/**`, `web/src/lib/api-types.ts`)

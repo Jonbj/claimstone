@@ -17,6 +17,7 @@ export interface ClaimstonePortalAPIV1 {
   "/projects/{p}/{sel}/inbox": Inbox;
   "/projects/{p}/{sel}/overview": Overview;
   "/projects/{p}/{sel}/questions/{qid}": QuestionDetail;
+  "/projects/{p}/{sel}/questions/{qid}/profile-diff": ProfileDiff;
   "/projects/{p}/{sel}/sources/{candidate_key}": SourceDossier;
   "/projects/{p}/{sel}/summary": Summary;
 }
@@ -425,6 +426,62 @@ export interface QuestionDetail {
     verdict: "SUPPORTED" | "CONTRADICTED" | "CONTESTED_IN_LITERATURE" | "UNANSWERED_IN_LITERATURE" | "NEVER_ASKED";
   } | null;
   verdict_stale: boolean;
+}
+export interface ProfileDiff {
+  added: {
+    [k: string]: unknown;
+  }[];
+  api_version: 1;
+  changed: {
+    [k: string]: unknown;
+  }[];
+  counts: {
+    from: {
+      by_class: {
+        [k: string]: unknown;
+      };
+      direction_count: {
+        [k: string]: number;
+      };
+    };
+    to: {
+      by_class: {
+        [k: string]: unknown;
+      };
+      direction_count: {
+        [k: string]: number;
+      };
+    };
+  };
+  from: {
+    built_at: string;
+    claim_gate_version: number;
+    decision_contract_version: number;
+    profile_sha256: string;
+    registry_version: number;
+  };
+  id: string;
+  project: string;
+  reason: string | null;
+  removed: {
+    [k: string]: unknown;
+  }[];
+  selector: {
+    manifest_only: boolean;
+    round: string | null;
+  };
+  summary: {
+    added: number;
+    changed: number;
+    removed: number;
+  };
+  to: {
+    built_at: string;
+    claim_gate_version: number;
+    decision_contract_version: number;
+    profile_sha256: string;
+    registry_version: number;
+  };
 }
 export interface SourceDossier {
   acquisitions: {
