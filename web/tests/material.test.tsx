@@ -2,7 +2,7 @@
 // a POSSIBLE_VERSION item links to this flow's Decisions; a proposal's answer row shows the
 // server's own state and reason. Signed out, the page offers the sign-in link and no write
 // control.
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import MaterialPage from "@/pages/MaterialPage";
