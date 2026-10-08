@@ -163,7 +163,7 @@ Frontend only (`web/`); `api-types.ts`, Python and fixtures do not change.
 
 - [x] J3.1 step 3 floor line only when status is not `not_started` and `figures.found` is a number > 0
       (files: `web/src/components/JourneySteps.tsx`, `web/tests/journey.test.tsx`)
-- [ ] J3.2 step figures: drop figures that restate the status or are an empty `drifted_parts`; `note` as a
+- [x] J3.2 step figures: drop figures that restate the status or are an empty `drifted_parts`; `note` as a
       muted sentence; no numeric figure dropped (files: `JourneySteps.tsx`, `journey.test.tsx`)
 - [ ] J3.3 UTC date-time formatter `web/src/lib/datetime.ts`, applied to ISO figure values on the journey
       (files: `web/src/lib/datetime.ts`, `JourneySteps.tsx`, `web/tests/datetime.test.ts`, `journey.test.tsx`)

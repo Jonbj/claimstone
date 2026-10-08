@@ -57,6 +57,25 @@ describe("J2: JourneySteps", () => {
     expect(document.querySelector("[data-floor]")).toBeNull();
   });
 
+  it("J3.2: figures drop status and empty drifted_parts, keep numbers, note is a muted sentence", () => {
+    mount(journey);
+    const copies = document.querySelector('[data-step="copies"]')!;
+    expect(copies.querySelector('[data-figure="status"]')).toBeNull();
+    expect(copies.querySelector('[data-figure="found"] dd')?.textContent).toBe("2");
+    expect(copies.querySelector('[data-figure="rate"] dd')?.textContent).toBe("1");
+    expect(document.querySelector('[data-step="protocol"] [data-figure="drifted_parts"]')).toBeNull();
+    expect(document.querySelector('[data-step="search"] [data-figure="note"]')).toBeNull();
+    expect(document.querySelector('[data-step="search"] [data-note]')?.textContent)
+      .toBe("single channel (keyword): completeness not estimable");
+    expect(document.querySelector('[data-step="annotate"] [data-figure="rejected"] dd')?.textContent).toBe("—");
+  });
+
+  it("J3.2: a non-empty drifted_parts is still shown", () => {
+    const proto = journey.steps[0];
+    mount({ ...journey, steps: [{ ...proto, figures: { ...proto.figures, drifted_parts: ["questions", "sources"] } }] });
+    expect(document.querySelector('[data-figure="drifted_parts"] dd')?.textContent).toBe("questions, sources");
+  });
+
   it("Read and sign buttons only for matrix rows awaiting a person, linking to the desk", () => {
     const marked = (rows as { id: string; display_state: string }[]).map((r, i) =>
       i === 1 || i === 3 ? { ...r, display_state: "awaiting_a_person" } : r);

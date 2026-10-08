@@ -31,24 +31,41 @@ const ACTOR: Record<JourneyStep["actor"], { word: string; cls: string }> = {
 // A figure is printed as received; null or absent is "—", never 0.
 function show(value: unknown): string {
   if (value === null || value === undefined) return "—";
+  if (Array.isArray(value) && value.every((x) => typeof x === "string")) return value.join(", ");
   if (typeof value === "object") return JSON.stringify(value);
   return String(value);
 }
 
 const LABELS: Record<string, string> = {};
 
+function isEmpty(value: unknown): boolean {
+  return value === null || value === undefined || (Array.isArray(value) && value.length === 0) || value === "";
+}
+
 function Figures({ figures }: { figures: JourneyStep["figures"] }) {
-  const entries = Object.entries(figures).filter(([, v]) => typeof v !== "object" || v === null);
-  if (entries.length === 0) return null;
+  // `status` only restates the step (the floor line already reads it); an empty `drifted_parts` says
+  // nothing; `note` is a sentence, not a figure. Every numeric figure stays, null shown as "—".
+  const entries = Object.entries(figures).filter(([key, v]) => {
+    if (key === "status" || key === "note") return false;
+    if (key === "drifted_parts" && isEmpty(v)) return false;
+    return typeof v !== "object" || v === null || (Array.isArray(v) && v.every((x) => typeof x === "string"));
+  });
+  const note = typeof figures.note === "string" && figures.note ? figures.note : null;
+  if (entries.length === 0 && note === null) return null;
   return (
-    <dl className="mt-1.5 flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-muted-foreground">
-      {entries.map(([key, value]) => (
-        <div key={key} className="flex gap-1" data-figure={key}>
-          <dt>{LABELS[key] ?? key.replace(/_/g, " ")}</dt>
-          <dd className="font-mono text-foreground">{show(value)}</dd>
-        </div>
-      ))}
-    </dl>
+    <>
+      {entries.length > 0 ? (
+        <dl className="mt-1.5 flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-muted-foreground">
+          {entries.map(([key, value]) => (
+            <div key={key} className="flex gap-1" data-figure={key}>
+              <dt>{LABELS[key] ?? key.replace(/_/g, " ")}</dt>
+              <dd className="font-mono text-foreground">{show(value)}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : null}
+      {note ? <p className="mt-1 text-xs text-muted-foreground" data-note>{note}</p> : null}
+    </>
   );
 }
 
