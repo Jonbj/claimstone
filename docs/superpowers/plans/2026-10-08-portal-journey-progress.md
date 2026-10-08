@@ -9,6 +9,7 @@ Precedent for payload and schema work: `docs/superpowers/plans/2026-10-07-portal
 |---|---|---|---|
 | **J1** | `journey` block in the flow overview, computed on the server; schema, fixtures, types, contract doc | J1's listed tests pass; all checks pass | DONE |
 | **J2** | the flow page rendered as the journey | J2's tests pass; all checks pass | DONE |
+| **J3** | journey page polish (screenshot defects on real data) | J3's tests pass; all checks pass | IN PROGRESS |
 
 ## Log entries
 
@@ -155,3 +156,21 @@ flow would redirect). "Running" step statuses are not covered by a component tes
 beyond the generic status mapping.
 
 NOT DONE: no browser/visual check against `V2Journey.html`; no Pause/Resume (unchanged, scheduler track).
+
+### J3 — IN PROGRESS
+
+Frontend only (`web/`); `api-types.ts`, Python and fixtures do not change.
+
+- [ ] J3.1 step 3 floor line only when status is not `not_started` and `figures.found` is a number > 0
+      (files: `web/src/components/JourneySteps.tsx`, `web/tests/journey.test.tsx`)
+- [ ] J3.2 step figures: drop figures that restate the status or are an empty `drifted_parts`; `note` as a
+      muted sentence; no numeric figure dropped (files: `JourneySteps.tsx`, `journey.test.tsx`)
+- [ ] J3.3 UTC date-time formatter `web/src/lib/datetime.ts`, applied to ISO figure values on the journey
+      (files: `web/src/lib/datetime.ts`, `JourneySteps.tsx`, `web/tests/datetime.test.ts`, `journey.test.tsx`)
+- [ ] J3.4 question state chips as human words via `vocabulary.ts`, code kept as `title`
+      (files: `web/src/lib/vocabulary.ts`, `JourneySide.tsx`, `journey.test.tsx`)
+- [ ] J3.5 topic card: first 4 expanded, "Show all N topics" toggle (files: `JourneySide.tsx`, `journey.test.tsx`)
+- [ ] J3.6 binding: no review-finding jargon; CURRENT with no differences is one compact line beside the
+      scope chips, drifted states keep the card (files: `web/src/pages/FlowOverviewPage.tsx`,
+      `web/tests/flowpage.test.tsx`)
+- [ ] J3.7 all checks, J3 marked DONE (files: this log)
