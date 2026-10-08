@@ -1045,6 +1045,191 @@
      },
      "type": "array"
     },
+    "journey": {
+     "additionalProperties": false,
+     "properties": {
+      "journey_version": {
+       "type": "integer"
+      },
+      "needs_you": {
+       "additionalProperties": false,
+       "properties": {
+        "note": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "optional": {
+         "type": [
+          "integer",
+          "null"
+         ]
+        },
+        "ready_to_sign": {
+         "type": "integer"
+        },
+        "required": {
+         "type": [
+          "integer",
+          "null"
+         ]
+        }
+       },
+       "required": [
+        "required",
+        "optional",
+        "ready_to_sign",
+        "note"
+       ],
+       "type": "object"
+      },
+      "questions": {
+       "additionalProperties": false,
+       "properties": {
+        "literature": {
+         "type": "integer"
+        },
+        "operational": {
+         "type": "integer"
+        },
+        "total": {
+         "type": "integer"
+        }
+       },
+       "required": [
+        "total",
+        "literature",
+        "operational"
+       ],
+       "type": "object"
+      },
+      "running": {
+       "items": {
+        "additionalProperties": false,
+        "properties": {
+         "operation_id": {
+          "type": "string"
+         },
+         "stage": {
+          "type": "string"
+         },
+         "state": {
+          "type": "string"
+         },
+         "state_note": {
+          "type": "string"
+         }
+        },
+        "required": [
+         "operation_id",
+         "stage",
+         "state",
+         "state_note"
+        ],
+        "type": "object"
+       },
+       "type": [
+        "array",
+        "null"
+       ]
+      },
+      "running_note": {
+       "type": [
+        "string",
+        "null"
+       ]
+      },
+      "steps": {
+       "items": {
+        "additionalProperties": false,
+        "properties": {
+         "actor": {
+          "enum": [
+           "you",
+           "claimstone"
+          ],
+          "type": "string"
+         },
+         "figures": {
+          "type": "object"
+         },
+         "key": {
+          "type": "string"
+         },
+         "n": {
+          "type": "integer"
+         },
+         "status": {
+          "enum": [
+           "done",
+           "partial",
+           "running",
+           "waits_for_you",
+           "blocked",
+           "not_started",
+           "not_applicable"
+          ],
+          "type": "string"
+         },
+         "summary": {
+          "type": "string"
+         },
+         "title": {
+          "type": "string"
+         }
+        },
+        "required": [
+         "n",
+         "key",
+         "title",
+         "actor",
+         "status",
+         "summary",
+         "figures"
+        ],
+        "type": "object"
+       },
+       "type": "array"
+      },
+      "topics": {
+       "items": {
+        "additionalProperties": false,
+        "properties": {
+         "id": {
+          "type": "string"
+         },
+         "label": {
+          "type": "string"
+         },
+         "terms": {
+          "items": {
+           "type": "string"
+          },
+          "type": "array"
+         }
+        },
+        "required": [
+         "id",
+         "label",
+         "terms"
+        ],
+        "type": "object"
+       },
+       "type": "array"
+      }
+     },
+     "required": [
+      "journey_version",
+      "topics",
+      "questions",
+      "steps",
+      "needs_you",
+      "running",
+      "running_note"
+     ],
+     "type": "object"
+    },
     "legacy": {
      "type": "boolean"
     },
@@ -1418,7 +1603,8 @@
     "inbox",
     "activity",
     "unavailable",
-    "errors"
+    "errors",
+    "journey"
    ],
    "title": "overview",
    "type": "object"

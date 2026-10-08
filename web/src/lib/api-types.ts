@@ -268,6 +268,45 @@ export interface Overview {
     scope: string;
     subject: string;
   }[];
+  journey: {
+    journey_version: number;
+    needs_you: {
+      note: string | null;
+      optional: number | null;
+      ready_to_sign: number;
+      required: number | null;
+    };
+    questions: {
+      literature: number;
+      operational: number;
+      total: number;
+    };
+    running:
+      | {
+          operation_id: string;
+          stage: string;
+          state: string;
+          state_note: string;
+        }[]
+      | null;
+    running_note: string | null;
+    steps: {
+      actor: "you" | "claimstone";
+      figures: {
+        [k: string]: unknown;
+      };
+      key: string;
+      n: number;
+      status: "done" | "partial" | "running" | "waits_for_you" | "blocked" | "not_started" | "not_applicable";
+      summary: string;
+      title: string;
+    }[];
+    topics: {
+      id: string;
+      label: string;
+      terms: string[];
+    }[];
+  };
   legacy: boolean;
   project: string;
   question_state_counts: {

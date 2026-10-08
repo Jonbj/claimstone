@@ -524,6 +524,313 @@
    "subject": "Q20"
   }
  ],
+ "journey": {
+  "journey_version": 1,
+  "needs_you": {
+   "note": null,
+   "optional": 0,
+   "ready_to_sign": 19,
+   "required": 0
+  },
+  "questions": {
+   "literature": 20,
+   "operational": 0,
+   "total": 20
+  },
+  "running": [],
+  "running_note": null,
+  "steps": [
+   {
+    "actor": "you",
+    "figures": {
+     "bound_at": "2026-10-06T00:00:00+00:00",
+     "drifted_parts": null,
+     "questions_literature": 20,
+     "questions_operational": 0,
+     "questions_total": 20,
+     "registry_version": 2
+    },
+    "key": "protocol",
+    "n": 1,
+    "status": "done",
+    "summary": "Protocol frozen at registry v2: 20 questions (20 literature, 0 operational), bound 2026-10-06T00:00:00+00:00.",
+    "title": "Protocol frozen"
+   },
+   {
+    "actor": "claimstone",
+    "figures": {
+     "candidates": 2,
+     "note": "single channel (keyword): completeness not estimable",
+     "per_class": {
+      "ACA": 2
+     }
+    },
+    "key": "search",
+    "n": 2,
+    "status": "done",
+    "summary": "2 candidates found.",
+    "title": "Search the declared scope"
+   },
+   {
+    "actor": "claimstone",
+    "figures": {
+     "confirmed": 2,
+     "floor": 0.8,
+     "found": 2,
+     "not_a_document": 0,
+     "not_obtained": 0,
+     "obtained": 2,
+     "rate": 1.0,
+     "status": "OK"
+    },
+    "key": "copies",
+    "n": 3,
+    "status": "done",
+    "summary": "2 of 2 found sources are confirmed documents (rate 1.00, floor 0.80): the floor is met.",
+    "title": "Obtain legal copies"
+   },
+   {
+    "actor": "claimstone",
+    "figures": {
+     "documents": 2,
+     "rejected": 0
+    },
+    "key": "documents",
+    "n": 4,
+    "status": "done",
+    "summary": "2 documents prepared, 0 rejected.",
+    "title": "Prepare the documents"
+   },
+   {
+    "actor": "claimstone",
+    "figures": {
+     "annotations_kept": 2,
+     "readings_answered": 40,
+     "readings_expected": 40,
+     "rejected": null
+    },
+    "key": "annotate",
+    "n": 5,
+    "status": "done",
+    "summary": "All 40 readings answered; 2 annotations kept, — rejected.",
+    "title": "Annotate every passage"
+   },
+   {
+    "actor": "claimstone",
+    "figures": {
+     "accepted": 2,
+     "reviewed": 0
+    },
+    "key": "review",
+    "n": 6,
+    "status": "not_started",
+    "summary": "No annotation has been reviewed yet.",
+    "title": "Independent review"
+   },
+   {
+    "actor": "claimstone",
+    "figures": {
+     "final": 19,
+     "profiles": 20,
+     "provisional": 1
+    },
+    "key": "profiles",
+    "n": 7,
+    "status": "partial",
+    "summary": "20 profiles built: 19 final and 1 provisional literature questions.",
+    "title": "Evidence profiles"
+   },
+   {
+    "actor": "you",
+    "figures": {
+     "literature_total": 20,
+     "operational": 0,
+     "ready_to_sign": 19,
+     "signed": 0
+    },
+    "key": "sign",
+    "n": 8,
+    "status": "waits_for_you",
+    "summary": "19 profiles are ready for you to read and sign; 0 of 20 literature questions signed.",
+    "title": "Read and sign"
+   }
+  ],
+  "topics": [
+   {
+    "id": "T01",
+    "label": "event study methodology",
+    "terms": [
+     "event study abnormal returns",
+     "cumulative abnormal returns",
+     "event window design",
+     "overlapping event windows",
+     "cross-sectional dependence clustered standard errors",
+     "BHAR versus CAR",
+     "bad-model problem long-horizon"
+    ]
+   },
+   {
+    "id": "T02",
+    "label": "news text and returns",
+    "terms": [
+     "financial news sentiment stock returns",
+     "textual analysis stock predictability",
+     "news content return predictability",
+     "Loughran McDonald financial dictionary",
+     "FinBERT financial sentiment",
+     "LLM financial sentiment"
+    ]
+   },
+   {
+    "id": "T03",
+    "label": "novelty, surprise, staleness",
+    "terms": [
+     "news novelty stock returns",
+     "stale news reprint",
+     "first mention versus republication",
+     "earnings surprise magnitude",
+     "information materiality"
+    ]
+   },
+   {
+    "id": "T04",
+    "label": "speed, latency, drift",
+    "terms": [
+     "market reaction speed news",
+     "high-frequency news response",
+     "post-news drift",
+     "underreaction overreaction news",
+     "news latency provider timestamp"
+    ]
+   },
+   {
+    "id": "T05",
+    "label": "pre-news behaviour",
+    "terms": [
+     "pre-announcement price run-up",
+     "information leakage before announcement",
+     "abnormal volume before news",
+     "informed trading pre-event"
+    ]
+   },
+   {
+    "id": "T06",
+    "label": "event families",
+    "terms": [
+     "earnings announcement returns",
+     "guidance revision returns",
+     "merger announcement returns",
+     "analyst upgrade downgrade returns",
+     "price target revision",
+     "FDA approval stock",
+     "litigation announcement returns",
+     "management change announcement returns"
+    ]
+   },
+   {
+    "id": "T07",
+    "label": "post-earnings-announcement drift",
+    "terms": [
+     "post earnings announcement drift",
+     "PEAD decline",
+     "PEAD transaction costs",
+     "Bernard Thomas drift"
+    ]
+   },
+   {
+    "id": "T08",
+    "label": "costs, limits to arbitrage, capacity",
+    "terms": [
+     "transaction costs anomaly returns",
+     "effective spread price impact",
+     "limits to arbitrage",
+     "strategy capacity decay",
+     "short sale constraints locate"
+    ]
+   },
+   {
+    "id": "T09",
+    "label": "multiple testing and credibility",
+    "terms": [
+     "multiple testing cross-section expected returns",
+     "t-statistic threshold three",
+     "data mined anomalies",
+     "backtest overfitting deflated Sharpe",
+     "post-publication alpha decay"
+    ]
+   },
+   {
+    "id": "T10",
+    "label": "replication and meta-analysis",
+    "terms": [
+     "replicating anomalies",
+     "replication crisis finance",
+     "open source asset pricing",
+     "meta-analysis economics publication bias",
+     "PET-PEESE MAIVE"
+    ]
+   },
+   {
+    "id": "T11",
+    "label": "information economics and attention",
+    "terms": [
+     "Grossman Stiglitz informationally efficient",
+     "Kyle price impact informed trading",
+     "rational inattention asset prices",
+     "investor attention returns",
+     "gradual information diffusion"
+    ]
+   },
+   {
+    "id": "T12",
+    "label": "behavioural mechanism",
+    "terms": [
+     "investor sentiment overreaction model",
+     "conservatism representativeness asset prices",
+     "limited attention distraction earnings"
+    ]
+   },
+   {
+    "id": "T13",
+    "label": "cross-sectional moderators",
+    "terms": [
+     "size liquidity information environment predictability",
+     "small cap news reaction",
+     "volatility regime news response",
+     "pre-market after-hours reaction"
+    ]
+   },
+   {
+    "id": "T14",
+    "label": "microstructure of the data itself",
+    "terms": [
+     "SIP consolidated tape delay",
+     "quote staleness",
+     "closing auction price discovery",
+     "news provider timestamp accuracy"
+    ]
+   },
+   {
+    "id": "T15",
+    "label": "causal inference",
+    "terms": [
+     "identification event study causal",
+     "exogenous shock stock returns",
+     "predictability versus causality asset prices"
+    ]
+   },
+   {
+    "id": "T16",
+    "label": "datasets, providers, code",
+    "terms": [
+     "RavenPack news analytics",
+     "financial news dataset benchmark",
+     "event study software package",
+     "news price alignment replication code"
+    ]
+   }
+  ]
+ },
  "legacy": false,
  "project": "example-news-and-returns",
  "question_state_counts": {

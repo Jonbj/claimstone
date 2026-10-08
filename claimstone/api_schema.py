@@ -317,6 +317,63 @@ SUMMARY = _payload("summary", {
 }, ["project", "flow_id", "selector", "selector_label", "floor_status", "verdicts",
     "inbox_counts"])
 
+# journey.STATUSES: the guided page's step statuses, decided on the server.
+JOURNEY_STATUSES = ("done", "partial", "running", "waits_for_you", "blocked", "not_started",
+                    "not_applicable")
+
+_JOURNEY_STEP = {
+    "type": "object",
+    "required": ["n", "key", "title", "actor", "status", "summary", "figures"],
+    "properties": {
+        "n": _INT, "key": _STR, "title": _STR,
+        "actor": {"type": "string", "enum": ["you", "claimstone"]},
+        "status": {"type": "string", "enum": list(JOURNEY_STATUSES)},
+        "summary": _STR,
+        # Numbers the summary quotes; `null` where unknown, never 0 for unknown.
+        "figures": {"type": "object"},
+    },
+    "additionalProperties": False,
+}
+
+_JOURNEY = {
+    "type": "object",
+    "required": ["journey_version", "topics", "questions", "steps", "needs_you", "running",
+                 "running_note"],
+    "properties": {
+        "journey_version": _INT,
+        "topics": {
+            "type": "array",
+            "items": {"type": "object", "required": ["id", "label", "terms"],
+                      "properties": {"id": _STR, "label": _STR,
+                                     "terms": {"type": "array", "items": _STR}},
+                      "additionalProperties": False},
+        },
+        "questions": {
+            "type": "object", "required": ["total", "literature", "operational"],
+            "properties": {"total": _INT, "literature": _INT, "operational": _INT},
+            "additionalProperties": False,
+        },
+        "steps": {"type": "array", "items": _JOURNEY_STEP},
+        "needs_you": {
+            "type": "object", "required": ["required", "optional", "ready_to_sign", "note"],
+            "properties": {"required": _INT_OR_NULL, "optional": _INT_OR_NULL,
+                           "ready_to_sign": _INT, "note": _STR_OR_NULL},
+            "additionalProperties": False,
+        },
+        "running": {
+            "type": ["array", "null"],
+            "items": {"type": "object",
+                      "required": ["operation_id", "stage", "state", "state_note"],
+                      "properties": {"operation_id": _STR, "stage": _STR, "state": _STR,
+                                     "state_note": _STR},
+                      "additionalProperties": False},
+        },
+        # Set (and `running` is null) when the operations ledger is damaged.
+        "running_note": _STR_OR_NULL,
+    },
+    "additionalProperties": False,
+}
+
 OVERVIEW = _payload("overview", {
     "project": _STR,
     "selector": _SELECTOR,
@@ -393,9 +450,10 @@ OVERVIEW = _payload("overview", {
     "activity": {"type": "array", "items": _ACTIVITY_ROW},
     "unavailable": _STR,
     "errors": {"type": "array", "items": _STR},
+    "journey": _JOURNEY,
 }, ["project", "selector", "selector_label", "flow", "legacy", "binding_state", "state",
     "floor_panel", "questions", "question_state_counts", "source_tracker", "inbox", "activity",
-    "unavailable", "errors"])
+    "unavailable", "errors", "journey"])
 
 INBOX = _payload("inbox", {
     "cards": {"type": "array", "items": _CARD},

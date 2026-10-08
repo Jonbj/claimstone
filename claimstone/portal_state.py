@@ -23,7 +23,7 @@ import pathlib
 from dataclasses import dataclass
 from typing import Any, Iterable, Mapping
 
-from claimstone import admissibility, claim_records, chunk_sets, flows, net, review, round_state, scope, synthesize
+from claimstone import admissibility, claim_records, chunk_sets, flows, journey, net, review, round_state, scope, synthesize
 from claimstone.config import (ConfigError, Project, RegistryDrift, check_registry_drift,
                                discover_projects, load_project)
 from claimstone.store import LedgerCorrupt, Store
@@ -763,6 +763,7 @@ def flow_overview(project: Project, store: Store, selector: scope.Selector,
     rs = computed.rs
     binding = flows.binding_state(project, store, flow_row) if flow_row is not None else None
     matrix = question_matrix(project, store, selector, computed)
+    cards = inbox_cards(project, store, selector, flow_row, computed)
     return {
         "project": project.name,
         "selector": selector.as_dict(),
@@ -775,11 +776,12 @@ def flow_overview(project: Project, store: Store, selector: scope.Selector,
         "questions": matrix,
         "question_state_counts": question_state_counts(matrix),
         "source_tracker": source_tracker(project, store, selector, computed),
-        "inbox": [dataclasses.asdict(card)
-                  for card in inbox_cards(project, store, selector, flow_row, computed)],
+        "inbox": [dataclasses.asdict(card) for card in cards],
         "activity": round_state.activity(store, 50, selector),
         "unavailable": rs.unavailable,
         "errors": list(rs.errors),
+        # The guided journey, decided here from the same `computed` and cards (portal journey J1).
+        "journey": journey.build(project, store, selector, flow_row, computed, cards, binding),
     }
 
 
