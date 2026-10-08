@@ -129,7 +129,7 @@ def _protocol(project: Project, flow_row: dict[str, Any] | None,
         return _step(1, "protocol", "Protocol frozen", "you", "done",
                      "Protocol frozen at registry v{registry_version}: {questions_total} "
                      "questions ({questions_literature} literature, {questions_operational} "
-                     "operational), bound {bound_at}.", figures)
+                     "operational).", figures)
     figures["drifted_parts"] = list(binding["differences"])
     return _step(1, "protocol", "Protocol frozen", "you", "blocked",
                  "The protocol has drifted from the one bound: {drifted_parts}.", figures)
