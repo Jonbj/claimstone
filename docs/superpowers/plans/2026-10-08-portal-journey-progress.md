@@ -112,7 +112,7 @@ Plan (frontend only; `api-types.ts`, Python and fixtures do not change):
 - [x] J2.2 right column: `JourneySide.tsx` (the topic, the questions compact, needs you with the null
       note) beside the kept `OperationsPanel` (files: `web/src/components/JourneySide.tsx`,
       `web/tests/journey.test.tsx`)
-- [ ] J2.3 restructure `FlowOverviewPage.tsx`: header with flow selector, journey left, side right,
+- [x] J2.3 restructure `FlowOverviewPage.tsx`: header with flow selector, journey left, side right,
       technical details in a collapsed `<details>`; legacy shows no write control
       (files: `web/src/pages/FlowOverviewPage.tsx`, `web/tests/flowpage.test.tsx`)
 - [ ] J2.4 `ProjectPage.tsx`: redirect to the single / single CURRENT flow, `?details=1` suppresses it,

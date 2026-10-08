@@ -1,6 +1,6 @@
 // F3: the flow page. Header links, the operations panel for flows only, no write control on
 // an unbound selector, and none for a signed-out visitor.
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { setCsrfToken } from "@/lib/control";
@@ -30,6 +30,14 @@ function mount(path: string, signedIn: boolean) {
     if (url.endsWith("/operations")) return json(200, { flow_id: flowId, operations: [] });
     if (url.includes("/overview")) {
       return json(200, url.includes("/unbound/") || url.includes("/u/") ? unboundOverview : flowOverview);
+    }
+    if (url.endsWith("/projects")) {
+      return json(200, { api_version: 1, projects: [{
+        name: "demo", config: "OK", config_error: null, registry_version: 2, registry_sha256: "abc",
+        registry_drift: null, integrity_error: null,
+        flows: [{ flow_id: flowId, selector_label: "round 1", binding_state: "CURRENT", bound_after_data: false, title: "Initial research" }],
+        unbound_selectors: [{ slug: "r0", label: "old round", selector: { round: "r0", manifest_only: false } }],
+      }] });
     }
     if (url.includes("/poll")) return json(200, { api_version: 1, signature: "s" });
     return json(404, { error: { code: "NOT_FOUND", message: "x" } });
@@ -79,5 +87,33 @@ describe("F3: flow journey page", () => {
     expect(screen.queryByRole("link", { name: /Add material|Decisions|Export/ })).toBeNull();
     expect(screen.queryByRole("button", { name: /Authorize|Pause|Resume/ })).toBeNull();
     expect(requested.some((u) => u.includes("/operations"))).toBe(false);
+  });
+
+  it("renders the server's steps in order and keeps technical details collapsed", async () => {
+    mount("/p/demo/f/sel1", true);
+    await screen.findByRole("heading", { name: "The journey" });
+    const keys = Array.from(document.querySelectorAll("[data-step]")).map((n) => n.getAttribute("data-step"));
+    expect(keys).toEqual(flowOverview.journey.steps.map((st) => st.key));
+    const details = screen.getByText("Evidence path and technical details").closest("details")!;
+    expect(details.open).toBe(false);
+    // KPIs, floor panel, source tracker and activity all live inside it.
+    expect(within(details).getByText("Sources in this scope")).toBeTruthy();
+    expect(within(details).getByText(/activity — this scope only/)).toBeTruthy();
+  });
+
+  it("offers the research-flow selector with history labelled, and a Project details link", async () => {
+    mount("/p/demo/f/sel1", true);
+    const nav = await screen.findByRole("navigation", { name: "Research flows" });
+    expect(within(nav).getByRole("link", { name: "Initial research" })).toBeTruthy();
+    expect(within(nav).getByText("History")).toBeTruthy();
+    expect(within(nav).getByText("protocol not verified")).toBeTruthy();
+    expect((await screen.findByRole("link", { name: "Project details" })).getAttribute("href"))
+      .toBe("/p/demo?details=1");
+  });
+
+  it("a legacy selector shows the journey and no write control or Read and sign button", async () => {
+    mount("/p/demo/u/-", true);
+    await screen.findByRole("heading", { name: "The journey" });
+    expect(screen.queryAllByRole("link", { name: /Read and sign|Open decisions/ })).toHaveLength(0);
   });
 });

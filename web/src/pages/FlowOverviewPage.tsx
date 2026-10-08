@@ -4,6 +4,8 @@ import ErrorState from "@/components/ErrorState";
 import RowFields from "@/components/RowFields";
 import FloorPanel from "@/components/FloorPanel";
 import InboxCards from "@/components/InboxCards";
+import JourneySteps from "@/components/JourneySteps";
+import { NeedsYou, RunningNote, TheQuestions, TheTopic } from "@/components/JourneySide";
 import OperationsPanel from "@/components/OperationsPanel";
 import OverviewKpis from "@/components/OverviewKpis";
 import Pending from "@/components/Pending";
@@ -27,6 +29,9 @@ export default function FlowOverviewPage({ kind }: { kind: "f" | "u" }) {
   const sel = rawSel ? decodeURIComponent(rawSel) : "";
 
   const overview = useApi(() => api.overview(project, kind, sel), [project, kind, sel]);
+  // The selector of research flows is the project list's own; if it cannot be read it is simply
+  // not offered (the page does not depend on it).
+  const index = useApi(() => api.projects(), []);
   usePoll(project || null, () => overview.reload());
 
   if (overview.error) return <ErrorState error={overview.error} context="overview" />;
@@ -39,6 +44,7 @@ export default function FlowOverviewPage({ kind }: { kind: "f" | "u" }) {
   ).map(([name, value]) => ({ name, value }));
   const next = data.inbox.find((card) => card.command !== null) ?? null;
   const flowTitle = data.flow ? String((data.flow as { title?: unknown }).title ?? "") : "";
+  const card = index.data?.projects.find((candidate) => candidate.name === project) ?? null;
   const flowId = data.flow ? String((data.flow as { flow_id?: unknown }).flow_id ?? "") : "";
 
   return (
@@ -69,24 +75,49 @@ export default function FlowOverviewPage({ kind }: { kind: "f" | "u" }) {
           {data.binding_state ? <Chip text={data.binding_state.state} /> : null}
           {data.legacy ? <Chip text="legacy: protocol not verified" /> : null}
         </p>
-        {kind === "f" ? (
-          <nav aria-label="Flow actions" className="flex flex-wrap gap-2">
-            {[
-              ["Add material", `${base}/material`],
-              ["Decisions", `${base}/decisions`],
-              ["Export", `${base}/export`],
-              ["Activity", `/p/${encodeURIComponent(project)}#activity`],
-            ].map(([label, to]) => (
-              <Link key={label} to={to}
-                    className="inline-flex min-h-11 items-center rounded-md px-4 text-sm font-medium ring-1 ring-gray-300 hover:bg-gray-50 dark:ring-gray-700 dark:hover:bg-gray-900">
-                {label}
+        {card && ((card.flows ?? []).length + (card.unbound_selectors ?? []).length) > 0 ? (
+          <nav aria-label="Research flows" className="flex flex-wrap items-center gap-2 text-sm">
+            <span className="text-muted-foreground">research</span>
+            {(card.flows ?? []).map((flow) => (
+              <Link key={flow.flow_id}
+                    to={`/p/${encodeURIComponent(project)}/f/${encodeURIComponent(flow.flow_id)}`}
+                    aria-current={kind === "f" && flow.flow_id === flowId ? "page" : undefined}
+                    className="rounded-md px-3 py-1 ring-1 ring-gray-300 hover:bg-gray-50 aria-[current=page]:bg-gray-100 aria-[current=page]:font-semibold dark:ring-gray-700 dark:hover:bg-gray-900 dark:aria-[current=page]:bg-gray-800">
+                {flow.title ?? `flow ${flow.flow_id.slice(0, 12)}`}
+              </Link>
+            ))}
+            {(card.unbound_selectors ?? []).length > 0 ? (
+              <span className="ml-2 text-muted-foreground">History</span>
+            ) : null}
+            {(card.unbound_selectors ?? []).map((entry) => (
+              <Link key={entry.slug}
+                    to={`/p/${encodeURIComponent(project)}/u/${encodeURIComponent(entry.slug)}`}
+                    aria-current={kind === "u" && entry.slug === sel ? "page" : undefined}
+                    className="rounded-md border border-dashed px-3 py-1 hover:bg-gray-50 aria-[current=page]:font-semibold dark:hover:bg-gray-900">
+                {entry.label} <span className="text-xs text-muted-foreground">protocol not verified</span>
               </Link>
             ))}
           </nav>
         ) : null}
+        <nav aria-label="Flow actions" className="flex flex-wrap gap-2">
+          {[
+            ...(kind === "f"
+              ? [
+                  ["Add material", `${base}/material`],
+                  ["Decisions", `${base}/decisions`],
+                  ["Export", `${base}/export`],
+                  ["Activity", `/p/${encodeURIComponent(project)}#activity`],
+                ]
+              : []),
+            ["Project details", `/p/${encodeURIComponent(project)}?details=1`],
+          ].map(([label, to]) => (
+            <Link key={label} to={to}
+                  className="inline-flex min-h-11 items-center rounded-md px-4 text-sm font-medium ring-1 ring-gray-300 hover:bg-gray-50 dark:ring-gray-700 dark:hover:bg-gray-900">
+              {label}
+            </Link>
+          ))}
+        </nav>
       </header>
-
-      {kind === "f" && flowId ? <OperationsPanel project={project} flowId={flowId} /> : null}
 
       {data.legacy ? (
         <section className="rounded-lg bg-card p-5 shadow-sm ring-1 ring-gray-200 dark:ring-gray-800">
@@ -148,6 +179,24 @@ export default function FlowOverviewPage({ kind }: { kind: "f" | "u" }) {
         </section>
       ) : null}
 
+      <div className="flex flex-wrap items-start gap-5">
+        <div className="min-w-0 flex-[3_1_520px]">
+          <JourneySteps journey={data.journey} rows={data.questions.rows} base={base} writable={kind === "f"} />
+        </div>
+        <aside aria-label="Beside the journey" className="flex min-w-0 flex-[2_1_320px] flex-col gap-5">
+          {kind === "f" && flowId ? <OperationsPanel project={project} flowId={flowId} /> : null}
+          <RunningNote journey={data.journey} />
+          <TheTopic topics={data.journey.topics} />
+          <TheQuestions rows={data.questions.rows} base={base} />
+          <NeedsYou needs={data.journey.needs_you} base={base} writable={kind === "f"} />
+        </aside>
+      </div>
+
+      <details className="rounded-lg bg-card p-5 shadow-sm ring-1 ring-gray-200 dark:ring-gray-800">
+        <summary className="cursor-pointer text-base font-semibold">
+          Evidence path and technical details
+        </summary>
+        <div className="mt-4 flex flex-col gap-5">
       <OverviewKpis overview={data} />
 
       <section className="rounded-lg bg-card p-5 shadow-sm ring-1 ring-gray-200 dark:ring-gray-800">
@@ -225,6 +274,8 @@ export default function FlowOverviewPage({ kind }: { kind: "f" | "u" }) {
           time and are not shown.
         </p>
       </section>
+        </div>
+      </details>
     </section>
   );
 }
