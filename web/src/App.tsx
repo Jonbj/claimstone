@@ -3,11 +3,13 @@ import Shell from "@/components/Shell";
 import AdminPage from "@/pages/AdminPage";
 import { SessionProvider } from "@/lib/session";
 import ClaimPage from "@/pages/ClaimPage";
+import DecisionsPage from "@/pages/DecisionsPage";
 import ExportPage from "@/pages/ExportPage";
 import FlowOverviewPage from "@/pages/FlowOverviewPage";
 import IndexPage from "@/pages/IndexPage";
 import InboxPage from "@/pages/InboxPage";
 import LoginPage from "@/pages/LoginPage";
+import MaterialPage from "@/pages/MaterialPage";
 import NotFoundPage from "@/pages/NotFoundPage";
 import ProjectPage from "@/pages/ProjectPage";
 import QuestionPage from "@/pages/QuestionPage";
@@ -37,6 +39,8 @@ const router = createBrowserRouter([
       { path: "p/:project", element: <ProjectPage /> },
       { path: "p/:project/f/:sel", element: <FlowOverviewPage kind="f" /> },
       { path: "p/:project/f/:sel/export", element: <ExportPage /> },
+      { path: "p/:project/f/:sel/decisions", element: <DecisionsPage /> },
+      { path: "p/:project/f/:sel/material", element: <MaterialPage /> },
       { path: "p/:project/u/:sel", element: <FlowOverviewPage kind="u" /> },
       { path: "p/:project/f/:sel/q/:qid", element: <QuestionPage kind="f" /> },
       { path: "p/:project/u/:sel/q/:qid", element: <QuestionPage kind="u" /> },
