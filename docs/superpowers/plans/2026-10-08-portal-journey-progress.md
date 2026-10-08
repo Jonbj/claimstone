@@ -105,7 +105,7 @@ readings, is accepted as recorded: each step reports its own ledger honestly.
 
 Plan (frontend only; `api-types.ts`, Python and fixtures do not change):
 
-- [ ] J2.1 `web/src/components/JourneySteps.tsx`: segment bar and the eight steps, status to colour/shape
+- [x] J2.1 `web/src/components/JourneySteps.tsx`: segment bar and the eight steps, status to colour/shape
       and word only, summary and actor verbatim, figures with "—" for null, step 3 floor line, step 8
       "Read and sign Qnn" buttons from matrix rows with `display_state == awaiting_a_person`
       (files: `web/src/components/JourneySteps.tsx`, `web/tests/journey.test.tsx`)
