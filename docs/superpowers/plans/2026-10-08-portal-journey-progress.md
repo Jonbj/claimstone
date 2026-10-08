@@ -8,7 +8,7 @@ Precedent for payload and schema work: `docs/superpowers/plans/2026-10-07-portal
 | step | content | done when | marker |
 |---|---|---|---|
 | **J1** | `journey` block in the flow overview, computed on the server; schema, fixtures, types, contract doc | J1's listed tests pass; all checks pass | DONE |
-| **J2** | the flow page rendered as the journey | J2's tests pass; all checks pass | TODO |
+| **J2** | the flow page rendered as the journey | J2's tests pass; all checks pass | DONE |
 
 ## Log entries
 
@@ -101,7 +101,7 @@ simulates a held writer lock and asserts the step runs. The contract is updated.
 whole-store views, where review counts every accepted claim and extract counts the live profiles'
 readings, is accepted as recorded: each step reports its own ledger honestly.
 
-### J2 — IN PROGRESS
+### J2 — DONE
 
 Plan (frontend only; `api-types.ts`, Python and fixtures do not change):
 
@@ -118,4 +118,40 @@ Plan (frontend only; `api-types.ts`, Python and fixtures do not change):
 - [x] J2.4 `ProjectPage.tsx`: redirect to the single / single CURRENT flow, `?details=1` suppresses it,
       integrity and ledgers in a collapsed `<details>`; "Project details" link on the journey header
       (files: `web/src/pages/ProjectPage.tsx`, `web/tests/project.test.tsx`)
-- [ ] J2.5 all checks, J2 marked DONE (files: this log)
+- [x] J2.5 all checks, J2 marked DONE (files: this log)
+
+Checks (final, at the code state of the closing commit; `api-types.ts` unchanged by `gen:types`):
+
+```
+$ cd web && npm run gen:types && npm run typecheck && npm test && npm run build
+ Test Files  32 passed (32)
+      Tests  194 passed (194)
+✓ built in 3.95s
+check-csp: ok (no inline script, no style attribute)
+$ .venv/bin/pytest -q tests/test_api_contract.py tests/test_portal_fixtures.py
+7 passed in 3.73s
+```
+
+The full `pytest`, `validate --all-projects` and `check_instrument_versions.py` were not re-run: J2 touches
+no Python.
+
+Decisions:
+- A step is shown `running` only if the server's `status` says so; the browser only maps status to a colour,
+  shape and its word. "Ready to sign" buttons come from matrix rows with `display_state ==
+  awaiting_a_person` (the state the KPI donut counts) and are absent on legacy selectors.
+- Step 3's floor line is chosen from the server's `figures.status` (`OK` met, `INSUFFICIENT_ACQUISITION`
+  below, anything else "floor —").
+- Binding, ledger-integrity and corpus-unavailable notices stay visible above the journey; the full
+  questions matrix, rejections card and inbox sit with KPIs, floor panel, source tracker and activity inside
+  the collapsed details (invariant 6 per-class counts stay available).
+- The header's research-flow selector comes from `GET /projects`; if unreadable it is omitted.
+- Redirect uses the card's `binding_state`; `?details=1` suppresses it and opens the technical details.
+  The header "Activity" link now points to `/p/:project?details=1#activity` (otherwise the redirect would
+  swallow it); its test was updated. A collapsed details whose integrity read failed says so in its summary.
+- Partial status is a half-filled gradient (done colour over grey).
+
+Deviations: Activity link target as above; the existing project-page test now uses two drifted flows (one
+flow would redirect). "Running" step statuses are not covered by a component test with a running fixture
+beyond the generic status mapping.
+
+NOT DONE: no browser/visual check against `V2Journey.html`; no Pause/Resume (unchanged, scheduler track).
