@@ -47,6 +47,16 @@ describe("J2: JourneySteps", () => {
     expect(document.querySelector("[data-floor]")?.textContent).toBe("floor met · 1 ≥ 0.8");
   });
 
+  it("J3.1: no floor line while the step is not started or nothing was found", () => {
+    const copies = journey.steps.find((st) => st.key === "copies")!;
+    const none: Journey = { ...journey, steps: [{ ...copies, status: "not_started", figures: { ...copies.figures, found: 0, rate: null, status: "INSUFFICIENT_ACQUISITION" } }] };
+    mount(none);
+    expect(document.querySelector("[data-floor]")).toBeNull();
+    cleanup();
+    mount({ ...journey, steps: [{ ...copies, status: "partial", figures: { ...copies.figures, found: 0 } }] });
+    expect(document.querySelector("[data-floor]")).toBeNull();
+  });
+
   it("Read and sign buttons only for matrix rows awaiting a person, linking to the desk", () => {
     const marked = (rows as { id: string; display_state: string }[]).map((r, i) =>
       i === 1 || i === 3 ? { ...r, display_state: "awaiting_a_person" } : r);

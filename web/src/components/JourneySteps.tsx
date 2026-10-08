@@ -52,6 +52,12 @@ function Figures({ figures }: { figures: JourneyStep["figures"] }) {
   );
 }
 
+// The floor line says nothing about a step that has not begun or has found nothing yet.
+function showsFloor(step: JourneyStep): boolean {
+  const found = step.figures.found;
+  return step.status !== "not_started" && typeof found === "number" && found > 0;
+}
+
 function FloorLine({ figures }: { figures: JourneyStep["figures"] }) {
   const rate = figures.rate;
   const floor = figures.floor;
@@ -112,7 +118,7 @@ export default function JourneySteps({
                   <span className={`text-xs font-medium ${s.ink}`} data-status-word>{s.word}</span>
                 </div>
                 <p className="mt-1 text-sm">{step.summary}</p>
-                {step.key === "copies" ? <FloorLine figures={step.figures} /> : null}
+                {step.key === "copies" && showsFloor(step) ? <FloorLine figures={step.figures} /> : null}
                 <Figures figures={step.figures} />
                 {step.key === "sign" ? (
                   writable && ready.length > 0 ? (
