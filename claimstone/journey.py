@@ -81,8 +81,12 @@ def _is_literature(row: Any) -> bool:
 
 
 def _running_stages(running: list[dict[str, Any]] | None) -> set[str]:
+    """Stages with work actually in flight. An authorized operation no worker has started, and an
+    interrupted one, stay listed in `running` with their state, but they do not make a step say
+    Claimstone is working: that would be a claim no recorded event supports (D107, review of J1)."""
     return {OPERATION_STAGE[item["stage"]] for item in running or []
-            if item.get("stage") in OPERATION_STAGE}
+            if item.get("stage") in OPERATION_STAGE
+            and item.get("state") == "RUNNING_OR_LOCK_HELD"}
 
 
 def _stage(rs: Any, name: str) -> Any:

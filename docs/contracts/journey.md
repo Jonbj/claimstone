@@ -15,11 +15,15 @@ journey: { journey_version, topics[{id,label,terms}], questions{total,literature
 - `figures` holds the numbers the summary quotes. Unknown is `null` in `figures` and "—" in the
   sentence, never 0. A summary is a fixed template chosen by status; no wording varies by result.
 - "Literature question" means any question whose `kind` is not `operational`.
-- "Running for S" means an operation of this flow whose last event is `authorized`, `started`,
-  `call_started` or `unit_completed` (the scheduler's "continuing" set), with stage mapped
-  `discover`, `acquire`, `normalize`, `extract-build|drain|harvest` to extract,
-  `review-build|drain|harvest` to review, `synthesize`. An authorized operation still waiting for its
-  worker counts; its `state` in `running` says so.
+- `running` lists this flow's operations whose last event is `authorized`, `started`,
+  `call_started` or `unit_completed` (the scheduler's "continuing" set), each with its `state`.
+  Stages are mapped as follows: `discover`, `acquire` and `normalize` to themselves;
+  `extract-build|drain|harvest` to extract; `review-build|drain|harvest` to review; `synthesize` to
+  itself.
+- "Running for S" is stricter: an operation of stage S whose `state` is `RUNNING_OR_LOCK_HELD`, the
+  scheduler's own word for work in flight with a writer holding the project lock. An authorized
+  operation no worker has started, and an interrupted one, stay listed but do not make a step
+  `running`, because no recorded event supports that claim (review of J1, 2026-10-08).
 
 ## The steps as built
 

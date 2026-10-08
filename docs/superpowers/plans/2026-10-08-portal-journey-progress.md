@@ -91,3 +91,12 @@ Decisions (the reading that never claims more progress than the ledgers show):
 Deviations: `running_note` field added to the spec's shape; sub-task split as above.
 
 NOT DONE: nothing of J1. The frontend (J2) is untouched.
+
+### J1 review — 2026-10-08 (reviewer)
+Accepted with one change: J1 let an `AUTHORIZED` operation set its step to `running`. An operation no
+worker has started is not work in flight, and saying so is the claim D107 refuses for the heartbeat. Now
+only `state == RUNNING_OR_LOCK_HELD` makes a step `running`. Authorized and interrupted operations stay
+listed in `running` with their state. Tests: the authorized case asserts no step is running; a new test
+simulates a held writer lock and asserts the step runs. The contract is updated. The step 5/6 mismatch on
+whole-store views, where review counts every accepted claim and extract counts the live profiles'
+readings, is accepted as recorded: each step reports its own ledger honestly.

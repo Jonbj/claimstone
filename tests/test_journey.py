@@ -254,19 +254,37 @@ def test_legacy_selector_is_not_verified_and_has_no_decisions(tmp_path):
 # --- running operations ---------------------------------------------------------------------------
 
 
-def test_authorized_operation_marks_its_step_running(tmp_path):
+def test_an_authorized_operation_is_listed_but_its_step_is_not_running(tmp_path):
+    """Authorized is not started: the operation is listed with its state, and the step does not
+    claim work in flight until a worker holds it."""
     project, store, flow = _fixture(tmp_path)
-    before = _by_key(_overview(project, store, "new"))
-    assert before["annotate"]["status"] != "running"
     plan = operations.plan(project, store, flow["flow_id"], "extract-build", batch="e1")
     operations.authorize(store, operations._digest(plan))
     overview = _overview(project, store, "new")
-    assert _by_key(overview)["annotate"]["status"] == "running"
     (item,) = overview["journey"]["running"]
     assert item["stage"] == "extract-build" and item["state"] == "AUTHORIZED"
     assert set(item) == {"operation_id", "stage", "state", "state_note"}
-    assert all(s["status"] != "running" for s in overview["journey"]["steps"]
-               if s["key"] != "annotate")
+    assert all(s["status"] != "running" for s in overview["journey"]["steps"])
+
+
+def test_an_in_flight_operation_with_the_lock_held_marks_its_step_running(tmp_path):
+    project, store, flow = _fixture(tmp_path)
+    plan = operations.plan(project, store, flow["flow_id"], "extract-build", batch="e1")
+    operation_id = operations._digest(plan)
+    operations.authorize(store, operation_id)
+    operations._append(store, operation_id, flow["flow_id"], "started", "worker")
+    interrupted = _overview(project, store, "new")
+    assert _by_key(interrupted)["annotate"]["status"] != "running"  # no writer: interrupted
+    # A writer holding the project lock is what the scheduler reads as "running" (operations.status).
+    from claimstone.store import Store as _Store
+    original = _Store.writer_busy
+    _Store.writer_busy = lambda self: True
+    try:
+        held = _overview(project, store, "new")
+    finally:
+        _Store.writer_busy = original
+    assert _by_key(held)["annotate"]["status"] == "running"
+    assert held["journey"]["running"][0]["state"] == "RUNNING_OR_LOCK_HELD"
 
 
 def test_planned_operation_is_not_running(tmp_path):
@@ -278,7 +296,7 @@ def test_planned_operation_is_not_running(tmp_path):
 
 
 def test_stage_mapping_covers_the_spec():
-    assert journey._running_stages([{"stage": s} for s in
+    assert journey._running_stages([{"stage": s, "state": "RUNNING_OR_LOCK_HELD"} for s in
                                     ("extract-build", "extract-drain", "review-drain",
                                      "discover", "acquire", "normalize", "synthesize")]) == \
         {"extract", "review", "discover", "acquire", "normalize", "synthesize"}
