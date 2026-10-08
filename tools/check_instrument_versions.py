@@ -76,6 +76,8 @@ INSTRUMENTS = (
     ("claimstone/today.py", "SEEN_VERSION", "seen_version"),
     # Who checked which service, or replaced which credential, and when (D106).
     ("claimstone/admin.py", "ADMIN_CHECK_VERSION", "admin_check_version"),
+    # The journey's step rules are an operator-visible interpretation of the ledgers (D111).
+    ("claimstone/journey.py", "JOURNEY_VERSION", "journey_version"),
 )
 
 # The parser is an instrument too, and a string rather than a number. Measured: lfoppiano/grobid

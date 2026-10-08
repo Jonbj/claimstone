@@ -20,7 +20,7 @@ Precedent for payload and schema work: `docs/superpowers/plans/2026-10-07-portal
       regenerated in the same commit because the contract and fixture tests compare them
       (files: `claimstone/journey.py`, `claimstone/portal_state.py`, `claimstone/api_schema.py`,
       `docs/contracts/portal-api.schema.json`, `web/tests/fixtures/**`, `web/src/lib/api-types.ts`)
-- [ ] J1.2 `JOURNEY_VERSION` registered in `tools/check_instrument_versions.py` with a dated D entry,
+- [x] J1.2 `JOURNEY_VERSION` registered in `tools/check_instrument_versions.py` with a dated D entry,
       `docs/contracts/journey.md` (files: `tools/check_instrument_versions.py`,
       `docs/DESIGN_DECISIONS.md`, `docs/contracts/journey.md`)
 - [ ] J1.3 `tests/test_journey.py`: each status rule, nulls, legacy, running operation, route, F13

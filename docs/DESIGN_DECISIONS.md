@@ -4436,3 +4436,23 @@ image's. A mixed corpus is possible from now on, and it is recorded per document
 `docker compose up -d --build` starts GROBID, the read-only API, the write boundary and the portal.
 The engine job (`cli`) and the trial scheduler worker (`trial`) keep their profiles. The trial
 worker's container was removed at the operator's request; its definition stays.
+
+## D111 — The research journey is computed on the server, from the readings the overview already made (2026-10-08)
+
+The operator approved a guided journey of eight steps (protocol, search, copies, documents,
+annotation, review, evidence profiles, read and sign). The data existed but no endpoint turned it into
+a journey, and meaning must not be decided in the browser. `portal_state.flow_overview` now carries a
+`journey` block (`journey_version 1`, `claimstone/journey.py`, contract `docs/contracts/journey.md`).
+
+**Why a version.** Which status a step shows, and what its sentence says, is an interpretation the
+operator reads as "how far along is this". Two readings of the same ledgers under different rules are
+not comparable, so the rules are versioned like an instrument and registered in
+`tools/check_instrument_versions.py`.
+
+**What it is not.** It reads no ledger of its own beyond the scheduler's operations and the decisions'
+open items; it reuses `Computed` and the inbox cards. It reads counts and states only, never a claim's
+stance or a profile's direction count, so flipping every stance changes steps 7 and 8 at most. A
+summary is a fixed template filled from `figures`; unknown is `null` and "—", never 0. Where the
+spec's table was ambiguous the reading chosen is the one that never claims more progress than the
+ledgers show (listed in the contract). No verdict is produced here: step 8 only counts what waits for a
+person's signature (invariant 7).
