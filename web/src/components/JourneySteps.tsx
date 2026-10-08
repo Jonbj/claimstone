@@ -1,4 +1,5 @@
 import { Link } from "react-router";
+import { formatUtc, isIsoTimestamp } from "@/lib/datetime";
 import type { Overview } from "@/lib/api-types";
 import type { MatrixRow } from "@/components/QuestionMatrix";
 
@@ -59,7 +60,11 @@ function Figures({ figures }: { figures: JourneyStep["figures"] }) {
           {entries.map(([key, value]) => (
             <div key={key} className="flex gap-1" data-figure={key}>
               <dt>{LABELS[key] ?? key.replace(/_/g, " ")}</dt>
-              <dd className="font-mono text-foreground">{show(value)}</dd>
+              {isIsoTimestamp(value) ? (
+                <dd className="font-mono text-foreground" title={value}>{formatUtc(value)}</dd>
+              ) : (
+                <dd className="font-mono text-foreground">{show(value)}</dd>
+              )}
             </div>
           ))}
         </dl>

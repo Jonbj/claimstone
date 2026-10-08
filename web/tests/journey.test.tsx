@@ -76,6 +76,13 @@ describe("J2: JourneySteps", () => {
     expect(document.querySelector('[data-figure="drifted_parts"] dd')?.textContent).toBe("questions, sources");
   });
 
+  it("J3.3: an ISO figure shows as a UTC date-time with the raw value as title", () => {
+    mount(journey);
+    const dd = document.querySelector('[data-figure="bound_at"] dd');
+    expect(dd?.textContent).toBe("6 Oct 2026, 00:00 UTC");
+    expect(dd?.getAttribute("title")).toBe("2026-10-06T00:00:00+00:00");
+  });
+
   it("Read and sign buttons only for matrix rows awaiting a person, linking to the desk", () => {
     const marked = (rows as { id: string; display_state: string }[]).map((r, i) =>
       i === 1 || i === 3 ? { ...r, display_state: "awaiting_a_person" } : r);

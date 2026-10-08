@@ -165,7 +165,7 @@ Frontend only (`web/`); `api-types.ts`, Python and fixtures do not change.
       (files: `web/src/components/JourneySteps.tsx`, `web/tests/journey.test.tsx`)
 - [x] J3.2 step figures: drop figures that restate the status or are an empty `drifted_parts`; `note` as a
       muted sentence; no numeric figure dropped (files: `JourneySteps.tsx`, `journey.test.tsx`)
-- [ ] J3.3 UTC date-time formatter `web/src/lib/datetime.ts`, applied to ISO figure values on the journey
+- [x] J3.3 UTC date-time formatter `web/src/lib/datetime.ts`, applied to ISO figure values on the journey
       (files: `web/src/lib/datetime.ts`, `JourneySteps.tsx`, `web/tests/datetime.test.ts`, `journey.test.tsx`)
 - [ ] J3.4 question state chips as human words via `vocabulary.ts`, code kept as `title`
       (files: `web/src/lib/vocabulary.ts`, `JourneySide.tsx`, `journey.test.tsx`)
