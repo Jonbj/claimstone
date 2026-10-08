@@ -100,3 +100,22 @@ listed in `running` with their state. Tests: the authorized case asserts no step
 simulates a held writer lock and asserts the step runs. The contract is updated. The step 5/6 mismatch on
 whole-store views, where review counts every accepted claim and extract counts the live profiles'
 readings, is accepted as recorded: each step reports its own ledger honestly.
+
+### J2 — IN PROGRESS
+
+Plan (frontend only; `api-types.ts`, Python and fixtures do not change):
+
+- [ ] J2.1 `web/src/components/JourneySteps.tsx`: segment bar and the eight steps, status to colour/shape
+      and word only, summary and actor verbatim, figures with "—" for null, step 3 floor line, step 8
+      "Read and sign Qnn" buttons from matrix rows with `display_state == awaiting_a_person`
+      (files: `web/src/components/JourneySteps.tsx`, `web/tests/journey.test.tsx`)
+- [ ] J2.2 right column: `JourneySide.tsx` (the topic, the questions compact, needs you with the null
+      note) beside the kept `OperationsPanel` (files: `web/src/components/JourneySide.tsx`,
+      `web/tests/journey.test.tsx`)
+- [ ] J2.3 restructure `FlowOverviewPage.tsx`: header with flow selector, journey left, side right,
+      technical details in a collapsed `<details>`; legacy shows no write control
+      (files: `web/src/pages/FlowOverviewPage.tsx`, `web/tests/flowpage.test.tsx`)
+- [ ] J2.4 `ProjectPage.tsx`: redirect to the single / single CURRENT flow, `?details=1` suppresses it,
+      integrity and ledgers in a collapsed `<details>`; "Project details" link on the journey header
+      (files: `web/src/pages/ProjectPage.tsx`, `web/tests/project.test.tsx`)
+- [ ] J2.5 all checks, J2 marked DONE (files: this log)
