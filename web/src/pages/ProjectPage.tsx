@@ -1,4 +1,4 @@
-import { Link, useParams } from "react-router";
+import { Link, Navigate, useParams, useSearchParams } from "react-router";
 import Chip from "@/components/Chip";
 import ErrorState from "@/components/ErrorState";
 import RowFields from "@/components/RowFields";
@@ -16,6 +16,9 @@ import { api } from "@/lib/api";
 export default function ProjectPage() {
   const { project: raw } = useParams();
   const project = raw ? decodeURIComponent(raw) : "";
+  const [search] = useSearchParams();
+  // `?details=1` suppresses the redirect so the technical details stay reachable.
+  const wantsDetails = search.get("details") === "1";
 
   const integrity = useApi(() => api.integrity(project), [project]);
   const index = useApi(() => api.projects(), []);
@@ -29,6 +32,17 @@ export default function ProjectPage() {
 
   const card =
     index.data?.projects.find((candidate) => candidate.name === project) ?? null;
+  // One bound flow, or exactly one CURRENT among several, is the page a person came for: go to its
+  // journey. Anything else lists the flows. The binding state is the server's word, not computed.
+  const flows = card?.flows ?? [];
+  const current = flows.filter((flow) => flow.binding_state === "CURRENT");
+  const target = flows.length === 1 ? flows[0] : current.length === 1 ? current[0] : null;
+  if (!wantsDetails && !index.error && target) {
+    return (
+      <Navigate replace
+                to={`/p/${encodeURIComponent(project)}/f/${encodeURIComponent(target.flow_id)}`} />
+    );
+  }
   const refreshing =
     integrity.refreshing || index.refreshing || activity.refreshing;
 
@@ -108,15 +122,26 @@ export default function ProjectPage() {
         )}
       </section>
 
-      <section aria-label="Integrity">
-        {integrity.pending ? (
-          <Pending label="loading integrity…" />
-        ) : integrity.error ? (
-          <ErrorState error={integrity.error} context="integrity" />
-        ) : integrity.data ? (
-          <IntegrityPanel integrity={integrity.data} />
-        ) : null}
-      </section>
+      <details id="technical-details" open={wantsDetails ? true : undefined}
+               className="rounded-lg bg-card p-5 shadow-sm ring-1 ring-gray-200 dark:ring-gray-800">
+        <summary className="cursor-pointer text-base font-semibold">
+          Technical details
+          {integrity.error ? (
+            <span className="ml-2 text-sm font-normal text-not-obtained">
+              integrity could not be read
+            </span>
+          ) : null}
+        </summary>
+        <section aria-label="Integrity" className="mt-4">
+          {integrity.pending ? (
+            <Pending label="loading integrity…" />
+          ) : integrity.error ? (
+            <ErrorState error={integrity.error} context="integrity" />
+          ) : integrity.data ? (
+            <IntegrityPanel integrity={integrity.data} />
+          ) : null}
+        </section>
+      </details>
 
       <section id="activity">
         <h2 className="mb-2 text-sm font-semibold">Activity — whole project</h2>

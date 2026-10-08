@@ -69,7 +69,7 @@ describe("F3: flow journey page", () => {
     expect(await href("Add material")).toBe("/p/demo/f/sel1/material");
     expect(await href("Decisions")).toBe("/p/demo/f/sel1/decisions");
     expect(await href("Export")).toBe("/p/demo/f/sel1/export");
-    expect(await href("Activity")).toBe("/p/demo#activity");
+    expect(await href("Activity")).toBe("/p/demo?details=1#activity");
     expect(await screen.findByText("No operation is planned for this flow.")).toBeTruthy();
   });
 

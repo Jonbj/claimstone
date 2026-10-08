@@ -106,7 +106,7 @@ export default function FlowOverviewPage({ kind }: { kind: "f" | "u" }) {
                   ["Add material", `${base}/material`],
                   ["Decisions", `${base}/decisions`],
                   ["Export", `${base}/export`],
-                  ["Activity", `/p/${encodeURIComponent(project)}#activity`],
+                  ["Activity", `/p/${encodeURIComponent(project)}?details=1#activity`],
                 ]
               : []),
             ["Project details", `/p/${encodeURIComponent(project)}?details=1`],

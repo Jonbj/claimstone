@@ -115,7 +115,7 @@ Plan (frontend only; `api-types.ts`, Python and fixtures do not change):
 - [x] J2.3 restructure `FlowOverviewPage.tsx`: header with flow selector, journey left, side right,
       technical details in a collapsed `<details>`; legacy shows no write control
       (files: `web/src/pages/FlowOverviewPage.tsx`, `web/tests/flowpage.test.tsx`)
-- [ ] J2.4 `ProjectPage.tsx`: redirect to the single / single CURRENT flow, `?details=1` suppresses it,
+- [x] J2.4 `ProjectPage.tsx`: redirect to the single / single CURRENT flow, `?details=1` suppresses it,
       integrity and ledgers in a collapsed `<details>`; "Project details" link on the journey header
       (files: `web/src/pages/ProjectPage.tsx`, `web/tests/project.test.tsx`)
 - [ ] J2.5 all checks, J2 marked DONE (files: this log)
