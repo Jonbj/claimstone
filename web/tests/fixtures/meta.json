@@ -25,6 +25,7 @@
   "image": "grobid/grobid:0.9.1-full",
   "intake_version": 1,
   "jats_parser_version": 2,
+  "journey_version": 1,
   "model_report_version": 2,
   "operations_version": 3,
   "operator_version": 1,

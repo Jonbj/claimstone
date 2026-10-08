@@ -7,12 +7,12 @@ Precedent for payload and schema work: `docs/superpowers/plans/2026-10-07-portal
 
 | step | content | done when | marker |
 |---|---|---|---|
-| **J1** | `journey` block in the flow overview, computed on the server; schema, fixtures, types, contract doc | J1's listed tests pass; all checks pass | IN PROGRESS |
+| **J1** | `journey` block in the flow overview, computed on the server; schema, fixtures, types, contract doc | J1's listed tests pass; all checks pass | DONE |
 | **J2** | the flow page rendered as the journey | J2's tests pass; all checks pass | TODO |
 
 ## Log entries
 
-### J1 — IN PROGRESS
+### J1 — DONE
 
 - [x] J1.1 `claimstone/journey.py` (eight step rules, fixed templates, topics, question counts,
       `needs_you`, `running`) wired into `portal_state.flow_overview` from the same `computed` and
@@ -23,9 +23,71 @@ Precedent for payload and schema work: `docs/superpowers/plans/2026-10-07-portal
 - [x] J1.2 `JOURNEY_VERSION` registered in `tools/check_instrument_versions.py` with a dated D entry,
       `docs/contracts/journey.md` (files: `tools/check_instrument_versions.py`,
       `docs/DESIGN_DECISIONS.md`, `docs/contracts/journey.md`)
-- [ ] J1.3 `tests/test_journey.py`: each status rule, nulls, legacy, running operation, route, F13
+- [x] J1.3 `tests/test_journey.py`: each status rule, nulls, legacy, running operation, route, F13
       (files: `tests/test_journey.py`)
-- [ ] J1.4 real-project read-only sanity check, all checks, J1 marked DONE (files: this log)
+- [x] J1.4 real-project read-only sanity check, all checks, J1 marked DONE (files: this log)
 
 The sub-task split changed from the plan: schema and regenerated artifacts moved into J1.1 because
 the contract and fixture tests fail on any overview payload change until they are regenerated.
+
+Checks (final, at the code state of the closing commit):
+
+```
+$ .venv/bin/pytest -q
+1449 passed, 7 skipped in 121.51s (0:02:01)
+$ .venv/bin/claimstone validate --all-projects
+OK   alembic-s4-lungo: 12 topics, 18 questions (registry v1, frozen 2026-09-28), 6 source classes, acquisition floor 0.80 (v1), 19 manifest rows, registry ee040e0c3cfc
+OK   example-news-and-returns: 16 topics, 20 questions (registry v2, frozen 2026-09-25), 6 source classes, acquisition floor 0.80 (v1), registry 85e5fcc44ddc
+OK   pilot-screen-time: 4 topics, 8 questions (registry v1, frozen 2026-09-28), 6 source classes, acquisition floor 0.80 (v1), 28 manifest rows, registry 82007de2b569
+OK   pmc-screen-time: 4 topics, 8 questions (registry v1, frozen 2026-09-28), 6 source classes, acquisition floor 0.80 (v1), 40 manifest rows, registry 82007de2b569
+$ .venv/bin/python tools/check_instrument_versions.py
+37 instrument version(s) acknowledged in the design record
+$ cd web && npm run gen:types && npm run typecheck && npm test && npm run build
+ Test Files  31 passed (31)
+      Tests  176 passed (176)
+✓ built in 4.04s
+check-csp: ok (no inline script, no style attribute)
+```
+
+Read-only sanity check (`portal_state.flow_overview` on real projects, no write, no stage command).
+Steps 1..8 statuses:
+
+- pmc-screen-time, whole store (legacy): not_applicable, done, done, done, partial, partial, partial,
+  waits_for_you (ready_to_sign 1)
+- pmc-screen-time, round pmc-oa-v1 (legacy): not_applicable, done, done, done, not_started, partial,
+  not_started, not_started
+- alembic-s4-lungo, flow s4-l02-repository-copies-2026-10-06-v2 (bound): done, not_started x7;
+  needs_you required 0, optional 0
+- alembic-s4-lungo, whole store (legacy): not_applicable, partial, partial, done, not_started, done,
+  not_started, not_started
+- alembic-s4-lungo, round s4-l02-search-2026-09-29-v1 (legacy): not_applicable, done, blocked (below
+  floor), done, not_started x4
+- alembic-s4-lungo, round s4-open-copies-v1 (legacy): not_applicable, partial, partial, done,
+  not_started, done, not_started, not_started
+
+No operation was running on either project (`running: []`). Observation: on the whole-store views
+step 6 reads `done`/`partial` while step 5 reads `not_started`/`partial`, because review progress
+counts all accepted claims in the store and extract progress counts live profile readings; the steps
+report what each stage's own ledger says and do not reconcile them.
+
+Decisions (the reading that never claims more progress than the ledgers show):
+- Step 7 is also `blocked` when any verdict row carries a per-row `unavailable` text (stored profiles
+  of a round that no longer clears admission), with that text verbatim. `rs.unavailable` alone was
+  empty in that case and counting the historical profiles would have shown `partial`.
+- Step 7: a literature question with no profile is not final; profile counts exclude operational.
+- Step 2 and 4: unreadable admission gives `partial`, never `done`. Step 4: no prepared document is
+  `not_started` even if copies were obtained.
+- "Running" uses the scheduler's continuing set as the spec says, so an `AUTHORIZED` operation (still
+  waiting for the worker) sets its step to `running`; its `state` in `running` says AUTHORIZED. I also
+  mapped the `-build` and `-harvest` variants (`extract-build`, `extract-harvest`, `review-build`,
+  `review-harvest`) to their lane's step; the spec named only extract-build/drain and review-drain.
+- `running` is filtered with `operations_view.for_flow` narrowed to the continuing events, because the
+  summary row carries no flow id; same replay, one `_events` pass.
+- Added `running_note` (string or null) to the block: the spec asks for a named note on a damaged
+  operations ledger but gave the shape no field for it.
+- `rejected` stays `null` ("—") where a stage records none, following the round state's convention.
+- Sub-task split changed: schema, fixtures and types went into J1.1 (contract tests compare them).
+
+Deviations: `running_note` field added to the spec's shape; sub-task split as above.
+
+NOT DONE: nothing of J1. The frontend (J2) is untouched.

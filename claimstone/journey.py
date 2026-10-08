@@ -235,7 +235,7 @@ def _review(rs: Any, running: set[str]) -> dict[str, Any]:
     return _step(6, "review", "Independent review", "claimstone", status, text, figures)
 
 
-def _profiles(rs: Any, running: set[str]) -> dict[str, Any]:
+def _profiles(rs: Any, running: set[str], refused: str = "") -> dict[str, Any]:
     stage = _stage(rs, "synthesize")
     literature = [q for q in rs.questions if _is_literature(q)]
     # A literature question with no profile is not final either: calling the step done while a
@@ -243,10 +243,13 @@ def _profiles(rs: Any, running: set[str]) -> dict[str, Any]:
     provisional = sum(1 for q in literature if q.provisional or not q.profile_sha256)
     final = sum(1 for q in literature if q.profile_sha256 and not q.provisional)
     figures: dict[str, Any] = {"profiles": stage.outputs, "provisional": None, "final": None}
-    if rs.unavailable:
-        figures["reason"] = rs.unavailable
-        return _step(7, "profiles", "Evidence profiles", "claimstone", "blocked",
-                     rs.unavailable, figures)
+    # `refused` is the first per-row `unavailable` text of the verdict rows: stored profiles of a
+    # round that no longer clears admission are historical, so counting them would claim more
+    # than the ledgers allow a person to read.
+    reason = rs.unavailable or refused
+    if reason:
+        figures["reason"] = reason
+        return _step(7, "profiles", "Evidence profiles", "claimstone", "blocked", reason, figures)
     if _positive(stage.outputs):
         figures["provisional"], figures["final"] = provisional, final
     if "synthesize" in running:
@@ -332,6 +335,8 @@ def build(project: Project, store: Store, selector: Any, flow_row: dict[str, Any
     running, running_note = running_operations(store, flow_row)
     active = _running_stages(running)
     rs, admitted = computed.rs, computed.admitted
+    refused = next((str(row["unavailable"]) for row in (computed.verdicts or {}).get("rows") or []
+                    if row.get("unavailable")), "")
     return {
         "journey_version": JOURNEY_VERSION,
         "topics": topics_block(project),
@@ -343,7 +348,7 @@ def build(project: Project, store: Store, selector: Any, flow_row: dict[str, Any
             _documents(rs, admitted, active),
             _annotate(rs, active),
             _review(rs, active),
-            _profiles(rs, active),
+            _profiles(rs, active, refused),
             _sign(rs, ready),
         ],
         "needs_you": needs_you(store, selector, flow_row, ready),
