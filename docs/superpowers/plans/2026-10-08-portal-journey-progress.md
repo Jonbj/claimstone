@@ -109,7 +109,7 @@ Plan (frontend only; `api-types.ts`, Python and fixtures do not change):
       and word only, summary and actor verbatim, figures with "—" for null, step 3 floor line, step 8
       "Read and sign Qnn" buttons from matrix rows with `display_state == awaiting_a_person`
       (files: `web/src/components/JourneySteps.tsx`, `web/tests/journey.test.tsx`)
-- [ ] J2.2 right column: `JourneySide.tsx` (the topic, the questions compact, needs you with the null
+- [x] J2.2 right column: `JourneySide.tsx` (the topic, the questions compact, needs you with the null
       note) beside the kept `OperationsPanel` (files: `web/src/components/JourneySide.tsx`,
       `web/tests/journey.test.tsx`)
 - [ ] J2.3 restructure `FlowOverviewPage.tsx`: header with flow selector, journey left, side right,

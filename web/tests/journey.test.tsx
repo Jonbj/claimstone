@@ -2,6 +2,7 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { afterEach, describe, expect, it } from "vitest";
+import { NeedsYou, RunningNote, TheQuestions, TheTopic } from "@/components/JourneySide";
 import JourneySteps from "@/components/JourneySteps";
 import type { Journey } from "@/components/JourneySteps";
 import flowOverview from "./fixtures/projects/example-news-and-returns/flows/0df548e3743689e1a0dd099da697aee4842e8a573f1225a8da13fec128a248cd/overview.json";
@@ -60,5 +61,36 @@ describe("J2: JourneySteps", () => {
   it("legacy selectors show no write controls", () => {
     mount(journey, false);
     expect(screen.queryAllByRole("link", { name: /Read and sign/ })).toHaveLength(0);
+  });
+});
+
+describe("J2: side column", () => {
+  afterEach(cleanup);
+
+  it("null needs_you renders the note, not zeros", () => {
+    const needs = { required: null, optional: null, ready_to_sign: 0, note: "decisions belong to a bound flow" };
+    render(<MemoryRouter><NeedsYou needs={needs} base="/p/d/u/x" writable={false} /></MemoryRouter>);
+    expect(screen.getByText("decisions belong to a bound flow")).toBeTruthy();
+    expect(screen.queryByText("Required decisions")).toBeNull();
+    expect(screen.queryByRole("link", { name: /decisions/i })).toBeNull();
+  });
+
+  it("known counts link to Decisions", () => {
+    render(<MemoryRouter><NeedsYou needs={journey.needs_you} base="/p/d/f/s" writable /></MemoryRouter>);
+    expect(screen.getByText("Required decisions")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Open decisions" }).getAttribute("href")).toBe("/p/d/f/s/decisions");
+  });
+
+  it("running null shows the named note; a list shows nothing here", () => {
+    const { container, rerender } = render(<RunningNote journey={{ ...journey, running: null, running_note: "operations ledger damaged" }} />);
+    expect(screen.getByText("operations ledger damaged")).toBeTruthy();
+    rerender(<RunningNote journey={journey} />);
+    expect(container.textContent).toBe("");
+  });
+
+  it("topics with terms and questions with state chips", () => {
+    render(<MemoryRouter><TheTopic topics={journey.topics} /><TheQuestions rows={rows} base="/p/d/f/s" /></MemoryRouter>);
+    expect(screen.getByText(journey.topics[0].label)).toBeTruthy();
+    expect(document.querySelectorAll("[data-question-id]").length).toBe((rows as unknown[]).length);
   });
 });
