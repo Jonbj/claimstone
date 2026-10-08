@@ -124,6 +124,14 @@ describe("J2: side column", () => {
     expect(container.textContent).toBe("");
   });
 
+  it("J3.4: a no_profile row shows the human word, the code is the title", () => {
+    const row = { ...(rows as Record<string, unknown>[])[0], id: "Q99", display_state: "no_profile", verdict: null, operational_not_applicable: false };
+    render(<MemoryRouter><TheQuestions rows={[row] as never} base="/p/d/f/s" /></MemoryRouter>);
+    const li = document.querySelector('[data-question-id="Q99"]')!;
+    expect(within(li as HTMLElement).getByText("no profile yet").getAttribute("title")).toBe("no_profile");
+    expect(within(li as HTMLElement).queryByText("no_profile")).toBeNull();
+  });
+
   it("topics with terms and questions with state chips", () => {
     render(<MemoryRouter><TheTopic topics={journey.topics} /><TheQuestions rows={rows} base="/p/d/f/s" /></MemoryRouter>);
     expect(screen.getByText(journey.topics[0].label)).toBeTruthy();

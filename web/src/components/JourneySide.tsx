@@ -1,5 +1,6 @@
 import { Link } from "react-router";
 import Chip from "@/components/Chip";
+import { stateLabel } from "@/lib/vocabulary";
 import type { Journey } from "@/components/JourneySteps";
 import type { MatrixRow } from "@/components/QuestionMatrix";
 
@@ -58,7 +59,7 @@ export function TheQuestions({ rows, base }: { rows: MatrixRow[]; base: string }
               {row.id}
             </Link>
             <span className="min-w-0 flex-1 text-muted-foreground">{row.text}</span>
-            <Chip text={stateWord(row)} />
+            <Chip text={stateWord(row)} label={stateLabel(stateWord(row))} />
           </li>
         ))}
       </ul>

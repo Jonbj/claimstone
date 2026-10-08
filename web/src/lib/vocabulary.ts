@@ -42,3 +42,24 @@ export function word(word: string): WordStyle {
   // Unknown: rendered as itself, neutral chip, never mapped to a verdict.
   return { cls: "v-unknown", dashed: false, isVerdict: false };
 }
+
+// Plain words for the displayed question states (server `display_state`) and the two engine
+// states. A person reads the word; the code stays available as the element's title. The five
+// verdicts are not here: they are shown as themselves.
+const STATE_WORDS: Record<string, string> = {
+  signed: "signed",
+  stale: "signature out of date",
+  awaiting_a_person: "waits for you",
+  provisional: "provisional",
+  no_verified_claim: "no verified claim",
+  not_applicable: "not applicable",
+  historical: "historical",
+  no_profile: "no profile yet",
+  NO_VERIFIED_CLAIM: "no verified claim",
+  LITERATURE_VERDICT_NOT_APPLICABLE: "no literature verdict (operational)",
+};
+
+/** The human word for a state code; a code with no entry is shown as itself. */
+export function stateLabel(code: string): string {
+  return STATE_WORDS[code] ?? code;
+}

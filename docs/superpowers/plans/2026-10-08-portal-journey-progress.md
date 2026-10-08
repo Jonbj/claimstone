@@ -167,7 +167,7 @@ Frontend only (`web/`); `api-types.ts`, Python and fixtures do not change.
       muted sentence; no numeric figure dropped (files: `JourneySteps.tsx`, `journey.test.tsx`)
 - [x] J3.3 UTC date-time formatter `web/src/lib/datetime.ts`, applied to ISO figure values on the journey
       (files: `web/src/lib/datetime.ts`, `JourneySteps.tsx`, `web/tests/datetime.test.ts`, `journey.test.tsx`)
-- [ ] J3.4 question state chips as human words via `vocabulary.ts`, code kept as `title`
+- [x] J3.4 question state chips as human words via `vocabulary.ts`, code kept as `title`
       (files: `web/src/lib/vocabulary.ts`, `JourneySide.tsx`, `journey.test.tsx`)
 - [ ] J3.5 topic card: first 4 expanded, "Show all N topics" toggle (files: `JourneySide.tsx`, `journey.test.tsx`)
 - [ ] J3.6 binding: no review-finding jargon; CURRENT with no differences is one compact line beside the
