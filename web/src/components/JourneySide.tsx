@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router";
 import Chip from "@/components/Chip";
 import { stateLabel } from "@/lib/vocabulary";
@@ -19,7 +20,12 @@ export function RunningNote({ journey }: { journey: Journey }) {
   );
 }
 
+const TOPICS_SHOWN = 4;
+
 export function TheTopic({ topics }: { topics: Journey["topics"] }) {
+  const [all, setAll] = useState(false);
+  const shown = all ? topics : topics.slice(0, TOPICS_SHOWN);
+  const hidden = topics.length - TOPICS_SHOWN;
   return (
     <section aria-label="The topic" className="rounded-lg bg-card p-5 shadow-sm ring-1 ring-gray-200 dark:ring-gray-800">
       <h2 className="mb-2 text-base font-semibold">The topic</h2>
@@ -27,7 +33,7 @@ export function TheTopic({ topics }: { topics: Journey["topics"] }) {
         <p className="text-sm text-muted-foreground">no topics declared</p>
       ) : (
         <ul className="flex flex-col gap-2">
-          {topics.map((topic) => (
+          {shown.map((topic) => (
             <li key={topic.id} className="text-sm" data-topic={topic.id}>
               <b>{topic.label}</b>
               <span className="block text-xs text-muted-foreground">
@@ -37,6 +43,12 @@ export function TheTopic({ topics }: { topics: Journey["topics"] }) {
           ))}
         </ul>
       )}
+      {hidden > 0 ? (
+        <button type="button" aria-expanded={all} onClick={() => setAll((v) => !v)}
+                className="mt-2 inline-flex min-h-11 items-center rounded-md px-3 text-sm ring-1 ring-gray-300 hover:bg-gray-50 dark:ring-gray-700 dark:hover:bg-gray-900">
+          {all ? "Show fewer topics" : `Show all ${topics.length} topics`}
+        </button>
+      ) : null}
     </section>
   );
 }

@@ -1,5 +1,5 @@
 // J2: the journey renders the server's steps; the browser maps status to colour only.
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { afterEach, describe, expect, it } from "vitest";
 import { NeedsYou, RunningNote, TheQuestions, TheTopic } from "@/components/JourneySide";
@@ -130,6 +130,24 @@ describe("J2: side column", () => {
     const li = document.querySelector('[data-question-id="Q99"]')!;
     expect(within(li as HTMLElement).getByText("no profile yet").getAttribute("title")).toBe("no_profile");
     expect(within(li as HTMLElement).queryByText("no_profile")).toBeNull();
+  });
+
+  it("J3.5: first four topics with terms, the rest behind a toggle", () => {
+    const many = Array.from({ length: 6 }, (_, i) => ({ id: `t${i}`, label: `Topic ${i}`, terms: [`term${i}a`, `term${i}b`] }));
+    render(<TheTopic topics={many as never} />);
+    expect(document.querySelectorAll("[data-topic]").length).toBe(4);
+    expect(screen.getByText("term0a · term0b")).toBeTruthy();
+    expect(screen.queryByText("Topic 4")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Show all 6 topics" }));
+    expect(document.querySelectorAll("[data-topic]").length).toBe(6);
+    expect(screen.getByText("term5a · term5b")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Show fewer topics" }));
+    expect(document.querySelectorAll("[data-topic]").length).toBe(4);
+  });
+
+  it("J3.5: four or fewer topics have no toggle", () => {
+    render(<TheTopic topics={journey.topics.slice(0, 4)} />);
+    expect(screen.queryByRole("button")).toBeNull();
   });
 
   it("topics with terms and questions with state chips", () => {
