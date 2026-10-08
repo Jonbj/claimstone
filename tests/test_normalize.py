@@ -373,3 +373,59 @@ def test_a_source_normalize_has_not_reached_is_not_counted_against_the_corpus(tm
     assert result["not_a_document"] == []
     assert (result["rate"], result["rate_upper"]) == (0.5, 1.0)
     assert result["final"] is False
+
+
+# --- D110: the image that read a PDF is recorded, and two images never share a cached TEI ---------
+
+
+def test_a_pdf_row_names_the_image_that_read_it(tmp_path):
+    from claimstone import grobid as grobid_module
+
+    store = Store("t", base=tmp_path)
+    store.append("acquisitions.jsonl", acquired("S01", store))
+    row = next(iter(normalize.run(store, FakeGrobid())))
+    assert row["pdf_parser"] == grobid_module.IMAGE
+    assert row["tei_path"].endswith(grobid_module.tei_relpath(row["sha256"]))
+
+
+def test_legacy_tei_is_not_reused_by_another_image(tmp_path):
+    """A TEI cached at the legacy flat path was produced by the legacy image. A newer image must
+    read the PDF itself rather than inherit that answer under its own name."""
+    from claimstone import grobid as grobid_module
+
+    store = Store("t", base=tmp_path)
+    source = acquired("S01", store)
+    store.append("acquisitions.jsonl", source)
+    legacy = store.root / grobid_module.tei_relpath(source["sha256"], grobid_module.LEGACY_IMAGE)
+    legacy.parent.mkdir(parents=True, exist_ok=True)
+    legacy.write_bytes(PAPER)
+    grobid = FakeGrobid()
+    list(normalize.run(store, grobid))
+    assert grobid.calls == 1
+    assert legacy.read_bytes() == PAPER  # the legacy answer is kept, untouched
+
+
+def test_paths_and_the_recorded_image():
+    from claimstone import grobid as grobid_module
+
+    assert grobid_module.tei_relpath("ab", grobid_module.LEGACY_IMAGE) == "tei/ab.xml"
+    assert grobid_module.tei_relpath("ab", "grobid/grobid:0.9.1-full") == \
+        "tei/grobid_grobid_0.9.1-full/ab.xml"
+    assert grobid_module.document_image({"format": "pdf"}) == grobid_module.LEGACY_IMAGE
+    assert grobid_module.document_image({"format": "pdf", "pdf_parser": "x"}) == "x"
+    assert grobid_module.document_image({"format": "html"}) is None
+
+
+def test_transferred_legacy_tei_is_read_and_recorded_as_the_legacy_images(tmp_path):
+    from claimstone import grobid as grobid_module
+
+    store = Store("t", base=tmp_path)
+    source = acquired("S01", store)
+    store.append("acquisitions.jsonl", source)
+    legacy = store.root / grobid_module.tei_relpath(source["sha256"], grobid_module.LEGACY_IMAGE)
+    legacy.parent.mkdir(parents=True, exist_ok=True)
+    legacy.write_bytes(PAPER)
+    grobid = FakeGrobid()
+    [row] = list(normalize.run(store, grobid, pdf_image=grobid_module.LEGACY_IMAGE))
+    assert grobid.calls == 0
+    assert row["pdf_parser"] == grobid_module.LEGACY_IMAGE

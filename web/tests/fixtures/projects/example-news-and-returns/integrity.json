@@ -2,7 +2,7 @@
  "api_version": 1,
  "code": {
   "dirty": null,
-  "grobid_image": "lfoppiano/grobid:0.8.1",
+  "grobid_image": "grobid/grobid:0.9.1-full",
   "revision": null
  },
  "config": {

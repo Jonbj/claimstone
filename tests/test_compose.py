@@ -97,7 +97,7 @@ def test_the_portal_api_is_read_only_isolated_and_secret_free():
 
     document = yaml.safe_load(COMPOSE.read_text(encoding="utf-8"))
     api = document["services"]["api"]
-    assert api.get("profiles") == ["portal"]
+    assert "profiles" not in api  # started by a plain `docker compose up` (D110)
     assert "ports" not in api
     assert set(api["volumes"]) == {"./store:/app/store:ro", "./projects:/app/projects:ro"}
     assert api.get("read_only") is True
@@ -175,7 +175,7 @@ def test_the_control_service_writes_only_what_it_must_and_publishes_nothing():
 
     document = yaml.safe_load(COMPOSE.read_text(encoding="utf-8"))
     control = document["services"]["control"]
-    assert control.get("profiles") == ["portal"]
+    assert "profiles" not in control
     assert "ports" not in control
     assert control["image"] == document["services"]["claimstone"]["image"]
     assert set(control["volumes"]) == {"./store:/app/store", "./projects:/app/projects:ro",

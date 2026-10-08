@@ -12,10 +12,34 @@ from typing import Any
 
 DEFAULT_URL = "http://localhost:8070"
 
-# The image every corpus figure was measured with. `latest-crf` is not a lighter drop-in: measured
-# on the same PDF it produced 508 KB of TEI against 91 KB, so switching images would silently change
-# body characters, sections and references. tools/check_instrument_versions.py holds it to this.
-IMAGE = "lfoppiano/grobid:0.8.1"
+# The image new PDFs are read with (D110): the official full build, whose deep-learning models
+# replace the CRF-only ones where GROBID ships them. Switching images changes body characters,
+# sections and references — measured once: `latest-crf` gave 508 KB of TEI against 0.8.1's 91 KB on
+# the same PDF — so the image is an instrument: tools/check_instrument_versions.py holds it to the
+# design record, every PDF document row names the image that read it, and its TEI is cached under
+# a directory of its own so two images' outputs never share a path.
+IMAGE = "grobid/grobid:0.9.1-full"
+
+# The image every corpus figure before D110 was measured with. Its TEI lives at `tei/<sha>.xml`,
+# and a document row without `pdf_parser` was read by it.
+LEGACY_IMAGE = "lfoppiano/grobid:0.8.1"
+
+
+def tei_relpath(digest: str, image: str = IMAGE) -> str:
+    """Where one PDF's TEI is cached, relative to the project store: the legacy image keeps the
+    flat layout its corpus was built with; any other image gets a directory named after it, so a
+    cached answer is only ever reused by the image that produced it."""
+    if image == LEGACY_IMAGE:
+        return f"tei/{digest}.xml"
+    slug = "".join(ch if ch.isalnum() or ch in "._-" else "_" for ch in image)
+    return f"tei/{slug}/{digest}.xml"
+
+
+def document_image(row: dict) -> str | None:
+    """The image that read a document row's PDF: recorded since D110, the legacy one before it."""
+    if row.get("format") != "pdf":
+        return None
+    return str(row.get("pdf_parser") or LEGACY_IMAGE)
 
 START_COMMAND = (
     "  docker run -d --name claimstone-grobid -p 8070:8070 \\\n"

@@ -9,6 +9,13 @@ what order.
 
 ## Where the work stands
 
+2026-10-08 one compose, full GROBID (D110): `docker compose up -d --build` starts GROBID, `api`, `control`
+and `web` (http://127.0.0.1:8788/); the engine job and the trial scheduler keep their profiles, and the trial
+worker's container was removed. GROBID is now `grobid/grobid:0.9.1-full` (pinned by digest) on the GPU.
+Documents read before today keep their legacy TEI and figures; every new PDF row names its image in
+`pdf_parser`, and re-reading old PDFs with the full build is an explicit `normalize --force` — an operator
+decision, because it moves the D7 figures.
+
 2026-10-07 portal backend B0–B13 (D89, D99–D108): `claimstone control` is the authenticated write
 boundary beside the read-only API. It handles operator sessions, signing from the web with drafts, intake
 of DOIs, links and files (quarantine, the engine's own gates, `supplied_copies` policy, default

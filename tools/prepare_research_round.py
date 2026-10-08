@@ -14,7 +14,8 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from claimstone import acquire, admissibility, discover, extract, html_doc, normalize, population, tei
+from claimstone import (acquire, admissibility, discover, extract, grobid, html_doc, normalize,
+                        population, tei)
 from claimstone.config import check_registry_drift, load_project
 from claimstone.store import Store
 from tools.replay_answers import files_snapshot
@@ -107,7 +108,10 @@ def prepare(plan, *, apply=False):
         class OfflineGrobid:
             def full_text(self, *args, **kwargs):
                 raise RuntimeError("network parsing is forbidden in this preparatory tool")
-        normalized = list(normalize.run(target, OfflineGrobid(), thresholds=project.normalize_thresholds))
+        # The TEI transferred above is the legacy image's (flat `tei/<sha>.xml`, D110): it is read and
+        # recorded as that image's output, never as the one pinned today.
+        normalized = list(normalize.run(target, OfflineGrobid(), thresholds=project.normalize_thresholds,
+                                        pdf_image=grobid.LEGACY_IMAGE))
         built = {}
         for kind in plan.get("kinds", ["effect", "method"]):
             built[kind] = extract.build(project, target, batch=plan["batch"], kind=kind)

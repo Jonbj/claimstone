@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# The research portal in containers: the read-only API and the nginx-served frontend (D84).
+# The research portal in containers: the read-only API, the write boundary and the frontend (D84, D108).
+# `docker compose up -d --build` starts the same services plus GROBID; this script adds the revision
+# stamp, the state directory and the operator commands.
 #
 #   ./portal.sh                   build if needed, start `api`, `control` and `web`, wait until healthy
 #   ./portal.sh down              stop and remove those three containers (GROBID and the store stay)

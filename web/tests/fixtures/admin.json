@@ -40,7 +40,7 @@
   "gate_version": 5,
   "html_parser_version": 2,
   "identity_relation_version": 2,
-  "image": "lfoppiano/grobid:0.8.1",
+  "image": "grobid/grobid:0.9.1-full",
   "intake_version": 1,
   "jats_parser_version": 2,
   "model_report_version": 2,

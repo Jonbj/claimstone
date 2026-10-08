@@ -17,6 +17,7 @@ import pathlib
 from typing import Any, Iterator
 
 from claimstone import chunk as chunking
+from claimstone import grobid as grobid_module
 from claimstone import html_doc, jats, tei, model_call, scope
 from claimstone.store import sha256_text
 from claimstone.store import Store
@@ -77,8 +78,14 @@ def run(
     force: bool = False,
     limit: int | None = None,
     selector: scope.Selector | None = None,
+    pdf_image: str | None = None,
 ) -> Iterator[dict[str, Any]]:
-    """Normalize every acquired source not already done. Idempotent by content hash."""
+    """Normalize every acquired source not already done. Idempotent by content hash.
+
+    `pdf_image` names the GROBID image whose TEI is read and recorded (D110). It defaults to the
+    pinned image; a tool that transfers TEI another store already holds passes the image that
+    produced it, so the row says what read the PDF rather than what is configured today."""
+    pdf_image = pdf_image or grobid_module.IMAGE
     th = {**chunking.DEFAULT_THRESHOLDS, **CONFIRM_DEFAULTS, **(thresholds or {})}
     done = store.latest_by("documents.jsonl", "source_id")
     references = _reference_rows(store)
@@ -109,7 +116,7 @@ def run(
         media_type = str(source.get("content_type") or "").lower().split(";", 1)[0].strip()
         is_jats = not is_pdf and media_type in {"application/xml", "text/xml", "application/jats+xml"}
         parser_fields = {"jats_parser_version": jats.JATS_PARSER_VERSION} if is_jats else {}
-        tei_path = store.root / "tei" / f"{digest}.xml"
+        tei_path = store.root / grobid_module.tei_relpath(digest, pdf_image)
 
         try:
             if is_pdf:
@@ -203,6 +210,9 @@ def run(
             # checked against `grobid.IMAGE`; the HTML side is code in this repository and carries a
             # version of its own, because what it extracts decides `references` and so `fulltext_confirmed`.
             "html_parser_version": None if is_pdf or is_jats else html_doc.HTML_PARSER_VERSION,
+            # Since D110 the PDF side names its image on the row: documents read before it were
+            # read by `grobid.LEGACY_IMAGE`, and a re-read under another image is a new generation.
+            "pdf_parser": pdf_image if is_pdf else None,
             "fulltext_confirmed": confirmed,
             "failure_class": None if confirmed else NOT_A_DOCUMENT,
             "reason": reason,

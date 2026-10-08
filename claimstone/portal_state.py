@@ -1049,9 +1049,10 @@ def lineage(project: Project, store: Store, selector: scope.Selector,
             "review": review_row,
             "chunk": chunk_step,
             "document": document,
-            "document_pdf_instrument": (grobid.IMAGE
-                                        if document is not None and document.get("format") == "pdf"
-                                        else None),
+            # The image recorded on the document row, not the one configured now: a document
+            # read before D110 was read by the legacy image, whatever is pinned today.
+            "document_pdf_instrument": (grobid.document_image(document)
+                                        if document is not None else None),
             "acquisition": acquisition,
             "acquisition_candidate_key": key,
             "candidate": scoped.get(key) if key is not None else None,

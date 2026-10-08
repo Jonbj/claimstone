@@ -1,4 +1,9 @@
-# Two services and one of them is not a service.
+# Everything that runs: `docker compose up -d --build` starts GROBID, the read-only API (`api`), the write
+# boundary (`control`) and the portal (`web`, http://127.0.0.1:8788/). Two services are not started by it:
+# the engine job `claimstone` (profile `cli`, run with `docker compose run --rm claimstone …`) and the trial
+# scheduler worker (profile `trial`).
+#
+# Of the long-running services, one is still not a service.
 #
 # `grobid` is long-running and stateless: it answers HTTP, holds nothing between calls, and is replaceable.
 # `claimstone` is a **batch job** — it runs, writes to an append-only ledger, and exits — so it sits behind
@@ -22,10 +27,13 @@ name: claimstone
 
 services:
   grobid:
+    # The official full build since D110 (deep-learning models on the GPU), pinned by **digest**, not by
+    # tag. The paragraph below is about the build every figure before D110 was measured with; its TEI
+    # stays at `tei/<sha>.xml`, the full build's under `tei/<image>/`, and each document row names its image.
     # Pinned by **digest**, not by tag. Measured: `latest-crf` produced 508 KB of TEI against 0.8.1's 91 KB
     # on the same PDF, so the image is an instrument and every corpus figure — 905,189 body characters, 472
     # chunks — was measured with this one. A tag can be re-pushed under the same name; a digest cannot.
-    image: lfoppiano/grobid:0.8.1@sha256:820a623a0234cda235d5eb83e924934162c5f0554a843cf665c339da8b51f900
+    image: grobid/grobid:0.9.1-full@sha256:35c83afedde0469ab7aef01870a26f6c402ae96cba535db5269f223fadc534ce
     environment:
       # Required, not optional: the image's JVM cannot read cgroup v2 under Docker 29 and the container
       # dies at startup without it. This cost twenty minutes to diagnose once.
@@ -50,12 +58,19 @@ services:
       timeout: 5s
       retries: 30
       start_period: 90s
-    # Measured on the target machine: 2.4 GB idle, 3.6 GB with models loaded. The limit is here because the
-    # production node has 14 GB and is a laptop — GROBID, not the model, is this pipeline's memory ceiling.
+    # The full image (D110) loads deep-learning models beside the CRF ones and runs them on the GPU. The
+    # CRF-only build measured 2.4 GB idle and 3.6 GB under load; the full one needs more, so the limit is
+    # 12 GB on this 61 GB machine. The GPU reservation needs the NVIDIA container runtime; on a host
+    # without one, GROBID's models run on the CPU only if this block is removed, and slowly.
     deploy:
       resources:
         limits:
-          memory: 6g
+          memory: 12g
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
     restart: unless-stopped
     networks: [claimstone]
     # No published port. The engine reaches it by service name on the private network; publishing 8070 would
@@ -144,7 +159,6 @@ services:
         GID: ${GID:-1000}
         CLAIMSTONE_CODE_REVISION: ${CLAIMSTONE_CODE_REVISION:-unknown}
     image: claimstone:local
-    profiles: [portal]
     command: ["api", "--host", "0.0.0.0", "--port", "8788", "--allow-host", "api:8788"]
     environment:
       CLAIMSTONE_ROOT: /app
@@ -191,7 +205,6 @@ services:
         GID: ${GID:-1000}
         CLAIMSTONE_CODE_REVISION: ${CLAIMSTONE_CODE_REVISION:-unknown}
     image: claimstone:local
-    profiles: [portal]
     command: ["control", "--bind", "0.0.0.0", "--port", "8790",
               "--allow-host", "control:8790",
               "--allow-host", "127.0.0.1:${CLAIMSTONE_PORTAL_PORT:-8788}",
@@ -243,7 +256,6 @@ services:
       context: .
       dockerfile: web/Dockerfile
     image: claimstone-web:local
-    profiles: [portal]
     depends_on:
       api:
         condition: service_healthy

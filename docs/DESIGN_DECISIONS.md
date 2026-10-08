@@ -4388,3 +4388,51 @@ Routes: `/`, `/projects`, `/p/:project`, `/p/:project/f/:sel` and `.../q/:qid`, 
 What decided it: the vitest suite (`cd web && npm test`) holds 167 tests in 29 files at this commit and
 covers each rule above; `npm run build` runs `check-csp`, which finds no inline script and no `style`
 attribute. Not measured: any behaviour in a browser, since no server was started.
+
+## D110 — The full GROBID build reads new PDFs, and every PDF document names the image that read it (2026-10-08)
+
+The operator asked for the full GROBID image and for one `docker compose up` that runs everything.
+
+**The image.** `grobid/grobid:0.9.1-full@sha256:35c83afedde0469ab7aef01870a26f6c402ae96cba535db5269f223fadc534ce`
+replaces `lfoppiano/grobid:0.8.1`. It is the official full build: 14.8 GB to download, 37.4 GB on
+disk. Its own `grobid.yaml` runs the deep-learning (DeLFT, BiLSTM-CRF) models for header,
+reference segmentation, citations, affiliations and funding, and keeps the CRF (Wapiti) models where
+GROBID's maintainers keep them: segmentation, fulltext, names, dates, figures and tables. That
+configuration is used as shipped. Forcing experimental models in is not "using the full build", it is
+a second, unmeasured choice.
+
+The container gets the GPU through the NVIDIA runtime, and its memory limit rises from 6 to 12 GB.
+The JVM runs with the image's own `-Xmx4g`. Measured on this machine:
+- the models occupy 4.3 GB of the RTX 3050's 8 GB;
+- the container holds 3.6 GB of RAM after start;
+- one 1.4 MB PDF from `store/pmc-screen-time` was parsed in 30.7 s on the first call, including model
+  warm-up.
+
+The output differs from the legacy build on the same PDF: 118,297 bytes of TEI with 64 `biblStruct`
+against 116,450 bytes with 63. Consolidation stays off: claimstone still sends
+`consolidateHeader=0` and `consolidateCitations=0`. Consolidation would send every reference to
+Crossref from inside GROBID, with no recorded outcome, which is the network conduct D7 and
+`grobid.py` already refuse.
+
+**Why this is not a silent change.** D7 recorded that switching images changes every count without
+touching a version number. Until now that was prevented only by never switching. The TEI cache was
+keyed by the PDF's hash alone, so a new image would have reused the old image's TEI for every PDF
+already read and parsed the rest itself, with nothing on record saying which was which. Now:
+- the legacy image's TEI stays at `tei/<sha>.xml` (`grobid.LEGACY_IMAGE`);
+- any other image's TEI goes under `tei/<image>/<sha>.xml` (`grobid.tei_relpath`), so an answer is
+  only ever reused by the image that produced it;
+- every PDF row in `documents.jsonl` carries `pdf_parser`, and a row without it was read by the
+  legacy image (`grobid.document_image`);
+- the portal's lineage reports the image recorded on the document, not the one configured today.
+
+**What does not change.** Nothing is re-read automatically. Every document normalized before today
+stays as it was, with its legacy TEI, chunks, claims and profiles. A source acquired from now on is
+read by the full build. Re-reading old PDFs with it is an explicit `normalize --force`, which produces
+a new chunk generation; it is an operator's decision, because it moves the figures measured under
+D7. `tools/derive_corpus_figures.py` reads the flat `tei/*.xml` only, so its figures remain the legacy
+image's. A mixed corpus is possible from now on, and it is recorded per document rather than hidden.
+
+**One command.** `api`, `control` and `web` lose the `portal` profile, so
+`docker compose up -d --build` starts GROBID, the read-only API, the write boundary and the portal.
+The engine job (`cli`) and the trial scheduler worker (`trial`) keep their profiles. The trial
+worker's container was removed at the operator's request; its definition stays.
