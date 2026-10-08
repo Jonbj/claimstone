@@ -18,6 +18,15 @@ function json(status: number, body: unknown) {
 const flowId = String((flowOverview.flow as { flow_id: string }).flow_id);
 let requested: string[];
 
+let overviewOverride: unknown = null;
+
+// Text of the page outside the collapsed technical details (whose notes come from the server).
+function outsideDetails(): string {
+  const clone = document.body.cloneNode(true) as HTMLElement;
+  clone.querySelectorAll("details").forEach((d) => d.remove());
+  return clone.textContent ?? "";
+}
+
 function mount(path: string, signedIn: boolean) {
   requested = [];
   vi.stubGlobal("fetch", (url: string) => {
@@ -29,7 +38,7 @@ function mount(path: string, signedIn: boolean) {
     }
     if (url.endsWith("/operations")) return json(200, { flow_id: flowId, operations: [] });
     if (url.includes("/overview")) {
-      return json(200, url.includes("/unbound/") || url.includes("/u/") ? unboundOverview : flowOverview);
+      return json(200, url.includes("/unbound/") || url.includes("/u/") ? unboundOverview : (overviewOverride ?? flowOverview));
     }
     if (url.endsWith("/projects")) {
       return json(200, { api_version: 1, projects: [{
@@ -60,7 +69,7 @@ describe("F3: flow journey page", () => {
     // recharts' ResponsiveContainer needs it; jsdom has none.
     vi.stubGlobal("ResizeObserver", class { observe() {} unobserve() {} disconnect() {} });
   });
-  afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
+  afterEach(() => { cleanup(); vi.unstubAllGlobals(); overviewOverride = null; });
 
   it("links Add material, Decisions, Export and Activity, and shows Right now", async () => {
     mount("/p/demo/f/sel1", true);
@@ -99,6 +108,24 @@ describe("F3: flow journey page", () => {
     // KPIs, floor panel, source tracker and activity all live inside it.
     expect(within(details).getByText("Sources in this scope")).toBeTruthy();
     expect(within(details).getByText(/activity — this scope only/)).toBeTruthy();
+  });
+
+  it("J3.6: a CURRENT binding is one compact line, with no card and no review jargon", async () => {
+    mount("/p/demo/f/sel1", true);
+    await screen.findByRole("heading", { name: "The journey" });
+    expect(document.querySelector("[data-binding-compact]")?.textContent).toMatch(/^binding: no differences/);
+    expect(screen.queryByRole("heading", { name: "binding" })).toBeNull();
+    expect(outsideDetails()).not.toMatch(/review F\d|\(F\d+\)/);
+  });
+
+  it("J3.6: a drifted binding keeps the full card, in plain words", async () => {
+    overviewOverride = { ...flowOverview, binding_state: { state: "DRIFTED", differences: ["questions"], bound_after_data: false } };
+    mount("/p/demo/f/sel1", true);
+    await screen.findByRole("heading", { name: "binding" });
+    expect(screen.getByText(/differs in: questions/)).toBeTruthy();
+    expect(screen.getByText("The binding is compared against the live project; it never supplies a value.")).toBeTruthy();
+    expect(document.querySelector("[data-binding-compact]")).toBeNull();
+    expect(outsideDetails()).not.toMatch(/review F\d|\(F\d+\)/);
   });
 
   it("offers the research-flow selector with history labelled, and a Project details link", async () => {

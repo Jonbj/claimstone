@@ -170,7 +170,7 @@ Frontend only (`web/`); `api-types.ts`, Python and fixtures do not change.
 - [x] J3.4 question state chips as human words via `vocabulary.ts`, code kept as `title`
       (files: `web/src/lib/vocabulary.ts`, `JourneySide.tsx`, `journey.test.tsx`)
 - [x] J3.5 topic card: first 4 expanded, "Show all N topics" toggle (files: `JourneySide.tsx`, `journey.test.tsx`)
-- [ ] J3.6 binding: no review-finding jargon; CURRENT with no differences is one compact line beside the
+- [x] J3.6 binding: no review-finding jargon; CURRENT with no differences is one compact line beside the
       scope chips, drifted states keep the card (files: `web/src/pages/FlowOverviewPage.tsx`,
       `web/tests/flowpage.test.tsx`)
 - [ ] J3.7 all checks, J3 marked DONE (files: this log)

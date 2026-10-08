@@ -45,6 +45,9 @@ export default function FlowOverviewPage({ kind }: { kind: "f" | "u" }) {
   const next = data.inbox.find((card) => card.command !== null) ?? null;
   const flowTitle = data.flow ? String((data.flow as { title?: unknown }).title ?? "") : "";
   const card = index.data?.projects.find((candidate) => candidate.name === project) ?? null;
+  const bs = data.binding_state;
+  const compactBinding = !data.legacy && bs !== null && bs !== undefined && bs.state === "CURRENT" && bs.differences.length === 0;
+  const boundAfterData = Boolean((data.flow as { bound_after_data?: boolean } | null)?.bound_after_data);
   const flowId = data.flow ? String((data.flow as { flow_id?: unknown }).flow_id ?? "") : "";
 
   return (
@@ -73,6 +76,12 @@ export default function FlowOverviewPage({ kind }: { kind: "f" | "u" }) {
             </>
           ) : null}
           {data.binding_state ? <Chip text={data.binding_state.state} /> : null}
+          {compactBinding ? (
+            <span data-binding-compact
+                  title="The binding is compared against the live project; it never supplies a value.">
+              binding: no differences{boundAfterData ? " · bound after data existed" : ""}
+            </span>
+          ) : null}
           {data.legacy ? <Chip text="legacy: protocol not verified" /> : null}
         </p>
         {card && ((card.flows ?? []).length + (card.unbound_selectors ?? []).length) > 0 ? (
@@ -131,7 +140,7 @@ export default function FlowOverviewPage({ kind }: { kind: "f" | "u" }) {
             are shown, not certified.
           </p>
         </section>
-      ) : data.binding_state ? (
+      ) : data.binding_state && !compactBinding ? (
         <section className="rounded-lg bg-card p-5 shadow-sm ring-1 ring-gray-200 dark:ring-gray-800">
           <h2 className="mb-1 text-sm font-semibold">binding</h2>
           <p className="flex flex-wrap items-baseline gap-2 text-sm">
@@ -143,10 +152,9 @@ export default function FlowOverviewPage({ kind }: { kind: "f" | "u" }) {
             )}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
-            The binding is compared against the live project and never supplies a value
-            to a computation (review F4).
+            The binding is compared against the live project; it never supplies a value.
           </p>
-          {(data.flow as { bound_after_data?: boolean } | null)?.bound_after_data ? (
+          {boundAfterData ? (
             <p className="mt-1 text-xs text-muted-foreground">
               bound after data existed: rows written before binding are not verified
               against this protocol
@@ -251,7 +259,7 @@ export default function FlowOverviewPage({ kind }: { kind: "f" | "u" }) {
         <InboxCards cards={data.inbox} />
         <p className="mt-2 text-xs text-muted-foreground">
           Commands are text to copy, never buttons: no route here starts work. Cards
-          arrive in server order, never sorted by expected result (review F13).
+          arrive in server order, never sorted by expected result.
         </p>
       </section>
 
