@@ -166,12 +166,12 @@ export default function QuestionPage({ kind }: { kind: "f" | "u" }) {
         <Field label="direction count">
           {joined(Object.entries(fields.direction_count))} ({fields.direction_count_note})
         </Field>
-        <Field label="gate rejected">{JSON.stringify(fields.gate_rejected)}</Field>
-        <Field label="reviewed, not usable">{JSON.stringify(fields.reviewed_not_usable)}</Field>
+        <Field label="gate rejected">{joined(Object.entries(fields.gate_rejected ?? {}))}</Field>
+        <Field label="reviewed, not usable">{joined(Object.entries(fields.reviewed_not_usable ?? {}))}</Field>
         <Field label="awaiting review">{fields.awaiting_review}</Field>
         <Field label="linkage">{String(fields.linkage)}</Field>
         {fields.extraction ? (
-          <Field label="extraction">{JSON.stringify(fields.extraction)}</Field>
+          <Field label="extraction">{joined(Object.entries(fields.extraction))}</Field>
         ) : null}
         <p className="mt-1 break-all font-mono text-xs text-muted-foreground">
           profile {fields.profile_sha256 ?? "—"}

@@ -13,6 +13,14 @@ const FIELDS: Array<[string, string]> = [
   ["verdict", "verdict"],
   ["acquired", "acquired"],
   ["failure_class", "failure class"],
+  ["claim_id", "claim"],
+  ["http_status", "HTTP"],
+  ["licence", "licence"],
+  ["provisional", "provisional"],
+  ["adjudicated_by", "signed by"],
+  ["backend", "backend"],
+  ["model", "model"],
+  ["decision", "decision"],
 ];
 
 export default function RowFields({ row }: { row: Record<string, unknown> }) {

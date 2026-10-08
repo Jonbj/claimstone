@@ -1,6 +1,7 @@
 import { Link, useParams } from "react-router";
 import Chip from "@/components/Chip";
 import ErrorState from "@/components/ErrorState";
+import RowFields from "@/components/RowFields";
 import IntegrityPanel from "@/components/IntegrityPanel";
 import Pending from "@/components/Pending";
 import { useApi } from "@/hooks/useApi";
@@ -135,7 +136,7 @@ export default function ProjectPage() {
                 </span>
                 <span>{row.stage}</span>
                 <span className="text-xs text-muted-foreground">
-                  {JSON.stringify(row.row).slice(0, 220)}
+                  <RowFields row={row.row as Record<string, unknown>} />
                 </span>
               </p>
             ))}

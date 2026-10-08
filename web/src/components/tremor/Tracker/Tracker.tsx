@@ -86,12 +86,14 @@ const Tracker = React.forwardRef<HTMLDivElement, TrackerProps>(
         className={cx("group flex h-8 w-full items-center", className)}
         {...props}
       >
-        {data.map((props, index) => (
+        {/* Local change to the vendored component: `key` is taken out before the spread, which
+            React refuses inside props (it warned on every flow page). */}
+        {data.map(({ key, ...block }, index) => (
           <Block
-            key={props.key ?? index}
+            key={key ?? index}
             defaultBackgroundColor={defaultBackgroundColor}
             hoverEffect={hoverEffect}
-            {...props}
+            {...block}
           />
         ))}
       </div>

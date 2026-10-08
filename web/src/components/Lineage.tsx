@@ -1,5 +1,6 @@
 import Chip from "@/components/Chip";
 import type { ReactNode } from "react";
+import { Link } from "react-router";
 import type { Lineage } from "@/lib/api-types";
 
 // Invariant 1, end to end (§8.3): a vertical list of the six steps — claim → review
@@ -20,7 +21,13 @@ function Step({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-export default function LineageView({ lineage }: { lineage: Lineage }) {
+// `sourceHref` builds the source dossier link for the candidate step: the claim page knows the
+// selector, this component does not. The dossier page had no link pointing at it before (found in
+// the browser walk-through of 2026-10-08).
+export default function LineageView({ lineage, sourceHref }: {
+  lineage: Lineage;
+  sourceHref?: (candidateKey: string) => string;
+}) {
   const claim = claimOf(lineage);
   const review = lineage.steps.review as
     | { verdict: string; reason: string; review_version: number; reviewed_by: string | null }
@@ -164,6 +171,15 @@ export default function LineageView({ lineage }: { lineage: Lineage }) {
           <Step label="candidate">
             class {candidate.source_class} · round {candidate.round} · channel{" "}
             {candidate.channel} · {candidate.title ?? ""}
+            {sourceHref && candidate.candidate_key ? (
+              <>
+                {" · "}
+                <Link to={sourceHref(candidate.candidate_key)}
+                      className="text-blue-600 hover:underline dark:text-blue-400">
+                  Source dossier →
+                </Link>
+              </>
+            ) : null}
           </Step>
         )}
       </div>

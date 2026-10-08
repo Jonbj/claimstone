@@ -1,6 +1,7 @@
 import { Link, useParams } from "react-router";
 import Chip from "@/components/Chip";
 import ErrorState from "@/components/ErrorState";
+import RowFields from "@/components/RowFields";
 import FloorPanel from "@/components/FloorPanel";
 import InboxCards from "@/components/InboxCards";
 import OperationsPanel from "@/components/OperationsPanel";
@@ -212,7 +213,7 @@ export default function FlowOverviewPage({ kind }: { kind: "f" | "u" }) {
             <span className="font-mono text-xs text-muted-foreground">{row.when}</span>
             <span>{row.stage}</span>
             <span className="text-xs text-muted-foreground">
-              {JSON.stringify(row.row).slice(0, 220)}
+              <RowFields row={row.row as Record<string, unknown>} />
             </span>
           </p>
         ))}

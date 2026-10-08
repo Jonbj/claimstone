@@ -34,7 +34,12 @@ export default function ClaimPage({ kind }: { kind: "f" | "u" }) {
       ) : lineage.pending || !lineage.data ? (
         <Pending label="loading claim…" />
       ) : (
-        <LineageView lineage={lineage.data} />
+        <LineageView
+          lineage={lineage.data}
+          sourceHref={(key) =>
+            `/p/${encodeURIComponent(project)}/${kind}/${encodeURIComponent(sel)}` +
+            `/source/${encodeURIComponent(key)}`}
+        />
       )}
     </section>
   );

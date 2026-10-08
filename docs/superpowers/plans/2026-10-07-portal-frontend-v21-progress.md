@@ -304,3 +304,33 @@ Accepted. F3: authorize posts `op.limits` unchanged. F4: verdict and attestation
 reported itself (unsaved text lost on a failed poll) was fixed in F6.3 with a test. F6: export verify
 only on request, credential fields cleared in `finally`, paid test never called, D109 written.
 Remaining before the browser walk-through: merge F5 (parallel branch) and wire its two routes.
+
+### Browser walk-through — 2026-10-08 (reviewer)
+Run against a throwaway workspace (`build_workspace` plus a pre-bound flow with a planned operation, a
+POSSIBLE_VERSION file, a proposed DOI, an offer and an export) — never the real store — with
+`claimstone api` and `claimstone control` on test ports behind the Vite dev proxy, signed in as a test
+operator. Two crawls followed every internal link breadth-first from Today, Projects, Administration,
+Inbox and the project page: 70 + 27 pages, then the claim and source pages directly.
+
+Found and fixed:
+- **React key warning on every flow page**: the vendored Tremor `Tracker` spread `key` into props.
+  `key` is now taken out before the spread.
+- **Raw JSON on screen**: the question page rendered `gate_rejected`, `reviewed_not_usable` and
+  `extraction` as JSON, and the flow and project activity lists rendered rows as JSON. They now use
+  labelled text (`joined`, `RowFields`, which gained claim, HTTP, licence, provisional, signed by,
+  backend, model and decision).
+- **Unreachable source dossier**: no link pointed at `…/source/:key`, a gap that predates v2.1. The
+  claim lineage's candidate step now links "Source dossier →", checked with a real click.
+
+Not a defect: question pages of this workspace have no usable results (no reviews), so they show no
+claim links. The claim pages open directly.
+
+Buttons exercised, with the effect checked in the ledgers:
+- Mark as seen → `seen.jsonl`;
+- Authorize → an `authorized` event with `identity: portal-session / tester`;
+- Create snapshot → `exports.jsonl` with `actor: tester`;
+- Verify → "Still holds".
+
+No page showed "not found" or an error state, and no console error remained.
+
+Final checks: web `31 files / 176 tests passed`, typecheck clean, build and check-csp ok.
