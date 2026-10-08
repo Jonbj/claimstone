@@ -9,7 +9,7 @@ Precedent for payload and schema work: `docs/superpowers/plans/2026-10-07-portal
 |---|---|---|---|
 | **J1** | `journey` block in the flow overview, computed on the server; schema, fixtures, types, contract doc | J1's listed tests pass; all checks pass | DONE |
 | **J2** | the flow page rendered as the journey | J2's tests pass; all checks pass | DONE |
-| **J3** | journey page polish (screenshot defects on real data) | J3's tests pass; all checks pass | IN PROGRESS |
+| **J3** | journey page polish (screenshot defects on real data) | J3's tests pass; all checks pass | DONE |
 
 ## Log entries
 
@@ -157,7 +157,7 @@ beyond the generic status mapping.
 
 NOT DONE: no browser/visual check against `V2Journey.html`; no Pause/Resume (unchanged, scheduler track).
 
-### J3 — IN PROGRESS
+### J3 — DONE
 
 Frontend only (`web/`); `api-types.ts`, Python and fixtures do not change.
 
@@ -173,4 +173,25 @@ Frontend only (`web/`); `api-types.ts`, Python and fixtures do not change.
 - [x] J3.6 binding: no review-finding jargon; CURRENT with no differences is one compact line beside the
       scope chips, drifted states keep the card (files: `web/src/pages/FlowOverviewPage.tsx`,
       `web/tests/flowpage.test.tsx`)
-- [ ] J3.7 all checks, J3 marked DONE (files: this log)
+- [x] J3.7 all checks, J3 marked DONE (files: this log)
+
+Checks (final; `api-types.ts` unchanged by `gen:types`):
+
+```
+$ cd web && npm run gen:types && npm run typecheck && npm test && npm run build
+ Test Files  33 passed (33)
+      Tests  205 passed (205)
+✓ built in 3.91s
+check-csp: ok (no inline script, no style attribute)
+```
+
+Decisions:
+- ISO formatting applies to figure values on the journey; summaries stay verbatim as the server sent them
+  (the protocol summary still contains its raw ISO). Only timestamps naming their own offset are formatted;
+  a zone-less string is shown raw (the browser would read it in local time).
+- `status` and `note` are no longer key/value figures; a non-empty `drifted_parts` list is shown joined.
+- The compact binding line sits beside the scope chips; "bound after data existed" is kept in it.
+- A review-finding reference inside a server-supplied note in the collapsed details ("review F1", from
+  Python) is not touched: no Python changes in J3.
+
+Python tests were not run: J3 touches no Python.
