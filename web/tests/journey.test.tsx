@@ -98,6 +98,30 @@ describe("J2: JourneySteps", () => {
     mount(journey, false);
     expect(screen.queryAllByRole("link", { name: /Read and sign/ })).toHaveLength(0);
   });
+  it("shows only the steps named in `keys`, with a chosen heading and no bar", () => {
+    render(
+      <MemoryRouter>
+        <JourneySteps journey={journey} rows={rows} base="/p/demo/f/sel1" writable
+                      keys={["copies", "documents"]} heading="Pipeline" bar={false} />
+      </MemoryRouter>,
+    );
+    const shown = Array.from(document.querySelectorAll("[data-step]")).map((n) => n.getAttribute("data-step"));
+    expect(shown).toEqual(["copies", "documents"]);
+    expect(screen.getByRole("heading", { name: "Pipeline" })).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "The journey" })).toBeNull();
+    expect(screen.queryByLabelText("Journey progress")).toBeNull();
+  });
+
+  it("a null heading renders no heading at all", () => {
+    render(
+      <MemoryRouter>
+        <JourneySteps journey={journey} rows={rows} base="/p/demo/f/sel1" writable
+                      keys={["protocol"]} heading={null} bar={false} />
+      </MemoryRouter>,
+    );
+    expect(document.querySelector("section h2")).toBeNull();
+    expect(document.querySelectorAll("[data-step]")).toHaveLength(1);
+  });
 });
 
 describe("J2: side column", () => {

@@ -1,4 +1,5 @@
 import { Link, useParams } from "react-router";
+import BlockMap from "@/components/BlockMap";
 import Chip from "@/components/Chip";
 import ErrorState from "@/components/ErrorState";
 import RowFields from "@/components/RowFields";
@@ -10,12 +11,16 @@ import OperationsPanel from "@/components/OperationsPanel";
 import OverviewKpis from "@/components/OverviewKpis";
 import Pending from "@/components/Pending";
 import QuestionMatrix from "@/components/QuestionMatrix";
+import SelectionPanel from "@/components/SelectionPanel";
 import SourceTracker from "@/components/SourceTracker";
 import CommandBlock from "@/components/CommandBlock";
 import { BarList } from "@/components/tremor/BarList/BarList";
 import { useApi } from "@/hooks/useApi";
 import { usePoll } from "@/hooks/usePoll";
 import { api } from "@/lib/api";
+
+// Steps 2-7 are the pipeline; step 1 sits under Protocol and step 8 under Human reading.
+const PIPELINE_STEPS = ["search", "copies", "documents", "annotate", "review", "profiles"] as const;
 
 // The flow/legacy overview (§8.3): binding badge, the four KPI cards, the source
 // tracker, the questions table with the rejections side card, the per-class floor
@@ -187,18 +192,35 @@ export default function FlowOverviewPage({ kind }: { kind: "f" | "u" }) {
         </section>
       ) : null}
 
-      <div className="flex flex-wrap items-start gap-5">
-        <div className="min-w-0 flex-[3_1_520px]">
-          <JourneySteps journey={data.journey} rows={data.questions.rows} base={base} writable={kind === "f"} />
-        </div>
-        <aside aria-label="Beside the journey" className="flex min-w-0 flex-[2_1_320px] flex-col gap-5">
-          {kind === "f" && flowId ? <OperationsPanel project={project} flowId={flowId} /> : null}
-          <RunningNote journey={data.journey} />
-          <TheTopic topics={data.journey.topics} />
-          <TheQuestions rows={data.questions.rows} base={base} />
-          <NeedsYou needs={data.journey.needs_you} base={base} writable={kind === "f"} />
-        </aside>
-      </div>
+      <BlockMap
+        blocks={data.journey.blocks}
+        panels={{
+          protocol: (
+            <>
+              <JourneySteps journey={data.journey} rows={data.questions.rows} base={base}
+                            writable={kind === "f"} keys={["protocol"]} heading="Protocol" bar={false} />
+              <TheTopic topics={data.journey.topics} />
+              <TheQuestions rows={data.questions.rows} base={base} />
+            </>
+          ),
+          pipeline: (
+            <JourneySteps journey={data.journey} rows={data.questions.rows} base={base}
+                          writable={kind === "f"} keys={PIPELINE_STEPS} heading="Pipeline" />
+          ),
+          selection: <SelectionPanel selection={data.journey.selection} />,
+          intake: <NeedsYou needs={data.journey.needs_you} base={base} writable={kind === "f"} />,
+          execution: (
+            <>
+              {kind === "f" && flowId ? <OperationsPanel project={project} flowId={flowId} /> : null}
+              <RunningNote journey={data.journey} />
+            </>
+          ),
+          reading: (
+            <JourneySteps journey={data.journey} rows={data.questions.rows} base={base}
+                          writable={kind === "f"} keys={["sign"]} heading="Human reading" bar={false} />
+          ),
+        }}
+      />
 
       <details className="rounded-lg bg-card p-5 shadow-sm ring-1 ring-gray-200 dark:ring-gray-800">
         <summary className="cursor-pointer text-base font-semibold">

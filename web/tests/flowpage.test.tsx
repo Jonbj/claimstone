@@ -100,7 +100,7 @@ describe("F3: flow journey page", () => {
 
   it("renders the server's steps in order and keeps technical details collapsed", async () => {
     mount("/p/demo/f/sel1", true);
-    await screen.findByRole("heading", { name: "The journey" });
+    await screen.findByRole("tablist", { name: "Blocks" });
     const keys = Array.from(document.querySelectorAll("[data-step]")).map((n) => n.getAttribute("data-step"));
     expect(keys).toEqual(flowOverview.journey.steps.map((st) => st.key));
     const details = screen.getByText("Evidence path and technical details").closest("details")!;
@@ -112,7 +112,7 @@ describe("F3: flow journey page", () => {
 
   it("J3.6: a CURRENT binding is one compact line, with no card and no review jargon", async () => {
     mount("/p/demo/f/sel1", true);
-    await screen.findByRole("heading", { name: "The journey" });
+    await screen.findByRole("tablist", { name: "Blocks" });
     expect(document.querySelector("[data-binding-compact]")?.textContent).toMatch(/^binding: no differences/);
     expect(screen.queryByRole("heading", { name: "binding" })).toBeNull();
     expect(outsideDetails()).not.toMatch(/review F\d|\(F\d+\)/);
@@ -140,7 +140,28 @@ describe("F3: flow journey page", () => {
 
   it("a legacy selector shows the journey and no write control or Read and sign button", async () => {
     mount("/p/demo/u/-", true);
-    await screen.findByRole("heading", { name: "The journey" });
+    await screen.findByRole("tablist", { name: "Blocks" });
     expect(screen.queryAllByRole("link", { name: /Read and sign|Open decisions/ })).toHaveLength(0);
+  });
+
+  it("shows the six blocks, opens on the first one waiting for you, and keeps all eight steps in the document in order", async () => {
+    mount("/p/demo/f/sel1", true);
+    const tabs = await screen.findAllByRole("tab");
+    expect(tabs.map((t) => t.getAttribute("data-block"))).toEqual(
+      ["protocol", "pipeline", "selection", "intake", "execution", "reading"]);
+    expect(tabs.map((t) => t.getAttribute("data-block"))).toEqual(
+      flowOverview.journey.blocks.map((b) => b.key));
+    const open = tabs.find((t) => t.getAttribute("aria-selected") === "true");
+    // the fixture's Human reading block waits for you, and that outranks the Pipeline default
+    expect(open?.getAttribute("data-block")).toBe("reading");
+    const steps = Array.from(document.querySelectorAll("[data-step]")).map((n) => n.getAttribute("data-step"));
+    expect(steps).toEqual(flowOverview.journey.steps.map((st) => st.key));
+  });
+
+  it("the Source selection tile says the scope is not declared when the server says so", async () => {
+    mount("/p/demo/f/sel1?block=selection", true);
+    await screen.findByRole("tablist", { name: "Blocks" });
+    expect(screen.getByText("No selection scope is declared for this flow.")).toBeTruthy();
+    expect(document.querySelector('[data-block="selection"]')?.textContent).toContain("not declared");
   });
 });

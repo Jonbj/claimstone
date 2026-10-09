@@ -109,21 +109,28 @@ export function SegmentBar({ steps }: { steps: JourneyStep[] }) {
   );
 }
 
+// `keys`, `heading` and `bar` let a block panel show part of the journey: the flow page puts step 1
+// under Protocol, steps 2-7 under Pipeline and step 8 under Human reading. Defaults keep the whole
+// journey, as before. Nothing here decides a status; the steps are the server's.
 export default function JourneySteps({
-  journey, rows, base, writable,
+  journey, rows, base, writable, keys, heading = "The journey", bar = true,
 }: {
   journey: Journey;
   rows: MatrixRow[];
   base: string;
   writable: boolean;
+  keys?: readonly string[];
+  heading?: string | null;
+  bar?: boolean;
 }) {
   const ready = readyToSign(rows);
+  const steps = keys ? journey.steps.filter((step) => keys.includes(step.key)) : journey.steps;
   return (
-    <section aria-label="The journey" className="flex flex-col gap-4">
-      <h2 className="text-base font-semibold">The journey</h2>
-      <SegmentBar steps={journey.steps} />
+    <section aria-label={heading ?? "Journey steps"} className="flex flex-col gap-4">
+      {heading === null ? null : <h2 className="text-base font-semibold">{heading}</h2>}
+      {bar ? <SegmentBar steps={steps} /> : null}
       <ol className="flex flex-col gap-3">
-        {journey.steps.map((step) => {
+        {steps.map((step) => {
           const s = STATUS[step.status];
           const a = ACTOR[step.actor];
           return (
