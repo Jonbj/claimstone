@@ -457,7 +457,7 @@ def test_one_query_discovery_plan_is_bounded_and_replay_safe(tmp_path, monkeypat
         return Response(url)
 
     def fake_search(logged, term, topic_id, **kwargs):
-        payload, outcome = logged.get_json('https://api.openalex.org/test')
+        payload, outcome = logged.get_json('https://api.openalex.org/works?search=test')
         assert outcome.ok and payload == {'results': []}
         return []
 

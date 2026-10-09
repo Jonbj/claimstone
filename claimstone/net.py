@@ -24,9 +24,9 @@ import requests
 from requests.adapters import HTTPAdapter
 from typing import Protocol
 
-from .provider_limits import provider_slot
+from .provider_limits import ProviderCreditLimit, ProviderRouteUnpriced, provider_slot
 
-FETCH_VERSION = 6
+FETCH_VERSION = 7
 
 REDIRECT = "REDIRECT_ERROR"
 
@@ -49,6 +49,8 @@ BAD_TYPE = "UNEXPECTED_CONTENT_TYPE"
 EMPTY = "EMPTY_RESPONSE"
 ADDRESS_REFUSED = "NON_GLOBAL_ADDRESS"
 REQUEST_LIMIT = "REQUEST_LIMIT_REACHED"
+PROVIDER_LIMIT = "PROVIDER_CREDIT_LIMIT"
+UNPRICED_ROUTE = "UNPRICED_PROVIDER_ROUTE"
 
 # Set by the content gate in fulltext.py rather than by HTTP: a 200 that carries a landing
 # page, or the abstract page of a document, is a failure of acquisition even though the
@@ -67,7 +69,7 @@ NO_LOCATIONS = "NO_LOCATIONS"
 TERMINAL = frozenset(
     {PAYWALL, ROBOTS, EXCLUDED, NOT_FOUND, BAD_TYPE, LANDING, ABSTRACT, TOO_SHORT,
      CORRUPT_PDF, NOT_TEXT, NO_LOCATIONS, REDIRECT,
-     ADDRESS_REFUSED, REQUEST_LIMIT,
+     ADDRESS_REFUSED, REQUEST_LIMIT, UNPRICED_ROUTE,
      # Terminal on conduct grounds rather than because retrying could not work. The host asked us to
      # prove we are not a robot; knocking again without answering that is ignoring the request, so a
      # retry needs a named campaign like any other. The class exists to keep the *denominator* honest —
@@ -76,7 +78,8 @@ TERMINAL = frozenset(
      CHALLENGE}
 )
 TRANSIENT = frozenset(
-    {TIMEOUT, CONNECTION, SERVER_ERROR, RATE_LIMITED, BUDGET, EMPTY, WAYBACK_MISS}
+    {TIMEOUT, CONNECTION, SERVER_ERROR, RATE_LIMITED, BUDGET, EMPTY, WAYBACK_MISS,
+     PROVIDER_LIMIT}
 )
 
 
@@ -371,7 +374,8 @@ class Fetcher:
             outcome.provider_usage = dict(provider_usage)
             if self.on_outcome:
                 blocked = outcome.status is None and outcome.failure_class in (
-                    EXCLUDED, BUDGET, ROBOTS, REDIRECT, ADDRESS_REFUSED, REQUEST_LIMIT)
+                    EXCLUDED, BUDGET, ROBOTS, REDIRECT, ADDRESS_REFUSED, REQUEST_LIMIT,
+                    PROVIDER_LIMIT, UNPRICED_ROUTE)
                 self.on_outcome(outcome, 'blocked' if blocked else ('transport' if check_robots else 'robots'))
             return outcome
 
@@ -414,29 +418,33 @@ class Fetcher:
                     self._physical_requests >= self.max_physical_requests):
                 return finish(Outcome(url, False, failure_class=REQUEST_LIMIT,
                                       detail='physical request ceiling reached'))
-            self._physical_requests += 1
             self._throttle()
-            slot = (provider_slot(self.failure_store, host) if self.failure_store is not None
+            slot = (provider_slot(self.failure_store, host, url) if self.failure_store is not None
                     else nullcontext())
-            with slot:
-                if self.on_request:
-                    self.on_request(url)
-                headers = {'Accept': 'application/json'} if as_json else {}
-                # A header keeps the key out of permanent request URLs. Recompute per hop:
-                # redirects to publishers, HTTP or lookalike hosts must never receive it.
-                parsed = urllib.parse.urlsplit(url)
-                if (parsed.scheme == 'https' and parsed.netloc == 'api.openalex.org'
-                        and (key := os.environ.get('OPENALEX_API_KEY', '').strip())):
-                    headers['Authorization'] = f'Bearer {key}'
-                try:
+            try:
+                with slot:
+                    self._physical_requests += 1
+                    if self.on_request:
+                        self.on_request(url)
+                    headers = {'Accept': 'application/json'} if as_json else {}
+                    # A header keeps the key out of permanent request URLs. Recompute per hop:
+                    # redirects to publishers, HTTP or lookalike hosts must never receive it.
+                    parsed = urllib.parse.urlsplit(url)
+                    if (parsed.scheme == 'https' and parsed.netloc == 'api.openalex.org'
+                            and (key := os.environ.get('OPENALEX_API_KEY', '').strip())):
+                        headers['Authorization'] = f'Bearer {key}'
                     response = self._session.get(url, timeout=self.timeout_s, allow_redirects=False,
                         headers=headers or None)
-                except requests.Timeout as exc:
-                    self._record_failure(host)
-                    return finish(Outcome(url, False, failure_class=TIMEOUT, detail=str(exc)))
-                except requests.RequestException as exc:
-                    self._record_failure(host)
-                    return finish(Outcome(url, False, failure_class=CONNECTION, detail=str(exc)))
+            except ProviderCreditLimit as exc:
+                return finish(Outcome(url, False, failure_class=PROVIDER_LIMIT, detail=str(exc)))
+            except ProviderRouteUnpriced as exc:
+                return finish(Outcome(url, False, failure_class=UNPRICED_ROUTE, detail=str(exc)))
+            except requests.Timeout as exc:
+                self._record_failure(host)
+                return finish(Outcome(url, False, failure_class=TIMEOUT, detail=str(exc)))
+            except requests.RequestException as exc:
+                self._record_failure(host)
+                return finish(Outcome(url, False, failure_class=CONNECTION, detail=str(exc)))
             if host == 'api.openalex.org':
                 provider_usage = {
                     name.lower(): str(response.headers[header])[:80]

@@ -264,7 +264,8 @@ def plan(project: Project, store: Store, flow_id: str, stage: str, *,
                 if (prior_query.get('ok') or not run_label or not retry_reason or
                         not retry_reason.strip() or
                         prior_query.get('failure_class') not in {
-                            'NON_GLOBAL_ADDRESS', 'DNS_ERROR', 'NETWORK_ERROR'}):
+                            'NON_GLOBAL_ADDRESS', 'DNS_ERROR', 'NETWORK_ERROR',
+                            'PROVIDER_CREDIT_LIMIT'}):
                     raise OperationError('query retry requires a failed pre-transport outcome, run label and reason')
             if any(row.get('event') == 'request_started' and
                    row.get('round') == selector.round and row.get('source_api') == api and

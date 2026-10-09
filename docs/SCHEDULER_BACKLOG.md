@@ -403,3 +403,8 @@ on query rows (D113). Following cursors under a new authorized page ceiling,
 and retaining every query path when a candidate is found again, remain pending.
 New arXiv candidate rows now retain the base ID and returned version (D114);
 explicit preprint/journal and version relationships remain pending.
+`fetch_version 7` now reserves estimated OpenAlex credits against a shared
+10,000-credit UTC-day ceiling before transport (D115). This closes the local
+Claimstone-only credit ceiling; it does not prove free-only operation for a
+prepaid key shared with other applications. Provider-side spending controls
+and an account-level policy remain an operator/deployment prerequisite.

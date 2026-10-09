@@ -4508,3 +4508,25 @@ version 1 is recorded. The PDF URL and `candidate_key_version 2` remain
 unchanged, so versions do not silently become separate works. A future
 preprint/journal relation ledger must still distinguish two artifacts before
 the engine treats them as one study; title similarity alone is insufficient.
+
+## D115 — Reserve OpenAlex's free daily credits before transport (2026-10-09)
+
+`fetch_version 7` extends the shared start ledger with UTC date and a
+conservative estimated credit count. Current Claimstone routes are priced as
+10 credits for a Work search, 1 for a Work list, 0 for a Work singleton or
+robots/rate-limit check; a requested rerank adds 10. Unpriced paths refuse
+transport instead of assuming a free lookup. A call that would bring this
+mounted store's same-day Claimstone reservations above 10,000 credits also
+refuses transport; failed starts are not refunded. The provider's
+[example costs](https://help.openalex.org/access/example-costs/) and
+[authentication limits](https://help.openalex.org/api/authentication/) were
+checked on 2026-10-09. A two-project fixture with a 10-credit test ceiling
+proves that the second search receives `PROVIDER_CREDIT_LIMIT` without a
+physical start or socket. The scheduler permits a new, named pre-transport
+query plan after that failure, still requiring an operator's authorization.
+
+This guard bounds only Claimstone instances sharing the store. It cannot
+guarantee zero paid usage if another application shares a prepaid key or
+OpenAlex changes prices before the estimate is updated. A provider-side hard
+spending cap or a dedicated key without prepaid funds is still required for
+that guarantee. No OpenAlex request was made to implement or test this change.

@@ -285,3 +285,49 @@ def test_openalex_meta_cost_is_kept_with_validated_response(tmp_path):
     validated = next(row for row in store.read('requests.jsonl')
                      if row['event'] == 'validated_response')
     assert validated['provider_usage'] == outcome.provider_usage
+
+
+def test_openalex_daily_credit_guard_blocks_before_a_second_project_opens_socket(
+        tmp_path, monkeypatch):
+    from claimstone import provider_limits
+    from claimstone.request_log import RecordingFetcher
+    from claimstone.store import Store
+
+    monkeypatch.setattr(provider_limits, 'OPENALEX_DAILY_CREDIT_CEILING', 10)
+    class Response:
+        status_code = 200
+        headers = {'Content-Type': 'application/json'}
+        content = b'{"meta":{"count":0},"results":[]}'
+        url = 'https://api.openalex.org/works?search=one'
+
+    first = net.Fetcher(obey_robots=False, pause_s=0, max_physical_requests=1)
+    first._session = type('Session', (), {'get': staticmethod(
+        lambda *args, **kwargs: Response())})()
+    assert RecordingFetcher(first, Store('a', base=tmp_path), campaign='a').get_json(
+        Response.url)[1].ok
+
+    second = net.Fetcher(obey_robots=False, pause_s=0, max_physical_requests=1)
+    second._session = type('Session', (), {'get': staticmethod(
+        lambda *args, **kwargs: (_ for _ in ()).throw(
+            AssertionError('credit refusal must happen before transport')))})()
+    store = Store('b', base=tmp_path)
+    payload, outcome = RecordingFetcher(second, store, campaign='b').get_json(
+        'https://api.openalex.org/works?search=two')
+    assert payload is None
+    assert outcome.failure_class == net.PROVIDER_LIMIT
+    assert not any(row.get('event') == 'request_started'
+                   for row in store.read('requests.jsonl'))
+    assert len(list(Store('.provider_limits', base=tmp_path).read('starts.jsonl'))) == 1
+
+
+def test_unpriced_openalex_route_is_refused_before_transport(tmp_path):
+    from claimstone.request_log import RecordingFetcher
+    from claimstone.store import Store
+
+    fetcher = net.Fetcher(obey_robots=False, pause_s=0)
+    fetcher._session = type('Session', (), {'get': staticmethod(
+        lambda *args, **kwargs: (_ for _ in ()).throw(
+            AssertionError('unpriced route opened a socket')))})()
+    outcome = RecordingFetcher(fetcher, Store('one', base=tmp_path)).get(
+        'https://api.openalex.org/unreviewed')
+    assert outcome.failure_class == net.UNPRICED_ROUTE

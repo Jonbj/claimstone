@@ -17,7 +17,7 @@ ledger; it does not write production acquisition or document rows.
 | `candidate_key`, `source_class`, `campaign` | acquisition context when applicable |
 | `event` | request_started, redirect, robots, transport, blocked, response or validated_response |
 | `url`, `request_url`, `redirect_chain` | outcome destination, original URL and destinations actually visited |
-| `fetch_version` | transport/check instrument; currently 6 for new requests |
+| `fetch_version` | transport/check instrument; currently 7 for new requests |
 | `ok`, `http_status`, `failure_class`, `detail` | explicit outcome; blocked destinations may have no HTTP status |
 | `content_type`, `bytes`, `elapsed_s` | available response metadata |
 | `raw_sha256`, `raw_path` | available body stored under requests/raw, content-addressed |
@@ -45,6 +45,14 @@ machine that does not share the mounted store. A recorded OpenAlex 429 with
 `daily_remaining: 0` is labelled as daily-credit exhaustion; without that
 header it remains ambiguous between credits and request rate. Neither case is
 an empty search.
+Each OpenAlex start also reserves a conservative route-based credit estimate
+against a shared UTC-day ceiling of 10,000 credits. A local ceiling refusal
+(`PROVIDER_CREDIT_LIMIT`) and an unpriced route (`UNPRICED_PROVIDER_ROUTE`)
+open no socket and have no `request_started` row; both still receive a blocked
+outcome row. The former may be replanned after a new UTC day with a named
+pre-transport retry and fresh operator authorization. This local guard cannot
+see another application's use of the same API key or replace a provider-side
+spending cap.
 
 ## Query completion
 
