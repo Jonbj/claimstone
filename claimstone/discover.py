@@ -24,6 +24,7 @@ from claimstone.store import Store, sha256_text
 from claimstone.request_log import RecordingFetcher
 
 ROUTINE = "routine"
+QUERY_HIT_VERSION = 1
 
 NEAR_MATCH_MIN_CHARS = 25
 
@@ -77,6 +78,7 @@ def run(
     policy = getattr(project, "population", {})
     population.check_round(store, policy, round_name)
     known = set(store.latest_by("candidates.jsonl", "candidate_key"))
+    known_hits = {r['hit_id'] for r in store.read('query_hits.jsonl')}
     new = 0
     possible_duplicates = 0
     seen_this_run = 0
@@ -116,6 +118,7 @@ def run(
                 else:
                     completed += 1
                 returned = len(rows)
+                query_id = sha256_text(f'{round_name}|{api}|{topic.id}|{term}')
                 total_available = None
                 next_cursor = None
                 if api == 'openalex' and failure is None:
@@ -128,12 +131,27 @@ def run(
                         cursor = meta.get('next_cursor')
                         if isinstance(cursor, str) and cursor:
                             next_cursor = cursor
-                for row in rows:
+                for rank, row in enumerate(rows, start=1):
                     if not row["title"] and not row["url"]:
                         continue
                     seen_this_run += 1
                     row["round"] = round_name
-                    if not population.observe(store, policy, row):
+                    in_scope = population.observe(store, policy, row)
+                    hit_id = sha256_text(f'{query_id}|{rank}|{row["candidate_key"]}')
+                    if hit_id not in known_hits:
+                        store.append('query_hits.jsonl', {
+                            'hit_id': hit_id, 'query_id': query_id,
+                            'query_hit_version': QUERY_HIT_VERSION,
+                            'round': round_name, 'topic_id': topic.id, 'source_api': api,
+                            'query': term, 'rank': rank,
+                            'candidate_key': row['candidate_key'],
+                            'title': row['title'], 'doi': row['doi'],
+                            'provider_id': row.get('openalex_work_id') or row.get('arxiv_base_id'),
+                            'population_in_scope': in_scope,
+                            'observed_at': row['found_at'],
+                        })
+                        known_hits.add(hit_id)
+                    if not in_scope:
                         outside_population += 1
                         continue
                     if row["candidate_key"] in known:
@@ -150,7 +168,7 @@ def run(
                     store.append("candidates.jsonl", row)
                     new += 1
                 store.append('queries.jsonl', context | {
-                    'query_id': sha256_text(f'{round_name}|{api}|{topic.id}|{term}'),
+                    'query_id': query_id,
                     'discovery_version': searchers.DISCOVERY_VERSION, 'per_query': per_query,
                     'ok': failure is None, 'failure_class': failure, 'detail': detail,
                     'returned': returned, 'total_available': total_available,
