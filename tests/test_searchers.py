@@ -54,6 +54,24 @@ def test_openalex_reports_the_venue_type_classify_needs():
     assert row["query_rank"] == 1
 
 
+def test_openalex_page_url_is_explicit_and_bounded(monkeypatch):
+    monkeypatch.setenv('CLAIMSTONE_CONTACT_EMAIL', 'research@example.org')
+    fetcher = FakeFetcher(json_pages={OPENALEX: {'results': []}})
+    list(searchers.search_openalex(fetcher, 'news sentiment', 'T02'))
+    assert fetcher.calls[0] == searchers.openalex_query_url('news sentiment')
+    url = searchers.openalex_query_url('news sentiment', per_page=100,
+        mode='search.title_abstract_keywords', page=2)
+    assert 'search.title_abstract_keywords=news+sentiment' in url
+    assert 'per-page=100' in url and 'page=2' in url
+    assert 'cursor=' not in url
+    with pytest.raises(ValueError, match='combined'):
+        searchers.openalex_query_url('news', page=2, cursor='opaque')
+    with pytest.raises(ValueError, match='10000'):
+        searchers.openalex_query_url('news', per_page=100, page=101)
+    with pytest.raises(ValueError, match='1..100'):
+        searchers.openalex_query_url('news', per_page=101)
+
+
 def test_crossref_asks_for_type_and_reports_it():
     # The live select clause omitted `type`, so crossref_type had nothing to match on.
     fetcher = FakeFetcher(json_pages={CROSSREF: CROSSREF_PAYLOAD})

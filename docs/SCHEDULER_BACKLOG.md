@@ -416,7 +416,12 @@ using one mounted store, not separate machines.
 `discovery_version 4` now retains OpenAlex Work IDs and one-based rank on new
 candidate rows and records `meta.count`, `next_cursor` and first-page capping
 on query rows (D113). Following cursors under a new authorized page ceiling,
-remains pending. New discovery runs retain every query path in
+remains pending for the scheduler. The D117 isolated pilot can follow page 2
+of a saved 100-row query using basic paging because OpenAlex reported 1,055
+results, below the documented 10,000-result basic-paging limit. A new search
+that needs cursor depth must start with `cursor=*` on its first page and freeze
+each returned cursor; it cannot splice a cursor into the previous basic-page
+result set. New discovery runs retain every query path in
 `query_hits.jsonl` (D116); historical rows remain unbackfilled.
 New arXiv candidate rows now retain the base ID and returned version (D114);
 explicit preprint/journal and version relationships remain pending.

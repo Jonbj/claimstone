@@ -4590,3 +4590,32 @@ This is a provenance repair, not a change to the frozen L02 protocol or its
 current candidate inventory. Existing historical searches are not backfilled
 from incomplete candidate rows; raw response replay requires its own bounded
 offline migration if an old query-hit matrix is needed.
+
+## D117 — Compare held identities and freeze a second search page (2026-10-09)
+
+An offline replay of D116's three saved responses against the 20-case L02
+reference packet found three exact DOI identities and one same-title pair with
+different DOIs (`10.2139/ssrn.2186267` and
+`10.1080/00036846.2016.1167830`). The latter is a possible version
+relationship, not a merge. The reference packet includes AI-provisional
+screening and no INCLUDE, so 3/20 is an identity retrieval check, not recall
+of relevant literature. Its private, content-addressed readout is under
+`store/alembic-s4-lungo/audits/research-search/variant-probe/readout-6228ddb0621486a0acd2562eb90e00b69c4ebb0dd82360c9e81290b704042250.json`;
+both OpenAlex and Crossref recovered the same three reference DOIs, while
+arXiv recovered none of them. The script
+recomputes all comparisons from retained provider bytes and records the packet
+hash. The 17 unmatched DOIs remain explicit.
+
+The scoped OpenAlex first page returned 100 of `meta.count: 1055` and did not
+request a cursor, so it returned no `next_cursor`. OpenAlex's current
+[paging contract](https://help.openalex.org/api/paging/) allows `page=2` here:
+basic paging reaches at most 10,000 results, while cursor paging must start
+with `cursor=*` on page one. Starting a cursor only on page two would not be a
+continuation of these saved bytes. `searchers.openalex_query_url` now validates
+mode, cap and page/cursor exclusivity while preserving the default v4 search
+URL. A separate page-probe tool freezes the original plan and response hashes,
+query, page 2, host, project inputs and a two-physical-request ceiling. It
+writes only audit and request evidence and refuses ambiguous started requests.
+This is preparation, not a change to the L02 production round or an automatic
+scheduler expansion. The operator must authorize that named campaign before
+it makes a request.

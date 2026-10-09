@@ -16,7 +16,7 @@ import urllib.parse
 import xml.etree.ElementTree as ET
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from claimstone import ids, net
+from claimstone import ids, net, searchers
 from claimstone.config import load_project
 from claimstone.request_log import RecordingFetcher
 from claimstone.store import Store
@@ -36,10 +36,8 @@ def digest(data: bytes) -> str:
 def query_url(query: dict) -> str:
     api, term, limit = query['api'], query['term'], query['limit']
     if api == 'openalex':
-        params = {'search.title_abstract_keywords': term, 'per-page': limit,
-                  'mailto': net.contact_email(), 'select':
-                  'id,doi,title,publication_year,primary_location,open_access,cited_by_count'}
-        return 'https://api.openalex.org/works?' + urllib.parse.urlencode(params)
+        return searchers.openalex_query_url(term, per_page=limit,
+                                           mode='search.title_abstract_keywords')
     if api == 'crossref':
         params = {'query.title': term, 'rows': limit, 'mailto': net.contact_email(),
                   'select': 'DOI,title,issued,container-title,URL,type,is-referenced-by-count'}
@@ -70,13 +68,14 @@ def prepare(plan_path: Path, store_base: str):
     if queries[2]['term'] != 'news sentiment returns':
         raise ValueError('arXiv fielded expression differs from frozen plan')
     project = load_project(plan['project'])
+    expected_inputs = {'topics.yaml', 'questions.yaml', 'sources.yaml'}
+    if (project.root / 'manifest.tsv').exists():
+        expected_inputs.add('manifest.tsv')
+    if set(plan['input_sha256']) != expected_inputs:
+        raise ValueError('all existing project inputs must be frozen')
     for name, expected in plan['input_sha256'].items():
-        if name not in {'topics.yaml', 'questions.yaml', 'sources.yaml', 'manifest.tsv'}:
-            raise ValueError('unexpected frozen input')
         if digest((project.root / name).read_bytes()) != expected:
             raise ValueError(f'project input changed: {name}')
-    if len(plan['input_sha256']) != 4:
-        raise ValueError('four project inputs required')
     store = Store(project.name, base=store_base)
     urls = [query_url(q) for q in queries]
     if len(set(urls)) != 3:
@@ -173,7 +172,7 @@ def run(plan_path: Path, *, execute=False, store_base='store'):
     return report
 
 
-def readout(plan_path: Path, *, store_base='store'):
+def readout(plan_path: Path, *, store_base='store', reference_packet: Path | None = None):
     """Recalculate the comparison from retained bytes, leaving the append-only probe alone."""
     plan, project, store, plan_sha, _ = prepare(plan_path, store_base)
     held = [r for r in store.read(LEDGER) if r.get('campaign') == plan['campaign']]
@@ -182,7 +181,28 @@ def readout(plan_path: Path, *, store_base='store'):
     latest = {r['api']: r for r in held if r.get('ok')}
     known = store.latest_by('candidates.jsonl', 'candidate_key')
     known_titles = {ids.normalize_title(r.get('title')) for r in known.values()}
+    references = {}
+    reference_titles = {}
+    reference_sha = None
+    if reference_packet is not None:
+        packet_bytes = reference_packet.read_bytes()
+        reference_sha = digest(packet_bytes)
+        packet = json.loads(packet_bytes)
+        cases = packet.get('cases')
+        if not isinstance(cases, list) or not cases:
+            raise ValueError('reference packet has no cases')
+        for case in cases:
+            key = str(case.get('candidate_key') or '')
+            doi = ids.normalize_doi(case.get('doi'))
+            title = ids.normalize_title(case.get('title'))
+            if not key or not doi or not title or key in references:
+                raise ValueError('reference case lacks a unique DOI, title or key')
+            references[key] = {'doi': doi, 'title': title}
+            reference_titles.setdefault(title, set()).add(key)
     by_key = defaultdict(set)
+    exact_reference_hits = set()
+    title_reference_hints = set()
+    possible_version_pairs = set()
     summary = []
     for q in plan['queries']:
         api = q['api']
@@ -194,18 +214,40 @@ def readout(plan_path: Path, *, store_base='store'):
         if digest(raw) != row['response_sha256']:
             raise ValueError('saved response hash mismatch')
         records = _records(api, raw)
+        api_exact = set()
+        api_title = set()
         for record in records:
             by_key[record['key']].add(api)
+            for key, reference in references.items():
+                if record['key'] == f"doi:{reference['doi']}":
+                    exact_reference_hits.add(key)
+                    api_exact.add(key)
+            for key in reference_titles.get(ids.normalize_title(record['title']), set()):
+                title_reference_hints.add(key)
+                api_title.add(key)
+                if record['key'] != f"doi:{references[key]['doi']}":
+                    possible_version_pairs.add((key, record['key']))
         summary.append({'api': api, 'returned': len(records),
                         'known_identity_hits': sum(r['key'] in known for r in records),
                         'known_title_hits': sum(ids.normalize_title(r['title']) in known_titles
                                                 for r in records),
+                        'reference_exact_doi_hits': len(api_exact),
+                        'reference_title_hints': len(api_title),
                         'unique_keys': len({r['key'] for r in records}),
                         'response_sha256': row['response_sha256']})
     report = {'campaign': plan['campaign'], 'plan_sha256': plan_sha,
               'basis': 'saved provider bytes; title matches are hints, not identity decisions',
               'providers': summary, 'unique_keys_all_providers': len(by_key),
               'keys_in_multiple_providers': sum(len(apis) > 1 for apis in by_key.values())}
+    if reference_packet is not None:
+        report['reference_packet_sha256'] = reference_sha
+        report['reference_count'] = len(references)
+        report['reference_exact_doi_hits'] = sorted(exact_reference_hits)
+        report['reference_title_hints'] = sorted(title_reference_hints)
+        report['reference_unmatched_doi_keys'] = sorted(set(references) - exact_reference_hits)
+        report['possible_version_pairs'] = [
+            {'reference_key': reference_key, 'result_key': result_key}
+            for reference_key, result_key in sorted(possible_version_pairs)]
     data = (json.dumps(report, sort_keys=True, indent=2) + '\n').encode()
     path = store.path(f'audits/research-search/variant-probe/readout-{digest(data)}.json')
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -221,12 +263,17 @@ def main():
     parser.add_argument('--store-base', default='store')
     parser.add_argument('--execute', action='store_true')
     parser.add_argument('--readout', action='store_true', help='recalculate from saved bytes offline')
+    parser.add_argument('--reference-packet', type=Path,
+                        help='compare saved results with a separate frozen DOI/title packet')
     args = parser.parse_args()
     load_environment(Path('.env'))
     if args.execute and args.readout:
         parser.error('--execute and --readout are mutually exclusive')
+    if args.reference_packet is not None and not args.readout:
+        parser.error('--reference-packet requires --readout')
     action = readout if args.readout else run
-    kwargs = {'store_base': args.store_base} if args.readout else {
+    kwargs = {'store_base': args.store_base,
+              'reference_packet': args.reference_packet} if args.readout else {
         'execute': args.execute, 'store_base': args.store_base}
     print(json.dumps(action(args.plan, **kwargs), indent=2))
 
