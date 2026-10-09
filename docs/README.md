@@ -42,6 +42,7 @@ write to — several fields exist to prevent a specific defect and look optional
 | file | ledger |
 |---|---|
 | [`contracts/candidates.md`](contracts/candidates.md) | what discovery found, and through which channel |
+| [`contracts/query_hits.md`](contracts/query_hits.md) | every keyword result position, including duplicate and out-of-population hits |
 | [`contracts/requests.md`](contracts/requests.md) | scholarly request events and completed/failed queries |
 | [`contracts/acquisitions.md`](contracts/acquisitions.md) | every fetch attempt, its licence, and why it failed |
 | [`contracts/normalize.md`](contracts/normalize.md) | documents and chunks |

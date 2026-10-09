@@ -9,6 +9,16 @@ what order.
 
 ## Where the work stands
 
+2026-10-09 isolated retrieval calibration (D116): the operator authorized a
+bounded L02 search-variant campaign. Three API calls plus three robots checks
+completed; the frozen private plan and saved-byte readout are under
+`store/alembic-s4-lungo/audits/research-search/variant-probe/`. It did not
+change the L02 round or admit candidates. The backend branch
+`provider-retrieval-campaign` adds `query_hits.jsonl` to preserve every
+keyword-result path on future discovery runs. The frontend work in the
+parallel session remains outside this branch. Search expansion, pagination,
+known-reference evaluation and a dated production protocol remain pending.
+
 2026-10-08 one compose, full GROBID (D110): `docker compose up -d --build` starts GROBID, `api`, `control`
 and `web` (http://127.0.0.1:8788/); the engine job and the trial scheduler keep their profiles, and the trial
 worker's container was removed. GROBID is now `grobid/grobid:0.9.1-full` (pinned by digest) on the GPU.

@@ -63,6 +63,27 @@ def test_the_same_candidate_is_not_written_twice(tmp_path):
     assert len(list(store.read("candidates.jsonl"))) == 1
 
 
+def test_every_query_hit_survives_candidate_deduplication_and_rerun(tmp_path):
+    project = load_project(PROJECT)
+    store = Store('t', base=tmp_path)
+    crossref = {'message': {'items': [{
+        'DOI': '10.1234/abc', 'title': ['News versus Sentiment'],
+        'issued': {'date-parts': [[2019]]}, 'container-title': ['Journal of Finance'],
+        'URL': 'https://doi.org/10.1234/abc', 'type': 'journal-article'}]}}
+    fetcher = FakeFetcher(json_pages={OPENALEX: OPENALEX_PAYLOAD, CROSSREF: crossref})
+    terms = next(t.terms for t in project.topics if t.id == 'T02')
+    discover.run(project, store, fetcher, apis=('openalex', 'crossref'), topics=('T02',))
+    hits = list(store.read('query_hits.jsonl'))
+    assert len(list(store.read('candidates.jsonl'))) == 1
+    assert len(hits) == 2 * len(terms)
+    assert {r['query_hit_version'] for r in hits} == {1}
+    assert {(r['source_api'], r['query']) for r in hits} == {
+        (api, term) for api in ('openalex', 'crossref') for term in terms}
+    assert len({r['candidate_key'] for r in hits}) == 1
+    discover.run(project, store, fetcher, apis=('openalex', 'crossref'), topics=('T02',))
+    assert len(list(store.read('query_hits.jsonl'))) == len(hits)
+
+
 def test_openalex_query_records_incomplete_first_page_even_when_one_candidate_is_kept(tmp_path):
     project = load_project(PROJECT)
     store = Store("t", base=tmp_path)

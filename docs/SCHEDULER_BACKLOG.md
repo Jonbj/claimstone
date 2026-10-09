@@ -1,6 +1,7 @@
 # Scheduler backlog from supervised use
 
-Recorded 2026-09-29. Requirements and acceptance criteria, **not an implemented scheduler**.
+Recorded 2026-09-29 and updated through 2026-10-09. Requirements and acceptance criteria;
+the current worker implements a subset (D87–D115).
 Manual calibration/debug remains the operator's chosen mode. Scientific rules remain in
 CLAUDE.md and the measured decisions D10, D39, D48, D54 and D65–D67; this document does not
 change a floor, registry, population, scientific instrument or model assignment.
@@ -8,8 +9,22 @@ change a floor, registry, population, scientific instrument or model assignment.
 The first implementation slice (D86) is `claimstone scheduler-preview`: a
 read-only flow-scoped next-work view. It reuses the portal's inbox semantics,
 flags an empty new round, protocol drift and integrity problems, and performs
-no operation. The proposed append-only execution contract is in
-`docs/contracts/scheduler_operations.md`; no worker or periodic timer exists.
+no operation. The worker and append-only execution contract are described in
+`docs/contracts/scheduler_operations.md`. The dated entries in `docs/HANDOFF.md`
+state which operations have actually been exercised.
+
+2026-10-09 retrieval calibration (D116): an authorized six-request L02 variant
+probe returned 100 OpenAlex, 100 Crossref and 6 arXiv rows. The 172 distinct
+candidate keys and 34 multi-provider keys are retrieval observations, not
+screened studies. New discovery runs now retain every query-result path in
+`query_hits.jsonl`, including duplicates and out-of-population rows. Scheduler
+work still needed: freeze and measure query variants with known-reference
+checks; plan bounded cursor pages for capped queries; compare provider yield
+after identity/version checks; avoid interpreting a 100-row cap or exact-phrase
+zero as complete coverage. Historical query hits have not been backfilled.
+Keep this calibration outside the production L02 round until a dated search
+protocol and population decision are made. Retry/backoff must respect the
+named campaign, physical ceiling, host failure budget, and provider credits.
 
 ## Workflow to automate
 

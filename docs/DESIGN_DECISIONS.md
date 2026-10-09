@@ -4558,3 +4558,35 @@ When the flow's round is empty the Pipeline tile says how many candidates the pr
 rounds, so an empty bound round is not read as an empty project. Measured, 2026-10-09: `alembic-s4-lungo`
 round `s4-l02-repository-copies-2026-10-06-v2` has 0 candidates while the two earlier rounds hold 34
 (21 + 13), by `candidates.jsonl`.
+## D116 — Retain each keyword-query hit and compare retrieval modes (2026-10-09)
+
+An isolated L02 probe compared one scoped OpenAlex search, one Crossref title
+search, and one arXiv title/abstract expression. Its frozen private plan is
+`store/alembic-s4-lungo/audits/research-search/variant-probe/plan-2026-10-09-v1.json`
+(SHA-256 `403c6703d47d5edfc5b81c3bea2fe4556a7f63e5db17534a483af6491713415b`).
+The six physical requests were three API requests plus three robots checks;
+OpenAlex reported 10 credits used. All successful responses remain as hashed
+bytes in the request store. One sandbox-only DNS refusal preceded them and
+consumed no physical request. The offline readout from those bytes shows
+100 OpenAlex, 100 Crossref, and 6 arXiv rows: 172 distinct candidate keys,
+34 keys found by more than one provider, two prior-corpus title matches from
+each of OpenAlex and Crossref, and no exact candidate-key match. The title
+matches are only inspection leads; this probe did not screen, acquire, or
+admit any work. The 100-row OpenAlex and Crossref caps prevent a completeness
+claim. The initial probe outcome rows used unnormalized provider DOI strings
+for comparison; the saved-byte readout corrected this without rewriting the
+append-only outcomes. That readout is
+`store/alembic-s4-lungo/audits/research-search/variant-probe/readout-0d6ee7c381eae0bc22f245fd4e3eab9dbb0421ed2dd751d5f4db235bc5dc7d36.json`.
+
+`query_hit_version 1` adds `query_hits.jsonl` for every usable keyword hit,
+before population filtering and candidate deduplication. Each hit records its
+provider, exact term, one-based rank, candidate identity, population scope,
+and query ID. Repeating the same query and result position is idempotent. A
+fixture with the same DOI from OpenAlex and Crossref proves that the candidate
+ledger retains one work while the hit ledger retains both retrieval paths.
+The existing search result and query row shapes remain at `discovery_version 4`;
+the new ledger has its own version so the current portal fixtures do not change.
+This is a provenance repair, not a change to the frozen L02 protocol or its
+current candidate inventory. Existing historical searches are not backfilled
+from incomplete candidate rows; raw response replay requires its own bounded
+offline migration if an old query-hit matrix is needed.
