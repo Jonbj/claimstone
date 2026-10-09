@@ -16,6 +16,7 @@ import time
 import socket
 import urllib.parse
 import urllib.robotparser
+from contextlib import nullcontext
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -23,7 +24,9 @@ import requests
 from requests.adapters import HTTPAdapter
 from typing import Protocol
 
-FETCH_VERSION = 5
+from .provider_limits import provider_slot
+
+FETCH_VERSION = 6
 
 REDIRECT = "REDIRECT_ERROR"
 
@@ -141,6 +144,7 @@ class Outcome:
     elapsed_s: float = 0.0
     request_url: str = ""
     redirect_chain: list[str] = field(default_factory=list)
+    provider_usage: dict[str, str | int | float] = field(default_factory=dict)
 
     def as_row(self) -> dict[str, Any]:
         return {
@@ -155,6 +159,7 @@ class Outcome:
             "content_type": self.content_type,
             "bytes": len(self.body) if self.body else 0,
             "elapsed_s": round(self.elapsed_s, 2),
+            "provider_usage": dict(self.provider_usage),
         }
 
 
@@ -357,11 +362,13 @@ class Fetcher:
         initial = url
         chain = []
         started = time.time()
+        provider_usage: dict[str, str | int | float] = {}
 
         def finish(outcome):
             outcome.request_url = initial
             outcome.redirect_chain = list(chain)
             outcome.elapsed_s = time.time() - started
+            outcome.provider_usage = dict(provider_usage)
             if self.on_outcome:
                 blocked = outcome.status is None and outcome.failure_class in (
                     EXCLUDED, BUDGET, ROBOTS, REDIRECT, ADDRESS_REFUSED, REQUEST_LIMIT)
@@ -369,6 +376,7 @@ class Fetcher:
             return outcome
 
         while True:
+            provider_usage = {}
             try:
                 parsed_url = urllib.parse.urlsplit(url)
                 port = parsed_url.port
@@ -407,32 +415,46 @@ class Fetcher:
                 return finish(Outcome(url, False, failure_class=REQUEST_LIMIT,
                                       detail='physical request ceiling reached'))
             self._physical_requests += 1
-            if self.on_request:
-                self.on_request(url)
             self._throttle()
-            headers = {'Accept': 'application/json'} if as_json else {}
-            # A header keeps the key out of permanent request URLs. Recompute per hop:
-            # redirects to publishers, HTTP or lookalike hosts must never receive it.
-            parsed = urllib.parse.urlsplit(url)
-            if (parsed.scheme == 'https' and parsed.netloc == 'api.openalex.org'
-                    and (key := os.environ.get('OPENALEX_API_KEY', '').strip())):
-                headers['Authorization'] = f'Bearer {key}'
-            try:
-                response = self._session.get(url, timeout=self.timeout_s, allow_redirects=False,
-                    headers=headers or None)
-            except requests.Timeout as exc:
-                self._record_failure(host)
-                return finish(Outcome(url, False, failure_class=TIMEOUT, detail=str(exc)))
-            except requests.RequestException as exc:
-                self._record_failure(host)
-                return finish(Outcome(url, False, failure_class=CONNECTION, detail=str(exc)))
+            slot = (provider_slot(self.failure_store, host) if self.failure_store is not None
+                    else nullcontext())
+            with slot:
+                if self.on_request:
+                    self.on_request(url)
+                headers = {'Accept': 'application/json'} if as_json else {}
+                # A header keeps the key out of permanent request URLs. Recompute per hop:
+                # redirects to publishers, HTTP or lookalike hosts must never receive it.
+                parsed = urllib.parse.urlsplit(url)
+                if (parsed.scheme == 'https' and parsed.netloc == 'api.openalex.org'
+                        and (key := os.environ.get('OPENALEX_API_KEY', '').strip())):
+                    headers['Authorization'] = f'Bearer {key}'
+                try:
+                    response = self._session.get(url, timeout=self.timeout_s, allow_redirects=False,
+                        headers=headers or None)
+                except requests.Timeout as exc:
+                    self._record_failure(host)
+                    return finish(Outcome(url, False, failure_class=TIMEOUT, detail=str(exc)))
+                except requests.RequestException as exc:
+                    self._record_failure(host)
+                    return finish(Outcome(url, False, failure_class=CONNECTION, detail=str(exc)))
+            if host == 'api.openalex.org':
+                provider_usage = {
+                    name.lower(): str(response.headers[header])[:80]
+                    for name, header in (
+                        ('daily_limit', 'X-RateLimit-Limit'),
+                        ('daily_remaining', 'X-RateLimit-Remaining'),
+                        ('credits_used', 'X-RateLimit-Credits-Used'),
+                        ('reset_seconds', 'X-RateLimit-Reset'),
+                    ) if header in response.headers
+                }
             if response.status_code in (301, 302, 303, 307, 308):
                 location = response.headers.get('Location')
                 if not location:
                     return finish(Outcome(url, False, response.status_code, REDIRECT, 'missing Location'))
                 if self.on_outcome:
                     self.on_outcome(Outcome(url, True, response.status_code, request_url=initial,
-                                            redirect_chain=list(chain)), 'redirect')
+                                            redirect_chain=list(chain),
+                                            provider_usage=dict(provider_usage)), 'redirect')
                 url = urllib.parse.urljoin(url, location)
                 continue
             break
@@ -454,7 +476,9 @@ class Fetcher:
             return finish(Outcome(url, False, status, PAYWALL, "forbidden", ctype, elapsed_s=elapsed))
         if status == 429:
             self._record_failure(refused_by)
-            return finish(Outcome(url, False, status, RATE_LIMITED, "rate limited", ctype,
+            detail = ('daily credits exhausted' if provider_usage.get('daily_remaining') == '0'
+                      else 'rate limited or daily credits exhausted')
+            return finish(Outcome(url, False, status, RATE_LIMITED, detail, ctype,
                            elapsed_s=elapsed))
         if status == 404:
             return finish(Outcome(url, False, status, NOT_FOUND, "not found", ctype, elapsed_s=elapsed))
@@ -484,6 +508,13 @@ class Fetcher:
             payload = json.loads(outcome.body.decode("utf-8", "replace"))
             if not isinstance(payload, dict):
                 raise ValueError('expected a JSON object')
+            if host_of(outcome.url) == 'api.openalex.org':
+                meta = payload.get('meta')
+                if isinstance(meta, dict):
+                    for field in ('cost_usd', 'cost'):
+                        value = meta.get(field)
+                        if type(value) in {int, float} and value >= 0:
+                            outcome.provider_usage[f'meta_{field}'] = value
             return payload, outcome
         except ValueError as exc:
             outcome.ok = False

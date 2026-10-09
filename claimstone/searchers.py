@@ -12,6 +12,7 @@ extracted from acquired texts in stage 3.
 from __future__ import annotations
 
 import datetime as _dt
+import re
 import urllib.parse
 from typing import Any, Iterator
 
@@ -19,7 +20,7 @@ from claimstone import ids, net
 from claimstone.store import sha256_text
 
 
-DISCOVERY_VERSION = 3
+DISCOVERY_VERSION = 4
 
 
 class SearchError(ValueError):
@@ -108,7 +109,7 @@ def search_openalex(
         )
     )
     payload, outcome = fetcher.get_json(url)
-    for work in records(payload, outcome, ("results",)):
+    for rank, work in enumerate(records(payload, outcome, ("results",)), start=1):
         location = work.get("primary_location") or {}
         source = (location.get("source") or {}) if isinstance(location, dict) else {}
         landing = location.get("pdf_url") or location.get("landing_page_url") or work.get("id")
@@ -126,6 +127,7 @@ def search_openalex(
             channel=CHANNEL_KEYWORD,
             is_oa=(work.get("open_access") or {}).get("is_oa"),
             citations=work.get("cited_by_count"),
+            extra={"openalex_work_id": work.get("id"), "query_rank": rank},
         )
 
 
@@ -180,6 +182,9 @@ def search_arxiv(
         link = entry.findtext("a:id", default="", namespaces=ns) or ""
         published = entry.findtext("a:published", default="", namespaces=ns) or ""
         arxiv = ids.arxiv_id(link)
+        path = urllib.parse.urlsplit(link).path
+        version_match = (re.search(rf'/{re.escape(arxiv)}v([1-9][0-9]*)$', path)
+                         if arxiv else None)
         yield _row(
             title=title,
             url=f"https://arxiv.org/pdf/{arxiv}" if arxiv else link,
@@ -194,6 +199,8 @@ def search_arxiv(
             topic_id=topic_id,
             channel=CHANNEL_KEYWORD,
             is_oa=True,
+            extra={"arxiv_base_id": arxiv,
+                   "arxiv_version": (int(version_match.group(1)) if version_match else None)},
         )
 
 

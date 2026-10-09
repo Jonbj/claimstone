@@ -387,3 +387,19 @@ At current volume, the guide's snapshot, daily sync, paid membership, universal
 are not prerequisites. The existing `select` includes `primary_location` and
 `open_access` because this project's frozen metadata population needs them;
 dropping those fields for a thinner first pass would change selection behavior.
+
+2026-10-09 implementation status (D112): shared on-machine provider pacing for
+arXiv, Crossref and OpenAlex is in place, including one concurrent connection
+per provider and recorded start reservations. OpenAlex quota headers and
+returned cost fields are retained in request rows; a 429 with zero remaining
+credits is explicitly labelled. Still pending before unattended expansion:
+cumulative OpenAlex credit reservations/authorization, bounded retry and
+backoff under the physical-request ceiling, and the separately measured search
+strategy, depth and identity changes above. The shared lock covers workers
+using one mounted store, not separate machines.
+`discovery_version 4` now retains OpenAlex Work IDs and one-based rank on new
+candidate rows and records `meta.count`, `next_cursor` and first-page capping
+on query rows (D113). Following cursors under a new authorized page ceiling,
+and retaining every query path when a candidate is found again, remain pending.
+New arXiv candidate rows now retain the base ID and returned version (D114);
+explicit preprint/journal and version relationships remain pending.

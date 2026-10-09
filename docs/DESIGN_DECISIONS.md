@@ -4456,3 +4456,55 @@ summary is a fixed template filled from `figures`; unknown is `null` and "—", 
 spec's table was ambiguous the reading chosen is the one that never claims more progress than the
 ledgers show (listed in the contract). No verdict is produced here: step 8 only counts what waits for a
 person's signature (invariant 7).
+
+## D112 — Share scholarly API pacing across project workers and retain OpenAlex usage (2026-10-09)
+
+`fetch_version 6` reserves each arXiv, Crossref and OpenAlex API transport in
+`store/.provider_limits/starts.jsonl` under one file lock across projects using
+the same mounted store. The lock remains held during the request, so concurrent
+workers cannot overlap arXiv legacy API connections. arXiv starts are at least
+three seconds apart; Crossref is conservatively held to one request per second
+even when the polite pool allows more; OpenAlex is held to at most 50 starts
+per second. Robots requests count. The existing per-operation physical-request
+ceiling and project request ledger remain in force, and an interrupted global
+reservation is retained rather than silently reused. A two-project concurrent
+test proves serialization and spacing with a shortened test interval.
+Provider limits checked against the official
+[arXiv API terms](https://info.arxiv.org/help/api/tou.html),
+[Crossref REST rate limits](https://www.crossref.org/blog/announcing-changes-to-rest-api-rate-limits/)
+and [OpenAlex authentication limits](https://help.openalex.org/api/authentication/).
+
+OpenAlex response rows now retain its daily-limit, remaining-credit,
+credits-used and reset headers when supplied, and validated JSON rows retain
+the returned `meta.cost_usd` or `meta.cost` when numeric. A 429 with zero
+remaining credits is labelled as quota exhaustion, not an empty search. A
+fixture proves that usage reaches the request ledger. These are observations,
+not a spending authorization: the current scheduler still has no cumulative
+OpenAlex credit reservation, and a shared prepaid account cannot be promised
+free-only usage by local estimates. The global lock coordinates only processes
+sharing this store root; a second machine needs a shared coordination service
+or an independent provider-side limit.
+
+## D113 — Show OpenAlex first-page depth and retain its Work ID (2026-10-09)
+
+`discovery_version 4` preserves the OpenAlex Work ID and one-based result rank
+on every newly admitted candidate row. The query-completion row retains
+`meta.count`, `meta.next_cursor` and an explicit `depth_capped` flag when the
+provider returned consistent metadata; missing or inconsistent metadata stays
+unknown. A fixture with one returned Work and `meta.count: 42` proves that
+deduplication to one candidate does not turn a capped page into a complete
+search. No additional page is requested, no old candidate row is rewritten,
+and the candidate key remains based on DOI/title as before. The Work ID is
+provider provenance, not proof that an obtained PDF is that work. Query paths
+for a duplicate found later by another API/query still need their own
+observation ledger; one candidate row records only its first admitted path.
+
+## D114 — Preserve the arXiv version without changing candidate identity (2026-10-09)
+
+New arXiv keyword candidate rows under `discovery_version 4` retain the
+canonical base ID and the version suffix reported by Atom, if present. The
+saved `2401.01234v1` fixture proves that the base remains `2401.01234` and
+version 1 is recorded. The PDF URL and `candidate_key_version 2` remain
+unchanged, so versions do not silently become separate works. A future
+preprint/journal relation ledger must still distinguish two artifacts before
+the engine treats them as one study; title similarity alone is insufficient.

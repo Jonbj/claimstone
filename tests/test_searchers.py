@@ -50,6 +50,8 @@ def test_openalex_reports_the_venue_type_classify_needs():
     assert row["url"] == "https://repo.example/a.pdf"
     assert row["topic_id"] == "T02"
     assert row["channel"] == "keyword"
+    assert row["openalex_work_id"] == "https://openalex.org/W123"
+    assert row["query_rank"] == 1
 
 
 def test_crossref_asks_for_type_and_reports_it():
@@ -69,6 +71,8 @@ def test_arxiv_parses_atom_and_is_always_a_preprint_venue():
     assert rows[0]["venue"] == "arXiv"
     assert rows[0]["venue_type"] == "preprint"
     assert rows[0]["is_oa"] is True
+    assert rows[0]["arxiv_base_id"] == "2401.01234"
+    assert rows[0]["arxiv_version"] == 1
 
 
 def test_an_empty_payload_yields_nothing():

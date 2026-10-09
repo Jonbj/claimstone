@@ -12,6 +12,7 @@ class RecordingFetcher:
         self.fetcher = fetcher.fetcher if isinstance(fetcher, RecordingFetcher) else fetcher
         self.store = store
         self.context = context
+        self.last_json_payload: dict[str, Any] | None = None
         if isinstance(net.Fetcher, type) and isinstance(self.fetcher, net.Fetcher):
             self.fetcher.failure_store = store
             if self.fetcher.max_physical_requests is not None:
@@ -47,6 +48,8 @@ class RecordingFetcher:
                                        **self.context})
         try:
             result = getattr(self.fetcher, method)(*args, **kwargs)
+            if method == 'get_json':
+                self.last_json_payload = result[0]
             self._record(result[1] if method == 'get_json' else result,
                          'validated_response' if method == 'get_json' else 'response')
             return result

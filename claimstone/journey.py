@@ -21,7 +21,6 @@ from typing import Any, Iterable, Mapping
 
 from claimstone import admissibility, decisions, operations_view
 from claimstone.config import Project
-from claimstone.operations import OperationError
 from claimstone.store import LedgerCorrupt, Store
 
 JOURNEY_VERSION = 1
@@ -304,9 +303,10 @@ def running_operations(store: Store, flow_row: dict[str, Any] | None
     summary row carries no flow id of its own), narrowed here to the continuing events."""
     if flow_row is None:
         return [], None
+    from claimstone import operations
     try:
         rows = operations_view.for_flow(store, str(flow_row["flow_id"]))
-    except (OperationError, LedgerCorrupt):
+    except (operations.OperationError, LedgerCorrupt):
         return None, OPERATIONS_NOTE
     keep = [row for row in rows
             if row["last_event"] == "authorized" or row["last_event"] in operations_view.IN_FLIGHT]

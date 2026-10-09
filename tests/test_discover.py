@@ -63,6 +63,20 @@ def test_the_same_candidate_is_not_written_twice(tmp_path):
     assert len(list(store.read("candidates.jsonl"))) == 1
 
 
+def test_openalex_query_records_incomplete_first_page_even_when_one_candidate_is_kept(tmp_path):
+    project = load_project(PROJECT)
+    store = Store("t", base=tmp_path)
+    payload = {**OPENALEX_PAYLOAD, "meta": {"count": 42, "next_cursor": "opaque-next"}}
+    fetcher = FakeFetcher(json_pages={OPENALEX: payload})
+    discover.run(project, store, fetcher, apis=("openalex",), topics=("T02",),
+                 per_query=1)
+    queries = list(store.read("queries.jsonl"))
+    assert queries and all(row["total_available"] == 42 for row in queries)
+    assert all(row["depth_capped"] is True and row["next_cursor"] == "opaque-next"
+               for row in queries)
+    assert len(list(store.read("candidates.jsonl"))) == 1
+
+
 def test_only_the_requested_topics_are_searched(tmp_path):
     project = load_project(PROJECT)
     store = Store("t", base=tmp_path)

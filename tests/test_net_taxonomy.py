@@ -184,3 +184,104 @@ def test_bounded_transport_rejects_downgrade_credentials_and_other_port():
     assert fetcher.get('http://example.org/a').failure_class == net.REDIRECT
     assert fetcher.get('https://user:secret@example.org/a').failure_class == net.ADDRESS_REFUSED
     assert fetcher.get('https://example.org:8080/a').failure_class == net.ADDRESS_REFUSED
+
+
+def test_provider_start_spacing_and_single_connection_are_shared_across_projects(
+        tmp_path, monkeypatch):
+    """Two project workers must not turn arXiv's one-client limit into two clients."""
+    import threading
+    import time
+
+    from claimstone import provider_limits
+    from claimstone.request_log import RecordingFetcher
+    from claimstone.store import Store
+
+    monkeypatch.setitem(provider_limits.INTERVALS, 'export.arxiv.org', 0.05)
+    active = 0
+    starts = []
+    guard = threading.Lock()
+
+    class Response:
+        status_code = 200
+        headers = {'Content-Type': 'application/atom+xml'}
+        content = b'<feed />'
+        url = 'https://export.arxiv.org/api/query'
+
+    def request(*args, **kwargs):
+        nonlocal active
+        with guard:
+            assert active == 0
+            active += 1
+            starts.append(time.time())
+        time.sleep(0.06)
+        with guard:
+            active -= 1
+        return Response()
+
+    barrier = threading.Barrier(2)
+    outcomes = []
+
+    def worker(name):
+        fetcher = net.Fetcher(obey_robots=False, pause_s=0)
+        fetcher._session = type('Session', (), {'get': staticmethod(request)})()
+        barrier.wait()
+        outcomes.append(RecordingFetcher(fetcher, Store(name, base=tmp_path)).get(
+            'https://export.arxiv.org/api/query'))
+
+    threads = [threading.Thread(target=worker, args=(name,)) for name in ('a', 'b')]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=3)
+        assert not thread.is_alive()
+    assert len(outcomes) == 2 and all(outcome.ok for outcome in outcomes)
+    assert starts[1] - starts[0] >= 0.05
+    rows = list(Store('.provider_limits', base=tmp_path).read('starts.jsonl'))
+    assert len(rows) == 2 and all(row['host'] == 'export.arxiv.org' for row in rows)
+
+
+def test_openalex_usage_is_recorded_and_zero_remaining_is_not_an_empty_search(tmp_path):
+    from claimstone.request_log import RecordingFetcher
+    from claimstone.store import Store
+
+    class Response:
+        status_code = 429
+        headers = {'Content-Type': 'application/json', 'X-RateLimit-Remaining': '0',
+                   'X-RateLimit-Credits-Used': '0'}
+        content = b'{"error":"quota"}'
+        url = 'https://api.openalex.org/works?search=x'
+
+    fetcher = net.Fetcher(obey_robots=False, pause_s=0)
+    fetcher._session = type('Session', (), {'get': staticmethod(
+        lambda *args, **kwargs: Response())})()
+    store = Store('one', base=tmp_path)
+    payload, outcome = RecordingFetcher(fetcher, store).get_json(Response.url)
+    assert payload is None
+    assert outcome.failure_class == net.RATE_LIMITED
+    assert outcome.detail == 'daily credits exhausted'
+    assert outcome.provider_usage == {'daily_remaining': '0', 'credits_used': '0'}
+    transport = next(row for row in store.read('requests.jsonl')
+                     if row['event'] == 'transport')
+    assert transport['provider_usage'] == outcome.provider_usage
+
+
+def test_openalex_meta_cost_is_kept_with_validated_response(tmp_path):
+    from claimstone.request_log import RecordingFetcher
+    from claimstone.store import Store
+
+    class Response:
+        status_code = 200
+        headers = {'Content-Type': 'application/json', 'X-RateLimit-Credits-Used': '10'}
+        content = b'{"meta":{"cost_usd":0.001,"count":42},"results":[]}'
+        url = 'https://api.openalex.org/works?search=x'
+
+    fetcher = net.Fetcher(obey_robots=False, pause_s=0)
+    fetcher._session = type('Session', (), {'get': staticmethod(
+        lambda *args, **kwargs: Response())})()
+    store = Store('one', base=tmp_path)
+    payload, outcome = RecordingFetcher(fetcher, store).get_json(Response.url)
+    assert payload['meta']['count'] == 42
+    assert outcome.provider_usage == {'credits_used': '10', 'meta_cost_usd': 0.001}
+    validated = next(row for row in store.read('requests.jsonl')
+                     if row['event'] == 'validated_response')
+    assert validated['provider_usage'] == outcome.provider_usage

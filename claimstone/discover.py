@@ -116,6 +116,18 @@ def run(
                 else:
                     completed += 1
                 returned = len(rows)
+                total_available = None
+                next_cursor = None
+                if api == 'openalex' and failure is None:
+                    payload = logged.last_json_payload
+                    meta = payload.get('meta') if isinstance(payload, dict) else None
+                    if isinstance(meta, dict):
+                        count = meta.get('count')
+                        if type(count) is int and count >= returned:
+                            total_available = count
+                        cursor = meta.get('next_cursor')
+                        if isinstance(cursor, str) and cursor:
+                            next_cursor = cursor
                 for row in rows:
                     if not row["title"] and not row["url"]:
                         continue
@@ -141,7 +153,11 @@ def run(
                     'query_id': sha256_text(f'{round_name}|{api}|{topic.id}|{term}'),
                     'discovery_version': searchers.DISCOVERY_VERSION, 'per_query': per_query,
                     'ok': failure is None, 'failure_class': failure, 'detail': detail,
-                    'returned': returned, 'completed_at': searchers._now()})
+                    'returned': returned, 'total_available': total_available,
+                    'depth_capped': (total_available > returned
+                                     if total_available is not None else None),
+                    'next_cursor': next_cursor,
+                    'completed_at': searchers._now()})
 
     return {
         "returned": seen_this_run,
