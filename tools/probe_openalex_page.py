@@ -14,7 +14,7 @@ import re
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from claimstone import net, searchers
+from claimstone import ids, net, searchers
 from claimstone.config import load_project
 from claimstone.request_log import RecordingFetcher
 from claimstone.store import Store
@@ -174,16 +174,105 @@ def run(plan_path: Path, *, execute: bool = False, store_base: str = 'store',
             transport._session.close()
 
 
+def readout(plan_path: Path, *, reference_packet: Path, store_base: str = 'store'):
+    """Recalculate page yield and reference clues from retained response bytes."""
+    plan, _, store, plan_sha, _, first_rows, parent_count, _ = prepare(
+        plan_path, store_base=store_base)
+    completed = [r for r in store.read(LEDGER)
+                 if r.get('campaign') == plan['campaign'] and
+                 r.get('plan_sha256') == plan_sha and r.get('ok')]
+    if len(completed) != 1:
+        raise ValueError('expected one completed page for this frozen plan')
+    page_row = completed[0]
+    page_sha = page_row.get('response_sha256')
+    if not isinstance(page_sha, str):
+        raise ValueError('completed page lacks raw response hash')
+    raw = store.path(f'requests/raw/{page_sha}.bin').read_bytes()
+    if sha(raw) != page_sha:
+        raise ValueError('saved second page hash mismatch')
+    second_rows = _records('openalex', raw)
+    packet_raw = reference_packet.read_bytes()
+    packet = json.loads(packet_raw)
+    cases = packet.get('cases')
+    if not isinstance(cases, list) or not cases:
+        raise ValueError('reference packet has no cases')
+    references = {}
+    for case in cases:
+        key = str(case.get('candidate_key') or '')
+        doi = ids.normalize_doi(case.get('doi'))
+        title = ids.normalize_title(case.get('title'))
+        if not key or not doi or not title or key in references:
+            raise ValueError('reference case lacks a unique DOI, title or key')
+        references[key] = (doi, title)
+
+    def compare(records):
+        exact = set()
+        title_hints = set()
+        possible_versions = set()
+        for record in records:
+            folded = ids.normalize_title(record['title'])
+            for key, (doi, title) in references.items():
+                if record['key'] == f'doi:{doi}':
+                    exact.add(key)
+                if folded == title:
+                    title_hints.add(key)
+                    if record['key'] != f'doi:{doi}':
+                        possible_versions.add((key, record['key']))
+        return exact, title_hints, possible_versions
+
+    first_exact, _, _ = compare(first_rows)
+    second_exact, second_titles, second_versions = compare(second_rows)
+    first_keys = {r['key'] for r in first_rows}
+    second_keys = {r['key'] for r in second_rows}
+    report = {
+        'campaign': plan['campaign'], 'plan_sha256': plan_sha,
+        'parent_response_sha256': plan['parent_response_sha256'],
+        'page2_response_sha256': page_sha,
+        'reference_packet_sha256': sha(packet_raw),
+        'first_page_reported_count': parent_count,
+        'second_page_reported_count': page_row.get('total_available'),
+        'page1_returned': len(first_rows), 'page2_returned': len(second_rows),
+        'exact_key_overlap': len(first_keys & second_keys),
+        'unique_keys_both_pages': len(first_keys | second_keys),
+        'reference_count': len(references),
+        'reference_exact_doi_page1': sorted(first_exact),
+        'reference_exact_doi_page2': sorted(second_exact),
+        'reference_new_exact_doi_page2': sorted(second_exact - first_exact),
+        'reference_title_hints_page2': sorted(second_titles),
+        'possible_version_pairs_page2': [
+            {'reference_key': key, 'result_key': result}
+            for key, result in sorted(second_versions)],
+        'basis': 'saved provider bytes; title equality is a clue, not a work merge',
+    }
+    data = (json.dumps(report, sort_keys=True, ensure_ascii=False, indent=2) + '\n').encode()
+    path = store.path(f'audits/research-search/variant-probe/page2-readout-{sha(data)}.json')
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if not path.exists():
+        path.write_bytes(data)
+    report['readout_path'] = str(path)
+    return report
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--plan', type=Path, required=True)
     parser.add_argument('--store-base', default='store')
     parser.add_argument('--execute', action='store_true')
+    parser.add_argument('--readout', action='store_true', help='compare saved pages offline')
+    parser.add_argument('--reference-packet', type=Path)
     args = parser.parse_args()
     load_environment(Path('.env'))
-    result = run(args.plan, execute=args.execute, store_base=args.store_base)
+    if args.execute and args.readout:
+        parser.error('--execute and --readout are mutually exclusive')
+    if args.readout and args.reference_packet is None:
+        parser.error('--readout requires --reference-packet')
+    if args.reference_packet is not None and not args.readout:
+        parser.error('--reference-packet requires --readout')
+    result = (readout(args.plan, reference_packet=args.reference_packet,
+                      store_base=args.store_base) if args.readout else
+              run(args.plan, execute=args.execute, store_base=args.store_base))
     print(json.dumps(result, ensure_ascii=False, indent=2))
-    return int(result['status'] == 'STOPPED_ON_FAILURE')
+    return int(result.get('status') == 'STOPPED_ON_FAILURE')
 
 
 if __name__ == '__main__':

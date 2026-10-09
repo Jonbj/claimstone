@@ -75,6 +75,15 @@ def test_page_probe_uses_saved_parent_and_writes_only_audit(tmp_path, monkeypatc
     assert probe_openalex_page.run(path, execute=True,
                                   store_base=str(tmp_path / 'store'), fetcher=fake)['status'] == 'COMPLETE'
     assert len(fake.calls) == 1
+    packet = tmp_path / 'packet.json'
+    packet.write_text(json.dumps({'cases': [{
+        'candidate_key': 'doi:10.1234/a100', 'doi': '10.1234/a100',
+        'title': 'Article 100'}]}))
+    readout = probe_openalex_page.readout(path, reference_packet=packet,
+                                          store_base=str(tmp_path / 'store'))
+    assert readout['reference_new_exact_doi_page2'] == ['doi:10.1234/a100']
+    assert readout['unique_keys_both_pages'] == 101
+    assert Path(readout['readout_path']).exists()
 
 
 def test_page_probe_refuses_mutated_parent_response(tmp_path, monkeypatch):

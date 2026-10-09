@@ -4619,3 +4619,19 @@ writes only audit and request evidence and refuses ambiguous started requests.
 This is preparation, not a change to the L02 production round or an automatic
 scheduler expansion. The operator must authorize that named campaign before
 it makes a request.
+
+The operator authorized the frozen page-2 campaign and it completed with one
+robots request and one OpenAlex API request (HTTP 200), exactly the two-request
+ceiling. OpenAlex reported 10 credits used and `meta.count: 1055` again. The
+second page returned 100 distinct keys, with no exact key overlap against the
+first page, giving 200 distinct keys across those two pages. Against the same
+20-case reference packet, page 2 added one exact DOI
+(`10.1108/mf-08-2022-0400`): four reference identities now appear in the
+first 200 OpenAlex results. It also returned the same title as the packet's
+`10.2139/ssrn.2692328` under a different DOI
+(`10.1016/j.jbankfin.2016.09.010`). That is another possible version pair,
+not a merge or relevance decision. The saved-byte comparison is
+`store/alembic-s4-lungo/audits/research-search/variant-probe/page2-readout-cabf123f6e96dbd62f5656324c3f400a01cad55f89d9ce3b8828373bebda211a.json`.
+No production candidate, query, acquisition or verdict row was written. The
+remaining 855 provider matches are a search-depth fact only; neither the
+provider count nor four packet identities measures literature completeness.

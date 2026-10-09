@@ -16,8 +16,13 @@ estimate. A separate, bounded OpenAlex page-2 plan is frozen at
 `store/alembic-s4-lungo/audits/research-search/variant-probe/page2-plan-2026-10-09-v1.json`
 (SHA-256 `6765e6f55fd1cc04a1e7cce6c46c749a7c62f5db5f0beb257488b76f7742ffbd`).
 It allows one API request and one robots check, estimated at 10 OpenAlex
-credits. Await the operator's per-campaign authorization before execution.
-The tool writes no production candidate or query rows.
+credits. The operator authorized it; both requests completed. Page 2 returned
+100 keys with zero exact overlap against page 1 and one additional exact DOI
+from the 20-case packet. The content-addressed readout is
+`store/alembic-s4-lungo/audits/research-search/variant-probe/page2-readout-cabf123f6e96dbd62f5656324c3f400a01cad55f89d9ce3b8828373bebda211a.json`.
+No production candidate or query row changed. A further page needs a new
+bounded campaign and operator authorization; do not treat 200/1055 provider
+results as a literature coverage rate.
 
 2026-10-09 isolated retrieval calibration (D116): the operator authorized a
 bounded L02 search-variant campaign. Three API calls plus three robots checks

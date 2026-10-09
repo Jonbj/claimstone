@@ -423,6 +423,11 @@ that needs cursor depth must start with `cursor=*` on its first page and freeze
 each returned cursor; it cannot splice a cursor into the previous basic-page
 result set. New discovery runs retain every query path in
 `query_hits.jsonl` (D116); historical rows remain unbackfilled.
+The authorized D117 second-page check returned 100 new keys without exact
+overlap with page 1 and one new exact identity from a 20-case reference packet.
+The scheduler still needs an approved, resumable page operation before it may
+perform this automatically; the pilot's isolated audit does not authorize
+future pages or add the 200 results to the frozen L02 candidate population.
 New arXiv candidate rows now retain the base ID and returned version (D114);
 explicit preprint/journal and version relationships remain pending.
 `fetch_version 7` now reserves estimated OpenAlex credits against a shared
