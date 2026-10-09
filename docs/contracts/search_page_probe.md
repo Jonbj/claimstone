@@ -24,3 +24,9 @@ retry; it needs inspection and a new named plan.
 Provider result keys and same-title matches are retrieval observations. They
 do not establish that two versions are one study or that either is eligible
 for a research question.
+
+`--readout --reference-packet PATH` replays the saved page bytes offline and
+writes a content-addressed `page2-readout-<sha256>.json` in the same audit
+directory. It compares exact candidate keys across pages and exact DOI/title
+matches against the packet, records possible version pairs, and keeps each
+packet identity unmatched until its DOI is actually recovered.
