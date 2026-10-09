@@ -93,20 +93,44 @@ def _row(
     }
 
 
+OPENALEX_SEARCH_MODES = frozenset({'search', 'search.title_abstract_keywords'})
+
+
+def openalex_query_url(term: str, *, per_page: int = 25, mode: str = 'search',
+                       page: int | None = None, cursor: str | None = None) -> str:
+    """Build one bounded Work-search URL; default bytes match discovery version 4."""
+    if mode not in OPENALEX_SEARCH_MODES or not isinstance(term, str) or not term.strip():
+        raise ValueError('unsupported OpenAlex search mode or empty term')
+    if type(per_page) is not int or not 1 <= per_page <= 100:
+        raise ValueError('OpenAlex per_page must be 1..100')
+    if page is not None and cursor is not None:
+        raise ValueError('page and cursor cannot be combined')
+    if page is not None and (type(page) is not int or page < 1 or page * per_page > 10_000):
+        raise ValueError('OpenAlex basic paging cannot exceed 10000 results')
+    if cursor is not None and (not isinstance(cursor, str) or not cursor):
+        raise ValueError('OpenAlex cursor must be a nonempty string')
+    params = {mode: term, 'per-page': per_page, 'mailto': net.contact_email(),
+              'select': 'id,doi,title,publication_year,primary_location,open_access,cited_by_count'}
+    if page is not None:
+        params['page'] = page
+    if cursor is not None:
+        params['cursor'] = cursor
+    return 'https://api.openalex.org/works?' + urllib.parse.urlencode(params)
+
+
 def search_openalex(
     fetcher: net.FetcherLike, term: str, topic_id: str, *, per_page: int = 25
 ) -> Iterator[dict[str, Any]]:
-    email = net.contact_email()
+    # Keep the frozen discovery-v4 request unchanged. The bounded URL builder
+    # above is for separately approved page/strategy probes.
     url = (
-        "https://api.openalex.org/works?"
-        + urllib.parse.urlencode(
-            {
-                "search": term,
-                "per-page": per_page,
-                "mailto": email,
-                "select": "id,doi,title,publication_year,primary_location,open_access,cited_by_count",
-            }
-        )
+        'https://api.openalex.org/works?'
+        + urllib.parse.urlencode({
+            'search': term,
+            'per-page': per_page,
+            'mailto': net.contact_email(),
+            'select': 'id,doi,title,publication_year,primary_location,open_access,cited_by_count',
+        })
     )
     payload, outcome = fetcher.get_json(url)
     for rank, work in enumerate(records(payload, outcome, ("results",)), start=1):

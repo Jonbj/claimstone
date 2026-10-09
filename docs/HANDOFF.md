@@ -9,6 +9,16 @@ what order.
 
 ## Where the work stands
 
+2026-10-09 retrieval continuation (D117): offline comparison of D116's saved
+responses against the 20-case L02 packet found three exact DOI identities and
+one same-title, different-DOI version hint. This is not a relevance or recall
+estimate. A separate, bounded OpenAlex page-2 plan is frozen at
+`store/alembic-s4-lungo/audits/research-search/variant-probe/page2-plan-2026-10-09-v1.json`
+(SHA-256 `6765e6f55fd1cc04a1e7cce6c46c749a7c62f5db5f0beb257488b76f7742ffbd`).
+It allows one API request and one robots check, estimated at 10 OpenAlex
+credits. Await the operator's per-campaign authorization before execution.
+The tool writes no production candidate or query rows.
+
 2026-10-09 isolated retrieval calibration (D116): the operator authorized a
 bounded L02 search-variant campaign. Three API calls plus three robots checks
 completed; the frozen private plan and saved-byte readout are under
