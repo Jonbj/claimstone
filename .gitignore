@@ -11,6 +11,9 @@ __pycache__/
 # live here hashed, and an installation's account list is not a repository artifact.
 .claimstone/
 
+# Local brainstorming server output (ports, PID, logs and transient HTML).
+.superpowers/
+
 # Project instances may encode a consuming system's internal design. Only the worked
 # example ships; real instances are kept out of a public repository deliberately.
 projects/*
