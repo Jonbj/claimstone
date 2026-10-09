@@ -335,10 +335,62 @@ _JOURNEY_STEP = {
     "additionalProperties": False,
 }
 
+# journey.BLOCK_STATUSES: the six blocks' statuses (a step's, plus four words of their own).
+JOURNEY_BLOCK_STATUSES = JOURNEY_STATUSES + ("idle", "advisory", "not_declared", "unavailable")
+
+_JOURNEY_BLOCK = {
+    "type": "object",
+    "required": ["key", "title", "status", "figure"],
+    "properties": {
+        "key": _STR, "title": _STR,
+        "status": {"type": "string", "enum": list(JOURNEY_BLOCK_STATUSES)},
+        "figure": _STR,
+    },
+    "additionalProperties": False,
+}
+
+_SELECTION_FIGURES = {
+    "type": ["object", "null"],
+    "required": ["inventory_count", "screened_count", "unobserved_count", "direct", "context",
+                 "not_direct", "uncertain", "identity_observations"],
+    "properties": {name: _INT for name in (
+        "inventory_count", "screened_count", "unobserved_count", "direct", "context",
+        "not_direct", "uncertain", "identity_observations")},
+    "additionalProperties": False,
+}
+
+# Advisory by construction: `advisory` is always true, nothing is ever admitted or closed here.
+_SELECTION = {
+    "type": "object",
+    "required": ["selection_version", "state", "advisory", "assessment_status", "cohort_closed",
+                 "admitted_candidates", "scopes"],
+    "properties": {
+        "selection_version": _INT,
+        "state": {"type": "string",
+                  "enum": ["DECLARED", "NO_SCOPE_DECLARED", "SCOPES_FILE_INVALID"]},
+        "advisory": {"const": True},
+        "assessment_status": {"const": "AI_PROVISIONAL"},
+        "cohort_closed": {"const": False},
+        "admitted_candidates": {"const": 0},
+        "scopes": {"type": "array", "items": {
+            "type": "object",
+            "required": ["scope_id", "question_id", "state", "figures"],
+            "properties": {
+                "scope_id": _STR, "question_id": _STR,
+                "state": {"type": "string", "enum": [
+                    "OK", "INVENTORY_UNREADABLE", "INVENTORY_DRIFTED",
+                    "SCREENING_OUTSIDE_INVENTORY", "SELECTION_LEDGER_INVALID"]},
+                "figures": _SELECTION_FIGURES,
+            },
+            "additionalProperties": False}},
+    },
+    "additionalProperties": False,
+}
+
 _JOURNEY = {
     "type": "object",
-    "required": ["journey_version", "topics", "questions", "steps", "needs_you", "running",
-                 "running_note"],
+    "required": ["journey_version", "topics", "questions", "steps", "blocks", "selection",
+                 "needs_you", "running", "running_note"],
     "properties": {
         "journey_version": _INT,
         "topics": {
@@ -354,6 +406,8 @@ _JOURNEY = {
             "additionalProperties": False,
         },
         "steps": {"type": "array", "items": _JOURNEY_STEP},
+        "blocks": {"type": "array", "items": _JOURNEY_BLOCK},
+        "selection": _SELECTION,
         "needs_you": {
             "type": "object", "required": ["required", "optional", "ready_to_sign", "note"],
             "properties": {"required": _INT_OR_NULL, "optional": _INT_OR_NULL,

@@ -4530,3 +4530,26 @@ guarantee zero paid usage if another application shares a prepaid key or
 OpenAlex changes prices before the estimate is updated. A provider-side hard
 spending cap or a dedicated key without prepaid funds is still required for
 that guarantee. No OpenAlex request was made to implement or test this change.
+
+## D116 — The flow page mirrors six blocks, and source selection becomes visible (2026-10-09)
+
+The flow page showed the journey as eight steps in one list. The operator's map of the project has six
+blocks, and two of them were invisible in the portal: the source-selection work that runs beside the
+pipeline, and the manual intake. `journey_version 2` adds `journey.blocks` (six tiles, each with a
+status and a figure decided on the server) and `journey.selection`; the page renders them as a strip of
+tiles with the selected block's detail under it, the selection in the URL as `?block=`.
+
+Source selection is advisory by construction. `claimstone/selection_view.py` reads a declared scope
+(`audits/source-selection/scopes.json`, outside `projects/` so declaring one cannot change the protocol
+digest) through `source_selection.preview()`, and always returns `advisory: true`,
+`assessment_status: AI_PROVISIONAL`, `cohort_closed: false`, `admitted_candidates: 0`. Its tile is never
+`done`. A failure is a named state with no figures. There is no separate route: the tile needs the
+figures on every poll of the overview, so a route would compute them twice.
+
+Measured, 2026-10-09, `source_selection.preview()` on `alembic-s4-lungo` (scope
+`l02-v2-ai-selection-2026-10-05`, question L02, inventory `l02-v1/inventory.json`, 830 keys, sha256
+`fa160b117a84a071e975acb0422f3a6a47a47263b7f0445e4ed455e39c05ab67`): 48 screened, 782 unobserved,
+3 direct candidates, 21 context, 18 not direct, 6 uncertain, 3 identity observations. The ledger holds
+49 rows for 48 keys: the count is of the latest row per key. These are the values the live check in the
+plan asserts. The Pipeline tile's status is a rule over steps 2-7 and its figure a count of steps; a
+percentage was refused because the steps have different bases.

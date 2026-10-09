@@ -269,6 +269,23 @@ export interface Overview {
     subject: string;
   }[];
   journey: {
+    blocks: {
+      figure: string;
+      key: string;
+      status:
+        | "done"
+        | "partial"
+        | "running"
+        | "waits_for_you"
+        | "blocked"
+        | "not_started"
+        | "not_applicable"
+        | "idle"
+        | "advisory"
+        | "not_declared"
+        | "unavailable";
+      title: string;
+    }[];
     journey_version: number;
     needs_you: {
       note: string | null;
@@ -290,6 +307,34 @@ export interface Overview {
         }[]
       | null;
     running_note: string | null;
+    selection: {
+      admitted_candidates: 0;
+      advisory: true;
+      assessment_status: "AI_PROVISIONAL";
+      cohort_closed: false;
+      scopes: {
+        figures: {
+          context: number;
+          direct: number;
+          identity_observations: number;
+          inventory_count: number;
+          not_direct: number;
+          screened_count: number;
+          uncertain: number;
+          unobserved_count: number;
+        } | null;
+        question_id: string;
+        scope_id: string;
+        state:
+          | "OK"
+          | "INVENTORY_UNREADABLE"
+          | "INVENTORY_DRIFTED"
+          | "SCREENING_OUTSIDE_INVENTORY"
+          | "SELECTION_LEDGER_INVALID";
+      }[];
+      selection_version: number;
+      state: "DECLARED" | "NO_SCOPE_DECLARED" | "SCOPES_FILE_INVALID";
+    };
     steps: {
       actor: "you" | "claimstone";
       figures: {

@@ -93,7 +93,45 @@
   }
  ],
  "journey": {
-  "journey_version": 1,
+  "blocks": [
+   {
+    "figure": "protocol not verified",
+    "key": "protocol",
+    "status": "not_applicable",
+    "title": "Protocol"
+   },
+   {
+    "figure": "1 of 6 steps done",
+    "key": "pipeline",
+    "status": "partial",
+    "title": "Pipeline"
+   },
+   {
+    "figure": "no scope for this flow",
+    "key": "selection",
+    "status": "not_declared",
+    "title": "Source selection"
+   },
+   {
+    "figure": "decisions belong to a bound flow",
+    "key": "intake",
+    "status": "not_applicable",
+    "title": "Manual intake"
+   },
+   {
+    "figure": "0 running · 0 listed",
+    "key": "execution",
+    "status": "idle",
+    "title": "Execution"
+   },
+   {
+    "figure": "0 to sign · 0 of 20 signed",
+    "key": "reading",
+    "status": "not_started",
+    "title": "Human reading"
+   }
+  ],
+  "journey_version": 2,
   "needs_you": {
    "note": "decisions belong to a bound flow",
    "optional": null,
@@ -107,6 +145,15 @@
   },
   "running": [],
   "running_note": null,
+  "selection": {
+   "admitted_candidates": 0,
+   "advisory": true,
+   "assessment_status": "AI_PROVISIONAL",
+   "cohort_closed": false,
+   "scopes": [],
+   "selection_version": 1,
+   "state": "NO_SCOPE_DECLARED"
+  },
   "steps": [
    {
     "actor": "you",

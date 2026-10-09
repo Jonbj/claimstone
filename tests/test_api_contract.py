@@ -68,6 +68,8 @@ def validate(instance, schema, where: str = "$") -> list[str]:
         if not any(_is_type(instance, name) for name in names):
             problems.append(f"{where}: expected type {schema['type']!r}, "
                             f"got {type(instance).__name__}")
+    if "const" in schema and not _enum_ok(instance, [schema["const"]]):
+        problems.append(f"{where}: {instance!r} is not the constant {schema['const']!r}")
     if "enum" in schema and not _enum_ok(instance, schema["enum"]):
         problems.append(f"{where}: {instance!r} is not in the vocabulary")
     if isinstance(instance, dict):
@@ -213,3 +215,8 @@ def test_a_signed_verdict_keeps_the_contract(workspace):
     assert validate(payload, schema) == []
     # Signed and current: nothing left to sign on this question.
     assert payload["adjudication_card"] is None
+
+
+def test_journey_block_statuses_match_the_schema():
+    from claimstone import api_schema, journey
+    assert tuple(api_schema.JOURNEY_BLOCK_STATUSES) == journey.BLOCK_STATUSES

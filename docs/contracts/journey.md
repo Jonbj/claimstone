@@ -1,12 +1,12 @@
 # `journey` — the guided research page, computed on the server
 
-`journey_version 1` (`claimstone/journey.py`, D111). A block of `GET …/flows/{id}/overview` and
+`journey_version 2` (`claimstone/journey.py`, D111, D116). A block of `GET …/flows/{id}/overview` and
 `GET …/unbound/{slug}/overview`. It is computed from the overview's own `Computed` object and inbox
 cards; the browser renders it as received.
 
 ```
 journey: { journey_version, topics[{id,label,terms}], questions{total,literature,operational},
-           steps[{n,key,title,actor,status,summary,figures}],
+           steps[{n,key,title,actor,status,summary,figures}], blocks[{key,title,status,figure}], selection{…},
            needs_you{required,optional,ready_to_sign,note}, running[...]|null, running_note }
 ```
 
@@ -60,3 +60,29 @@ Each is the one that never claims more progress than the ledgers show.
   named note.
 - `running` is `[]` for a legacy selector. A damaged operations ledger gives `running: null` and a
   `running_note`; steps then show no `running` status.
+
+## The six blocks (D116)
+
+`blocks` is the flow page's strip, in this order: `protocol`, `pipeline`, `selection`, `intake`,
+`execution`, `reading`. Each tile has a `status`, a short `figure` (a fixed template over numbers;
+unknown is "—") and the block's `title`. Statuses are the journey's, plus `idle` (the ledger reads and
+nothing is waiting), `advisory`, `not_declared` and `unavailable`.
+
+| block | status rule | figure |
+|---|---|---|
+| protocol | step 1's status; `not_applicable` for a legacy selector | `{questions_total} questions · floor {floor}`, or `protocol not verified` |
+| pipeline | from steps 2-7: `done` if all `done`; else `blocked` if any; else `running` if any; else `not_started` if all; else `partial` | `{done} of {total} steps done` (a count of steps, never a percentage) |
+| selection | `not_declared` when nothing is declared; `unavailable` (declaration unreadable, or any scope in a named error); otherwise `advisory`. **Never `done`.** | `{screened_count} seen · {unobserved_count} unseen` for one scope, `{n} scopes` for several; `no scope for this flow`, `declaration unreadable` or `{n} scope(s) unreadable` otherwise |
+| intake | `waits_for_you` if `needs_you.required` > 0; `idle` if 0; `unavailable` if null; `not_applicable` for a legacy selector | `{required} required · {optional} optional` |
+| execution | `running` if an operation is running in the strict sense above; else `idle` (also for a legacy selector, whose `running` is `[]` by contract); `unavailable` if `running` is null | `{live} running · {listed} listed` |
+| reading | step 8's status | `{ready_to_sign} to sign · {signed} of {literature_total} signed` |
+
+The Protocol tile's figure is read from the live project, so for a flow whose binding is `DRIFTED` it
+describes the drifted protocol, not the bound one (its status is `blocked`).
+
+The page opens on the first block, in this order, whose status is `waits_for_you` or `blocked`;
+otherwise on `pipeline`. The selection lives in the URL as `?block=`.
+
+`selection` carries the advisory source-selection read of `claimstone/selection_view.py`; see
+`source_selection.md`. It is present for every selector; `state` is `NO_SCOPE_DECLARED` when nothing is
+declared for the round.

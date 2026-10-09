@@ -8,7 +8,11 @@ rows; the stage-only rules (annotate, review, profiles, sign) are exercised on h
 from __future__ import annotations
 
 import copy
+import hashlib
+import json
 from types import SimpleNamespace
+
+import pytest
 
 from claimstone import flows, journey, operations, portal_state, round_state, scope
 from claimstone.round_state import Progress, StageState
@@ -74,7 +78,7 @@ def _stages(**by_name):
 def test_bound_flow_gives_eight_steps_in_order(tmp_path):
     _pd, _sd, project, store = build_workspace(tmp_path)
     block = _overview(project, store)["journey"]
-    assert block["journey_version"] == journey.JOURNEY_VERSION == 1
+    assert block["journey_version"] == journey.JOURNEY_VERSION == 2
     assert [s["key"] for s in block["steps"]] == STEP_KEYS
     assert [s["n"] for s in block["steps"]] == list(range(1, 9))
     assert [s["actor"] for s in block["steps"]] == ["you"] + ["claimstone"] * 6 + ["you"]
@@ -355,3 +359,152 @@ def test_flipping_stances_changes_no_step_before_the_profiles(tmp_path):
     for key in STEP_KEYS[:6]:
         assert one[key]["status"] == two[key]["status"], key
         assert one[key]["summary"] == two[key]["summary"], key
+
+
+# --- the six blocks ---------------------------------------------------------------------------
+
+PIPELINE_KEYS = ["search", "copies", "documents", "annotate", "review", "profiles"]
+BLOCK_KEYS = ["protocol", "pipeline", "selection", "intake", "execution", "reading"]
+
+
+def _pipeline_steps(statuses):
+    return [{"key": key, "status": status} for key, status in zip(PIPELINE_KEYS, statuses)]
+
+
+def test_the_overview_carries_six_blocks_in_order(tmp_path):
+    _pd, _sd, project, store = build_workspace(tmp_path)
+    block = _overview(project, store)["journey"]
+    assert [b["key"] for b in block["blocks"]] == BLOCK_KEYS
+    for tile in block["blocks"]:
+        assert tile["status"] in journey.BLOCK_STATUSES
+        assert isinstance(tile["title"], str) and isinstance(tile["figure"], str)
+    assert block["selection"]["state"] == "NO_SCOPE_DECLARED"
+
+
+@pytest.mark.parametrize("statuses,expected", [
+    (["done"] * 6, "done"),
+    (["done", "done", "blocked", "done", "done", "done"], "blocked"),
+    (["done", "partial", "running", "not_started", "not_started", "not_started"], "running"),
+    (["not_started"] * 6, "not_started"),
+    (["done"] + ["not_started"] * 5, "partial"),
+    (["partial"] + ["not_started"] * 5, "partial"),
+    (["blocked", "running"] + ["not_started"] * 4, "blocked"),
+    (["done", "running", "blocked", "done", "not_started", "partial"], "blocked"),
+])
+def test_pipeline_tile_status_rule(statuses, expected):
+    assert journey._pipeline_block(_pipeline_steps(statuses))["status"] == expected
+
+
+def test_pipeline_tile_figure_counts_steps_not_percent():
+    tile = journey._pipeline_block(_pipeline_steps(["done"] * 2 + ["partial"] + ["not_started"] * 3))
+    assert tile["figure"] == "2 of 6 steps done"
+
+
+def test_selection_tile_is_never_done_and_names_every_state():
+    def sel(state, scopes=()):
+        return {"state": state, "scopes": list(scopes)}
+
+    def ok(screened=48, unobserved=782):
+        return {"scope_id": "s", "question_id": "Q", "state": "OK",
+                "figures": {"screened_count": screened, "unobserved_count": unobserved}}
+
+    bad = {"scope_id": "s", "question_id": "Q", "state": "INVENTORY_DRIFTED", "figures": None}
+    assert journey._selection_block(sel("NO_SCOPE_DECLARED"))["status"] == "not_declared"
+    assert journey._selection_block(sel("SCOPES_FILE_INVALID"))["status"] == "unavailable"
+    assert journey._selection_block(sel("DECLARED", [bad]))["status"] == "unavailable"
+    tile = journey._selection_block(sel("DECLARED", [ok()]))
+    assert tile["status"] == "advisory" and tile["figure"] == "48 seen · 782 unseen"
+    # Even with nothing left unobserved the block stays advisory: this surface closes no cohort.
+    assert journey._selection_block(sel("DECLARED", [ok(830, 0)]))["status"] == "advisory"
+    assert journey._selection_block(sel("DECLARED", [ok(), ok()]))["figure"] == "2 scopes"
+
+
+def test_intake_tile_rules():
+    waiting = journey._intake_block({"x": 1}, {"required": 2, "optional": 1})
+    assert waiting["status"] == "waits_for_you" and waiting["figure"] == "2 required · 1 optional"
+    assert journey._intake_block({"x": 1}, {"required": 0, "optional": 3})["status"] == "idle"
+    unreadable = journey._intake_block({"x": 1}, {"required": None, "optional": None})
+    assert unreadable["status"] == "unavailable" and unreadable["figure"] == "— required · — optional"
+    assert journey._intake_block(None, {"required": None, "optional": None})["status"] == "not_applicable"
+
+
+def test_execution_tile_rules():
+    assert journey._execution_block(None)["status"] == "unavailable"
+    idle = journey._execution_block([])
+    assert idle["status"] == "idle" and idle["figure"] == "0 running · 0 listed"
+    authorized = [{"stage": "extract-drain", "state": "AUTHORIZED"}]
+    assert journey._execution_block(authorized)["status"] == "idle"
+    live = [{"stage": "extract-drain", "state": "RUNNING_OR_LOCK_HELD"}, authorized[0]]
+    tile = journey._execution_block(live)
+    assert tile["status"] == "running" and tile["figure"] == "1 running · 2 listed"
+
+
+def test_a_legacy_selector_has_a_protocol_tile_that_says_it_is_not_verified(tmp_path):
+    _pd, _sd, project, store = build_workspace(tmp_path)
+    tiles = {b["key"]: b for b in _overview(project, store, "r2")["journey"]["blocks"]}
+    assert tiles["protocol"]["status"] == "not_applicable"
+    assert tiles["protocol"]["figure"] == "protocol not verified"
+    assert tiles["intake"]["status"] == "not_applicable"
+
+
+def test_selection_is_carried_in_the_overview_and_the_read_writes_nothing(tmp_path):
+    _pd, _sd, project, store = build_workspace(tmp_path)
+    base = store.path("audits/source-selection")
+    (base / "inv").mkdir(parents=True)
+    data = json.dumps([{"candidate_key": key} for key in ("x", "y", "z")]).encode()
+    (base / "inv" / "inventory.json").write_bytes(data)
+    (base / "scopes.json").write_text(json.dumps({"scopes": [{
+        "scope_id": "s1", "question_id": "Q1", "round": "r1",
+        "inventory_path": "inv/inventory.json",
+        "inventory_sha256": hashlib.sha256(data).hexdigest()}]}))
+    audits = store.path("audits")
+    before = {p: p.read_bytes() for p in audits.rglob("*") if p.is_file()}
+    block = _overview(project, store)["journey"]
+    assert block["selection"]["state"] == "DECLARED"
+    assert block["selection"]["scopes"][0]["figures"]["unobserved_count"] == 3
+    tile = {b["key"]: b for b in block["blocks"]}["selection"]
+    assert tile["status"] == "advisory" and tile["figure"] == "0 seen · 3 unseen"
+    assert {p: p.read_bytes() for p in audits.rglob("*") if p.is_file()} == before
+    assert not store.path("source_screening.jsonl").exists()
+
+
+def test_reading_tile_rules():
+    def sign(status, **figures):
+        return [{"key": "sign", "status": status, "figures": figures}]
+
+    none = journey._reading_block(sign("not_applicable"))
+    assert none["status"] == "not_applicable" and none["figure"] == "no literature question"
+    waiting = journey._reading_block(sign("waits_for_you", ready_to_sign=3, signed=1,
+                                          literature_total=5))
+    assert waiting["status"] == "waits_for_you" and waiting["figure"] == "3 to sign · 1 of 5 signed"
+
+
+def test_protocol_tile_of_a_bound_flow_mirrors_the_overview_steps(tmp_path):
+    _pd, _sd, project, store = build_workspace(tmp_path)
+    block = _overview(project, store)["journey"]
+    steps = {step["key"]: step for step in block["steps"]}
+    tile = {b["key"]: b for b in block["blocks"]}["protocol"]
+    floor = steps["copies"]["figures"]["floor"]
+    floor_text = "—" if floor is None else f"{floor:.2f}"
+    assert tile["status"] == steps["protocol"]["status"]
+    assert tile["figure"] == f"{steps['protocol']['figures']['questions_total']} questions · floor {floor_text}"
+
+
+def test_protocol_tile_with_an_unknown_floor_shows_a_dash():
+    steps = [{"key": "protocol", "status": "done", "figures": {"questions_total": 4}},
+             {"key": "copies", "status": "not_started", "figures": {"floor": None}}]
+    assert journey._protocol_block(steps)["figure"] == "4 questions · floor —"
+
+
+def test_selection_tile_with_one_unreadable_scope_is_unavailable():
+    ok = {"scope_id": "a", "question_id": "Q", "state": "OK",
+          "figures": {"screened_count": 1, "unobserved_count": 2}}
+    bad = {"scope_id": "b", "question_id": "Q", "state": "INVENTORY_DRIFTED", "figures": None}
+    tile = journey._selection_block({"state": "DECLARED", "scopes": [ok, bad]})
+    assert tile["status"] == "unavailable" and tile["figure"] == "1 scope(s) unreadable"
+
+
+def test_execution_tile_lists_an_unknown_stage_but_does_not_count_it_running():
+    assert "bogus" not in journey.OPERATION_STAGE
+    tile = journey._execution_block([{"stage": "bogus", "state": "RUNNING_OR_LOCK_HELD"}])
+    assert tile["status"] == "idle" and tile["figure"] == "0 running · 1 listed"

@@ -210,3 +210,31 @@ clarifies the required output shape but has no measured result. A separate twent
 plan under `l02-v2/heldout-metadata-v1-plan.json` excludes development-case titles. The
 `build_screening_reference_packet.py` output has no labels; only a person independent of the
 model run can supply the reference. Missing abstracts stay `metadata_only`, not `EXCLUDE`.
+
+## Scope declaration for the portal (D116)
+
+`store/<project>/audits/source-selection/scopes.json` declares which screening scopes the portal shows
+for which round. It lives under `store/`, not `projects/`: the observations are advisory, so declaring
+one must not change the protocol digest and turn every bound flow `DRIFTED`.
+
+```json
+{"scopes": [{"scope_id": "…", "question_id": "L02", "round": "…",
+             "inventory_path": "l02-v1/inventory.json", "inventory_sha256": "…"}]}
+```
+
+`inventory_path` is relative to `audits/source-selection/`; a path that leaves that directory, or that
+contains a NUL byte, is `INVENTORY_UNREADABLE`. An inventory that is empty, is not a list, or has rows
+without `candidate_key` is also `INVENTORY_UNREADABLE`. `round` only routes the scope to a flow's page;
+it feeds no computation and does not claim the inventory was drawn from that round.
+
+`claimstone/selection_view.py` reads it with `source_selection.preview()` and returns, in the overview's
+`journey.selection`, per scope: `inventory_count`, `screened_count`, `unobserved_count`, `direct`,
+`context`, `not_direct`, `uncertain`, `identity_observations`, counted from the latest row per key, so
+superseded rows are not counted twice. Always present: `advisory: true`,
+`assessment_status: "AI_PROVISIONAL"`, `cohort_closed: false`, `admitted_candidates: 0`.
+
+A failure is a named state with `figures: null`, never a zero: `NO_SCOPE_DECLARED`,
+`SCOPES_FILE_INVALID` (whole declaration), and per scope `INVENTORY_UNREADABLE`, `INVENTORY_DRIFTED`
+(the inventory's sha256 differs from the declared one), `SCREENING_OUTSIDE_INVENTORY`
+(a screened work is not in the declared inventory), `SELECTION_LEDGER_INVALID` (a corrupt or malformed screening or
+identity ledger, an identity row outside the inventory, or an OSError reading a ledger). The read writes nothing.

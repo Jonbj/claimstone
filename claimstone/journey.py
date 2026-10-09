@@ -19,14 +19,21 @@ from __future__ import annotations
 
 from typing import Any, Iterable, Mapping
 
-from claimstone import admissibility, decisions, operations_view
+from claimstone import admissibility, decisions, operations_view, selection_view
 from claimstone.config import Project
 from claimstone.store import LedgerCorrupt, Store
 
-JOURNEY_VERSION = 1
+JOURNEY_VERSION = 2
 
 STATUSES = ("done", "partial", "running", "waits_for_you", "blocked", "not_started",
             "not_applicable")
+
+# The six blocks of the flow page. A block's status is a step's status where one block is one step,
+# and one of four more words where it is not: `idle` (the ledger reads and nothing is waiting),
+# `advisory` (source selection: figures exist, nothing is admitted), `not_declared` and
+# `unavailable` (a named failure; never a zero).
+BLOCK_STATUSES = STATUSES + ("idle", "advisory", "not_declared", "unavailable")
+PIPELINE_STEP_KEYS = ("search", "copies", "documents", "annotate", "review", "profiles")
 
 # The scheduler stage a running operation belongs to, as the journey names it. `extract-build`
 # and `extract-drain` are the spec's; the build/harvest variants of the same lanes map to the
@@ -79,13 +86,17 @@ def _is_literature(row: Any) -> bool:
     return row.kind != "operational"
 
 
-def _running_stages(running: list[dict[str, Any]] | None) -> set[str]:
-    """Stages with work actually in flight. An authorized operation no worker has started, and an
-    interrupted one, stay listed in `running` with their state, but they do not make a step say
+def _in_flight(running: list[dict[str, Any]] | None) -> list[dict[str, Any]]:
+    """Operations with work actually in flight. An authorized operation no worker has started, and
+    an interrupted one, stay listed in `running` with their state, but they do not make a step say
     Claimstone is working: that would be a claim no recorded event supports (D107, review of J1)."""
-    return {OPERATION_STAGE[item["stage"]] for item in running or []
+    return [item for item in running or []
             if item.get("stage") in OPERATION_STAGE
-            and item.get("state") == "RUNNING_OR_LOCK_HELD"}
+            and item.get("state") == "RUNNING_OR_LOCK_HELD"]
+
+
+def _running_stages(running: list[dict[str, Any]] | None) -> set[str]:
+    return {OPERATION_STAGE[item["stage"]] for item in _in_flight(running)}
 
 
 def _stage(rs: Any, name: str) -> Any:
@@ -292,6 +303,97 @@ def _sign(rs: Any, ready_to_sign: int) -> dict[str, Any]:
     return _step(8, "sign", "Read and sign", "you", status, text, figures)
 
 
+# --- the six blocks ---------------------------------------------------------------------------
+
+
+def _block(key: str, title: str, status: str, template: str,
+           figures: Mapping[str, Any]) -> dict[str, Any]:
+    assert status in BLOCK_STATUSES, status
+    return {"key": key, "title": title, "status": status,
+            "figure": sentence(template, figures)}
+
+
+def _protocol_block(steps: list[dict[str, Any]]) -> dict[str, Any]:
+    protocol = steps[0]
+    if protocol["status"] == "not_applicable":
+        return _block("protocol", "Protocol", "not_applicable", "protocol not verified", {})
+    copies = next(step for step in steps if step["key"] == "copies")
+    figures = {"questions_total": protocol["figures"]["questions_total"],
+               "floor": copies["figures"]["floor"]}
+    return _block("protocol", "Protocol", protocol["status"],
+                  "{questions_total} questions · floor {floor}", figures)
+
+
+def _pipeline_block(steps: list[dict[str, Any]]) -> dict[str, Any]:
+    """From steps 2-7. A count of steps, never a percentage: the steps have different bases."""
+    middle = [step for step in steps if step["key"] in PIPELINE_STEP_KEYS]
+    seen = {step["status"] for step in middle}
+    if seen == {"done"}:
+        status = "done"
+    elif "blocked" in seen:
+        status = "blocked"
+    elif "running" in seen:
+        status = "running"
+    elif seen == {"not_started"}:
+        status = "not_started"
+    else:
+        status = "partial"  # some work exists and some is missing
+    figures = {"done": sum(1 for step in middle if step["status"] == "done"),
+               "total": len(middle)}
+    return _block("pipeline", "Pipeline", status, "{done} of {total} steps done", figures)
+
+
+def _selection_block(selection: Mapping[str, Any]) -> dict[str, Any]:
+    """Never `done`: this surface does not close a cohort."""
+    state, scopes = selection["state"], selection["scopes"]
+    if state == selection_view.NO_SCOPE_DECLARED:
+        return _block("selection", "Source selection", "not_declared",
+                      "no scope for this flow", {})
+    if state == selection_view.SCOPES_FILE_INVALID:
+        return _block("selection", "Source selection", "unavailable",
+                      "declaration unreadable", {})
+    if any(scope["state"] != selection_view.OK for scope in scopes):
+        return _block("selection", "Source selection", "unavailable",
+                      "{n} scope(s) unreadable",
+                      {"n": sum(1 for scope in scopes if scope["state"] != selection_view.OK)})
+    if len(scopes) == 1:
+        return _block("selection", "Source selection", "advisory",
+                      "{screened_count} seen · {unobserved_count} unseen", scopes[0]["figures"])
+    return _block("selection", "Source selection", "advisory", "{n} scopes", {"n": len(scopes)})
+
+
+def _intake_block(flow_row: dict[str, Any] | None, needs: Mapping[str, Any]) -> dict[str, Any]:
+    if flow_row is None:
+        return _block("intake", "Manual intake", "not_applicable",
+                      "decisions belong to a bound flow", {})
+    template = "{required} required · {optional} optional"
+    if needs["required"] is None:
+        status = "unavailable"
+    elif needs["required"] > 0:
+        status = "waits_for_you"
+    else:
+        status = "idle"
+    return _block("intake", "Manual intake", status, template, needs)
+
+
+def _execution_block(running: list[dict[str, Any]] | None) -> dict[str, Any]:
+    if running is None:
+        return _block("execution", "Execution", "unavailable", "operations unreadable", {})
+    live = len(_in_flight(running))
+    return _block("execution", "Execution", "running" if live else "idle",
+                  "{live} running · {listed} listed", {"live": live, "listed": len(running)})
+
+
+def _reading_block(steps: list[dict[str, Any]]) -> dict[str, Any]:
+    sign = steps[-1]
+    if sign["status"] == "not_applicable":
+        return _block("reading", "Human reading", "not_applicable",
+                      "no literature question", {})
+    return _block("reading", "Human reading", sign["status"],
+                  "{ready_to_sign} to sign · {signed} of {literature_total} signed",
+                  sign["figures"])
+
+
 # --- the two small reads ---------------------------------------------------------------------
 
 
@@ -341,21 +443,33 @@ def build(project: Project, store: Store, selector: Any, flow_row: dict[str, Any
     rs, admitted = computed.rs, computed.admitted
     refused = next((str(row["unavailable"]) for row in (computed.verdicts or {}).get("rows") or []
                     if row.get("unavailable")), "")
+    steps = [
+        _protocol(project, flow_row, binding),
+        _search(rs, admitted, active),
+        _copies(rs, admitted, active),
+        _documents(rs, admitted, active),
+        _annotate(rs, active),
+        _review(rs, active),
+        _profiles(rs, active, refused),
+        _sign(rs, ready),
+    ]
+    needs = needs_you(store, selector, flow_row, ready)
+    selection = selection_view.read(store, selector)
     return {
         "journey_version": JOURNEY_VERSION,
         "topics": topics_block(project),
         "questions": questions_block(project),
-        "steps": [
-            _protocol(project, flow_row, binding),
-            _search(rs, admitted, active),
-            _copies(rs, admitted, active),
-            _documents(rs, admitted, active),
-            _annotate(rs, active),
-            _review(rs, active),
-            _profiles(rs, active, refused),
-            _sign(rs, ready),
+        "steps": steps,
+        "blocks": [
+            _protocol_block(steps),
+            _pipeline_block(steps),
+            _selection_block(selection),
+            _intake_block(flow_row, needs),
+            _execution_block(running),
+            _reading_block(steps),
         ],
-        "needs_you": needs_you(store, selector, flow_row, ready),
+        "selection": selection,
+        "needs_you": needs,
         "running": running,
         "running_note": running_note,
     }
