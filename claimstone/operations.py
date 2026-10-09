@@ -774,11 +774,14 @@ def tick(project: Project, store: Store, *, max_operations: int = 1,
 
 def drive_local(project: Project, store: Store, flow_id: str, *,
                 extract_model: str, review_model: str,
-                max_local_calls: int) -> dict[str, Any]:
+                max_local_calls: int,
+                authorization_identity: dict[str, Any] | None = None,
+                authorization_label: str | None = None) -> dict[str, Any]:
     """One user-authorized pass through scoped local stages, stopping at human/network gates.
 
-    The CLI invocation is the operator's bounded local-work instruction. Each
-    generated plan still receives its own append-only authorization event.
+    The CLI invocation or a standing local mandate is the operator's bounded
+    instruction. Each generated plan still receives its own append-only
+    authorization event.
     No scholarly URL or paid backend is contacted here.
     """
     if (not extract_model or not review_model or extract_model == review_model or
@@ -811,9 +814,10 @@ def drive_local(project: Project, store: Store, flow_id: str, *,
     review_batch = f'{flow_id[:16]}-review'
 
     def run_stage(stage: str, **kwargs: Any) -> dict[str, Any]:
-        frozen = plan(project, store, flow_id, stage, **kwargs)
+        frozen = plan(project, store, flow_id, stage,
+                      run_label=authorization_label, **kwargs)
         operation_id = _digest(frozen)
-        authorize(store, operation_id)
+        authorize(store, operation_id, identity=authorization_identity)
         result = execute(project, store, operation_id)
         steps.append({'stage': stage, 'operation_id': operation_id, 'result': result})
         return result

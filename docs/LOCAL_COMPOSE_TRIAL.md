@@ -12,6 +12,26 @@ or authorize discovery, acquisition, model calls, purchases or verdicts.
 ./trial.sh down     # stop the worker; leave portal and GROBID running
 ```
 
+An optional local coordinator can revisit one bound flow after an operator
+records a mandate. Replace the project, flow, model names and ID with values
+from that flow; keep the returned `mandate_id` for the second command:
+
+```bash
+./claimstone.sh scheduler auto-enable projects/PROJECT FLOW_ID \
+  --extract-model EXTRACT_MODEL --review-model REVIEW_MODEL \
+  --max-total-local-calls 20
+CLAIMSTONE_AUTO_PROJECT=projects/PROJECT CLAIMSTONE_AUTO_MANDATE=MANDATE_ID \
+  docker compose --profile autopilot up -d --build auto-worker
+```
+
+`auto-worker` repeats local passes within that one lifetime call cap and
+executes only external operations independently authorized for the flow. It
+does not start a new network campaign. Use `scheduler auto-status` to inspect
+the remaining allowance and `scheduler auto-disable` to stop future passes.
+The service can be stopped with `docker compose --profile autopilot stop
+auto-worker`. Disabling the mandate stops its work; the idle service stays up
+until stopped explicitly, so Docker's restart policy does not relaunch it.
+
 Open <http://127.0.0.1:8788/>. The read-only API is proxied under `/api/v1/`;
 `/api/v1/meta` and `/api/v1/projects` are useful smoke checks. The current L02
 flow is bound to round `s4-l02-repository-copies-2026-10-06-v2`. Its scheduler

@@ -84,6 +84,13 @@ is still read-only, and no new live network campaign was started as part of
 this development. See [the scheduler contract](docs/contracts/scheduler_operations.md)
 for current limits.
 
+For one flow, `scheduler auto-enable PROJECT FLOW_ID --extract-model MODEL_A
+--review-model MODEL_B --max-total-local-calls N` records a bounded local-work
+mandate. `scheduler auto-worker PROJECT MANDATE_ID` revisits that flow after new
+data arrives; `auto-status`, `auto-once` and `auto-disable` inspect, run one pass
+and stop it. The total local-call allowance survives worker restarts. Network
+operations still need separate exact-plan authorization.
+
 All six stages are implemented and one round has run end to end on literature deposited in PubMed
 Central: 37 of 40 sources confirmed against a floor of 0.80, 1,721 accepted annotations and 271 rejections.
 

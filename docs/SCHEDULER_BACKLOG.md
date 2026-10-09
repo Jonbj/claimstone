@@ -337,8 +337,19 @@ authorized hosts and per-unit request ceilings. Batch planning and approval
 allow a worker to process several such units unattended. It cannot yet run
 full open-access acquisition cascades or automatically plan paid lanes. The
 operator-invoked `scheduler drive` chains the scoped local stages under a
-total call cap and stops at network/floor/human gates. The
-following duties still need executable units:
+total call cap and stops at network/floor/human gates.
+
+The 2026-10-09 local mandate slice adds `scheduler auto-enable`, `auto-once`,
+`auto-worker`, `auto-status` and `auto-disable`. One approval covers recurring
+scoped local passes with a cumulative model-call ceiling that survives
+restarts. It executes only independently authorized external plans; it neither
+schedules a new search/copy request nor renews its own allowance. The next
+coordinator work is an operator-approved, versioned recurring network policy
+with per-run and lifetime limits, safe search-page/copy planning, incremental
+source selection and an end-of-run dossier. The local mandate authorizes no
+periodic network campaign.
+
+The following duties still need executable units:
 
 - Bounded discovery and acquisition plans must freeze exact work identities,
   allowed hosts, robots/redirect ceilings and retry campaigns. Reconcile

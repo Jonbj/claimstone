@@ -24,6 +24,19 @@ calls. It records each local plan and authorization. It stops at any network
 work lacking approval, the floor or human-reading boundary. It is not a standing daemon
 policy and cannot reset a persistent paid budget by restarting a worker.
 
+`scheduler auto-enable` records a separate, flow-bound **local** mandate in
+`local_mandates.jsonl`: two different local model names, the current protocol
+and code hashes, the authorizing OS operator and a cumulative call ceiling.
+`auto-once` runs the same scoped local chain and may execute network operations
+that were independently authorized before that pass. `auto-worker` polls it;
+`auto-disable` revokes subsequent passes. Every local drain authorization
+names the mandate, and its entire frozen call list counts against the ceiling
+before transport, including failed or interrupted calls. Restarting the
+worker does not restore that allowance. A changed protocol or Python package
+refuses execution until the operator issues a new mandate. This mandate never
+authorizes a new discovery/acquisition request, a paid model call, source
+admission, purchase or verdict. Use `auto-status` to inspect remaining calls.
+
 The scheduler executes a bounded plan for one existing flow. It does not create a
 scientific verdict, close a source-selection cohort from provisional AI labels,
 or infer that a previously refused host is now available. The live project and
