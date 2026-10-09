@@ -348,6 +348,9 @@ coordinator work is an operator-approved, versioned recurring network policy
 with per-run and lifetime limits, safe search-page/copy planning, incremental
 source selection and an end-of-run dossier. The local mandate authorizes no
 periodic network campaign.
+Batch planning now scans past already settled query/candidate identities before
+applying its actionable-unit cap (D119), so repeated plans can reach later
+terms. It still does not generate cursor pages or approve a new sweep.
 
 The following duties still need executable units:
 

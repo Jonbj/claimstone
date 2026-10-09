@@ -4625,3 +4625,16 @@ network or paid plan is authorized by this mandate; existing independently
 authorized external operations may execute, and a new campaign still needs
 its own authorization. This is the local coordinator slice, not recurring
 search or automatic scientific admission.
+
+## D119 — Batch planning scans past settled work before applying its unit cap (2026-10-09)
+
+The first batch planner sliced the ordered topic/term list to `max_units`
+before checking whether those identities could be planned. Repeated calls
+therefore inspected the same completed queries and could never reach a later
+term. The planner now scans in the same frozen order, records skipped prior
+successes or ineligible candidates, and stops only after finding the requested
+number of actionable plans or exhausting the list. A test seeds two completed
+queries and verifies that a two-unit batch selects the next two rather than
+returning an empty batch. It makes no request and does not authorize those
+plans. Search-depth pagination and recurring network authorization are still
+separate work.

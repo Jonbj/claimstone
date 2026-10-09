@@ -37,6 +37,13 @@ refuses execution until the operator issues a new mandate. This mandate never
 authorizes a new discovery/acquisition request, a paid model call, source
 admission, purchase or verdict. Use `auto-status` to inspect remaining calls.
 
+`batch-plan` scans requested query or candidate identities in frozen order
+until it has up to `max_units` actionable plans. `selected` counts examined
+identities, including prior successes or ineligible candidates listed in
+`skipped`; `remaining_unplanned` counts identities not yet examined. This lets
+another batch advance beyond already completed work without changing the
+query identity or silently retrying it.
+
 The scheduler executes a bounded plan for one existing flow. It does not create a
 scientific verdict, close a source-selection cohort from provisional AI labels,
 or infer that a previously refused host is now available. The live project and

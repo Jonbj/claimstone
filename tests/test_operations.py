@@ -524,6 +524,31 @@ def test_batch_plan_and_one_operator_authorization_freeze_total_ceiling(tmp_path
                for op in batch['operation_ids'])
 
 
+def test_batch_plan_advances_past_completed_queries(tmp_path):
+    from claimstone.store import sha256_text
+
+    root = tmp_path / 'example-news-and-returns'
+    shutil.copytree('projects/example-news-and-returns', root)
+    project = load_project(root)
+    store = Store(project.name, base=tmp_path / 'store')
+    flow, _ = flows.create(project, store, selector=Selector('new'), title='new')
+    first_two = [(topic.id, term) for topic in project.topics
+                 for term in topic.terms][:2]
+    for topic_id, term in first_two:
+        store.append('queries.jsonl', {
+            'query_id': sha256_text(f'new|openalex|{topic_id}|{term}'),
+            'round': 'new', 'source_api': 'openalex', 'topic_id': topic_id,
+            'query': term, 'campaign': 'previous', 'ok': True, 'returned': 0})
+    batch = operations.plan_batch(project, store, flow['flow_id'], 'discover',
+                                  apis=['openalex'], allowed_hosts=['api.openalex.org'],
+                                  max_units=2, max_requests_each=3, per_query=5)
+    assert len(batch['operation_ids']) == 2
+    assert batch['selected'] == 4
+    assert len(batch['skipped']) == 2
+    assert all((unit['subject']['topic_id'], unit['subject']['term']) not in first_two
+               for unit in batch['units'])
+
+
 def test_later_query_plan_survives_candidates_found_by_earlier_query(tmp_path, monkeypatch):
     from claimstone import discover
 

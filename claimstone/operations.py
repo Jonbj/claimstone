@@ -453,11 +453,14 @@ def plan_batch(project: Project, store: Store, flow_id: str, stage: str, *,
         else:
             for key in sorted(scoped_candidates):
                 requested.append({'candidate_key': key})
-        selected = requested[:max_units]
         planned: list[str] = []
         units: list[dict[str, Any]] = []
         skipped: list[dict[str, str]] = []
-        for item in selected:
+        examined = 0
+        for item in requested:
+            if len(planned) >= max_units:
+                break
+            examined += 1
             try:
                 one = plan(project, store, flow_id, stage,
                            allowed_hosts=allowed_hosts,
@@ -484,7 +487,7 @@ def plan_batch(project: Project, store: Store, flow_id: str, stage: str, *,
         batch = {'batch_version': OPERATIONS_VERSION, 'project': project.name,
                  'flow_id': flow_id, 'stage': stage, 'operation_ids': planned,
                  'units': units,
-                 'selected': len(selected), 'remaining_unplanned': len(requested) - len(selected),
+                 'selected': examined, 'remaining_unplanned': len(requested) - examined,
                  'skipped': skipped,
                  'max_total_requests': len(planned) * max_requests_each}
         batch_id = _digest(batch)
