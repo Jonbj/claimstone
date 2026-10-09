@@ -52,6 +52,7 @@ write to — several fields exist to prevent a specific defect and look optional
 | [`contracts/reviews.md`](contracts/reviews.md) | a second reader's verdict on one claim |
 | [`contracts/model_calls.md`](contracts/model_calls.md) | the file boundary every model-using stage crosses |
 | [`contracts/flows.md`](contracts/flows.md) | a round selector bound to the protocol digests it ran under |
+| [`contracts/local_mandates.md`](contracts/local_mandates.md) | bounded recurring local work for one flow |
 | [`contracts/exports.md`](contracts/exports.md) | a verifiable snapshot of one flow, and how it is checked |
 
 ## The stage designs

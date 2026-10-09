@@ -978,7 +978,7 @@ def _scheduler_preview(args: argparse.Namespace) -> int:
 
 def _scheduler_operation(args: argparse.Namespace) -> int:
     import json
-    from claimstone import operations
+    from claimstone import autopilot, operations
     from claimstone.store import LedgerCorrupt
 
     project, store = _flow_open(args)
@@ -1024,6 +1024,39 @@ def _scheduler_operation(args: argparse.Namespace) -> int:
                                             extract_model=args.extract_model,
                                             review_model=args.review_model,
                                             max_local_calls=args.max_local_calls)
+        elif args.scheduler_command == 'auto-enable':
+            result = autopilot.enable(project, store, args.flow_id,
+                                      extract_model=args.extract_model,
+                                      review_model=args.review_model,
+                                      max_total_local_calls=args.max_total_local_calls)
+        elif args.scheduler_command == 'auto-disable':
+            result = autopilot.disable(store, args.mandate_id)
+        elif args.scheduler_command == 'auto-status':
+            result = autopilot.status(store, args.mandate_id)
+        elif args.scheduler_command == 'auto-once':
+            result = autopilot.tick(project, store, args.mandate_id)
+        elif args.scheduler_command == 'auto-worker':
+            import signal
+            import threading
+            if args.poll_seconds < 1:
+                raise operations.OperationError('--poll-seconds must be at least 1')
+            print('local mandate worker running; Ctrl-C stops after the current pass',
+                  file=sys.stderr)
+            stopping = threading.Event()
+            previous_sigterm = signal.signal(signal.SIGTERM,
+                                             lambda signum, frame: stopping.set())
+            try:
+                while not stopping.is_set():
+                    result = autopilot.tick(load_project(args.project), store,
+                                            args.mandate_id)
+                    if result.get('local_calls') or result.get('network', {}).get('processed'):
+                        print(json.dumps(result, ensure_ascii=False), flush=True)
+                    stopping.wait(args.poll_seconds)
+            except KeyboardInterrupt:
+                pass
+            finally:
+                signal.signal(signal.SIGTERM, previous_sigterm)
+            return 0
         elif args.scheduler_command == 'authorize':
             result = operations.authorize(store, args.operation_id)
         elif args.scheduler_command == 'run':
@@ -1544,6 +1577,23 @@ def build_parser() -> argparse.ArgumentParser:
     scheduler_drive.add_argument('--review-model', required=True)
     scheduler_drive.add_argument('--max-local-calls', type=int, required=True)
     scheduler_drive.set_defaults(func=_scheduler_operation)
+    scheduler_auto_enable = scheduler_sub.add_parser(
+        'auto-enable', help='authorize bounded recurring local work for one flow')
+    scheduler_auto_enable.add_argument('project')
+    scheduler_auto_enable.add_argument('flow_id')
+    scheduler_auto_enable.add_argument('--store', default='store')
+    scheduler_auto_enable.add_argument('--extract-model', required=True)
+    scheduler_auto_enable.add_argument('--review-model', required=True)
+    scheduler_auto_enable.add_argument('--max-total-local-calls', type=int, required=True)
+    scheduler_auto_enable.set_defaults(func=_scheduler_operation)
+    for action in ('auto-disable', 'auto-status', 'auto-once', 'auto-worker'):
+        command = scheduler_sub.add_parser(action)
+        command.add_argument('project')
+        command.add_argument('mandate_id')
+        command.add_argument('--store', default='store')
+        if action == 'auto-worker':
+            command.add_argument('--poll-seconds', type=int, default=30)
+        command.set_defaults(func=_scheduler_operation)
     for action in ('authorize', 'run', 'status'):
         command = scheduler_sub.add_parser(action)
         command.add_argument('project')

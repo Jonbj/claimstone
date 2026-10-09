@@ -4635,3 +4635,20 @@ not a merge or relevance decision. The saved-byte comparison is
 No production candidate, query, acquisition or verdict row was written. The
 remaining 855 provider matches are a search-depth fact only; neither the
 provider count nor four packet identities measures literature completeness.
+
+## D118 — A standing local mandate advances one flow under a lifetime call cap (2026-10-09)
+
+`scheduler drive` previously required a fresh CLI invocation for each pass.
+The operator asked for a flow that resumes local work and later updates itself
+without assembling stage commands. A durable local mandate now records the
+bound flow, protocol/code hashes, two distinct local model names, authorizing
+OS identity and a cumulative maximum number of model calls. `auto-once` and
+`auto-worker` invoke the existing scoped drive under that mandate. Each drain
+operation's entire frozen call list counts at authorization, before a model
+call begins. A worker restart or an interrupted/failed call cannot replenish
+the allowance. The focused tests exercise empty-flow waiting, one-call
+execution and restart accounting, disabling and code-change refusal. No new
+network or paid plan is authorized by this mandate; existing independently
+authorized external operations may execute, and a new campaign still needs
+its own authorization. This is the local coordinator slice, not recurring
+search or automatic scientific admission.

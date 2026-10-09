@@ -9,6 +9,16 @@ what order.
 
 ## Where the work stands
 
+2026-10-09 standing local coordinator (D118): a flow may receive one
+`scheduler auto-enable` mandate with two distinct local models and a lifetime
+call cap. `auto-worker` revisits the flow, executes already authorized external
+operations, and advances local normalize/extract/review/profile work; each
+model call is reserved before execution and the cap survives restarts.
+`auto-disable` stops later passes. This does not authorize a recurring network
+campaign, paid model calls, source admission or a verdict. Recurring search,
+copy planning and a completed dossier still need implementation and an
+operator-approved policy. No mandate was issued for a real flow in this work.
+
 2026-10-09 retrieval continuation (D117): offline comparison of D116's saved
 responses against the 20-case L02 packet found three exact DOI identities and
 one same-title, different-DOI version hint. This is not a relevance or recall
