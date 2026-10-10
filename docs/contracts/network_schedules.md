@@ -31,8 +31,18 @@ run `claimstone scheduler schedule-authorize PROJECT SCHEDULE_ID`. Use
 work. The operator must explicitly approve the concrete schedule; a local
 mandate or a generic request to run automatically is not an approval.
 
-This first slice schedules already frozen batches. It cannot preapprove
-unknown candidates, invent new search terms, renew a protocol or create a
-future round. A new round still needs separately frozen scope and an
-authorization appropriate to its actual queries. Scientific admission,
-purchase and verdicts remain human decisions.
+`periodic-plan` can create finite future rounds and freeze their exact query
+batches before constructing this same schedule. Its input lists new round
+names, titles and ordered nonoverlapping windows; all topic-term/API queries
+must fit the per-round unit cap. Repeating the same plan is idempotent while
+the rounds have no candidates. It does not authorize the schedule.
+`periodic-audit` reports per-round query outcomes, ancestor admission and
+whole-store admission, without writing a judgement. These commands cannot preapprove
+unknown candidates, invent search terms or renew a protocol. Acquisition,
+purchase and verdicts keep their existing gates.
+
+Discovery plans hash the complete frozen population ledger. Planning creates
+all dated flows before the batches so its own later rounds do not invalidate
+earlier inputs. A later, unrelated population write or a code/protocol change
+can still invalidate a pending operation; inspect and replan under fresh
+authorization rather than executing stale work.

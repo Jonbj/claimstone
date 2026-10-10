@@ -4710,3 +4710,28 @@ active window. Tests verify a future batch makes zero requests, direct run
 refuses it, approval and revocation are idempotent, and an incorrect lifetime
 ceiling is refused. This does not authorize unknown future candidates or
 create a new research round. No real network campaign was scheduled here.
+
+## D124 — Dated update rounds preserve the per-round and cumulative gates (2026-10-10)
+
+The finite schedule in D123 could run only batches for flows already created
+manually. `scheduler periodic-plan` now takes 1–32 future, ordered,
+nonoverlapping UTC windows. It freezes a new flow per window, linked to the
+previous flow, then plans every protocol topic-term/API query for each round.
+All flows are created before the discovery operations so their frozen
+`populations.jsonl` input digest remains stable. A too-small unit cap, reused
+candidate round, conflicting flow binding, invalid window or missing query
+refuses the plan. Repeating the same incomplete plan reuses content identities.
+No network operation is authorized by planning.
+
+`periodic-audit` reads query outcomes and acquisition admission for each new
+round, its ancestor flow chain and the entire corpus. It does not count an empty update as an acquired
+corpus or call a query complete merely because an operation stopped; a query
+must have an `ok` result. The readiness flag requires successful queries,
+current bindings, completed operations, any nonempty lineage round above its floor,
+and a final whole-corpus floor. It is only a gate for evidence review and never
+a verdict. A source first found in an older round stays there, so whole-corpus
+admission is the cumulative denominator. Question-level cumulative profiles,
+unknown-candidate copy authorization and a final dossier remain separate work.
+Offline tests cover the plan's idempotence, future-window withholding, no
+request writes, preflight refusal and cumulative candidate count. No real
+network campaign ran for this decision.

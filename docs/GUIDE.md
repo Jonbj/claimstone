@@ -56,6 +56,20 @@ The same invocation first runs any network units for that flow that were
 already authorized when it started; it never expands their host lists or
 ceilings.
 
+To prepare a finite series of dated update rounds offline, write a JSON array
+such as `[ {"round":"update-2026-11", "title":"November update",
+"not_before":"2026-11-01T00:00:00Z", "expires_at":"2026-11-02T00:00:00Z"} ]`.
+Then use `scheduler periodic-plan PROJECT SOURCE_FLOW_ID --rounds-file FILE
+--api crossref --allow-host api.crossref.org --max-units-each N
+--max-requests-each N`. The per-round unit cap must fit *all* topic terms for
+the selected APIs. This creates new flow bindings and exact discovery batches,
+but makes no request. Inspect the returned schedule ID and its batches, then
+authorize that finite schedule with `scheduler schedule-authorize PROJECT ID`.
+`scheduler periodic-audit PROJECT ID` reports each round's query outcomes and
+acquisition floor, ancestor flow admission and whole-corpus admission. It never issues a verdict. A
+new candidate still needs a separately authorized acquisition plan; scheduling
+discovery does not preapprove unknown future copies.
+
 What each stage does, what it writes, and what the numbers mean. *In italiano: [GUIDE.it.md](GUIDE.it.md).*
 
 Worked against the round that closed on 2026-09-28 — `pmc-screen-time`, 40 sources — so every figure here is

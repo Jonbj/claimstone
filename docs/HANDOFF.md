@@ -9,14 +9,22 @@ what order.
 
 ## Where the work stands
 
+2026-10-10 dated update rounds (D124): `scheduler periodic-plan` prepares
+1–32 new, linked flows and their complete discovery batches in nonoverlapping
+UTC windows, then returns a finite schedule for separate operator approval.
+`periodic-audit` reads successful query outcomes, each round's admission and
+whole-corpus admission; it never produces a verdict. This development made
+no real-project schedule or network request. Unknown future candidate copies,
+cumulative question profiles and an end-of-run dossier remain unfinished.
+
 2026-10-10 finite network schedule (D123): existing frozen discovery or
 acquisition batches may be placed in exact UTC windows under one summed
 physical-request ceiling and approved once by the operator. `schedule-plan`
 is offline; `schedule-authorize` records the approval, and `schedule-revoke`
 stops later starts. Direct execution and polling both enforce the window.
 This change created no schedule for a real project and made no network
-request. Unknown future candidates, new search rounds and scientific
-decisions still cannot be preapproved by this schedule.
+request. Unknown future candidates and scientific decisions still cannot be
+preapproved by this schedule.
 
 2026-10-10 coordinator proposals (D121): version 2 local mandates may include
 exact discovery APIs/hosts, copy hosts and per-batch caps. `auto-worker`
