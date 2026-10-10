@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import ErrorState from "@/components/ErrorState";
 import Pending from "@/components/Pending";
@@ -39,6 +39,9 @@ function Drafts() {
   const list = useApi(() => control.newDrafts(), []);
   const [error, setError] = useState<Error | null>(null);
   const [busy, setBusy] = useState(false);
+  const [asking, setAsking] = useState<string | null>(null); // the draft whose Discard awaits an answer
+  const [discarding, setDiscarding] = useState<string[]>([]); // drafts with a discard in flight
+  const inFlight = useRef(new Set<string>()); // synchronous guard: state lags behind a fast double click
 
   async function start() {
     if (busy) return;
@@ -55,12 +58,19 @@ function Drafts() {
   }
 
   async function discard(draft: DraftSummary) {
+    if (inFlight.current.has(draft.draft_id)) return;
+    inFlight.current.add(draft.draft_id);
+    setDiscarding((held) => [...held, draft.draft_id]);
     setError(null);
     try {
       await control.newDiscard(draft.draft_id, draft.revision);
       list.reload();
     } catch (cause) {
       setError(cause instanceof Error ? cause : new Error(String(cause)));
+    } finally {
+      inFlight.current.delete(draft.draft_id);
+      setDiscarding((held) => held.filter((id) => id !== draft.draft_id));
+      setAsking(null);
     }
   }
 
@@ -103,9 +113,31 @@ function Drafts() {
                       <Link className="underline" to={`/new/${encodeURIComponent(draft.draft_id)}/${nextStep(draft)}`}>
                         {t("wizard.drafts.resume")}
                       </Link>
-                      <button type="button" className="underline" onClick={() => void discard(draft)}>
-                        {t("wizard.drafts.discard")}
-                      </button>
+                      {asking === draft.draft_id ? (
+                        <span className="flex items-center gap-2">
+                          <span>{t("wizard.drafts.discardSure")}</span>
+                          <button
+                            type="button"
+                            className="underline"
+                            disabled={discarding.includes(draft.draft_id)}
+                            onClick={() => void discard(draft)}
+                          >
+                            {t("wizard.drafts.discardYes")}
+                          </button>
+                          <button
+                            type="button"
+                            className="underline"
+                            disabled={discarding.includes(draft.draft_id)}
+                            onClick={() => setAsking(null)}
+                          >
+                            {t("wizard.drafts.discardNo")}
+                          </button>
+                        </span>
+                      ) : (
+                        <button type="button" className="underline" onClick={() => setAsking(draft.draft_id)}>
+                          {t("wizard.drafts.discard")}
+                        </button>
+                      )}
                     </>
                   ) : null}
                   {draft.status === "created" && draft.project ? (

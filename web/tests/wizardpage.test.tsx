@@ -16,6 +16,8 @@ let draftBody: Record<string, unknown>;
 let stepUnauthorized = false;
 let stepStale = false;
 let draftReadFails = false;
+let discardStatus = 200;
+let discardBodies: unknown[] = [];
 let created = false;
 const baseDraft = {
   draft_id: "d1", revision: 1, status: "open", steps: {}, advanced: {}, figures: {}, project: null,
@@ -42,6 +44,11 @@ function mount(path: string) {
       { draft_id: "d1", status: "open", revision: 3, steps_saved: [1, 2], project_name: "news-tone", project: null, updated_at: "t" },
       { draft_id: "d2", status: "created", revision: 9, steps_saved: [1, 2, 3], project_name: "done-one", project: "done-one", updated_at: "t" },
     ] });
+    if (url === "/control/v1/new/d1/discard") {
+      discardBodies.push(JSON.parse(String(init.body)));
+      return discardStatus === 200 ? json(200, { revision: 4, status: "discarded" })
+        : json(409, { error: { code: "STALE_REVISION", message: "saved from revision 3" } });
+    }
     if (url === "/control/v1/new/d1" && draftReadFails) return json(500, { error: { code: "INTERNAL", message: "boom" } });
     if (url === "/control/v1/new/d1/create") {
       created = true;
@@ -84,6 +91,8 @@ beforeEach(() => {
   stepUnauthorized = false;
   stepStale = false;
   draftReadFails = false;
+  discardStatus = 200;
+  discardBodies = [];
   created = false;
   draftBody = { ...baseDraft };
 });
@@ -104,6 +113,37 @@ describe("NewProjectsPage", () => {
     mount("/new");
     fireEvent.click(await screen.findByRole("button", { name: "Start a new project" }));
     await waitFor(() => expect(where).toBe("/new/d9/1"));
+  });
+
+  it("Discard asks first, sends the draft's revision once, and refreshes the list", async () => {
+    mount("/new");
+    fireEvent.click(await screen.findByRole("button", { name: "Discard" }));
+    expect(discardBodies).toHaveLength(0);
+    expect(screen.getByText("Discard this draft?")).toBeTruthy();
+    const yes = screen.getByRole("button", { name: "Yes, discard" });
+    fireEvent.click(yes);
+    fireEvent.click(yes); // a second click while the first is in flight sends nothing
+    await waitFor(() => expect(discardBodies).toHaveLength(1));
+    expect(discardBodies[0]).toEqual({ base_revision: 3 });
+    await waitFor(() => expect(requested.filter((r) => r === "GET /control/v1/new").length).toBe(2));
+    expect(discardBodies).toHaveLength(1);
+  });
+
+  it("answering No sends nothing and brings the Discard button back", async () => {
+    mount("/new");
+    fireEvent.click(await screen.findByRole("button", { name: "Discard" }));
+    fireEvent.click(screen.getByRole("button", { name: "No, keep it" }));
+    expect(screen.getByRole("button", { name: "Discard" })).toBeTruthy();
+    expect(discardBodies).toHaveLength(0);
+  });
+
+  it("a refused discard shows the server's error", async () => {
+    discardStatus = 409;
+    mount("/new");
+    fireEvent.click(await screen.findByRole("button", { name: "Discard" }));
+    fireEvent.click(screen.getByRole("button", { name: "Yes, discard" }));
+    expect(await screen.findByText("saved from revision 3")).toBeTruthy();
+    expect(screen.getByText("news-tone")).toBeTruthy();
   });
 
   it("signed out it offers the sign-in link and shows no draft", async () => {
