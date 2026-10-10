@@ -228,3 +228,22 @@ def test_a_step_save_racing_create_is_serialized(ws, monkeypatch):
         assert current["steps"][2]["data"] == other
     else:
         assert results["save"].code == "DRAFT_CLOSED" and current["steps"][2]["data"] != other
+
+
+def test_a_leftover_store_directory_blocks_the_name_at_step_1(ws):
+    (ws["store"] / "news-tone").mkdir(parents=True)
+    draft = _call(svc.start, ws)[0]["draft_id"]
+    error = _refused(svc.save_step, ws, draft, 1, 1, STEP1)
+    assert error.status == 422 and error.details[0]["path"] == "name"
+    assert "stored data" in error.details[0]["message"]
+
+
+def test_create_refuses_a_name_with_leftover_store_data_and_creates_nothing(ws):
+    draft, _ = _fill(ws)
+    shown = _shown(ws, draft)
+    (ws["store"] / "news-tone").mkdir(parents=True)
+    error = _refused(svc.create, ws, draft, True, shown)
+    assert (error.status, error.code) == (409, "NAME_TAKEN")
+    assert not (ws["projects"] / "news-tone").exists()
+    current = _call(svc.read, ws, draft)[0]
+    assert current["status"] == "open" and current["last_failure"]

@@ -117,6 +117,8 @@ def save_step(projects_dir, store_dir, actor, code_revision, draft_id, step, bas
         normalized = pb.normalize_step(step, data, _templates_dir(projects_dir))
         if step == 1 and (pathlib.Path(projects_dir) / normalized["name"]).exists():
             raise pb.DraftInvalid([pb.Problem("name", "a project with this name already exists")])
+        if step == 1 and (pathlib.Path(store_dir) / normalized["name"]).exists():
+            raise pb.DraftInvalid([pb.Problem("name", "a project with this name already has stored data")])
         row = wd.save_step(store, actor=actor, draft_id=draft_id, step=step,
                            base_revision=base_revision, data=normalized, code_revision=code_revision)
     return {"revision": row["revision"], "data": normalized,
@@ -184,6 +186,11 @@ def create(projects_dir, store_dir, actor, code_revision, draft_id, confirm, sho
             raise ServiceError(409, "PREVIEW_CHANGED",
                                "the project changed since you reviewed it; review it again before creating")
         name = state[1]["name"]
+        if (pathlib.Path(store_dir) / name).exists():
+            reason = f"a project named {name} already has stored data"
+            wd.mark_failed(store, actor=actor, draft_id=draft_id, reason=reason,
+                           code_revision=code_revision)
+            raise ServiceError(409, "NAME_TAKEN", reason)
         try:
             made = pb.create_project(projects_dir, name, files,
                                      expected_protocol_sha256=info["protocol_sha256"], lock_store=store)
