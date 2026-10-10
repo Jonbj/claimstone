@@ -112,11 +112,13 @@ def read(projects_dir, store_dir, actor, code_revision, draft_id):
 def save_step(projects_dir, store_dir, actor, code_revision, draft_id, step, base_revision, data):
     if step not in (1, 2, 3):
         raise ServiceError(404, "NOT_FOUND", "no such step")
-    normalized = pb.normalize_step(step, data, _templates_dir(projects_dir))
-    if step == 1 and (pathlib.Path(projects_dir) / normalized["name"]).exists():
-        raise pb.DraftInvalid([pb.Problem("name", "a project with this name already exists")])
-    row = wd.save_step(_store(store_dir), actor=actor, draft_id=draft_id, step=step,
-                       base_revision=base_revision, data=normalized, code_revision=code_revision)
+    store = _store(store_dir)
+    with store.writer_lock():
+        normalized = pb.normalize_step(step, data, _templates_dir(projects_dir))
+        if step == 1 and (pathlib.Path(projects_dir) / normalized["name"]).exists():
+            raise pb.DraftInvalid([pb.Problem("name", "a project with this name already exists")])
+        row = wd.save_step(store, actor=actor, draft_id=draft_id, step=step,
+                           base_revision=base_revision, data=normalized, code_revision=code_revision)
     return {"revision": row["revision"], "data": normalized,
             "figures": _step_figures(step, normalized)}, 200
 
@@ -138,12 +140,13 @@ def _files_and_info(projects_dir, current: dict[str, Any]):
 @_guard
 def save_advanced(projects_dir, store_dir, actor, code_revision, draft_id, base_revision, files):
     store = _store(store_dir)
-    current = wd.state(store, draft_id, actor)
-    candidate = {**current, "advanced": files}
-    if files:
-        _files_and_info(projects_dir, candidate)  # raises DraftInvalid when it would not load
-    row = wd.save_advanced(store, actor=actor, draft_id=draft_id, base_revision=base_revision,
-                           files=files, code_revision=code_revision)
+    with store.writer_lock():
+        current = wd.state(store, draft_id, actor)
+        candidate = {**current, "advanced": files}
+        if files:
+            _files_and_info(projects_dir, candidate)  # raises DraftInvalid when it would not load
+        row = wd.save_advanced(store, actor=actor, draft_id=draft_id, base_revision=base_revision,
+                               files=files, code_revision=code_revision)
     return {"revision": row["revision"]}, 200
 
 
@@ -172,22 +175,23 @@ def create(projects_dir, store_dir, actor, code_revision, draft_id, confirm, sho
     if confirm is not True:
         raise ServiceError(422, "VALIDATION", "confirm must be the literal true")
     store = _store(store_dir)
-    current = wd.state(store, draft_id, actor)
-    if current["status"] != "open":
-        raise ServiceError(409, "DRAFT_CLOSED", f"this draft is {current['status']}")
-    state, files, info = _files_and_info(projects_dir, current)
-    if shown_sha256 != info["protocol_sha256"]:
-        raise ServiceError(409, "PREVIEW_CHANGED",
-                           "the project changed since you reviewed it; review it again before creating")
-    name = state[1]["name"]
-    try:
-        made = pb.create_project(projects_dir, name, files,
-                                 expected_protocol_sha256=info["protocol_sha256"], lock_store=store)
-    except (pb.DraftInvalid, pb.ProjectExists, pb.RoundTripMismatch) as exc:
-        wd.mark_failed(store, actor=actor, draft_id=draft_id, reason=str(exc) or type(exc).__name__,
-                       code_revision=code_revision)
-        raise
-    wd.mark_created(store, actor=actor, draft_id=draft_id, project=name, files=made["files"],
-                    code_revision=code_revision)
-    return {"project": name, "protocol_sha256": made["protocol_sha256"], "files": made["files"],
-            "frozen": {"registry_version": 1, "frozen_at": _today(), "floor_version": 1}}, 201
+    with store.writer_lock():
+        current = wd.state(store, draft_id, actor)
+        if current["status"] != "open":
+            raise ServiceError(409, "DRAFT_CLOSED", f"this draft is {current['status']}")
+        state, files, info = _files_and_info(projects_dir, current)
+        if shown_sha256 != info["protocol_sha256"]:
+            raise ServiceError(409, "PREVIEW_CHANGED",
+                               "the project changed since you reviewed it; review it again before creating")
+        name = state[1]["name"]
+        try:
+            made = pb.create_project(projects_dir, name, files,
+                                     expected_protocol_sha256=info["protocol_sha256"], lock_store=store)
+        except (pb.DraftInvalid, pb.ProjectExists, pb.RoundTripMismatch) as exc:
+            wd.mark_failed(store, actor=actor, draft_id=draft_id, reason=str(exc) or type(exc).__name__,
+                           code_revision=code_revision)
+            raise
+        wd.mark_created(store, actor=actor, draft_id=draft_id, project=name, files=made["files"],
+                        code_revision=code_revision)
+        return {"project": name, "protocol_sha256": made["protocol_sha256"], "files": made["files"],
+                "frozen": {"registry_version": 1, "frozen_at": _today(), "floor_version": 1}}, 201

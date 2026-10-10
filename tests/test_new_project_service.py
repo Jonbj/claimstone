@@ -148,3 +148,83 @@ def test_templates_are_listed_and_read(ws):
     assert [c["id"] for c in one["classes"]][:2] == ["ACA", "WP"]
     assert any(p["id"] == "health" for p in one["notation_presets"])
     assert _refused(svc.template, ws, "nope").status == 404
+
+
+# --- create / save / discard are serialized under the draft store's writer lock ---------------------
+
+import threading
+import time
+
+from claimstone import project_builder as pb
+from claimstone import wizard_drafts as wd
+
+
+def _slow_inspect(monkeypatch):
+    """Make `create` park inside inspect until released; returns (entered, release)."""
+    entered, release = threading.Event(), threading.Event()
+    real = pb.inspect
+
+    def slow(*args, **kwargs):
+        out = real(*args, **kwargs)
+        if not release.is_set():
+            entered.set()
+            release.wait(10)
+        return out
+
+    monkeypatch.setattr(pb, "inspect", slow)
+    return entered, release
+
+
+def _in_thread(fn, results, key):
+    def run():
+        try:
+            results[key] = fn()
+        except svc.ServiceError as exc:
+            results[key] = exc
+    thread = threading.Thread(target=run)
+    thread.start()
+    return thread
+
+
+def test_a_discard_during_create_never_leaves_a_project_and_a_discarded_draft(ws, monkeypatch):
+    draft, rev = _fill(ws)
+    shown = _shown(ws, draft)
+    entered, release = _slow_inspect(monkeypatch)
+    results = {}
+    creator = _in_thread(lambda: _call(svc.create, ws, draft, True, shown), results, "create")
+    assert entered.wait(10)
+    discarder = _in_thread(lambda: _call(svc.discard, ws, draft, rev), results, "discard")
+    time.sleep(0.5)
+    release.set()
+    creator.join(10)
+    discarder.join(10)
+    status = wd.state(wd.open_store(ws["store"]), draft, "op1")["status"]
+    exists = (ws["projects"] / "news-tone").exists()
+    assert (exists, status) in {(True, "created"), (False, "discarded")}, (exists, status, results)
+
+
+def test_a_step_save_racing_create_is_serialized(ws, monkeypatch):
+    draft, rev = _fill(ws)
+    shown = _shown(ws, draft)
+    entered, release = _slow_inspect(monkeypatch)
+    results = {}
+    creator = _in_thread(lambda: _call(svc.create, ws, draft, True, shown), results, "create")
+    assert entered.wait(10)
+    other = {"questions": [{"text": "A different question?", "kind": "effect"}]}
+    saver = _in_thread(lambda: _call(svc.save_step, ws, draft, 2, rev, other), results, "save")
+    time.sleep(0.5)
+    release.set()
+    creator.join(10)
+    saver.join(10)
+    store = wd.open_store(ws["store"])
+    current = wd.state(store, draft, "op1")
+    created_row = [r for r in store.read(wd.LEDGER) if r["event"] == "created"][0]
+    for name, recorded in created_row["data"].items():
+        assert pb.sha256_text((ws["projects"] / "news-tone" / name).read_text("utf-8")) == recorded, name
+    saved = isinstance(results["save"], tuple)
+    questions = (ws["projects"] / "news-tone" / "questions.yaml").read_text("utf-8")
+    assert saved == ("A different question?" in questions)
+    if saved:
+        assert current["steps"][2]["data"] == other
+    else:
+        assert results["save"].code == "DRAFT_CLOSED" and current["steps"][2]["data"] != other
