@@ -979,7 +979,7 @@ def _scheduler_preview(args: argparse.Namespace) -> int:
 def _scheduler_operation(args: argparse.Namespace) -> int:
     import json
     import pathlib
-    from claimstone import autopilot, network_schedule, operations, periodic
+    from claimstone import autopilot, copy_policy, network_schedule, operations, periodic
     from claimstone.store import LedgerCorrupt
 
     project, store = _flow_open(args)
@@ -1033,6 +1033,20 @@ def _scheduler_operation(args: argparse.Namespace) -> int:
                                    per_query=args.per_query)
         elif args.scheduler_command == 'periodic-audit':
             result = periodic.audit(project, store, args.schedule_id)
+        elif args.scheduler_command == 'copy-policy-plan':
+            result = copy_policy.plan(project, store, args.schedule_id,
+                                      allowed_hosts=args.allow_host,
+                                      source_classes=args.source_class,
+                                      max_candidates=args.max_candidates,
+                                      max_requests_each=args.max_requests_each,
+                                      not_before=args.not_before,
+                                      expires_at=args.expires_at)
+        elif args.scheduler_command == 'copy-policy-authorize':
+            result = copy_policy.authorize(store, args.policy_id)
+        elif args.scheduler_command == 'copy-policy-revoke':
+            result = copy_policy.revoke(store, args.policy_id)
+        elif args.scheduler_command == 'copy-policy-status':
+            result = copy_policy.status(store, args.policy_id)
         elif args.scheduler_command == 'schedule-authorize':
             result = network_schedule.authorize(store, args.schedule_id)
         elif args.scheduler_command == 'schedule-revoke':
@@ -1621,6 +1635,24 @@ def build_parser() -> argparse.ArgumentParser:
     scheduler_periodic_audit.add_argument('schedule_id')
     scheduler_periodic_audit.add_argument('--store', default='store')
     scheduler_periodic_audit.set_defaults(func=_scheduler_operation)
+    scheduler_copy_policy_plan = scheduler_sub.add_parser(
+        'copy-policy-plan', help='freeze a finite copy allowance for unknown scheduled discoveries')
+    scheduler_copy_policy_plan.add_argument('project')
+    scheduler_copy_policy_plan.add_argument('schedule_id')
+    scheduler_copy_policy_plan.add_argument('--allow-host', action='append', required=True)
+    scheduler_copy_policy_plan.add_argument('--source-class', action='append', required=True)
+    scheduler_copy_policy_plan.add_argument('--max-candidates', type=int, required=True)
+    scheduler_copy_policy_plan.add_argument('--max-requests-each', type=int, required=True)
+    scheduler_copy_policy_plan.add_argument('--not-before', required=True)
+    scheduler_copy_policy_plan.add_argument('--expires-at', required=True)
+    scheduler_copy_policy_plan.add_argument('--store', default='store')
+    scheduler_copy_policy_plan.set_defaults(func=_scheduler_operation)
+    for action in ('copy-policy-authorize', 'copy-policy-revoke', 'copy-policy-status'):
+        command = scheduler_sub.add_parser(action)
+        command.add_argument('project')
+        command.add_argument('policy_id')
+        command.add_argument('--store', default='store')
+        command.set_defaults(func=_scheduler_operation)
     for action in ('schedule-authorize', 'schedule-revoke', 'schedule-status'):
         command = scheduler_sub.add_parser(action)
         command.add_argument('project')

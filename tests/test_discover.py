@@ -76,7 +76,8 @@ def test_every_query_hit_survives_candidate_deduplication_and_rerun(tmp_path):
     hits = list(store.read('query_hits.jsonl'))
     assert len(list(store.read('candidates.jsonl'))) == 1
     assert len(hits) == 2 * len(terms)
-    assert {r['query_hit_version'] for r in hits} == {1}
+    assert {r['query_hit_version'] for r in hits} == {2}
+    assert all('url' in row and 'source_class' in row for row in hits)
     assert {(r['source_api'], r['query']) for r in hits} == {
         (api, term) for api in ('openalex', 'crossref') for term in terms}
     assert len({r['candidate_key'] for r in hits}) == 1

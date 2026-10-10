@@ -9,6 +9,14 @@ what order.
 
 ## Where the work stands
 
+2026-10-10 finite future-copy policy (D125): after an operator approves a
+discovery schedule, a separately approved policy can let the worker acquire
+later candidates with matching version 2 query hits under exact HTTPS hosts,
+classes, dates and lifetime request/candidate caps. It is revocable and made
+no real request in development. The policy excludes unknown hosts, possible
+duplicates and manually changed candidate identity. Portal controls for this
+policy, cumulative question profiles and the final dossier remain pending.
+
 2026-10-10 dated update rounds (D124): `scheduler periodic-plan` prepares
 1–32 new, linked flows and their complete discovery batches in nonoverlapping
 UTC windows, then returns a finite schedule for separate operator approval.

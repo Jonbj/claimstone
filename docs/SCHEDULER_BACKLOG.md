@@ -355,11 +355,13 @@ mandate names exact search/copy proposal limits. It reports pending batch IDs
 but leaves them unapproved. D123 adds a finite, revocable, operator-approved
 network schedule for batches already frozen, with exact UTC windows and a
 summed lifetime physical-request ceiling. Remaining for periodic autonomous
-research: safe cursor depth, controlled copy resolution, cumulative evidence
+research: safe cursor depth, broader legal-copy resolution, cumulative evidence
 profiles and a concise end-of-run dossier. D124 prepares finite dated update
 rounds and audits each round plus whole-corpus admission; it does not yet merge
 question-level evidence into a new cumulative profile. The schedule cannot
-approve candidates that are not yet known.
+approve candidates that are not yet known. D125 adds a separate finite policy
+for later candidates with matching scheduled query hits, exact approved HTTPS
+hosts/classes and lifetime caps; other locations still need a new campaign.
 
 The following duties still need executable units:
 

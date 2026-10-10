@@ -439,4 +439,11 @@ authorize that finite schedule with `scheduler schedule-authorize PROJECT ID`.
 `scheduler periodic-audit PROJECT ID` reports each round's query outcomes and
 acquisition floor, ancestor flow admission and whole-corpus admission. It never issues a verdict. A
 new candidate still needs a separately authorized acquisition plan; scheduling
-discovery does not preapprove unknown future copies.
+discovery does not preapprove unknown future copies. For a bounded allowance
+covering later copies, use `scheduler copy-policy-plan PROJECT SCHEDULE_ID
+--allow-host HOST --source-class CLASS --max-candidates N
+--max-requests-each N --not-before UTC --expires-at UTC`, inspect the policy,
+then run `copy-policy-authorize PROJECT POLICY_ID`. The worker prepares exact
+candidate acquisitions when matching scheduled search hits arrive.
+`copy-policy-status` shows permanent reservations; `copy-policy-revoke` stops
+future starts. Unknown hosts and classes remain outside the allowance.

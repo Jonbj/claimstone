@@ -21,6 +21,10 @@ A finite advance approval can instead bind already frozen batches to exact
 UTC windows and a summed lifetime request ceiling. See
 [`network_schedules.md`](network_schedules.md). The operator approves that
 concrete list once; due-time and revocation are checked at execution.
+For copies whose candidate URL is learned only after a scheduled query, a
+separate finite, revocable [copy policy](copy_policies.md) can delegate bounded
+acquisition on exact hosts and source classes. Its candidate reservations are
+permanent, and it never overrides the normal acquisition gates.
 
 `scheduler drive` is a single operator-invoked pass. It first runs only the
 flow's external operations already authorized at invocation, then chains the

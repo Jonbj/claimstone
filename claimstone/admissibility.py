@@ -159,7 +159,12 @@ def rate(
             continue
         name = str((row or {}).get("failure_class") or "NOT_ATTEMPTED")
         failures[name] = failures.get(name, 0) + 1
-        host = net.host_of(str((row or candidate).get("url") or ""))
+        try:
+            host = net.host_of(str((row or candidate).get("url") or ""))
+        except ValueError:
+            # The host breakdown is descriptive. A malformed candidate URL
+            # still belongs in the acquisition denominator and failures.
+            host = ""
         if host:
             hosts[host] = hosts.get(host, 0) + 1
     for bucket in by_class.values():

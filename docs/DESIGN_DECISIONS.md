@@ -4735,3 +4735,39 @@ unknown-candidate copy authorization and a final dossier remain separate work.
 Offline tests cover the plan's idempotence, future-window withholding, no
 request writes, preflight refusal and cumulative candidate count. No real
 network campaign ran for this decision.
+
+## D125 — Finite copy permission for candidates discovered later (2026-10-10)
+
+D123/D124 can authorize known search queries in advance, but the candidate
+URLs are not known until those queries return. A new copy policy binds one
+authorized discovery schedule and a finite UTC window, exact HTTPS hosts and
+declared source classes, a maximum number of candidates, and a physical
+request ceiling per candidate. The policy is separately planned, authorized
+and revocable. Its lifetime reservations count every authorized candidate,
+including failed and interrupted acquisitions. The regular executor still
+enforces robots, redirects, global-address checks, host budgets, content
+classification and terminal retry rules. Resolver APIs are disabled for this
+delegation; another host requires a new campaign.
+
+To avoid treating a later manual edit as a scheduled discovery, query-hit
+instrument `query_hit_version 2` records the candidate URL and classified
+source class along with the existing title and DOI. Automatic copy permission
+requires those fields to match the current candidate, a completed discovery
+operation in the approved schedule, its successful query outcome, and an
+in-population hit. Version 1 hits cannot confer this permission. The worker
+plans and authorizes one exact acquisition operation under the project writer
+lock, recording the policy ID with the operator's original approval identity.
+The operation must begin while both policy and discovery schedule remain
+authorized and the policy window is open. Revocation stops later starts.
+Offline tests exercise a wrong query campaign, unauthorized schedule, host
+exclusion, repeated worker passes, lifetime reservations and revocation,
+without making a request. This is contingent network permission, not source
+admission, purchase or a scientific verdict. No real campaign ran.
+
+The malformed-URL fixture exposed a prior read failure: host parsing raised
+on an unmatched IPv6 bracket while admission was only trying to group failed
+candidates by host. Admission now retains that candidate in the denominator
+and leaves its host ungrouped. The same fixture lets the worker continue to a different valid candidate without a request to the
+malformed address. The ordinary batch planner also converts malformed
+candidate URLs into a skipped unit, so a later valid candidate remains
+reachable under its unit cap. The fetcher and its version are unchanged.

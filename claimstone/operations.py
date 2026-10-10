@@ -279,8 +279,11 @@ def plan(project: Project, store: Store, flow_id: str, stage: str, *,
             if selected_candidate is None or not selected_candidate.get('source_class'):
                 raise OperationError('candidate is absent, outside the flow or unclassified')
             target = str(selected_candidate.get('url') or '')
-            parsed_target = urllib.parse.urlsplit(target)
-            direct_host = net.host_of(target)
+            try:
+                parsed_target = urllib.parse.urlsplit(target)
+                direct_host = net.host_of(target)
+            except ValueError as exc:
+                raise OperationError('candidate URL is malformed') from exc
             hosts = _exact_hosts(allowed_hosts)
             if (parsed_target.scheme not in {'https', 'http'} or
                     parsed_target.username is not None or parsed_target.password is not None or
@@ -551,6 +554,11 @@ def execute(project: Project, store: Store, operation_id: str,
             from claimstone import network_schedule
             if not network_schedule.due(store, schedule_id, operation_id):
                 raise OperationError('scheduled authorization is not currently active')
+        copy_policy_id = (rows[1].get('identity') or {}).get('copy_policy_id')
+        if copy_policy_id:
+            from claimstone import copy_policy
+            if plan_row['stage'] != 'acquire' or not copy_policy.due(store, copy_policy_id):
+                raise OperationError('copy policy authorization is not currently active')
         if plan_row['code_sha256'] != _code_identity():
             raise OperationError('project or code identity changed; prepare a new plan')
         held, selector = _flow(project, store, plan_row['flow_id'])
@@ -767,6 +775,8 @@ def tick(project: Project, store: Store, *, max_operations: int = 1,
     """Execute up to N authorized or interrupted local operations, in plan order."""
     if type(max_operations) is not int or max_operations < 1:
         raise OperationError('max_operations must be positive')
+    from claimstone import copy_policy
+    copy_policy.materialize_due(project, store, flow_id=flow_id)
     grouped = _events(store)
     ready = [operation_id for operation_id, rows in grouped.items()
              if rows[-1]['event'] in {'authorized', 'started', 'call_started', 'unit_completed'}
@@ -777,6 +787,9 @@ def tick(project: Project, store: Store, *, max_operations: int = 1,
     ready = [operation_id for operation_id in ready
              if not grouped[operation_id][1].get('schedule_id') or
              network_schedule.due(store, grouped[operation_id][1]['schedule_id'], operation_id)]
+    ready = [operation_id for operation_id in ready
+             if not (grouped[operation_id][1].get('identity') or {}).get('copy_policy_id') or
+             copy_policy.due(store, grouped[operation_id][1]['identity']['copy_policy_id'])]
     results: list[dict[str, Any]] = []
     for operation_id in ready[:max_operations]:
         try:

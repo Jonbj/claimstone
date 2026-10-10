@@ -211,6 +211,8 @@ def tick(project: Project, store: Store, mandate_id: str) -> dict[str, Any]:
                 operations._code_identity() != mandate['code_sha256']):
             raise operations.OperationError('protocol or code changed; renew the local mandate')
         identity = dict(mandate['authorized_by']) | {'mandate_id': mandate_id}
+        from claimstone import copy_policy
+        copy_policy.materialize_due(project, store, flow_id=mandate['flow_id'])
         result = operations.drive_local(
             project, store, mandate['flow_id'],
             extract_model=mandate['extract_model'],

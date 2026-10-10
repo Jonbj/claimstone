@@ -24,7 +24,7 @@ from claimstone.store import Store, sha256_text
 from claimstone.request_log import RecordingFetcher
 
 ROUTINE = "routine"
-QUERY_HIT_VERSION = 1
+QUERY_HIT_VERSION = 2
 
 NEAR_MATCH_MIN_CHARS = 25
 
@@ -137,6 +137,8 @@ def run(
                     seen_this_run += 1
                     row["round"] = round_name
                     in_scope = population.observe(store, policy, row)
+                    if in_scope:
+                        row["source_class"] = classify.classify(row, project.classes)
                     hit_id = sha256_text(f'{query_id}|{rank}|{row["candidate_key"]}')
                     if hit_id not in known_hits:
                         store.append('query_hits.jsonl', {
@@ -146,6 +148,7 @@ def run(
                             'query': term, 'rank': rank,
                             'candidate_key': row['candidate_key'],
                             'title': row['title'], 'doi': row['doi'],
+                            'url': row['url'], 'source_class': row.get('source_class'),
                             'provider_id': row.get('openalex_work_id') or row.get('arxiv_base_id'),
                             'population_in_scope': in_scope,
                             'observed_at': row['found_at'],
@@ -156,7 +159,6 @@ def run(
                         continue
                     if row["candidate_key"] in known:
                         continue
-                    row["source_class"] = classify.classify(row, project.classes)
                     row["round"] = round_name
                     note = near_match(row["candidate_key"], known)
                     if note:

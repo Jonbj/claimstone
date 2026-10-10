@@ -81,8 +81,9 @@ scholarly query and one candidate acquisition at a time. A local mandate can
 advance authorized work through the research stages and propose network
 batches. An operator can approve exact batches through the authenticated
 control service or approve a finite, revocable schedule of already frozen
-batches. The worker does not open a new research round or approve unknown
-future requests. See [the scheduler contract](docs/contracts/scheduler_operations.md)
+batches. A finite schedule can prepare dated research rounds; a separately
+approved copy policy lets the worker acquire matching future candidates on
+exact hosts under lifetime caps. See [the scheduler contract](docs/contracts/scheduler_operations.md)
 for current limits.
 
 For one flow, `scheduler auto-enable PROJECT FLOW_ID --extract-model MODEL_A

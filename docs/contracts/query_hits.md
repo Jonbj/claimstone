@@ -12,6 +12,10 @@ change of rank makes another observation. The ledger is append-only; historical 
 
 Each row has `query_hit_version`, `round`, `topic_id`, `source_api`, `query`, one-based `rank`,
 `candidate_key`, `title`, normalized `doi` or null, provider ID when available,
-`population_in_scope`, and `observed_at`. A hit may refer to a candidate that was not admitted to
+`population_in_scope`, and `observed_at`. Version 2 also records the exact
+candidate `url` and its classified `source_class` as observed at discovery;
+these fields let a finite copy policy reject later changes to the candidate.
+Older version 1 hits cannot authorize an automatic copy. A hit may refer to a candidate that was not admitted to
 `candidates.jsonl`. A matching title or provider ID is a retrieval clue, never permission to merge
-records, obtain a copy, or issue a verdict.
+records or issue a verdict. Obtaining a copy from a version 2 hit still requires
+a separately authorized, bounded copy policy and the executor's network gates.
