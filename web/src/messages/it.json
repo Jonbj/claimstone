@@ -10,13 +10,13 @@
     "signInLink": "Accedi",
     "advancedActive": "Le modifiche avanzate sono attive: le modifiche nelle fasi da 1 a 3 potrebbero non comparire nei file generati. Ripristinale nella fase 4 per generare di nuovo i file.",
     "advancedLink": "Vai alla fase 4",
+    "lastFailure": "L'ultimo tentativo di creare il progetto è stato rifiutato:",
     "expired": {
       "text": "La sessione è scaduta. Accedi in un'altra scheda, poi premi il pulsante qui sotto e salva di nuovo. Quello che hai scritto è ancora qui.",
       "signIn": "Accedi in un'altra scheda",
       "recheck": "Ho effettuato l'accesso: controlla di nuovo"
     },
     "loading": "Caricamento della bozza…",
-    "back": "Indietro",
     "saveContinue": "Salva e continua",
     "saving": "Salvataggio…",
     "draftNote": "Bozza salvata · nulla parte finché non crei il progetto",
@@ -140,6 +140,7 @@
       "startNote": "Non ancora disponibile: autorizzare e avviare la ricerca arriva con la prossima tappa del portale.",
       "notStartedTitle": "Cosa non parte",
       "notStarted": "Creare il progetto non avvia nessuna ricerca, nessuna richiesta di copie e nessuna chiamata a un modello, e non spende nulla.",
+      "privacy": "Il progetto viene creato nella cartella projects/, che Git ignora: resta su questa macchina e non viene pubblicato.",
       "nextTitle": "Cosa viene dopo",
       "next1": "Autorizzi un piano esatto: le ricerche, le richieste di copie e l'eventuale lavoro a pagamento dei modelli, fino a un tetto che stabilisci tu.",
       "next2": "Claimstone cerca negli indici e ottiene copie legali, registrando ogni tentativo.",

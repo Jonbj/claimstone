@@ -8,6 +8,7 @@ import { control } from "@/lib/control";
 import type { Created, DraftState, Preview } from "@/lib/control";
 import { useLocale } from "@/lib/i18n";
 import { StepHeading } from "./Field";
+import { useLeaveWarning } from "./useLeaveWarning";
 import { ErrorSummary } from "./problems";
 import { explainParams } from "./figures";
 import { areaClass, cardClass, primaryClass, quietClass } from "./stepTypes";
@@ -54,6 +55,7 @@ function ReviewForm({ draftId, draft, onCreated, onChanged, onFigures, onReload 
   const { t } = useLocale();
   const preview = useApi(() => control.newPreview(draftId), [draftId, draft.revision]);
   const [edits, setEdits] = useState<Record<string, string>>({});
+  useLeaveWarning(JSON.stringify(edits)); // saving or resetting empties `edits`, which is the baseline
   const [confirmed, setConfirmed] = useState(false);
   const [busy, setBusy] = useState<"create" | "files" | null>(null);
   const [error, setError] = useState<Error | null>(null);
@@ -171,6 +173,7 @@ function ReviewForm({ draftId, draft, onCreated, onChanged, onFigures, onReload 
       <section className={cardClass}>
         <h3 className="text-sm font-semibold">{t("wizard.step4.notStartedTitle")}</h3>
         <p className="mt-1 text-[13px] text-muted-foreground">{t("wizard.step4.notStarted")}</p>
+        <p className="mt-1 text-[13px] text-muted-foreground">{t("wizard.step4.privacy")}</p>
         <h3 className="mt-4 text-sm font-semibold">{t("wizard.step4.nextTitle")}</h3>
         <ol className="mt-1 list-decimal pl-5 text-[13px] text-muted-foreground">
           <li>{t("wizard.step4.next1")}</li>

@@ -4,6 +4,7 @@ import { control } from "@/lib/control";
 import { useLocale } from "@/lib/i18n";
 import Field, { StepHeading } from "./Field";
 import { ErrorSummary, FieldError, problemsOf } from "./problems";
+import { useLeaveWarning } from "./useLeaveWarning";
 import { areaClass, cardClass, inputClass, primaryClass, quietClass } from "./stepTypes";
 import type { StepProps } from "./stepTypes";
 
@@ -31,6 +32,8 @@ export default function StepTopic({ draftId, draft, onSaved, onReload }: StepPro
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const problems = problemsOf(error);
+  const snapshot = JSON.stringify([name, description, topics]);
+  const markSaved = useLeaveWarning(snapshot);
 
   const update = (index: number, patch: Partial<TopicRow>) =>
     setTopics((rows) => rows.map((row, i) => (i === index ? { ...row, ...patch } : row)));
@@ -51,6 +54,7 @@ export default function StepTopic({ draftId, draft, onSaved, onReload }: StepPro
         })),
       };
       const result = await control.newSaveStep(draftId, 1, draft.revision, data);
+      markSaved(snapshot);
       onSaved({ step: 1, revision: result.revision, figures: result.figures });
     } catch (cause) {
       setError(cause instanceof Error ? cause : new Error(String(cause)));

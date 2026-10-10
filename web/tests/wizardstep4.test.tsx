@@ -160,4 +160,9 @@ describe("StepReview", () => {
     const heading = await screen.findByRole("heading", { level: 2, name: "4 · Review and create" });
     expect(document.activeElement).toBe(heading);
   });
+
+  it("says the project folder is ignored by Git and stays on this machine", async () => {
+    mount();
+    expect(await screen.findByText(/which Git ignores: it stays on this machine and is not published/)).toBeTruthy();
+  });
 });

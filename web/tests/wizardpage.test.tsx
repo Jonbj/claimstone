@@ -278,4 +278,19 @@ describe("WizardPage", () => {
     expect(screen.getByText("Project created")).toBeTruthy();
     expect(screen.queryByText("boom")).toBeNull();
   });
+
+  it("shows the reason the last creation attempt was refused, as the server wrote it", async () => {
+    draftBody = { ...baseDraft, last_failure: "the generated files did not round-trip" };
+    mount("/new/d1/1");
+    expect(await screen.findByText(/The last attempt to create the project was refused/)).toBeTruthy();
+    expect(screen.getByText("the generated files did not round-trip")).toBeTruthy();
+  });
+
+  it("reads the step strictly: 2abc, 04 and 0 are all step 1", async () => {
+    for (const bad of ["2abc", "04", "0", "5"]) {
+      cleanup();
+      mount(`/new/d1/${bad}`);
+      expect(await screen.findByText("1 · The topic")).toBeTruthy();
+    }
+  });
 });

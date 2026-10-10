@@ -8,6 +8,7 @@ import type { WizardTemplate } from "@/lib/control";
 import { useLocale } from "@/lib/i18n";
 import Field, { StepHeading } from "./Field";
 import { ErrorSummary, FieldError, messageFor, problemsOf } from "./problems";
+import { useLeaveWarning } from "./useLeaveWarning";
 import { areaClass, cardClass, inputClass, primaryClass } from "./stepTypes";
 import type { StepProps } from "./stepTypes";
 
@@ -43,6 +44,8 @@ function SourcesForm({ draftId, draft, onSaved, onReload, template }: StepProps 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const problems = problemsOf(error);
+  const snapshot = JSON.stringify([classes, floor, rationale, supplied, notation, custom, hosts]);
+  const markSaved = useLeaveWarning(snapshot);
   const groupId = useId();
   const lines = (text: string) => text.split("\n").map((s) => s.trim()).filter(Boolean);
 
@@ -63,6 +66,7 @@ function SourcesForm({ draftId, draft, onSaved, onReload, template }: StepProps 
         extra_excluded_hosts: lines(hosts),
       };
       const result = await control.newSaveStep(draftId, 3, draft.revision, data);
+      markSaved(snapshot);
       onSaved({ step: 3, revision: result.revision, figures: result.figures });
     } catch (cause) {
       setError(cause instanceof Error ? cause : new Error(String(cause)));

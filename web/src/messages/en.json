@@ -10,13 +10,13 @@
     "signInLink": "Sign in",
     "advancedActive": "Advanced edits are active: changes in steps 1 to 3 may not appear in the generated files. Reset them in step 4 to generate the files again.",
     "advancedLink": "Go to step 4",
+    "lastFailure": "The last attempt to create the project was refused:",
     "expired": {
       "text": "Your session ended. Sign in in another tab, then press the button below and save again. What you typed is still here.",
       "signIn": "Sign in in another tab",
       "recheck": "I have signed in: check again"
     },
     "loading": "Loading the draft…",
-    "back": "Back",
     "saveContinue": "Save and continue",
     "saving": "Saving…",
     "draftNote": "Draft saved · nothing runs until you create the project",
@@ -140,6 +140,7 @@
       "startNote": "Not available yet: authorizing and starting research comes with the next stage of the portal.",
       "notStartedTitle": "What does not start",
       "notStarted": "Creating the project starts no search, no copy request and no model call, and spends nothing.",
+      "privacy": "The project is created in the projects/ folder, which Git ignores: it stays on this machine and is not published.",
       "nextTitle": "What comes next",
       "next1": "You authorize one exact plan: the searches, the copy requests and any paid model work, up to a cap you set.",
       "next2": "Claimstone searches the indexes and obtains legal copies, recording every attempt.",
