@@ -7,7 +7,7 @@ import shutil
 
 import pytest
 
-from claimstone import cli, flows, network_schedule, operations, periodic
+from claimstone import cli, flows, network_schedule, operations, periodic, periodic_dossier
 from claimstone.config import load_project
 from claimstone.scope import Selector
 from claimstone.store import Store
@@ -90,3 +90,17 @@ def test_periodic_cli_plans_and_audits_without_transport(tmp_path, capsys):
                      '--store', str(store.root.parent)]) == 0
     assert json.loads(capsys.readouterr().out)['verdict'] is None
     assert not list(store.read('requests.jsonl'))
+
+
+def test_periodic_dossier_refuses_an_unfinished_schedule_without_writing(tmp_path):
+    project, store, source, rounds = _setup(tmp_path)
+    planned = periodic.plan(project, store, source, rounds,
+                            apis=['crossref'], allowed_hosts=['api.crossref.org'],
+                            max_units_each=1, max_requests_each=2)
+    report = periodic_dossier.preview(project, store, planned['schedule_id'])
+    assert report['state'] == 'INSUFFICIENT_ACQUISITION'
+    assert report['profiles'] == []
+    assert report['audit']['ready_for_evidence_review'] is False
+    assert periodic_dossier.finalize(project, store, planned['schedule_id']) == report
+    assert not list(store.read(periodic_dossier.LEDGER))
+    assert not list(store.read('profiles.jsonl'))

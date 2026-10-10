@@ -174,7 +174,7 @@ canonical and always visible, with the gloss beside them, never instead. The eng
 ## Order of work
 
 1. Project builder, templates and validation (engine only, no web).
-2. Draft ledger, control routes, preview, `docs/contracts/new_project.md`, `control_api.md` update, D125.
+2. Draft ledger, control routes, preview, `docs/contracts/new_project.md`, `control_api.md` update, D127.
 3. i18n infrastructure.
 4. The four wizard steps and the explanation panel.
 5. Guide pages (EN/IT), the website page, and the live check.

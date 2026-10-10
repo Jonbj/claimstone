@@ -9,21 +9,31 @@ what order.
 
 ## Where the work stands
 
+2026-10-10 cumulative periodic handoff (D126): `scheduler periodic-dossier`
+and the read-only API now show full-corpus evidence profiles, dated-round and
+cumulative admission, unfinished obligations and any human signatures.
+`periodic-finalize` appends whole-store profiles and a content-addressed dossier
+only when the schedule, floor and all scientific readings are final. A local
+mandate driving a scheduled child flow attempts this on every pass. No real
+schedule was finalized in development, no research request was made and no
+verdict was signed. Future child flows still need their own bounded local
+mandates; portal schedule and copy-policy controls remain to build.
+
 2026-10-10 finite future-copy policy (D125): after an operator approves a
 discovery schedule, a separately approved policy can let the worker acquire
 later candidates with matching version 2 query hits under exact HTTPS hosts,
 classes, dates and lifetime request/candidate caps. It is revocable and made
 no real request in development. The policy excludes unknown hosts, possible
 duplicates and manually changed candidate identity. Portal controls for this
-policy, cumulative question profiles and the final dossier remain pending.
+policy remain pending.
 
 2026-10-10 dated update rounds (D124): `scheduler periodic-plan` prepares
 1–32 new, linked flows and their complete discovery batches in nonoverlapping
 UTC windows, then returns a finite schedule for separate operator approval.
 `periodic-audit` reads successful query outcomes, each round's admission and
 whole-corpus admission; it never produces a verdict. This development made
-no real-project schedule or network request. Unknown future candidate copies,
-cumulative question profiles and an end-of-run dossier remain unfinished.
+no real-project schedule or network request. D125 and D126 subsequently added
+bounded future-copy permission and the cumulative evidence handoff.
 
 2026-10-10 finite network schedule (D123): existing frozen discovery or
 acquisition batches may be placed in exact UTC windows under one summed

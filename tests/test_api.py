@@ -22,7 +22,7 @@ from contextlib import contextmanager
 
 import pytest
 
-from claimstone import api, flows
+from claimstone import api, flows, periodic_dossier
 from claimstone.store import Store
 from tests.test_portal_state import build_workspace
 
@@ -56,6 +56,32 @@ def _get(url, headers=None):
 def _get_json(url, headers=None):
     status, headers_, body = _get(url, headers)
     return status, headers_, json.loads(body)
+
+
+def test_periodic_dossier_route_is_read_only_and_names_unknown_schedule(workspace, monkeypatch):
+    seen = []
+    def report(project, store, schedule_id):
+        seen.append((project.name, schedule_id))
+        return {'schedule_id': schedule_id, 'state': 'WAITING_FOR_SCHEDULE',
+                'blockers': ['SCHEDULE_OR_ROUND_INCOMPLETE'],
+                'audit': {}, 'profiles': [], 'human_decisions': [],
+                'snapshot_sha256': 'a' * 64, 'finalized_dossier_id': None,
+                'finalized_at': None, 'snapshot_stale': False,
+                'needs_finalization': False, 'history_count': 0,
+                'verdict': None}
+    monkeypatch.setattr(periodic_dossier, 'preview', report)
+    with _served(workspace) as (_httpd, base, store):
+        before = list(store.read(periodic_dossier.LEDGER))
+        status, _, body = _get_json(
+            f'{base}/api/v1/projects/{PROJECT}/periodic-dossiers/schedule-id')
+        assert status == 200
+        assert body['state'] == 'WAITING_FOR_SCHEDULE'
+        assert body['verdict'] is None
+        from claimstone.api_schema import ROUTES
+        from tests.test_api_contract import validate
+        assert validate(body, ROUTES['/projects/{p}/periodic-dossiers/{schedule_id}']) == []
+        assert seen == [(PROJECT, 'schedule-id')]
+        assert list(store.read(periodic_dossier.LEDGER)) == before
 
 
 def _error_json(url, headers=None):
