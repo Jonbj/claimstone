@@ -128,7 +128,7 @@ def test_render_needs_all_three_steps():
 
 def test_inspect_loads_with_the_real_loader_and_derives_figures():
     info = pb.inspect(pb.render(_state(), TEMPLATES, today="2026-10-10"), name="news-tone",
-                      templates_dir=TEMPLATES, template_id="general")
+                      templates_dir=TEMPLATES, template_id="general", today="2026-10-10")
     fig = info["figures"]
     assert (fig["topics"], fig["terms"]) == (1, 2)
     assert (fig["searches_per_index"], fig["searches_all_indexes"]) == (2, 6)
@@ -142,9 +142,9 @@ def test_a_description_does_not_change_the_protocol_digest():
     base = _state()
     other = {**base, 1: {**base[1], "description": "a completely different description"}}
     a = pb.inspect(pb.render(base, TEMPLATES, today="2026-10-10"), name="x1",
-                   templates_dir=TEMPLATES, template_id="general")
+                   templates_dir=TEMPLATES, template_id="general", today="2026-10-10")
     b = pb.inspect(pb.render(other, TEMPLATES, today="2026-10-10"), name="x1",
-                   templates_dir=TEMPLATES, template_id="general")
+                   templates_dir=TEMPLATES, template_id="general", today="2026-10-10")
     assert a["protocol_sha256"] == b["protocol_sha256"]
 
 
@@ -152,7 +152,7 @@ def test_an_override_must_still_load():
     files = pb.render(_state(), TEMPLATES, today="2026-10-10",
                       overrides={"sources.yaml": "classes: []\n"})
     with pytest.raises(pb.DraftInvalid) as raised:
-        pb.inspect(files, name="news-tone", templates_dir=TEMPLATES, template_id="general")
+        pb.inspect(files, name="news-tone", templates_dir=TEMPLATES, template_id="general", today="2026-10-10")
     assert raised.value.problems[0].path == "sources.yaml"
 
 
@@ -161,7 +161,7 @@ def test_an_override_cannot_remove_a_template_excluded_host():
     files = pb.render(state, TEMPLATES, today="2026-10-10")
     files["sources.yaml"] = files["sources.yaml"].replace("- sci-hub.se\n", "")
     with pytest.raises(pb.DraftInvalid) as raised:
-        pb.inspect(files, name="news-tone", templates_dir=TEMPLATES, template_id="general")
+        pb.inspect(files, name="news-tone", templates_dir=TEMPLATES, template_id="general", today="2026-10-10")
     assert "sci-hub.se" in raised.value.problems[0].message
 
 
@@ -170,13 +170,60 @@ def test_an_unknown_override_file_is_refused():
         pb.render(_state(), TEMPLATES, today="2026-10-10", overrides={"manifest.tsv": "x"})
 
 
-def test_a_question_with_no_kind_in_an_override_is_counted_unassigned():
+def _inspect_refused(files, path):
+    with pytest.raises(pb.DraftInvalid) as raised:
+        pb.inspect(files, name="news-tone", templates_dir=TEMPLATES, template_id="general",
+                   today="2026-10-10")
+    assert raised.value.problems[0].path == path
+    return raised.value.problems[0].message
+
+
+def test_a_question_with_no_kind_in_an_override_is_refused():
     files = pb.render(_state(), TEMPLATES, today="2026-10-10")
     files["questions.yaml"] = ("registry_version: 1\nfrozen_at: '2026-10-10'\nquestions:\n"
                                "- {id: Q01, text: 'x?'}\n")
-    info = pb.inspect(files, name="news-tone", templates_dir=TEMPLATES, template_id="general")
-    assert info["figures"]["questions_by_kind"]["unassigned"] == 1
-    assert info["figures"]["questions_literature"] == 1
+    assert "kind" in _inspect_refused(files, "questions.yaml")
+
+
+def _edited(filename, old, new):
+    files = pb.render(_state(), TEMPLATES, today="2026-10-10")
+    assert old in files[filename]
+    files[filename] = files[filename].replace(old, new)
+    return files
+
+
+def test_an_override_cannot_change_the_registry_version():
+    files = _edited("questions.yaml", "registry_version: 1", "registry_version: 7")
+    assert "registry version 1" in _inspect_refused(files, "questions.yaml")
+
+
+def test_an_override_cannot_backdate_the_freeze():
+    files = _edited("questions.yaml", "frozen_at: '2026-10-10'", "frozen_at: '1999-01-01'")
+    assert "today" in _inspect_refused(files, "questions.yaml")
+
+
+def test_an_override_cannot_bump_the_floor_version():
+    files = _edited("sources.yaml", "floor_version: 1", "floor_version: 3")
+    assert "floor version 1" in _inspect_refused(files, "sources.yaml")
+
+
+def test_an_override_cannot_backdate_the_floor():
+    files = _edited("sources.yaml", "floor_set_at: '2026-10-10'", "floor_set_at: '1999-01-01'")
+    assert "today" in _inspect_refused(files, "sources.yaml")
+
+
+def test_an_override_cannot_drop_the_floor_rationale():
+    files = pb.render(_state(), TEMPLATES, today="2026-10-10")
+    files["sources.yaml"] = "\n".join(
+        line for line in files["sources.yaml"].splitlines() if not line.startswith("floor_rationale"))
+    assert "rationale" in _inspect_refused(files, "sources.yaml")
+
+
+def test_an_override_cannot_drop_the_supplied_copies_declaration():
+    files = pb.render(_state(), TEMPLATES, today="2026-10-10")
+    files["sources.yaml"] = "\n".join(
+        line for line in files["sources.yaml"].splitlines() if not line.startswith("supplied_copies"))
+    assert "supplied" in _inspect_refused(files, "sources.yaml")
 
 
 import hashlib
@@ -195,7 +242,7 @@ def _prepared(tmp_path):
     projects = tmp_path / "projects"
     projects.mkdir()
     files = pb.render(_state(), TEMPLATES, today="2026-10-10")
-    info = pb.inspect(files, name="news-tone", templates_dir=TEMPLATES, template_id="general")
+    info = pb.inspect(files, name="news-tone", templates_dir=TEMPLATES, template_id="general", today="2026-10-10")
     return projects, files, info, Store("_new-projects", base=tmp_path / "store")
 
 

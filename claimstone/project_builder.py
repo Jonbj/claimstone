@@ -339,9 +339,38 @@ def figures(project: Any) -> dict[str, Any]:
     }
 
 
+def _require_fresh_protocol(project: Any, today: str) -> None:
+    def refuse(path: str, message: str) -> None:
+        raise DraftInvalid([Problem(path, message)])
+
+    if project.registry_version != 1:
+        refuse("questions.yaml", "a new project is frozen at registry version 1; later versions "
+                                 "are dated bumps of an existing registry")
+    if project.frozen_at != today:
+        refuse("questions.yaml", f"a new project is frozen today ({today}), so frozen_at must be "
+                                 "today's date")
+    if project.floor_version != 1:
+        refuse("sources.yaml", "a new project's acquisition floor is at floor version 1; later "
+                               "versions are dated changes of an existing floor")
+    if project.floor_set_at != today:
+        refuse("sources.yaml", f"the floor is set today ({today}), so floor_set_at must be today's date")
+    if len(project.floor_rationale.strip()) < MIN_FLOOR_RATIONALE:
+        refuse("sources.yaml", f"a floor needs a floor_rationale of at least {MIN_FLOOR_RATIONALE} "
+                               "characters: a bar without a reason is arbitrary")
+    if project.supplied_copies_declared is not True:
+        refuse("sources.yaml", "supplied_copies must be declared (count or separate): it decides "
+                               "whether copies an operator supplies count toward the floor")
+    for question in project.questions:
+        if question.kind not in QUESTION_KINDS:
+            refuse("questions.yaml", f"question {question.id} needs a kind, one of "
+                                     + ", ".join(QUESTION_KINDS) + ": the kind decides which rule judges it")
+
+
 def inspect(files: dict[str, str], *, name: str, templates_dir: str | pathlib.Path,
-            template_id: str) -> dict[str, Any]:
-    """Load the files with the real loader and derive the figures. Raises `DraftInvalid`."""
+            template_id: str, today: str) -> dict[str, Any]:
+    """Load the files with the real loader and derive the figures. Raises `DraftInvalid`.
+
+    A new project is protocol v1, frozen `today`; an advanced override that says otherwise is refused."""
     if set(files) != set(FILES):
         raise DraftInvalid([Problem("files", "need exactly " + ", ".join(FILES))])
     template = load_template(templates_dir, template_id)
@@ -352,6 +381,7 @@ def inspect(files: dict[str, str], *, name: str, templates_dir: str | pathlib.Pa
             (root / filename).write_text(text, encoding="utf-8")
         try:
             project = load_project(root)
+            _require_fresh_protocol(project, today)
             lost = sorted(set(template["excluded_hosts"]) - set(project.excluded_hosts))
             if lost:
                 raise DraftInvalid([Problem("sources.yaml", "the template's excluded hosts cannot "
