@@ -390,6 +390,14 @@ As built (B12):
   table has no `stopping` event yet, and appending one would make the whole ledger invalid. **Not
   built**: it belongs to the scheduler track.
 - Planning is not offered: plans come from the scheduler and the CLI.
+- `GET …/batches` → `{flow_id, batches}` for frozen operation batches in this
+  flow. Each batch includes its ID, exact units and hosts, skipped subjects,
+  summed physical-request ceiling, current operation states and the number
+  awaiting approval. A changed batch hash or mismatched operation is a 409.
+- `POST …/batches/{batch_id}/authorize` with the displayed
+  `{operation_ids, max_total_requests}` → 201 when it authorizes new units, 200
+  on an idempotent repeat. A mismatch is 409 `PLAN_DIFFERS`; the event names
+  the authenticated portal operator on every newly authorized operation.
 - Today (B9) now reports `continues_without_you` per project: the authorized, running or
   interrupted operations.
 

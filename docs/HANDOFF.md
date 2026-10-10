@@ -9,6 +9,17 @@ what order.
 
 ## Where the work stands
 
+2026-10-10 coordinator proposals (D120): version 2 local mandates may include
+exact discovery APIs/hosts, copy hosts and per-batch caps. `auto-worker`
+automatically prepares the next bounded discovery/acquisition batches after a
+pass; `auto-status` lists batch IDs awaiting approval. These are planned rows
+only. The operator still authorizes each exact batch before the worker may
+make requests. No recurring network sweep, new round, live mandate or real
+request was created by this development.
+The control server now lists and authorizes whole frozen batches in one
+authenticated action (D121); its POST repeats the exact operation IDs and
+request ceiling. The parallel frontend session has not been changed here.
+
 2026-10-09 standing local coordinator (D118): a flow may receive one
 `scheduler auto-enable` mandate with two distinct local models and a lifetime
 call cap. `auto-worker` revisits the flow, executes already authorized external

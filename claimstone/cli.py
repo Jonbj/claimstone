@@ -1028,7 +1028,13 @@ def _scheduler_operation(args: argparse.Namespace) -> int:
             result = autopilot.enable(project, store, args.flow_id,
                                       extract_model=args.extract_model,
                                       review_model=args.review_model,
-                                      max_total_local_calls=args.max_total_local_calls)
+                                      max_total_local_calls=args.max_total_local_calls,
+                                      discover_apis=args.discover_api,
+                                      discover_hosts=args.discover_host,
+                                      acquire_hosts=args.acquire_host,
+                                      proposal_max_units=args.proposal_max_units,
+                                      proposal_max_requests_each=args.proposal_max_requests_each,
+                                      proposal_per_query=args.proposal_per_query)
         elif args.scheduler_command == 'auto-disable':
             result = autopilot.disable(store, args.mandate_id)
         elif args.scheduler_command == 'auto-status':
@@ -1049,7 +1055,8 @@ def _scheduler_operation(args: argparse.Namespace) -> int:
                 while not stopping.is_set():
                     result = autopilot.tick(load_project(args.project), store,
                                             args.mandate_id)
-                    if result.get('local_calls') or result.get('network', {}).get('processed'):
+                    if (result.get('local_calls') or result.get('network', {}).get('processed') or
+                            any(item['new'] for item in result.get('proposals', []))):
                         print(json.dumps(result, ensure_ascii=False), flush=True)
                     stopping.wait(args.poll_seconds)
             except KeyboardInterrupt:
@@ -1585,6 +1592,15 @@ def build_parser() -> argparse.ArgumentParser:
     scheduler_auto_enable.add_argument('--extract-model', required=True)
     scheduler_auto_enable.add_argument('--review-model', required=True)
     scheduler_auto_enable.add_argument('--max-total-local-calls', type=int, required=True)
+    scheduler_auto_enable.add_argument('--discover-api', action='append', default=[],
+                                       help='API for unapproved discovery proposals; repeatable')
+    scheduler_auto_enable.add_argument('--discover-host', action='append', default=[],
+                                       help='exact discovery host in proposed plans; repeatable')
+    scheduler_auto_enable.add_argument('--acquire-host', action='append', default=[],
+                                       help='exact acquisition host in proposed plans; repeatable')
+    scheduler_auto_enable.add_argument('--proposal-max-units', type=int, default=10)
+    scheduler_auto_enable.add_argument('--proposal-max-requests-each', type=int, default=3)
+    scheduler_auto_enable.add_argument('--proposal-per-query', type=int, default=25)
     scheduler_auto_enable.set_defaults(func=_scheduler_operation)
     for action in ('auto-disable', 'auto-status', 'auto-once', 'auto-worker'):
         command = scheduler_sub.add_parser(action)

@@ -13,21 +13,27 @@ or authorize discovery, acquisition, model calls, purchases or verdicts.
 ```
 
 An optional local coordinator can revisit one bound flow after an operator
-records a mandate. Replace the project, flow, model names and ID with values
+records a mandate. Replace the project, flow, model names, copy host and ID with values
 from that flow; keep the returned `mandate_id` for the second command:
 
 ```bash
 ./claimstone.sh scheduler auto-enable projects/PROJECT FLOW_ID \
   --extract-model EXTRACT_MODEL --review-model REVIEW_MODEL \
-  --max-total-local-calls 20
+  --max-total-local-calls 20 \
+  --discover-api openalex --discover-host api.openalex.org \
+  --acquire-host archive.example.org \
+  --proposal-max-units 2 --proposal-max-requests-each 3 --proposal-per-query 10
 CLAIMSTONE_AUTO_PROJECT=projects/PROJECT CLAIMSTONE_AUTO_MANDATE=MANDATE_ID \
   docker compose --profile autopilot up -d --build auto-worker
 ```
 
 `auto-worker` repeats local passes within that one lifetime call cap and
-executes only external operations independently authorized for the flow. It
-does not start a new network campaign. Use `scheduler auto-status` to inspect
-the remaining allowance and `scheduler auto-disable` to stop future passes.
+prepares bounded discovery/copy batches. They remain unapproved until
+`scheduler authorize-batch PROJECT BATCH_ID` records an operator's decision;
+only then may the worker execute them. Omit the optional proposal switches to
+run local work only. Use `scheduler auto-status` to inspect the remaining
+allowance and pending batch IDs, and `scheduler auto-disable` to stop future
+passes.
 The service can be stopped with `docker compose --profile autopilot stop
 auto-worker`. Disabling the mandate stops its work; the idle service stays up
 until stopped explicitly, so Docker's restart policy does not relaunch it.

@@ -102,3 +102,32 @@ def test_today_lists_what_continues_without_a_person(ws):
     payload = today.today(ws["projects"], ws["store_dir"], ws["state"], actor="op1")
     entry = next(p for p in payload["projects"] if p["project"] == ws["project"].name)
     assert [op["operation_id"] for op in entry["continues_without_you"]] == [ws["operation_id"]]
+
+
+def test_portal_reviews_and_authorizes_one_exact_batch(ws):
+    batch = operations.plan_batch(
+        ws['project'], ws['store'], ws['flow_id'], 'discover',
+        apis=['openalex'], allowed_hosts=['api.openalex.org'],
+        max_units=1, max_requests_each=2, per_query=1)
+    with _served(ws) as (base, prefix, headers):
+        batches_url = base + prefix.removesuffix('/operations') + '/batches'
+        status, _h, listed = _request(batches_url, headers={'Cookie': headers['Cookie']})
+        assert status == 200
+        held = next(item for item in listed['batches']
+                    if item['batch_id'] == batch['batch_id'])
+        assert held['awaiting_approval'] == 1
+        path = batches_url + '/' + batch['batch_id'] + '/authorize'
+        refused = _request(path, method='POST', headers=headers, payload={
+            'operation_ids': held['operation_ids'], 'max_total_requests': 3})
+        assert refused[0] == 409 and refused[2]['error']['code'] == 'PLAN_DIFFERS'
+        assert operations.status(ws['store'], batch['operation_ids'][0])['state'] == 'PLANNED'
+        shown = {'operation_ids': held['operation_ids'],
+                 'max_total_requests': held['max_total_requests']}
+        approved = _request(path, method='POST', headers=headers, payload=shown)
+        again = _request(path, method='POST', headers=headers, payload=shown)
+    assert approved[0] == 201 and approved[2]['batch']['authorized_now'] == 1
+    assert again[0] == 200 and again[2]['batch']['authorized_now'] == 0
+    authorized = operations.status(ws['store'], batch['operation_ids'][0])['events'][1]
+    assert authorized['identity'] == {
+        'signer_auth': 'portal-session', 'operator': 'op1', 'name': 'Op One'}
+    assert list(ws['store'].read('requests.jsonl')) == []
