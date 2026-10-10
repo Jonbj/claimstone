@@ -68,7 +68,7 @@ so `.env` must hold `CLAIMSTONE_CONTACT_EMAIL`.
 - **[docs/README.md](docs/README.md)** — the documentation map: which file answers which question.
 - **[docs/GUIDE.md](docs/GUIDE.md)** — a walkthrough of a whole round, stage by stage, with what each
   number means. Start here if you want to run one.
-- **[docs/DESIGN_DECISIONS.md](docs/DESIGN_DECISIONS.md)** — 68 decisions, each with the measurement that
+- **[docs/DESIGN_DECISIONS.md](docs/DESIGN_DECISIONS.md)** — dated decisions, each with the measurement that
   decided it. Read the entry before arguing with the choice.
 - **[docs/HANDOFF.md](docs/HANDOFF.md)** — what is running now, what is pending, and which decisions belong
   to a person rather than to the engine.
@@ -76,12 +76,13 @@ so `.env` must hold `CLAIMSTONE_CONTACT_EMAIL`.
 
 ## Status
 
-The scheduler now has bounded, operator-authorized operations for scoped
-offline stages, local and explicitly budgeted remote model calls, one scholarly query and one candidate
-acquisition. `scheduler batch-plan` prepares reviewable multi-unit campaigns;
-`scheduler worker` executes only plans already authorized. The research portal
-is still read-only, and no new live network campaign was started as part of
-this development. See [the scheduler contract](docs/contracts/scheduler_operations.md)
+The scheduler has bounded operations for scoped stages, model calls, one
+scholarly query and one candidate acquisition at a time. A local mandate can
+advance authorized work through the research stages and propose network
+batches. An operator can approve exact batches through the authenticated
+control service or approve a finite, revocable schedule of already frozen
+batches. The worker does not open a new research round or approve unknown
+future requests. See [the scheduler contract](docs/contracts/scheduler_operations.md)
 for current limits.
 
 For one flow, `scheduler auto-enable PROJECT FLOW_ID --extract-model MODEL_A

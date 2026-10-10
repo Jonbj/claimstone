@@ -9,7 +9,7 @@ what order.
 
 ## Where the work stands
 
-2026-10-10 finite network schedule (D122): existing frozen discovery or
+2026-10-10 finite network schedule (D123): existing frozen discovery or
 acquisition batches may be placed in exact UTC windows under one summed
 physical-request ceiling and approved once by the operator. `schedule-plan`
 is offline; `schedule-authorize` records the approval, and `schedule-revoke`
@@ -18,7 +18,7 @@ This change created no schedule for a real project and made no network
 request. Unknown future candidates, new search rounds and scientific
 decisions still cannot be preapproved by this schedule.
 
-2026-10-10 coordinator proposals (D120): version 2 local mandates may include
+2026-10-10 coordinator proposals (D121): version 2 local mandates may include
 exact discovery APIs/hosts, copy hosts and per-batch caps. `auto-worker`
 automatically prepares the next bounded discovery/acquisition batches after a
 pass; `auto-status` lists batch IDs awaiting approval. These are planned rows
@@ -26,10 +26,10 @@ only. The operator still authorizes each exact batch before the worker may
 make requests. No recurring network sweep, new round, live mandate or real
 request was created by this development.
 The control server now lists and authorizes whole frozen batches in one
-authenticated action (D121); its POST repeats the exact operation IDs and
+authenticated action (D122); its POST repeats the exact operation IDs and
 request ceiling. The parallel frontend session has not been changed here.
 
-2026-10-09 standing local coordinator (D118): a flow may receive one
+2026-10-09 standing local coordinator (D119): a flow may receive one
 `scheduler auto-enable` mandate with two distinct local models and a lifetime
 call cap. `auto-worker` revisits the flow, executes already authorized external
 operations, and advances local normalize/extract/review/profile work; each
@@ -39,7 +39,7 @@ campaign, paid model calls, source admission or a verdict. Recurring search,
 copy planning and a completed dossier still need implementation and an
 operator-approved policy. No mandate was issued for a real flow in this work.
 
-2026-10-09 retrieval continuation (D117): offline comparison of D116's saved
+2026-10-09 retrieval continuation (D118): offline comparison of D117's saved
 responses against the 20-case L02 packet found three exact DOI identities and
 one same-title, different-DOI version hint. This is not a relevance or recall
 estimate. A separate, bounded OpenAlex page-2 plan is frozen at
@@ -54,7 +54,7 @@ No production candidate or query row changed. A further page needs a new
 bounded campaign and operator authorization; do not treat 200/1055 provider
 results as a literature coverage rate.
 
-2026-10-09 isolated retrieval calibration (D116): the operator authorized a
+2026-10-09 isolated retrieval calibration (D117): the operator authorized a
 bounded L02 search-variant campaign. Three API calls plus three robots checks
 completed; the frozen private plan and saved-byte readout are under
 `store/alembic-s4-lungo/audits/research-search/variant-probe/`. It did not

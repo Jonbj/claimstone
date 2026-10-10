@@ -4558,7 +4558,8 @@ When the flow's round is empty the Pipeline tile says how many candidates the pr
 rounds, so an empty bound round is not read as an empty project. Measured, 2026-10-09: `alembic-s4-lungo`
 round `s4-l02-repository-copies-2026-10-06-v2` has 0 candidates while the two earlier rounds hold 34
 (21 + 13), by `candidates.jsonl`.
-## D116 — Retain each keyword-query hit and compare retrieval modes (2026-10-09)
+
+## D117 — Retain each keyword-query hit and compare retrieval modes (2026-10-09)
 
 An isolated L02 probe compared one scoped OpenAlex search, one Crossref title
 search, and one arXiv title/abstract expression. Its frozen private plan is
@@ -4591,9 +4592,9 @@ current candidate inventory. Existing historical searches are not backfilled
 from incomplete candidate rows; raw response replay requires its own bounded
 offline migration if an old query-hit matrix is needed.
 
-## D117 — Compare held identities and freeze a second search page (2026-10-09)
+## D118 — Compare held identities and freeze a second search page (2026-10-09)
 
-An offline replay of D116's three saved responses against the 20-case L02
+An offline replay of D117's three saved responses against the 20-case L02
 reference packet found three exact DOI identities and one same-title pair with
 different DOIs (`10.2139/ssrn.2186267` and
 `10.1080/00036846.2016.1167830`). The latter is a possible version
@@ -4636,7 +4637,7 @@ No production candidate, query, acquisition or verdict row was written. The
 remaining 855 provider matches are a search-depth fact only; neither the
 provider count nor four packet identities measures literature completeness.
 
-## D118 — A standing local mandate advances one flow under a lifetime call cap (2026-10-09)
+## D119 — A standing local mandate advances one flow under a lifetime call cap (2026-10-09)
 
 `scheduler drive` previously required a fresh CLI invocation for each pass.
 The operator asked for a flow that resumes local work and later updates itself
@@ -4653,7 +4654,7 @@ authorized external operations may execute, and a new campaign still needs
 its own authorization. This is the local coordinator slice, not recurring
 search or automatic scientific admission.
 
-## D119 — Batch planning scans past settled work before applying its unit cap (2026-10-09)
+## D120 — Batch planning scans past settled work before applying its unit cap (2026-10-09)
 
 The first batch planner sliced the ordered topic/term list to `max_units`
 before checking whether those identities could be planned. Repeated calls
@@ -4666,9 +4667,9 @@ returning an empty batch. It makes no request and does not authorize those
 plans. Search-depth pagination and recurring network authorization are still
 separate work.
 
-## D120 — The coordinator proposes the next network batch without approving it (2026-10-10)
+## D121 — The coordinator proposes the next network batch without approving it (2026-10-10)
 
-The D118 worker could advance local work but waited for a person to assemble
+The D119 worker could advance local work but waited for a person to assemble
 each discovery or acquisition batch by CLI. Version 2 of its durable mandate
 may now freeze exact API lists, hosts, per-query results, actionable units and
 physical requests per unit. After each pass it invokes the existing batch
@@ -4682,9 +4683,9 @@ The policy does not authorize a future sweep or schedule a new round; an
 operator must still approve each proposed batch. No production campaign ran
 for this decision.
 
-## D121 — The portal can approve a frozen batch as one authenticated action (2026-10-10)
+## D122 — The portal can approve a frozen batch as one authenticated action (2026-10-10)
 
-D120 removed manual batch planning, but the portal previously authorized only
+D121 removed manual batch planning, but the portal previously authorized only
 one operation at a time. The control server now lists each flow's immutable
 batches with units, hosts, skipped items, operation states and the total
 physical-request ceiling. A POST must repeat the shown operation IDs and
@@ -4696,9 +4697,9 @@ only executor. The frontend session may connect this route to its approval
 view; this backend change does not alter frontend files or approve any real
 campaign.
 
-## D122 — A finite schedule can preapprove exact network batches (2026-10-10)
+## D123 — A finite schedule can preapprove exact network batches (2026-10-10)
 
-D120/D121 remove manual batch assembly but still require a fresh approval
+D121/D122 remove manual batch assembly but still require a fresh approval
 click for each batch. To support unattended execution at known times, a
 schedule now binds 1–32 already frozen batches to UTC start/expiry windows,
 their exact units and one summed physical request ceiling. The operator

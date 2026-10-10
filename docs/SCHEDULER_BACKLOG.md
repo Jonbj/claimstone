@@ -13,7 +13,7 @@ no operation. The worker and append-only execution contract are described in
 `docs/contracts/scheduler_operations.md`. The dated entries in `docs/HANDOFF.md`
 state which operations have actually been exercised.
 
-2026-10-09 retrieval calibration (D116): an authorized six-request L02 variant
+2026-10-09 retrieval calibration (D117): an authorized six-request L02 variant
 probe returned 100 OpenAlex, 100 Crossref and 6 arXiv rows. The 172 distinct
 candidate keys and 34 multi-provider keys are retrieval observations, not
 screened studies. New discovery runs now retain every query-result path in
@@ -348,11 +348,11 @@ proposal policy is separate from the later finite schedule. Safe search-page
 and copy planning, incremental source selection and an end-of-run dossier
 remain. The local mandate authorizes no periodic network campaign.
 Batch planning now scans past already settled query/candidate identities before
-applying its actionable-unit cap (D119), so repeated plans can reach later
+applying its actionable-unit cap (D120), so repeated plans can reach later
 terms. It still does not generate cursor pages or approve a new sweep.
-The D120 coordinator now uses that planner after every pass when a version 2
+The D121 coordinator now uses that planner after every pass when a version 2
 mandate names exact search/copy proposal limits. It reports pending batch IDs
-but leaves them unapproved. D122 adds a finite, revocable, operator-approved
+but leaves them unapproved. D123 adds a finite, revocable, operator-approved
 network schedule for batches already frozen, with exact UTC windows and a
 summed lifetime physical-request ceiling. Remaining for periodic autonomous
 research: dated update rounds with cumulative evidence semantics, safe cursor
@@ -424,7 +424,7 @@ are not prerequisites. The existing `select` includes `primary_location` and
 `open_access` because this project's frozen metadata population needs them;
 dropping those fields for a thinner first pass would change selection behavior.
 
-2026-10-09 implementation status (D112–D116): shared on-machine provider pacing for
+2026-10-09 implementation status (D112–D117): shared on-machine provider pacing for
 arXiv, Crossref and OpenAlex is in place, including one concurrent connection
 per provider and recorded start reservations. OpenAlex quota headers and
 returned cost fields are retained in request rows; a 429 with zero remaining
@@ -437,14 +437,14 @@ using one mounted store, not separate machines.
 `discovery_version 4` now retains OpenAlex Work IDs and one-based rank on new
 candidate rows and records `meta.count`, `next_cursor` and first-page capping
 on query rows (D113). Following cursors under a new authorized page ceiling,
-remains pending for the scheduler. The D117 isolated pilot can follow page 2
+remains pending for the scheduler. The D118 isolated pilot can follow page 2
 of a saved 100-row query using basic paging because OpenAlex reported 1,055
 results, below the documented 10,000-result basic-paging limit. A new search
 that needs cursor depth must start with `cursor=*` on its first page and freeze
 each returned cursor; it cannot splice a cursor into the previous basic-page
 result set. New discovery runs retain every query path in
-`query_hits.jsonl` (D116); historical rows remain unbackfilled.
-The authorized D117 second-page check returned 100 new keys without exact
+`query_hits.jsonl` (D117); historical rows remain unbackfilled.
+The authorized D118 second-page check returned 100 new keys without exact
 overlap with page 1 and one new exact identity from a 20-case reference packet.
 The scheduler still needs an approved, resumable page operation before it may
 perform this automatically; the pilot's isolated audit does not authorize

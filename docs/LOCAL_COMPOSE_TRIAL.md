@@ -52,13 +52,13 @@ docker compose --profile trial exec -T scheduler claimstone scheduler-preview \
 
 The preview currently reports zero candidates and `PREVIEW_ONLY`. This is a
 real running stack, but it is not yet an end-to-end automated research run:
-controlled candidate intake, authenticated portal commands and human decisions
-are still pending. A new network campaign requires a frozen plan and the
-operator's authorization before it can run. The current portal API is read-only.
+the selected round has no candidates, and the worker cannot create a new
+research round or sign a verdict. A new network campaign requires a frozen
+plan and the operator's authorization before it can run. The `/api/v1/` API
+is read-only; the separate control service handles authenticated writes.
 
-Before moving this stack to a VM, complete the portal control API and its
-authentication, run at least one bounded flow through its stages locally, and
-exercise the operator decisions in the web interface. Then prepare VM-specific
+Before moving this stack to a VM, run at least one bounded flow through its
+stages locally and exercise the operator decisions in the web interface. Then prepare VM-specific
 secrets, backups of `store/`, HTTPS and authenticated access. Do not expose this
 local read-only portal or the current control plane directly on a public port.
 
