@@ -180,11 +180,26 @@ def test_no_route_changes_an_existing_project(ws):
         draft, rev = _fill(client)
         client.post(f"/new/{draft}/advanced", {"base_revision": rev, "files": {}})
         client.get(f"/new/{draft}/preview")
-        client.post(f"/new/{draft}/create", _create_body(client, draft))
-        # a second draft aiming at the existing name is refused and still changes nothing
+        status, _h, body = client.post(f"/new/{draft}/create",
+                                       {"confirm": True, "protocol_sha256": "0" * 64})
+        assert (status, body["error"]["code"]) == (409, "PREVIEW_CHANGED")
+        assert client.post(f"/new/{draft}/create", _create_body(client, draft))[0] == 201
+        # a second draft aiming at the existing name is refused, then discarded
         _, _, second = client.post("/new", {})
-        client.post(f"/new/{second['draft_id']}/steps/1",
-                    {"base_revision": 1, "data": {**STEP1, "name": "example-news-and-returns"}})
+        status, _h, _b = client.post(f"/new/{second['draft_id']}/steps/1",
+                                     {"base_revision": 1, "data": {**STEP1, "name": "example-news-and-returns"}})
+        assert status == 422
+        assert client.post(f"/new/{second['draft_id']}/discard", {"base_revision": 1})[0] == 200
+        # a name that becomes taken between review and creation
+        _, _, third = client.post("/new", {})
+        rev3 = 1
+        for step, data in ((1, {**STEP1, "name": "late-name"}), (2, STEP2), (3, STEP3)):
+            rev3 = client.post(f"/new/{third['draft_id']}/steps/{step}",
+                               {"base_revision": rev3, "data": data})[2]["revision"]
+        shown = _create_body(client, third["draft_id"])
+        (ws["projects"] / "late-name").mkdir()
+        status, _h, body = client.post(f"/new/{third['draft_id']}/create", shown)
+        assert (status, body["error"]["code"]) == (409, "NAME_TAKEN")
     assert _tree(ws["projects"] / "example-news-and-returns") == before
 
 

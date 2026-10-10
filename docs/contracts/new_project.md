@@ -23,15 +23,21 @@ A draft is what an operator typed before a project existed. The ledger lives in
 
 | route | answer |
 |---|---|
-| `POST /new` | 201 `{draft_id, revision}` |
+| `POST /new` | 201 `{draft_id, revision}` (revision 1) |
 | `GET /new` | `{drafts: [...]}`, the operator's own |
-| `GET /new/{id}` | the replayed state plus `figures` per saved step; another operator's id is 404 |
-| `POST /new/{id}/steps/{1-3}` `{base_revision, data}` | 200 `{revision, data, figures}`; 422 with `details: [{path, message}]` and nothing written; 409 `STALE_REVISION`, `DRAFT_CLOSED` |
-| `POST /new/{id}/advanced` `{base_revision, files}` | 200 `{revision}`; the files must still load; `{}` clears |
-| `GET /new/{id}/preview` | `{figures, protocol_sha256, files, revision}`; needs steps 1–3 |
-| `POST /new/{id}/discard` `{base_revision}` | 200 |
-| `POST /new/{id}/create` `{confirm: true, protocol_sha256}` | 201 `{project, protocol_sha256, files, frozen}`; `protocol_sha256` is the digest the review page showed; 409 `PREVIEW_CHANGED` when the draft now renders differently, `NAME_TAKEN`, `ROUND_TRIP`, `DRAFT_CLOSED` |
-| `GET /new-templates`, `GET /new-templates/{id}` | the data templates (`templates/project/*.yaml`) |
+| `GET /new/{id}` | the replayed state: `draft_id`, `revision`, `status`, `steps` (step number → `{data, revision}`), `advanced`, `project`, `last_failure` (the reason of the last refused creation, cleared once the project is created), `started_at`, `updated_at`, plus `figures` per saved step; another operator's id is 404 |
+| `POST /new/{id}/steps/{1-3}` `{base_revision, data}` | 200 `{revision, data, figures}`; 422 `VALIDATION` with `details: [{path, message}]` and nothing written; 409 `STALE_REVISION`, `DRAFT_CLOSED`; ownership and status are checked before the data |
+| `POST /new/{id}/advanced` `{base_revision, files}` | 200 `{revision}`; the files must still load (422 `VALIDATION`); `{}` clears; 409 `INCOMPLETE` until steps 1–3 are saved, `STALE_REVISION`, `DRAFT_CLOSED` |
+| `GET /new/{id}/preview` | `{figures, protocol_sha256, files, revision}`; 409 `INCOMPLETE` until steps 1–3 are saved, `DRAFT_CLOSED` |
+| `POST /new/{id}/discard` `{base_revision}` | 200 `{revision, status: "discarded"}`; 409 `STALE_REVISION`, `DRAFT_CLOSED` |
+| `POST /new/{id}/create` `{confirm: true, protocol_sha256}` | 201 `{project, protocol_sha256, files, frozen}`; `protocol_sha256` is the digest the review page showed; 422 `VALIDATION` when `confirm` is not the literal `true` or the digest is missing or malformed; 409 `INCOMPLETE`, `DRAFT_CLOSED`, `PREVIEW_CHANGED` (the draft now renders differently), `NAME_TAKEN` (also when `store/<name>` already exists), `ROUND_TRIP` |
+| `GET /new-templates`, `GET /new-templates/{id}` | the data templates (`templates/project/*.yaml`); an unknown template is 404 |
+
+Every route: 404 `NOT_FOUND` for an unknown draft (the same answer for another operator's), for a step
+other than `1`, `2`, `3` (ASCII digits only), and for an unknown template. The date written into the
+registry and floor (`frozen_at`) is the UTC date, computed once per request and the same one the response
+reports. Creation and the saves are serialized under the draft store's writer lock, so a discard or a
+save from another tab either lands before creation (which then refuses) or after it.
 
 ## What creation does, and does not do
 

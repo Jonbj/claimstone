@@ -69,15 +69,16 @@ and is never listed to another. Nothing in this ledger is read by any stage, pro
 
 ### Routes (all under `/control/v1/`, all POST rules of `control_api.md` apply)
 
-- `POST new` → `{draft_id, revision: 0}`.
+- `POST new` → `{draft_id, revision: 1}`.
 - `POST new/{id}/steps/{n}` with `{base_revision, data}` → 422 with field paths when invalid and nothing written;
   409 `STALE_REVISION` when `base_revision` is behind; otherwise `{revision, data, figures}`.
 - `POST new/{id}/advanced` with `{files: {…}}` replaces the generated text of a file; it must pass the same
   loaders, and may add to the excluded hosts but never remove one the template declares.
-- `GET new` lists the operator's drafts; `GET new/{id}` reads one; `GET new/{id}/preview` → figures only,
-  computed offline, no network, no write.
+- `GET new` lists the operator's drafts; `GET new/{id}` reads one; `GET new/{id}/preview` → `{figures, protocol_sha256, files,
+  revision}`, computed offline, no network, no write.
 - `POST new/{id}/discard` appends `discarded`.
-- `POST new/{id}/create` with `{confirm: true}` and an `Idempotency-Key`.
+- `POST new/{id}/create` with `{confirm: true, protocol_sha256}` and an `Idempotency-Key`; `protocol_sha256` is the
+  digest the review page displayed, and a draft that now renders differently is 409 `PREVIEW_CHANGED`.
 
 Every route is registered in `ROUTES`, so the anonymous-access test covers it the moment it exists.
 
