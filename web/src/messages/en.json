@@ -8,6 +8,11 @@
     "lede": "Describe a topic, ask your questions, declare the sources and the bar. Claimstone checks each step and keeps a draft. Nothing runs until you create the project, and creating it does not start any research.",
     "signIn": "Sign in to create a project.",
     "signInLink": "Sign in",
+    "expired": {
+      "text": "Your session ended. Sign in in another tab, then press the button below and save again. What you typed is still here.",
+      "signIn": "Sign in in another tab",
+      "recheck": "I have signed in: check again"
+    },
     "loading": "Loading the draft…",
     "back": "Back",
     "saveContinue": "Save and continue",

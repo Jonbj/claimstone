@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import ErrorState from "@/components/ErrorState";
 import Pending from "@/components/Pending";
@@ -20,9 +20,13 @@ export default function WizardPage() {
   const draftId = decodeURIComponent(raw);
   const session = useSession();
   const { t } = useLocale();
+  // Once a wizard has been mounted for a signed-in operator it stays mounted if the session ends:
+  // unmounting it would throw away what was typed. The banner explains and offers a way back.
+  const wasSignedIn = useRef(false);
+  if (session.operator) wasSignedIn.current = true;
   if (!session.ready) return <Pending label="…" />;
-  if (!session.operator) {
-    const next = `/new/${encodeURIComponent(draftId)}/${encodeURIComponent(rawStep)}`;
+  const next = `/new/${encodeURIComponent(draftId)}/${encodeURIComponent(rawStep)}`;
+  if (!session.operator && !wasSignedIn.current) {
     return (
       <section className="flex flex-col gap-3 pt-6">
         <h1 className="text-[44px] leading-tight">{t("wizard.title")}</h1>
@@ -35,10 +39,13 @@ export default function WizardPage() {
   }
   const parsed = Number.parseInt(rawStep, 10);
   const step = (parsed >= 1 && parsed <= 4 ? parsed : 1) as 1 | 2 | 3 | 4;
-  return <Wizard draftId={draftId} step={step} />;
+  return <Wizard draftId={draftId} step={step} expired={!session.operator} next={next} recheck={session.recheck} />;
 }
 
-function Wizard({ draftId, step }: { draftId: string; step: 1 | 2 | 3 | 4 }) {
+function Wizard(
+  { draftId, step, expired, next, recheck }:
+  { draftId: string; step: 1 | 2 | 3 | 4; expired: boolean; next: string; recheck: () => Promise<void> },
+) {
   const { t } = useLocale();
   const navigate = useNavigate();
   const draftApi = useApi(() => control.newRead(draftId), [draftId]);
@@ -108,6 +115,19 @@ function Wizard({ draftId, step }: { draftId: string; step: 1 | 2 | 3 | 4 }) {
         <h1 className="text-[44px] leading-tight">{t("wizard.title")}</h1>
         <p className="mt-1 max-w-[70ch] text-sm text-muted-foreground">{t("wizard.lede")}</p>
       </header>
+      {expired ? (
+        <div role="status" className="flex flex-col gap-2 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm">
+          <p>{t("wizard.expired.text")}</p>
+          <p className="flex flex-wrap items-center gap-3">
+            <a className="underline" href={`/login?next=${encodeURIComponent(next)}`} target="_blank" rel="noopener noreferrer">
+              {t("wizard.expired.signIn")}
+            </a>
+            <button type="button" className="min-h-11 rounded-lg border border-border px-3" onClick={() => void recheck()}>
+              {t("wizard.expired.recheck")}
+            </button>
+          </p>
+        </div>
+      ) : null}
       <WizardShell
         draftId={draftId}
         current={step}

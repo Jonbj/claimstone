@@ -8,6 +8,11 @@
     "lede": "Descrivi un argomento, scrivi le domande, dichiara le fonti e la soglia. Claimstone controlla ogni passo e conserva una bozza. Nulla parte finché non crei il progetto, e crearlo non avvia nessuna ricerca.",
     "signIn": "Accedi per creare un progetto.",
     "signInLink": "Accedi",
+    "expired": {
+      "text": "La sessione è scaduta. Accedi in un'altra scheda, poi premi il pulsante qui sotto e salva di nuovo. Quello che hai scritto è ancora qui.",
+      "signIn": "Accedi in un'altra scheda",
+      "recheck": "Ho effettuato l'accesso: controlla di nuovo"
+    },
     "loading": "Caricamento della bozza…",
     "back": "Indietro",
     "saveContinue": "Salva e continua",

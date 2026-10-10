@@ -17,6 +17,8 @@ export interface SessionState {
   error: Error | null;
   signIn: (id: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
+  /** Asks the server again; a 401 simply leaves the operator null and never throws. */
+  recheck: () => Promise<void>;
 }
 
 const SessionContext = createContext<SessionState | null>(null);
@@ -65,9 +67,21 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const recheck = useCallback(async () => {
+    try {
+      const info = await control.session();
+      setError(null);
+      setOperator(info.operator);
+    } catch (cause) {
+      if (!(cause instanceof ControlError && cause.status === 401)) {
+        setError(cause instanceof Error ? cause : new Error(String(cause)));
+      }
+    }
+  }, []);
+
   const value = useMemo(
-    () => ({ operator, ready, error, signIn, signOut }),
-    [operator, ready, error, signIn, signOut],
+    () => ({ operator, ready, error, signIn, signOut, recheck }),
+    [operator, ready, error, signIn, signOut, recheck],
   );
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }

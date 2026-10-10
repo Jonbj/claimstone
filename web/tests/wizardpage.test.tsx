@@ -13,6 +13,7 @@ const json = (status: number, body: unknown) =>
 let requested: string[];
 let signedIn = true;
 let draftBody: Record<string, unknown>;
+let stepUnauthorized = false;
 const baseDraft = {
   draft_id: "d1", revision: 1, status: "open", steps: {}, advanced: {}, figures: {}, project: null,
   last_failure: null, started_at: "t", updated_at: "t",
@@ -39,6 +40,9 @@ function mount(path: string) {
       { draft_id: "d2", status: "created", revision: 9, steps_saved: [1, 2, 3], project_name: "done-one", project: "done-one", updated_at: "t" },
     ] });
     if (url === "/control/v1/new/d1") return json(200, draftBody);
+    if (url === "/control/v1/new/d1/steps/1" && stepUnauthorized) {
+      return json(401, { error: { code: "UNAUTHORIZED", message: "session ended" } });
+    }
     if (url === "/control/v1/new/d1/steps/1") return json(200, { revision: 2, data: {}, figures: { topics: 1, terms: 2 } });
     return json(404, { error: { code: "NOT_FOUND", message: "no" } });
   });
@@ -61,6 +65,7 @@ function mount(path: string) {
 beforeEach(() => {
   setCsrfToken(null);
   signedIn = true;
+  stepUnauthorized = false;
   draftBody = { ...baseDraft };
 });
 afterEach(() => {
@@ -126,5 +131,41 @@ describe("WizardPage", () => {
     mount("/new/d1/1");
     await screen.findByText("1 · The topic");
     expect(requested.every((r) => r.includes("/control/v1/new") || r.includes("/control/v1/session"))).toBe(true);
+  });
+
+  it("a session that ends mid-save keeps the typed text, and a re-check restores saving", async () => {
+    mount("/new/d1/1");
+    await screen.findByText("1 · The topic");
+    fireEvent.change(screen.getByLabelText(/Project name/), { target: { value: "news-tone" } });
+    fireEvent.change(screen.getByLabelText(/^Topic\b/), { target: { value: "News" } });
+    stepUnauthorized = true;
+    signedIn = false;
+    fireEvent.click(screen.getByRole("button", { name: "Save and continue" }));
+    expect(await screen.findByText(/Your session ended/)).toBeTruthy();
+    expect((screen.getByLabelText(/Project name/) as HTMLInputElement).value).toBe("news-tone");
+    expect((screen.getByLabelText(/^Topic\b/) as HTMLInputElement).value).toBe("News");
+    const link = screen.getByRole("link", { name: "Sign in in another tab" });
+    expect(link.getAttribute("href")).toBe("/login?next=%2Fnew%2Fd1%2F1");
+    expect(link.getAttribute("target")).toBe("_blank");
+    expect(link.getAttribute("rel")).toBe("noopener noreferrer");
+
+    stepUnauthorized = false;
+    signedIn = true;
+    fireEvent.click(screen.getByRole("button", { name: "I have signed in: check again" }));
+    await waitFor(() => expect(screen.queryByText(/Your session ended/)).toBeNull());
+    fireEvent.click(screen.getByRole("button", { name: "Save and continue" }));
+    await waitFor(() => expect(where).toBe("/new/d1/2"));
+  });
+
+  it("a still-signed-out re-check keeps the banner and does not throw", async () => {
+    mount("/new/d1/1");
+    await screen.findByText("1 · The topic");
+    stepUnauthorized = true;
+    signedIn = false;
+    fireEvent.click(screen.getByRole("button", { name: "Save and continue" }));
+    await screen.findByText(/Your session ended/);
+    fireEvent.click(screen.getByRole("button", { name: "I have signed in: check again" }));
+    await waitFor(() => expect(requested.filter((r) => r.includes("/session")).length).toBeGreaterThan(1));
+    expect(screen.getByText(/Your session ended/)).toBeTruthy();
   });
 });
