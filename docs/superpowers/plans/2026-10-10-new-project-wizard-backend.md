@@ -629,7 +629,7 @@ def _sources_step(data: Any, templates_dir: str | pathlib.Path,
 - [ ] **Step 4: Run to verify pass**
 
 Run: `.venv/bin/pytest -q tests/test_project_builder.py`
-Expected: all pass. (`test_step_3_keeps_the_floor_with_no_override_key` asserts unknown keys such as `override` are named.)
+Expected: all pass. (`test_step_3_has_no_override_field_and_names_unknown_keys` asserts unknown keys such as `override` are named.)
 
 - [ ] **Step 5: Commit**
 
@@ -1536,10 +1536,12 @@ def save_step(projects_dir, store_dir, actor, code_revision, draft_id, step, bas
 
 def _files_and_info(projects_dir, current: dict[str, Any]):
     state = {int(n): v["data"] for n, v in current["steps"].items()}
-    files = pb.render(state, _templates_dir(projects_dir), today=_today(),
+    today = _today()
+    files = pb.render(state, _templates_dir(projects_dir), today=today,
                       overrides=current["advanced"] or None)
+    # `today` is required: inspect refuses an override that breaks "registry v1, floor v1, frozen today".
     info = pb.inspect(files, name=state[1]["name"], templates_dir=_templates_dir(projects_dir),
-                      template_id=state[3]["template"])
+                      template_id=state[3]["template"], today=today)
     return state, files, info
 
 
