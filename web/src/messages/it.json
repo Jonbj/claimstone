@@ -119,6 +119,7 @@
       "advancedHelp": "Una modifica sostituisce un file intero e deve comunque superare gli stessi controlli. Se cambi un passo precedente dopo aver modificato qui, ripristina i file perché vengano generati di nuovo.",
       "saveFiles": "Salva le modifiche ai file",
       "resetFiles": "Ripristina i file generati",
+      "resetHelp": "Se hai modificato i file e la data è cambiata, ripristinali: verranno generati di nuovo.",
       "confirm": "So che il registro delle domande e la soglia vengono congelati alla versione 1 con la data di oggi, e che cambiarli più avanti richiede una nuova versione datata.",
       "create": "Crea il progetto",
       "creating": "Creazione…",

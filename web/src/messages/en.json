@@ -119,6 +119,7 @@
       "advancedHelp": "An edit replaces a whole file and must still load with the same checks. If you change an earlier step after editing here, reset the files so they are generated again.",
       "saveFiles": "Save file changes",
       "resetFiles": "Reset to generated files",
+      "resetHelp": "If you edited the files and the date has changed, reset them so they are generated again.",
       "confirm": "I understand that the question registry and the floor are frozen at version 1 with today's date, and that changing them later needs a dated new version.",
       "create": "Create the project",
       "creating": "Creating…",

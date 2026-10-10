@@ -61,12 +61,6 @@ function ReviewForm({ draftId, draft, onCreated, onChanged, onFigures }: ReviewP
     if (preview.data) onFigures?.(preview.data.figures);
   }, [preview.data, onFigures]);
 
-  if (preview.error) return <ErrorState error={preview.error} context="preview" />;
-  if (preview.pending || !preview.data) return <Pending label={t("wizard.loading")} />;
-  const data = preview.data;
-  const name = String((draft.steps["1"].data as { name?: string }).name ?? "");
-  const params = explainParams(data.figures, { name });
-
   async function run(kind: "create" | "files", work: () => Promise<void>) {
     if (busy) return;
     setBusy(kind);
@@ -80,6 +74,36 @@ function ReviewForm({ draftId, draft, onCreated, onChanged, onFigures }: ReviewP
     }
   }
 
+  const resetFiles = () =>
+    run("files", async () => {
+      await control.newSaveAdvanced(draftId, draft.revision, {});
+      setEdits({});
+      onChanged();
+    });
+
+  if (preview.error) {
+    // The preview can fail for a reason only a reset cures (an override frozen on an earlier UTC
+    // day), so the reset must not live only inside the form that this error replaces.
+    return (
+      <div className="flex flex-col gap-3">
+        <ErrorState error={preview.error} context="preview" />
+        {Object.keys(draft.advanced).length ? (
+          <section className={cardClass}>
+            <p className="text-[13px] text-muted-foreground">{t("wizard.step4.resetHelp")}</p>
+            <ErrorSummary error={error} />
+            <button type="button" disabled={busy !== null} onClick={() => void resetFiles()} className={`${quietClass} mt-2`}>
+              {t("wizard.step4.resetFiles")}
+            </button>
+          </section>
+        ) : null}
+      </div>
+    );
+  }
+  if (preview.pending || !preview.data) return <Pending label={t("wizard.loading")} />;
+  const data = preview.data;
+  const name = String((draft.steps["1"].data as { name?: string }).name ?? "");
+  const params = explainParams(data.figures, { name });
+
   const create = (event: FormEvent) => {
     event.preventDefault(); // the CSP has form-action 'none'
     if (!confirmed) return;
@@ -92,13 +116,6 @@ function ReviewForm({ draftId, draft, onCreated, onChanged, onFigures }: ReviewP
         Object.entries(edits).filter(([file, text]) => text !== data.files[file]),
       );
       await control.newSaveAdvanced(draftId, draft.revision, { ...draft.advanced, ...changed });
-      setEdits({});
-      onChanged();
-    });
-
-  const resetFiles = () =>
-    run("files", async () => {
-      await control.newSaveAdvanced(draftId, draft.revision, {});
       setEdits({});
       onChanged();
     });

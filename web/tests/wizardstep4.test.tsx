@@ -23,7 +23,9 @@ const preview = {
 
 let calls: Array<{ method: string; url: string; body: unknown }>;
 let createStatus = 201;
+let previewStatus = 200;
 beforeEach(() => {
+  previewStatus = 200;
   setCsrfToken("tok");
   calls = [];
   createStatus = 201;
@@ -40,6 +42,10 @@ beforeEach(() => {
         : { error: { code: "NAME_TAKEN", message: "a project named news-tone already exists" } };
     }
     if (url.endsWith("/advanced")) body = { revision: 7 };
+    if (url.endsWith("/preview") && previewStatus !== 200) {
+      status = previewStatus;
+      body = { error: { code: "VALIDATION", message: "frozen_at is not today" } };
+    }
     return Promise.resolve(new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } }));
   });
 });
@@ -120,6 +126,17 @@ describe("StepReview", () => {
     fireEvent.click(screen.getByText("Advanced: edit the generated files"));
     fireEvent.click(screen.getByRole("button", { name: "Reset to generated files" }));
     await waitFor(() => expect(calls.some((c) => c.url.endsWith("/advanced"))).toBe(true));
+    expect(calls.find((c) => c.url.endsWith("/advanced"))!.body).toEqual({ base_revision: 6, files: {} });
+  });
+
+  it("when the preview fails with an override present, the error stays and so does a reset", async () => {
+    previewStatus = 422;
+    const onChanged = vi.fn();
+    mount(full(), { onChanged });
+    expect(await screen.findByText(/frozen_at is not today/)).toBeTruthy();
+    expect(screen.getByText(/reset them so they are generated again/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Reset to generated files" }));
+    await waitFor(() => expect(onChanged).toHaveBeenCalled());
     expect(calls.find((c) => c.url.endsWith("/advanced"))!.body).toEqual({ base_revision: 6, files: {} });
   });
 });
