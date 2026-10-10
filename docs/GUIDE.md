@@ -1,75 +1,5 @@
 # A round, end to end
 
-For a bound research flow, `claimstone scheduler-preview PROJECT FLOW_ID`
-prints an offline, read-only proposal of next work. It does not authorize or
-start a stage. It names protocol/integrity blockers and keeps an empty new
-round distinct from a closed candidate cohort (D86).
-
-An existing flow can also run one bounded offline stage through the operation
-ledger. For example, after candidates and acquired copies exist:
-
-```bash
-.venv/bin/claimstone scheduler plan projects/<name> <flow-id> normalize
-.venv/bin/claimstone scheduler authorize projects/<name> <operation-id>
-.venv/bin/claimstone scheduler run projects/<name> <operation-id>
-.venv/bin/claimstone scheduler status projects/<name> <operation-id>
-```
-
-Use `extract-build --batch <name>` or `review-build --batch <name>
---reviewer <backend>/<model>` for scoped queue construction. A local model
-queue can be drained with `extract-drain` or `review-drain` plus `--batch`,
-`--model` and `--max-calls`; then plan the matching `extract-harvest` or
-`review-harvest`. `synthesize` builds a profile. The operator authorizes each
-exact plan from the local OS account. These operations permit no external
-internet requests except an explicitly planned single-candidate `acquire`
-with `--candidate-key`, repeatable `--allow-host` and `--max-requests`.
-A `discover` plan instead names `--api`, `--topic`, `--term`, `--per-query`,
-`--allow-host` and `--max-requests`; it runs one frozen query per authorization.
-For a metered drain, add `--backend ollama-cloud`, `--budget-id`,
-`--budget-cents`, `--max-call-cents`, `--price-in-cents` and
-`--price-out-cents`. Prices are declared upper estimates in USD cents per
-million tokens, and reservations are cumulative across plans with the same
-budget ID. Review the exact plan and authorize it before a worker may call the
-provider. Credits in an account alone grant no authorization. A provider bill
-can exceed a local estimate; use the provider's account spending controls as
-the external hard cap. Interrupted calls with uncertain billing stop for
-inspection rather than being sent again.
-After a failed offline operation, use a new `--run-label` once the cause is
-resolved. An uncertain physical request blocks automatic retry even with a
-new label.
-For a query that failed before any physical request, a new discovery plan may
-name `--run-label` and `--retry-reason`. It binds the prior failure row and
-still requires a separate operator authorization before execution.
-
-For several query or candidate plans, `scheduler batch-plan` accepts explicit
-APIs/hosts, `--max-units` and `--max-requests-each`, and prints one batch ID
-with the total ceiling and skipped items. Review that JSON, then run
-`scheduler authorize-batch PROJECT BATCH_ID`. `scheduler tick PROJECT` runs a
-bounded number of approved operations once; `scheduler worker PROJECT` polls
-for further approved operations. The worker does not approve new work.
-For a single unattended local pass after collection, run `scheduler drive
-PROJECT FLOW_ID --extract-model MODEL_A --review-model MODEL_B
---max-local-calls N`. It stops at the network, acquisition-floor or human
-reading gate; it cannot sign a verdict. Run it inside `./claimstone.sh` if
-PDF normalization needs the internal GROBID service.
-The same invocation first runs any network units for that flow that were
-already authorized when it started; it never expands their host lists or
-ceilings.
-
-To prepare a finite series of dated update rounds offline, write a JSON array
-such as `[ {"round":"update-2026-11", "title":"November update",
-"not_before":"2026-11-01T00:00:00Z", "expires_at":"2026-11-02T00:00:00Z"} ]`.
-Then use `scheduler periodic-plan PROJECT SOURCE_FLOW_ID --rounds-file FILE
---api crossref --allow-host api.crossref.org --max-units-each N
---max-requests-each N`. The per-round unit cap must fit *all* topic terms for
-the selected APIs. This creates new flow bindings and exact discovery batches,
-but makes no request. Inspect the returned schedule ID and its batches, then
-authorize that finite schedule with `scheduler schedule-authorize PROJECT ID`.
-`scheduler periodic-audit PROJECT ID` reports each round's query outcomes and
-acquisition floor, ancestor flow admission and whole-corpus admission. It never issues a verdict. A
-new candidate still needs a separately authorized acquisition plan; scheduling
-discovery does not preapprove unknown future copies.
-
 What each stage does, what it writes, and what the numbers mean. *In italiano: [GUIDE.it.md](GUIDE.it.md).*
 
 Worked against the round that closed on 2026-09-28 — `pmc-screen-time`, 40 sources — so every figure here is
@@ -254,9 +184,10 @@ Its one categorical output is `NO_VERIFIED_CLAIM`, which says nothing survived. 
 `NEVER_ASKED`: an extraction miss, an all-rejected question and a genuinely unasked one look identical from
 here, and only screening tells them apart.
 
-D45 corrected the saved round's completeness: 34 extraction readings have no valid answer, including
-10 effect readings that keep Q04 provisional. A terminal model failure is not a reading with zero claims.
-The profile reports `extraction.expected`, `unanswered`, `unharvested` and `unchunked_sources`.
+D45 made completeness explicit: a terminal model failure is not a reading with zero claims, so the profile reports
+`extraction.expected`, `unanswered`, `unharvested` and `unchunked_sources`. When D45 was written, 34 readings of the saved
+round had no valid answer, 10 of them effect readings that kept Q04 provisional. D52 then completed all 734 Q04 effect
+readings, and `verdicts` now shows 0 unanswered for Q04.
 
 Use the same `--round` and `--manifest-only` on `synthesize`, `verdicts` and `adjudicate`; the scope is
 hashed and its profiles and signatures are kept separate. `verdicts` recomputes in memory without
@@ -433,3 +364,79 @@ missing, failed or insufficient-depth queries from a frozen protocol. With `--ex
 it reads contact and keys safely from `.env`, shares one fetcher across the selected queries and
 stops at the first failure. Completed queries, including capped ones, are skipped: deeper search
 requires an explicit follow-up protocol. Default limit is one query; it launches no model calls.
+
+## The scheduler: bounded operations (not finished)
+
+This part of the engine is still being completed, so it comes last. What follows is what exists today. It does not open a
+new research round, approve unknown future requests or sign a verdict. Current limits are in
+[the scheduler contract](contracts/scheduler_operations.md).
+
+For a bound research flow, `claimstone scheduler-preview PROJECT FLOW_ID`
+prints an offline, read-only proposal of next work. It does not authorize or
+start a stage. It names protocol/integrity blockers and keeps an empty new
+round distinct from a closed candidate cohort (D86).
+
+An existing flow can also run one bounded offline stage through the operation
+ledger. For example, after candidates and acquired copies exist:
+
+```bash
+.venv/bin/claimstone scheduler plan projects/<name> <flow-id> normalize
+.venv/bin/claimstone scheduler authorize projects/<name> <operation-id>
+.venv/bin/claimstone scheduler run projects/<name> <operation-id>
+.venv/bin/claimstone scheduler status projects/<name> <operation-id>
+```
+
+Use `extract-build --batch <name>` or `review-build --batch <name>
+--reviewer <backend>/<model>` for scoped queue construction. A local model
+queue can be drained with `extract-drain` or `review-drain` plus `--batch`,
+`--model` and `--max-calls`; then plan the matching `extract-harvest` or
+`review-harvest`. `synthesize` builds a profile. The operator authorizes each
+exact plan from the local OS account. These operations permit no external
+internet requests except an explicitly planned single-candidate `acquire`
+with `--candidate-key`, repeatable `--allow-host` and `--max-requests`.
+A `discover` plan instead names `--api`, `--topic`, `--term`, `--per-query`,
+`--allow-host` and `--max-requests`; it runs one frozen query per authorization.
+For a metered drain, add `--backend ollama-cloud`, `--budget-id`,
+`--budget-cents`, `--max-call-cents`, `--price-in-cents` and
+`--price-out-cents`. Prices are declared upper estimates in USD cents per
+million tokens, and reservations are cumulative across plans with the same
+budget ID. Review the exact plan and authorize it before a worker may call the
+provider. Credits in an account alone grant no authorization. A provider bill
+can exceed a local estimate; use the provider's account spending controls as
+the external hard cap. Interrupted calls with uncertain billing stop for
+inspection rather than being sent again.
+After a failed offline operation, use a new `--run-label` once the cause is
+resolved. An uncertain physical request blocks automatic retry even with a
+new label.
+For a query that failed before any physical request, a new discovery plan may
+name `--run-label` and `--retry-reason`. It binds the prior failure row and
+still requires a separate operator authorization before execution.
+
+For several query or candidate plans, `scheduler batch-plan` accepts explicit
+APIs/hosts, `--max-units` and `--max-requests-each`, and prints one batch ID
+with the total ceiling and skipped items. Review that JSON, then run
+`scheduler authorize-batch PROJECT BATCH_ID`. `scheduler tick PROJECT` runs a
+bounded number of approved operations once; `scheduler worker PROJECT` polls
+for further approved operations. The worker does not approve new work.
+For a single unattended local pass after collection, run `scheduler drive
+PROJECT FLOW_ID --extract-model MODEL_A --review-model MODEL_B
+--max-local-calls N`. It stops at the network, acquisition-floor or human
+reading gate; it cannot sign a verdict. Run it inside `./claimstone.sh` if
+PDF normalization needs the internal GROBID service.
+The same invocation first runs any network units for that flow that were
+already authorized when it started; it never expands their host lists or
+ceilings.
+
+To prepare a finite series of dated update rounds offline, write a JSON array
+such as `[ {"round":"update-2026-11", "title":"November update",
+"not_before":"2026-11-01T00:00:00Z", "expires_at":"2026-11-02T00:00:00Z"} ]`.
+Then use `scheduler periodic-plan PROJECT SOURCE_FLOW_ID --rounds-file FILE
+--api crossref --allow-host api.crossref.org --max-units-each N
+--max-requests-each N`. The per-round unit cap must fit *all* topic terms for
+the selected APIs. This creates new flow bindings and exact discovery batches,
+but makes no request. Inspect the returned schedule ID and its batches, then
+authorize that finite schedule with `scheduler schedule-authorize PROJECT ID`.
+`scheduler periodic-audit PROJECT ID` reports each round's query outcomes and
+acquisition floor, ancestor flow admission and whole-corpus admission. It never issues a verdict. A
+new candidate still needs a separately authorized acquisition plan; scheduling
+discovery does not preapprove unknown future copies.
