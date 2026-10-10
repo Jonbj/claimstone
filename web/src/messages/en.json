@@ -39,7 +39,7 @@
       "title": "What Claimstone will do",
       "afterSave": "After you save this step",
       "atCreation": "When you create the project",
-      "afterStart": "After you start research (next stage)"
+      "afterStart": "After you start research (next stage of the portal)"
     },
     "drafts": {
       "title": "Your drafts",
@@ -60,7 +60,7 @@
       }
     },
     "kind": {
-      "effect": "effect — judged on results that test it: estimates, uncertainty, horizon, sample, design.",
+      "effect": "effect — judged on results that test it: estimates, uncertainty, time horizon, sample, study design.",
       "heterogeneity": "heterogeneity — judged on the contrast between subgroups, with its uncertainty and whether the subgroup analysis was prespecified.",
       "method": "method — judged on which sources endorse the practice and which demonstrate its failure, kept apart, each with the role of its source.",
       "premise": "premise — judged on the explicit statement of it, or a contradiction of it.",
@@ -72,7 +72,7 @@
       "name": "Project name",
       "nameHelp": "2 to 63 lowercase letters, digits or hyphens, starting with a letter or a digit. It becomes the folder name and cannot be changed.",
       "description": "What you need to know, and why (optional)",
-      "descriptionHelp": "In scope and out of scope, in a few sentences. It is kept with the project and read by no stage.",
+      "descriptionHelp": "In scope and out of scope, in a few sentences. It is kept with the project and no stage of the analysis reads it.",
       "topics": "Topics",
       "topicLabel": "Topic",
       "topicLegend": "Topic {n}",
@@ -113,7 +113,7 @@
         "count": "count — counted toward the floor once verified",
         "separate": "separate — read, but reported apart from the floor"
       },
-      "suppliedHelp": "Declared now, before any copy exists. It cannot change under this protocol.",
+      "suppliedHelp": "Declared now, before any copy exists, and it cannot change while this protocol holds.",
       "notation": "How your discipline writes its figures",
       "notationCustom": "Custom list",
       "customLabels": "Notation, one per line",
@@ -151,7 +151,7 @@
       "next2": "Claimstone searches the indexes and obtains legal copies, recording every attempt.",
       "next3": "It prepares the documents and extracts claims bound to verbatim quotes, and an independent second reader reviews each one.",
       "next4": "If the round clears the floor, it builds an evidence profile for each literature question.",
-      "next5": "A person reads each profile and signs a verdict. Nothing is signed for you.",
+      "next5": "A person reads each profile and signs a verdict. No verdict is signed for you.",
       "afterSave": "Here you save only Advanced file edits: they are checked with the same loaders and kept in the draft. Nothing is created until you press \"Create the project\".",
       "atCreation": "Claimstone writes three files under projects/{name}/, freezes the question registry and the floor at version 1 on {frozenAt} (UTC date), and records each file's hash. It starts nothing.",
       "afterStart": "You will authorize one exact plan before anything runs. Claimstone then searches, obtains legal copies, prepares the documents, extracts claims bound to verbatim quotes, has an independent second reader review each one and, if the round clears the floor, builds an evidence profile per literature question. A person reads it and signs. This version of the portal does none of that yet."
