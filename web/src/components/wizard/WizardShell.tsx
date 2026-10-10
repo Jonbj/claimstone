@@ -14,8 +14,8 @@ export default function WizardShell(
   const { t } = useLocale();
   return (
     <div className="grid gap-5 min-[900px]:grid-cols-[210px_minmax(0,1fr)_320px]">
-      <nav aria-label={t("wizard.rail.label")}>
-        <ol className="flex gap-2 overflow-x-auto min-[900px]:flex-col min-[900px]:overflow-visible">
+      <nav aria-label={t("wizard.rail.label")} className="min-w-0">
+        <ol className="relative flex gap-2 overflow-x-auto min-[900px]:flex-col min-[900px]:overflow-visible">
           {STEPS.map((n) => {
             const done = saved.includes(n);
             const active = n === current;

@@ -75,4 +75,23 @@ describe("WizardShell", () => {
     expect(screen.getByText("form")).toBeTruthy();
     expect(screen.getByText("panel")).toBeTruthy();
   });
+
+  it("keeps the rail from widening the page below 900 px", () => {
+    // Seen in a real browser (documentElement.scrollWidth > clientWidth at 420 px): a grid child
+    // does not shrink without min-w-0, and the sr-only mark escapes an overflow container unless
+    // the container is positioned. jsdom cannot measure layout, so the two classes are pinned.
+    media(false);
+    render(
+      <MemoryRouter>
+        <LocaleProvider>
+          <WizardShell draftId="d1" current={4} saved={[1, 2, 3]} explain={<p>panel</p>}>
+            <p>form</p>
+          </WizardShell>
+        </LocaleProvider>
+      </MemoryRouter>,
+    );
+    const rail = screen.getByRole("navigation", { name: "Steps" });
+    expect(rail.className).toContain("min-w-0");
+    expect(rail.querySelector("ol")!.className).toContain("relative");
+  });
 });
