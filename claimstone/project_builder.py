@@ -359,3 +359,46 @@ def inspect(files: dict[str, str], *, name: str, templates_dir: str | pathlib.Pa
             return {"figures": figures(project), "protocol_sha256": flows.protocol_digest(project)}
         except ConfigError as exc:
             raise DraftInvalid([Problem(_file_of(str(exc)), str(exc))]) from exc
+
+
+# --- creation -----------------------------------------------------------------------------------
+
+
+def create_project(projects_dir: str | pathlib.Path, name: str, files: dict[str, str], *,
+                   expected_protocol_sha256: str, lock_store: Store) -> dict[str, Any]:
+    """Create `projects/<name>/` from three files. The only writer under `projects/`.
+
+    It creates a directory that did not exist and nothing else: no file of an existing project is
+    opened for writing. The files are written to `projects/.incoming-<random>/` (the same mount, so the
+    rename is atomic; `discover_projects` ignores the dot), loaded with the real loader, compared with
+    the protocol the preview promised, and only then renamed. Everything is serialized under one
+    lock so two creations cannot race for a name.
+    """
+    if not isinstance(name, str) or not NAME_RE.fullmatch(name):
+        raise DraftInvalid([Problem("name", "not a valid project name")])
+    if set(files) != set(FILES):
+        raise DraftInvalid([Problem("files", "need exactly " + ", ".join(FILES))])
+    projects = pathlib.Path(projects_dir)
+    final = projects / name
+    with lock_store.writer_lock():
+        if os.path.lexists(final):
+            raise ProjectExists(name)
+        projects.mkdir(parents=True, exist_ok=True)
+        staging = projects / f".incoming-{secrets.token_hex(8)}"
+        staging.mkdir()
+        try:
+            for filename in FILES:
+                (staging / filename).write_text(files[filename], encoding="utf-8")
+            try:
+                loaded = flows.protocol_digest(load_project(staging))
+            except ConfigError as exc:
+                raise DraftInvalid([Problem(_file_of(str(exc)), str(exc))]) from exc
+            if loaded != expected_protocol_sha256:
+                raise RoundTripMismatch(f"files carry {loaded}, the preview promised "
+                                        f"{expected_protocol_sha256}")
+            os.rename(staging, final)
+        except BaseException:
+            shutil.rmtree(staging, ignore_errors=True)
+            raise
+    return {"project": name, "protocol_sha256": loaded,
+            "files": {filename: sha256_text(files[filename]) for filename in FILES}}

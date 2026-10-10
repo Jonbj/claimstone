@@ -177,3 +177,71 @@ def test_a_question_with_no_kind_in_an_override_is_counted_unassigned():
     info = pb.inspect(files, name="news-tone", templates_dir=TEMPLATES, template_id="general")
     assert info["figures"]["questions_by_kind"]["unassigned"] == 1
     assert info["figures"]["questions_literature"] == 1
+
+
+import hashlib
+import shutil
+
+from claimstone.config import load_project, discover_projects
+from claimstone.store import Store
+
+
+def _tree_hash(root: pathlib.Path) -> dict[str, str]:
+    return {str(p.relative_to(root)): hashlib.sha256(p.read_bytes()).hexdigest()
+            for p in sorted(root.rglob("*")) if p.is_file()}
+
+
+def _prepared(tmp_path):
+    projects = tmp_path / "projects"
+    projects.mkdir()
+    files = pb.render(_state(), TEMPLATES, today="2026-10-10")
+    info = pb.inspect(files, name="news-tone", templates_dir=TEMPLATES, template_id="general")
+    return projects, files, info, Store("_new-projects", base=tmp_path / "store")
+
+
+def test_create_writes_three_files_that_load_with_the_same_digest(tmp_path):
+    projects, files, info, lock = _prepared(tmp_path)
+    result = pb.create_project(projects, "news-tone", files,
+                               expected_protocol_sha256=info["protocol_sha256"], lock_store=lock)
+    root = projects / "news-tone"
+    assert sorted(p.name for p in root.iterdir()) == sorted(pb.FILES)
+    assert result["files"]["questions.yaml"] == hashlib.sha256(files["questions.yaml"].encode()).hexdigest()
+    assert pb.flows.protocol_digest(load_project(root)) == info["protocol_sha256"]
+    assert [p.name for p in discover_projects(projects)] == ["news-tone"]
+
+
+def test_create_refuses_any_existing_entry_and_changes_nothing(tmp_path):
+    projects, files, info, lock = _prepared(tmp_path)
+    shutil.copytree(REPO / "projects" / "example-news-and-returns", projects / "news-tone")
+    before = _tree_hash(projects)
+    with pytest.raises(pb.ProjectExists):
+        pb.create_project(projects, "news-tone", files,
+                          expected_protocol_sha256=info["protocol_sha256"], lock_store=lock)
+    assert _tree_hash(projects) == before
+    assert not [p for p in projects.iterdir() if p.name.startswith(".incoming")]
+
+
+def test_a_digest_mismatch_leaves_no_project_and_no_staging(tmp_path):
+    projects, files, info, lock = _prepared(tmp_path)
+    with pytest.raises(pb.RoundTripMismatch):
+        pb.create_project(projects, "news-tone", files, expected_protocol_sha256="0" * 64,
+                          lock_store=lock)
+    assert list(projects.iterdir()) == []
+
+
+def test_a_file_that_no_longer_loads_leaves_nothing(tmp_path):
+    projects, files, info, lock = _prepared(tmp_path)
+    broken = {**files, "sources.yaml": "classes: []\n"}
+    with pytest.raises(pb.DraftInvalid):
+        pb.create_project(projects, "news-tone", broken,
+                          expected_protocol_sha256=info["protocol_sha256"], lock_store=lock)
+    assert list(projects.iterdir()) == []
+
+
+@pytest.mark.parametrize("bad", ["../escape", "A", "", "a/b", ".hidden"])
+def test_create_refuses_a_name_that_could_be_a_path(tmp_path, bad):
+    projects, files, info, lock = _prepared(tmp_path)
+    with pytest.raises(pb.DraftInvalid):
+        pb.create_project(projects, bad, files, expected_protocol_sha256=info["protocol_sha256"],
+                          lock_store=lock)
+    assert list(projects.iterdir()) == []
