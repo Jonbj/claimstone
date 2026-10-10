@@ -90,6 +90,11 @@ mandate. `scheduler auto-worker PROJECT MANDATE_ID` revisits that flow after new
 data arrives; `auto-status`, `auto-once` and `auto-disable` inspect, run one pass
 and stop it. The total local-call allowance survives worker restarts. Network
 operations still need separate exact-plan authorization.
+Optional `--discover-api`, `--discover-host` and `--acquire-host` settings let
+that worker prepare the next bounded batches; `auto-status` shows those still
+awaiting approval. Preparing a batch makes no network request.
+The authenticated control API can list and authorize one frozen batch in a
+single action; the worker remains responsible for execution.
 
 All six stages are implemented and one round has run end to end on literature deposited in PubMed
 Central: 37 of 40 sources confirmed against a floor of 0.80, 1,721 accepted annotations and 271 rejections.

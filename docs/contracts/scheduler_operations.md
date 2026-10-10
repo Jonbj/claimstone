@@ -36,6 +36,12 @@ worker does not restore that allowance. A changed protocol or Python package
 refuses execution until the operator issues a new mandate. This mandate never
 authorizes a new discovery/acquisition request, a paid model call, source
 admission, purchase or verdict. Use `auto-status` to inspect remaining calls.
+Version 2 may carry a bounded **proposal** policy: after an approved pass, the
+worker freezes the next discovery and acquisition batches as planned rows and
+reports their IDs. The API/host lists and caps are operator-supplied, but they
+grant no network permission. Each batch still needs its own authorization;
+the worker executes it on a later pass. A version 1 local mandate has no
+proposal policy and remains readable.
 
 `batch-plan` scans requested query or candidate identities in frozen order
 until it has up to `max_units` actionable plans. `selected` counts examined
@@ -172,3 +178,8 @@ operator whose session made the request, after checking that the request repeats
 exactly. Without `identity` the OS login is recorded as before. The ledger has no `stopping`,
 `stopped` or `heartbeat` events yet, so the portal offers no pause or resume and reports no worker
 heartbeat.
+`authorize_batch` accepts the same authenticated identity and records it on
+each newly authorized operation. The portal exposes a read view of each batch
+and accepts a batch authorization only when the submitted operation IDs and
+summed physical-request ceiling match that frozen batch exactly. A repeated
+request is idempotent; it never enlarges the approved set.

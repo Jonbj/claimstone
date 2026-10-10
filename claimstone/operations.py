@@ -496,7 +496,8 @@ def plan_batch(project: Project, store: Store, flow_id: str, stage: str, *,
         return batch | {'batch_id': batch_id}
 
 
-def authorize_batch(store: Store, batch_id: str) -> dict[str, Any]:
+def authorize_batch(store: Store, batch_id: str, *,
+                    identity: dict[str, Any] | None = None) -> dict[str, Any]:
     """One explicit operator action authorizes only the batch's frozen plans."""
     with store.writer_lock():
         batches = {row['batch_id']: row for row in store.read(BATCH_LEDGER)}
@@ -514,7 +515,7 @@ def authorize_batch(store: Store, batch_id: str) -> dict[str, Any]:
         authorized = 0
         for operation_id in batch['operation_ids']:
             if len(events[operation_id]) == 1:
-                authorize(store, operation_id, batch_id=batch_id)
+                authorize(store, operation_id, batch_id=batch_id, identity=identity)
                 authorized += 1
         return {'batch_id': batch_id, 'authorized_now': authorized,
                 'operation_ids': batch['operation_ids'],

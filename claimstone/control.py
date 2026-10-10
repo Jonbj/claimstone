@@ -261,6 +261,9 @@ ROUTES: tuple[Route, ...] = (
     Route("POST", ("admin", "paid-test"), "_admin_paid_test"),
     # B12: the scheduler's operations. Planning stays with the scheduler and the CLI.
     Route("GET", ("p", "{project}", "flows", "{flow_id}", "operations"), "_operations_list"),
+    Route("GET", ("p", "{project}", "flows", "{flow_id}", "batches"), "_batches_list"),
+    Route("POST", ("p", "{project}", "flows", "{flow_id}", "batches", "{batch_id}",
+                   "authorize"), "_batch_authorize"),
     Route("POST", ("p", "{project}", "flows", "{flow_id}", "operations", "{operation_id}",
                    "authorize"), "_operation_authorize"),
     Route("POST", ("p", "{project}", "flows", "{flow_id}", "operations", "{operation_id}",
@@ -1057,6 +1060,45 @@ def _operation_authorize(self: _Handler, params: dict[str, str], query: Any,
     return {"authorized": recorded, "already_authorized": already}, 200 if already else 201
 
 
+def _batches_list(self: _Handler, params: dict[str, str], query: Any,
+                  body: dict[str, Any]) -> tuple[Any, int]:
+    self._require_session()
+    _project, store, row, _selector = _flow_only(self, params)
+    try:
+        batches = operations_view.batches_for_flow(store, str(row['flow_id']))
+    except operations.OperationError as exc:
+        raise ControlError(409, 'OPERATIONS_LEDGER', str(exc)) from None
+    return {'flow_id': str(row['flow_id']), 'batches': batches}, 200
+
+
+def _batch_authorize(self: _Handler, params: dict[str, str], query: Any,
+                     body: dict[str, Any]) -> tuple[Any, int]:
+    """Authorize exactly the batch and total request ceiling the operator saw."""
+    self._only_keys(body, frozenset({'operation_ids', 'max_total_requests'}))
+    session = self._require_session()
+    _project, store, row, _selector = _flow_only(self, params)
+    try:
+        batch = next((item for item in operations_view.batches_for_flow(
+            store, str(row['flow_id'])) if item['batch_id'] == params['batch_id']), None)
+    except operations.OperationError as exc:
+        raise ControlError(409, 'OPERATIONS_LEDGER', str(exc)) from None
+    if batch is None:
+        raise portal_state.NotFound(f"no batch {params['batch_id']} in this flow")
+    if (not isinstance(body.get('operation_ids'), list) or
+            type(body.get('max_total_requests')) is not int or
+            body.get('operation_ids') != batch['operation_ids'] or
+            body.get('max_total_requests') != batch['max_total_requests']):
+        raise ControlError(409, 'PLAN_DIFFERS',
+                           'the batch differs from what was read; read it again before authorizing')
+    try:
+        recorded = operations.authorize_batch(store, batch['batch_id'], identity={
+            'signer_auth': 'portal-session', 'operator': session.operator_id,
+            'name': session.operator_name})
+    except operations.OperationError as exc:
+        raise ControlError(409, 'REFUSED', str(exc)) from None
+    return {'batch': recorded}, 201 if recorded['authorized_now'] else 200
+
+
 def _operation_not_built(self: _Handler, params: dict[str, str], query: Any,
                          body: dict[str, Any]) -> tuple[Any, int]:
     self._require_session()
@@ -1067,6 +1109,8 @@ def _operation_not_built(self: _Handler, params: dict[str, str], query: Any,
 
 
 for _name, _function in (("_operations_list", _operations_list),
+                         ("_batches_list", _batches_list),
+                         ("_batch_authorize", _batch_authorize),
                          ("_operation_authorize", _operation_authorize),
                          ("_operation_not_built", _operation_not_built),
                          ("_admin_read", _admin_read), ("_admin_check", _admin_check),

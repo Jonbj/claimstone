@@ -98,3 +98,61 @@ def test_mandate_does_not_reuse_a_manual_stage_authorization(tmp_path):
     assert auto_plan['run_label'] == mandate_id
     assert operations._digest(auto_plan) != operations._digest(manual)
     assert autopilot.status(store, mandate_id)['reserved_local_calls'] == 0
+
+
+def test_worker_proposes_network_batches_without_authorizing_them(tmp_path, monkeypatch):
+    from claimstone import discover
+
+    project, store, flow_id = _fixture(tmp_path)
+    mandate_id = autopilot.enable(
+        project, store, flow_id, extract_model='reader-a', review_model='reader-b',
+        max_total_local_calls=0, discover_apis=['openalex'],
+        discover_hosts=['api.openalex.org'], acquire_hosts=['example.org'],
+        proposal_max_units=1, proposal_max_requests_each=2,
+        proposal_per_query=1)['mandate_id']
+    first = autopilot.tick(project, store, mandate_id)
+    assert first['stopped_reason'] == 'NEEDS_AUTHORIZED_DISCOVERY'
+    assert first['proposals'] == [{
+        'stage': 'discover', 'batch_id': first['proposals'][0]['batch_id'],
+        'units': 1, 'max_total_requests': 2, 'new': True}]
+    batch_id = first['proposals'][0]['batch_id']
+    batch = next(row for row in store.read(operations.BATCH_LEDGER)
+                 if row['batch_id'] == batch_id)
+    assert operations.status(store, batch['operation_ids'][0])['state'] == 'PLANNED'
+    assert list(store.read('requests.jsonl')) == []
+    assert autopilot.tick(project, store, mandate_id)['proposals'][0]['new'] is False
+    assert len(autopilot.status(store, mandate_id)['pending_batches']) == 1
+
+    operations.authorize_batch(store, batch_id)
+    monkeypatch.setenv('CLAIMSTONE_CONTACT_EMAIL', 'test@example.org')
+
+    def fake_run(project, store, fetcher, *, apis, topics, terms,
+                 per_query, round_name, campaign):
+        planned = operations.status(store, campaign)['plan']
+        store.append('queries.jsonl', {'query_id': planned['query']['query_id'],
+                                      'campaign': campaign, 'ok': True, 'returned': 1})
+        store.append('candidates.jsonl', {
+            'candidate_key': 'doi:10.1/new', 'source_id': 'S01',
+            'source_class': 'ACA', 'round': round_name,
+            'url': 'https://example.org/paper.pdf'})
+        return {'queries': 1}
+
+    monkeypatch.setattr(discover, 'run', fake_run)
+    next_pass = autopilot.tick(project, store, mandate_id)
+    assert next_pass['network']['processed'] == 1
+    acquisition = next(item for item in next_pass['proposals']
+                       if item['stage'] == 'acquire')
+    acquisition_batch = next(row for row in store.read(operations.BATCH_LEDGER)
+                             if row['batch_id'] == acquisition['batch_id'])
+    assert operations.status(store, acquisition_batch['operation_ids'][0])['state'] == 'PLANNED'
+    assert list(store.read('acquisitions.jsonl')) == []
+    assert list(store.read('requests.jsonl')) == []
+
+
+def test_mandate_proposals_reject_incomplete_discovery_scope(tmp_path):
+    project, store, flow_id = _fixture(tmp_path)
+    with pytest.raises(operations.OperationError, match='both APIs and exact hosts'):
+        autopilot.enable(project, store, flow_id, extract_model='reader-a',
+                         review_model='reader-b', max_total_local_calls=1,
+                         discover_apis=['openalex'])
+    assert list(store.read(autopilot.LEDGER)) == []

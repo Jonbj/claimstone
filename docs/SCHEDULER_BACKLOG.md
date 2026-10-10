@@ -351,6 +351,12 @@ periodic network campaign.
 Batch planning now scans past already settled query/candidate identities before
 applying its actionable-unit cap (D119), so repeated plans can reach later
 terms. It still does not generate cursor pages or approve a new sweep.
+The D120 coordinator now uses that planner after every pass when a version 2
+mandate names exact search/copy proposal limits. It reports pending batch IDs
+but leaves them unapproved. Remaining for periodic autonomous research: dated
+update rounds, a finite operator-approved network schedule or an explicit
+change to the current per-campaign authorization rule, cursor depth, controlled
+copy resolution and a concise end-of-run dossier.
 
 The following duties still need executable units:
 

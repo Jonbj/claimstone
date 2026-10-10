@@ -4665,3 +4665,33 @@ queries and verifies that a two-unit batch selects the next two rather than
 returning an empty batch. It makes no request and does not authorize those
 plans. Search-depth pagination and recurring network authorization are still
 separate work.
+
+## D120 — The coordinator proposes the next network batch without approving it (2026-10-10)
+
+The D118 worker could advance local work but waited for a person to assemble
+each discovery or acquisition batch by CLI. Version 2 of its durable mandate
+may now freeze exact API lists, hosts, per-query results, actionable units and
+physical requests per unit. After each pass it invokes the existing batch
+planner for discovery and eligible copies, records only planned operations,
+and reports batch IDs awaiting approval. The first focused test starts with an
+empty flow, observes one unapproved query plan and zero request rows, approves
+that exact batch, then observes a new candidate and an unapproved copy batch.
+Repeated passes preserve the batch ID. This removes manual planning between
+stages while retaining the repository's per-campaign authorization boundary.
+The policy does not authorize a future sweep or schedule a new round; an
+operator must still approve each proposed batch. No production campaign ran
+for this decision.
+
+## D121 — The portal can approve a frozen batch as one authenticated action (2026-10-10)
+
+D120 removed manual batch planning, but the portal previously authorized only
+one operation at a time. The control server now lists each flow's immutable
+batches with units, hosts, skipped items, operation states and the total
+physical-request ceiling. A POST must repeat the shown operation IDs and
+ceiling; the server replays and verifies the batch hash, then records the
+authenticated operator on every newly authorized operation. The focused HTTP
+test rejects a changed ceiling, authorizes one exact batch, repeats it
+idempotently, and observes zero network request rows. The worker remains the
+only executor. The frontend session may connect this route to its approval
+view; this backend change does not alter frontend files or approve any real
+campaign.
