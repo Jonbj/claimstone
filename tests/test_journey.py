@@ -508,3 +508,43 @@ def test_execution_tile_lists_an_unknown_stage_but_does_not_count_it_running():
     assert "bogus" not in journey.OPERATION_STAGE
     tile = journey._execution_block([{"stage": "bogus", "state": "RUNNING_OR_LOCK_HELD"}])
     assert tile["status"] == "idle" and tile["figure"] == "0 running · 1 listed"
+
+
+# --- the pipeline tile says when the project holds candidates in other rounds ----------------------
+
+
+def _other_candidates(store, selector):
+    rows = [row for row in store.latest_by("candidates.jsonl", "candidate_key").values()
+            if not scope.candidate_in_scope(row, selector)]
+    return len(rows), len({row.get("round") for row in rows})
+
+
+def test_pipeline_tile_notes_other_rounds_only_when_not_started():
+    idle = _pipeline_steps(["not_started"] * 6)
+    tile = journey._pipeline_block(idle, others=(34, 2))
+    assert tile["figure"] == "0 of 6 steps done · 34 candidates in 2 other round(s)"
+    assert tile["status"] == "not_started"
+    started = _pipeline_steps(["done"] + ["not_started"] * 5)
+    assert journey._pipeline_block(started, others=(34, 2))["figure"] == "1 of 6 steps done"
+    assert journey._pipeline_block(idle, others=None)["figure"] == "0 of 6 steps done"
+
+
+def test_an_empty_round_says_what_the_other_rounds_hold(tmp_path):
+    _pd, _sd, project, store = build_workspace(tmp_path)
+    selector = scope.Selector("r-empty")
+    count, rounds = _other_candidates(store, selector)
+    assert count > 0
+    block = portal_state.flow_overview(project, store, selector, None)["journey"]
+    tile = {b["key"]: b for b in block["blocks"]}["pipeline"]
+    assert tile["status"] == "not_started"
+    assert tile["figure"] == f"0 of 6 steps done · {count} candidates in {rounds} other round(s)"
+
+
+def test_a_damaged_candidates_ledger_gives_no_other_rounds_count(tmp_path):
+    _pd, _sd, project, store = build_workspace(tmp_path)
+    with store.path("candidates.jsonl").open("a", encoding="utf-8") as handle:
+        handle.write('{"torn": \n{"candidate_key": "z", "round": "r9"}\n')
+    selector = scope.Selector("r-empty")
+    # The overview itself refuses to build on a damaged candidates ledger (a named error, not a
+    # figure), so the helper's answer is the whole contract here: unknown, never a guessed count.
+    assert journey._other_rounds(store, selector) is None

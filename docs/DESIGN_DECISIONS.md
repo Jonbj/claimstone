@@ -4553,3 +4553,8 @@ Measured, 2026-10-09, `source_selection.preview()` on `alembic-s4-lungo` (scope
 49 rows for 48 keys: the count is of the latest row per key. These are the values the live check in the
 plan asserts. The Pipeline tile's status is a rule over steps 2-7 and its figure a count of steps; a
 percentage was refused because the steps have different bases.
+
+When the flow's round is empty the Pipeline tile says how many candidates the project holds in other
+rounds, so an empty bound round is not read as an empty project. Measured, 2026-10-09: `alembic-s4-lungo`
+round `s4-l02-repository-copies-2026-10-06-v2` has 0 candidates while the two earlier rounds hold 34
+(21 + 13), by `candidates.jsonl`.

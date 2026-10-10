@@ -71,7 +71,7 @@ nothing is waiting), `advisory`, `not_declared` and `unavailable`.
 | block | status rule | figure |
 |---|---|---|
 | protocol | step 1's status; `not_applicable` for a legacy selector | `{questions_total} questions · floor {floor}`, or `protocol not verified` |
-| pipeline | from steps 2-7: `done` if all `done`; else `blocked` if any; else `running` if any; else `not_started` if all; else `partial` | `{done} of {total} steps done` (a count of steps, never a percentage) |
+| pipeline | from steps 2-7: `done` if all `done`; else `blocked` if any; else `running` if any; else `not_started` if all; else `partial` | `{done} of {total} steps done` (a count of steps, never a percentage), plus ` · {n} candidates in {k} other round(s)` when the tile is `not_started` and the store holds candidates in other rounds |
 | selection | `not_declared` when nothing is declared; `unavailable` (declaration unreadable, or any scope in a named error); otherwise `advisory`. **Never `done`.** | `{screened_count} seen · {unobserved_count} unseen` for one scope, `{n} scopes` for several; `no scope for this flow`, `declaration unreadable` or `{n} scope(s) unreadable` otherwise |
 | intake | `waits_for_you` if `needs_you.required` > 0; `idle` if 0; `unavailable` if null; `not_applicable` for a legacy selector | `{required} required · {optional} optional` |
 | execution | `running` if an operation is running in the strict sense above; else `idle` (also for a legacy selector, whose `running` is `[]` by contract); `unavailable` if `running` is null | `{live} running · {listed} listed` |

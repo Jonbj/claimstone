@@ -21,6 +21,7 @@ from typing import Any, Iterable, Mapping
 
 from claimstone import admissibility, decisions, operations_view, selection_view
 from claimstone.config import Project
+from claimstone.scope import candidate_in_scope
 from claimstone.store import LedgerCorrupt, Store
 
 JOURNEY_VERSION = 2
@@ -324,8 +325,24 @@ def _protocol_block(steps: list[dict[str, Any]]) -> dict[str, Any]:
                   "{questions_total} questions · floor {floor}", figures)
 
 
-def _pipeline_block(steps: list[dict[str, Any]]) -> dict[str, Any]:
-    """From steps 2-7. A count of steps, never a percentage: the steps have different bases."""
+def _other_rounds(store: Store, selector: Any) -> tuple[int, int] | None:
+    """(candidates, rounds) the store holds outside the selector, or None when none or unknown."""
+    try:
+        rows = store.latest_by("candidates.jsonl", "candidate_key").values()
+    except LedgerCorrupt:
+        return None  # unknown is not guessed
+    outside = [row for row in rows if not candidate_in_scope(row, selector)]
+    if not outside:
+        return None
+    return len(outside), len({row.get("round") for row in outside})
+
+
+def _pipeline_block(steps: list[dict[str, Any]],
+                    others: tuple[int, int] | None = None) -> dict[str, Any]:
+    """From steps 2-7. A count of steps, never a percentage: the steps have different bases.
+
+    `others` is (candidates, rounds) held outside the flow's selector; it is a figure, shown only
+    on a `not_started` tile, so an empty bound round is not read as an empty project."""
     middle = [step for step in steps if step["key"] in PIPELINE_STEP_KEYS]
     seen = {step["status"] for step in middle}
     if seen == {"done"}:
@@ -340,7 +357,11 @@ def _pipeline_block(steps: list[dict[str, Any]]) -> dict[str, Any]:
         status = "partial"  # some work exists and some is missing
     figures = {"done": sum(1 for step in middle if step["status"] == "done"),
                "total": len(middle)}
-    return _block("pipeline", "Pipeline", status, "{done} of {total} steps done", figures)
+    template = "{done} of {total} steps done"
+    if status == "not_started" and others:
+        figures = {**figures, "candidates": others[0], "rounds": others[1]}
+        template += " · {candidates} candidates in {rounds} other round(s)"
+    return _block("pipeline", "Pipeline", status, template, figures)
 
 
 def _selection_block(selection: Mapping[str, Any]) -> dict[str, Any]:
@@ -455,6 +476,9 @@ def build(project: Project, store: Store, selector: Any, flow_row: dict[str, Any
     ]
     needs = needs_you(store, selector, flow_row, ready)
     selection = selection_view.read(store, selector)
+    pipeline = _pipeline_block(steps)
+    if pipeline["status"] == "not_started":
+        pipeline = _pipeline_block(steps, _other_rounds(store, selector))
     return {
         "journey_version": JOURNEY_VERSION,
         "topics": topics_block(project),
@@ -462,7 +486,7 @@ def build(project: Project, store: Store, selector: Any, flow_row: dict[str, Any
         "steps": steps,
         "blocks": [
             _protocol_block(steps),
-            _pipeline_block(steps),
+            pipeline,
             _selection_block(selection),
             _intake_block(flow_row, needs),
             _execution_block(running),
