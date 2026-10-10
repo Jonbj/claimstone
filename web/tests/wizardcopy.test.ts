@@ -37,4 +37,42 @@ describe("wizard copy", () => {
       expect(CATALOGS[locale]["wizard.step2.atCreation"]).toContain("{operational}");
     }
   });
+
+  const wizardCopy = (locale: "en" | "it") =>
+    Object.entries(CATALOGS[locale]).filter(([key]) => key.startsWith("wizard."));
+
+  it("step 2 names all five verdict states, untranslated", () => {
+    for (const locale of ["en", "it"] as const) {
+      const step2 = wizardCopy(locale)
+        .filter(([key]) => key.startsWith("wizard.step2.") || key.startsWith("wizard.steps.2."))
+        .map(([, text]) => text)
+        .join(" ");
+      for (const state of ["SUPPORTED", "CONTRADICTED", "CONTESTED_IN_LITERATURE", "UNANSWERED_IN_LITERATURE", "NEVER_ASKED"]) {
+        expect(step2).toContain(state);
+      }
+    }
+  });
+
+  it("never says 'nothing starts' loosely, a 'tappa', or 'today' for a UTC date", () => {
+    for (const locale of ["en", "it"] as const) {
+      for (const [key, text] of wizardCopy(locale)) {
+        for (const banned of ["nulla parte", "tappa", "data di oggi", "today's date"]) {
+          expect(text.toLowerCase(), `${locale} ${key}`).not.toContain(banned);
+        }
+      }
+    }
+  });
+
+  it("the Italian copy avoids the false friends and the mixed terms", () => {
+    for (const [key, text] of wizardCopy("it")) {
+      expect(text, key).not.toMatch(/\bevidenza\b/i); // "evidenze" in "profilo delle evidenze" is fine
+      expect(text, key).not.toMatch(/domande di letteratura/i);
+      expect(text, key).not.toMatch(/\bstadi[oi]\b/i);
+    }
+  });
+
+  it("the note beside Save does not claim a draft is already saved", () => {
+    expect(CATALOGS.en["wizard.draftNote"]).not.toMatch(/draft saved/i);
+    expect(CATALOGS.it["wizard.draftNote"]).not.toMatch(/bozza salvata/i);
+  });
 });
