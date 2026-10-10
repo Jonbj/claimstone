@@ -184,6 +184,18 @@ describe("F1: control client transport", () => {
     expect(JSON.parse(String(calls[4].init.body))).toEqual({ confirm: true, protocol_sha256: "a".repeat(64) });
   });
 
+  it("create sends the same Idempotency-Key for the same draft and digest, so a retry replays", async () => {
+    setCsrfToken("tok");
+    mockFetch(reply(200, {}));
+    await control.newCreate("d1", "a".repeat(64));
+    await control.newCreate("d1", "a".repeat(64));
+    await control.newCreate("d1", "b".repeat(64));
+    const keys = calls.map((c) => headersOf(c)["Idempotency-Key"]);
+    expect(keys[0]).toBe(`create-d1-${"a".repeat(16)}`);
+    expect(keys[1]).toBe(keys[0]);
+    expect(keys[2]).not.toBe(keys[0]);
+  });
+
   it("the new-project reads are plain GETs", async () => {
     mockFetch(reply(200, {}));
     await control.newDrafts();

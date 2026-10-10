@@ -15,6 +15,8 @@ let signedIn = true;
 let draftBody: Record<string, unknown>;
 let stepUnauthorized = false;
 let stepStale = false;
+let draftReadFails = false;
+let created = false;
 const baseDraft = {
   draft_id: "d1", revision: 1, status: "open", steps: {}, advanced: {}, figures: {}, project: null,
   last_failure: null, started_at: "t", updated_at: "t",
@@ -40,6 +42,12 @@ function mount(path: string) {
       { draft_id: "d1", status: "open", revision: 3, steps_saved: [1, 2], project_name: "news-tone", project: null, updated_at: "t" },
       { draft_id: "d2", status: "created", revision: 9, steps_saved: [1, 2, 3], project_name: "done-one", project: "done-one", updated_at: "t" },
     ] });
+    if (url === "/control/v1/new/d1" && draftReadFails) return json(500, { error: { code: "INTERNAL", message: "boom" } });
+    if (url === "/control/v1/new/d1/create") {
+      created = true;
+      return json(201, { project: "news-tone", protocol_sha256: "b".repeat(64), files: { "topics.yaml": "h" },
+        frozen: { registry_version: 1, frozen_at: "2026-10-10", floor_version: 1 } });
+    }
     if (url === "/control/v1/new/d1") return json(200, draftBody);
     if (url === "/control/v1/new/d1/preview") {
       return json(200, { figures: { terms: 50, topics: 9 }, protocol_sha256: "a".repeat(64), revision: 1,
@@ -75,6 +83,8 @@ beforeEach(() => {
   signedIn = true;
   stepUnauthorized = false;
   stepStale = false;
+  draftReadFails = false;
+  created = false;
   draftBody = { ...baseDraft };
 });
 afterEach(() => {
@@ -213,5 +223,19 @@ describe("WizardPage", () => {
     expect(await screen.findByText("1 · The topic")).toBeTruthy();
     expect(screen.getByText(/2 terms in 1 topics/)).toBeTruthy();
     expect(screen.queryByText(/50 terms/)).toBeNull();
+  });
+
+  it("a failed reload after a successful create keeps the success screen", async () => {
+    const step = (name: string) => ({ data: { name }, revision: 1 });
+    draftBody = { ...baseDraft, steps: { "1": step("news-tone"), "2": step("x"), "3": step("y") } };
+    mount("/new/d1/4");
+    fireEvent.click(await screen.findByLabelText(/I understand that the question registry/));
+    draftReadFails = true;
+    fireEvent.click(screen.getByRole("button", { name: "Create the project" }));
+    expect(await screen.findByText("Project created")).toBeTruthy();
+    await waitFor(() => expect(created).toBe(true));
+    await waitFor(() => expect(requested.filter((r) => r === "GET /control/v1/new/d1").length).toBeGreaterThan(1));
+    expect(screen.getByText("Project created")).toBeTruthy();
+    expect(screen.queryByText("boom")).toBeNull();
   });
 });

@@ -58,6 +58,26 @@ function Wizard(
     setPreviewFigures({});
   }, [step]);
 
+  const createdScreen = (result: Created | null, project: string) => (
+    <section className="flex flex-col gap-3 pt-6">
+      <h1 className="text-[44px] leading-tight">{t("wizard.created.title")}</h1>
+      <p className="text-sm">{t("wizard.created.body", { name: project })}</p>
+      {result ? (
+        <ul className="font-mono text-xs text-muted-foreground">
+          {Object.entries(result.files).map(([file, hash]) => (
+            <li key={file}>{file} · {hash}</li>
+          ))}
+        </ul>
+      ) : null}
+      <p className="flex gap-4">
+        <Link className="underline" to="/projects">{t("wizard.created.projects")}</Link>
+        <Link className="underline" to="/new">{t("wizard.created.another")}</Link>
+      </p>
+    </section>
+  );
+  // A successful create is final: a failed re-read of the draft afterwards must not replace this.
+  if (created) return createdScreen(created, created.project);
+
   if (draftApi.error) return <ErrorState error={draftApi.error} context="draft" />;
   // While a save is being reloaded the form would hold a stale revision; show a pending line instead.
   if (draftApi.pending || draftApi.refreshing || !draftApi.data) return <Pending label={t("wizard.loading")} />;
@@ -69,26 +89,7 @@ function Wizard(
   if (draft.status === "discarded") {
     return <section className="flex flex-col gap-3 pt-6"><p className="text-sm">{t("wizard.discarded")}</p>{back}</section>;
   }
-  if (created || draft.status === "created") {
-    const name = created?.project ?? draft.project ?? "";
-    return (
-      <section className="flex flex-col gap-3 pt-6">
-        <h1 className="text-[44px] leading-tight">{t("wizard.created.title")}</h1>
-        <p className="text-sm">{t("wizard.created.body", { name })}</p>
-        {created ? (
-          <ul className="font-mono text-xs text-muted-foreground">
-            {Object.entries(created.files).map(([file, hash]) => (
-              <li key={file}>{file} · {hash}</li>
-            ))}
-          </ul>
-        ) : null}
-        <p className="flex gap-4">
-          <Link className="underline" to="/projects">{t("wizard.created.projects")}</Link>
-          <Link className="underline" to="/new">{t("wizard.created.another")}</Link>
-        </p>
-      </section>
-    );
-  }
+  if (draft.status === "created") return createdScreen(null, draft.project ?? "");
 
   const figures: Figures = Object.assign({}, ...Object.values(draft.figures), ...Object.values(justSaved), step === 4 ? previewFigures : {});
   const saved = Object.keys(draft.steps).map(Number);

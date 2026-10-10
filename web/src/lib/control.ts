@@ -367,10 +367,12 @@ interface PostOptions {
   csrf?: boolean;
   /** A wrong password is a 401 that does not mean the session ended. */
   auth?: boolean;
+  /** A caller-chosen key for a write whose retry must replay the first answer. */
+  idempotencyKey?: string;
 }
 
 async function post<T>(path: string, body: unknown, options: PostOptions = {}): Promise<T> {
-  const { idempotent = true, csrf = true, auth = true } = options;
+  const { idempotent = true, csrf = true, auth = true, idempotencyKey } = options;
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (csrf) {
     if (csrfToken === null) {
@@ -378,7 +380,7 @@ async function post<T>(path: string, body: unknown, options: PostOptions = {}): 
     }
     headers["X-CSRF-Token"] = csrfToken;
   }
-  if (idempotent) headers["Idempotency-Key"] = uuid();
+  if (idempotent) headers["Idempotency-Key"] = idempotencyKey ?? uuid();
   const response = await fetch(`${PREFIX}${path}`, {
     method: "POST",
     credentials: "same-origin",
@@ -453,7 +455,10 @@ export const control = {
   newDiscard: (id: string, baseRevision: number) =>
     post<{ revision: number; status: string }>(`/new/${enc(id)}/discard`, { base_revision: baseRevision }),
   newCreate: (id: string, protocolSha256: string) =>
-    post<Created>(`/new/${enc(id)}/create`, { confirm: true, protocol_sha256: protocolSha256 }),
+    // The key is the draft and the digest: a retry after a lost answer replays the first answer
+    // instead of creating twice, and a different digest is a different request.
+    post<Created>(`/new/${enc(id)}/create`, { confirm: true, protocol_sha256: protocolSha256 },
+                  { idempotencyKey: `create-${id}-${protocolSha256.slice(0, 16)}` }),
 
   // decisions
   decisions: (project: string, flowId: string) =>
