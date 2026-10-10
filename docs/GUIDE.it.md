@@ -25,6 +25,26 @@ su nessuno dei tre:
 
 Controlla il contratto e nient'altro. Costa poco ed è la prima cosa da eseguire dopo ogni modifica.
 
+## Creare un progetto dal portale
+
+Invece di scrivere a mano i tre file, un operatore può costruire un progetto nel portale: accedi, scegli
+**+ Nuovo progetto** e segui quattro passi. Il wizard conserva una **bozza** dopo ogni passo e spiega, in
+italiano o in inglese, cosa farà Claimstone con quello che hai inserito. Nulla esiste sotto `projects/` finché
+non confermi l'ultimo passo, e confermare non avvia nessuna ricerca, nessuna richiesta di copie e nessuna
+chiamata a un modello.
+
+1. **Argomento** — un nome, una descrizione e gli argomenti con i loro termini di ricerca.
+2. **Domande** — ciascuna con un tipo; le domande `operational` restano nel progetto ma non ricevono mai un verdetto.
+3. **Fonti e rigore** — le classi di fonte che possono contare, la soglia di acquisizione con il suo motivo, se le
+   copie fornite da te contano per la soglia, e la notazione del campo.
+4. **Riepilogo e creazione** — i file esatti, un editor Avanzate per il testo generato, e la conferma. Creare scrive
+   `topics.yaml`, `questions.yaml` e `sources.yaml`, congela il registro delle domande e la soglia alla versione 1
+   con la data di oggi e registra l'impronta di ciascun file.
+
+Autorizzare e avviare la ricerca è una tappa separata, non ancora nel portale. Per verificare il wizard da un capo
+all'altro senza toccare un progetto reale: `.venv/bin/python tools/check_new_project_wizard.py`. Le rotte sono
+descritte in [`contracts/new_project.md`](contracts/new_project.md).
+
 ## 1 · discover — candidati, da due canali indipendenti
 
 ```bash

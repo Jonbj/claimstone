@@ -25,6 +25,25 @@ of them:
 
 This checks the contract and nothing else. It is cheap and it is the first thing to run after any edit.
 
+## Creating a project from the portal
+
+Instead of writing the three files by hand, an operator can build a project in the portal: sign in, choose
+**+ New project**, and follow four steps. The wizard keeps a **draft** after every step and explains, in
+Italian or English, what Claimstone will do with what you entered. Nothing exists under `projects/` until
+you confirm the last step, and confirming starts no search, no copy request and no model call.
+
+1. **Topic** — a name, a description and the topics with their search terms.
+2. **Questions** — each with a kind; `operational` questions are tracked but never receive a verdict.
+3. **Sources and rigour** — the source classes that may count, the acquisition floor with its reason, whether
+   supplied copies count toward it, and the field's notation.
+4. **Review and create** — the exact files, an Advanced editor for the generated text, and the confirmation.
+   Creating writes `topics.yaml`, `questions.yaml` and `sources.yaml`, freezes the question registry and the
+   floor at version 1 with today's date, and records each file's hash.
+
+Authorizing and starting the research is a separate stage, not yet in the portal. To check the wizard end to end
+without touching a real project: `.venv/bin/python tools/check_new_project_wizard.py`. The routes are described in
+[`contracts/new_project.md`](contracts/new_project.md).
+
 ## 1 · discover — candidates, from two independent channels
 
 ```bash

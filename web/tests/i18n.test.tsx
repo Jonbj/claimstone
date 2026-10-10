@@ -85,3 +85,24 @@ describe("LocaleProvider and LocaleSwitch", () => {
     expect(screen.getByTestId("probe").textContent).toBe("en:Language");
   });
 });
+
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+
+describe("t() is only ever called with a literal key", () => {
+  // A variable first argument could carry what a person typed. Literal keys (including template
+  // literals with a fixed prefix) cannot.
+  const roots = [join(__dirname, "..", "src", "components", "wizard"), join(__dirname, "..", "src", "pages")];
+  const files = roots.flatMap((root) =>
+    readdirSync(root).filter((f) => /\.tsx?$/.test(f)).map((f) => join(root, f)));
+
+  it("scans the wizard sources", () => {
+    expect(files.length).toBeGreaterThan(5);
+  });
+
+  it("never passes an identifier as the key", () => {
+    const offenders = files.filter((file) =>
+      /\bt\(\s*[A-Za-z_]/.test(readFileSync(file, "utf-8")));
+    expect(offenders).toEqual([]);
+  });
+});
