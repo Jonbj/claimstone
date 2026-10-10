@@ -53,7 +53,7 @@ function SourcesForm({ draftId, draft, onSaved, template }: StepProps & { templa
       const data = {
         template: template.id,
         classes,
-        acquisition_floor: Number(floor),
+        acquisition_floor: Number(floor.trim().replace(/^([^,]*),([^,]*)$/, "$1.$2")), // 0,8 is 0.8
         floor_rationale: rationale,
         supplied_copies: supplied,
         notation,

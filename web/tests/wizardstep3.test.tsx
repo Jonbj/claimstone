@@ -78,4 +78,14 @@ describe("StepSources", () => {
     expect(data.notation).toBe("custom");
     expect(data.custom_value_labels).toEqual(["Sharpe", "alpha"]);
   });
+
+  it("accepts an Italian decimal comma in the floor", async () => {
+    const onSaved = mount();
+    fireEvent.click(await screen.findByLabelText(/ACA/));
+    fireEvent.change(screen.getByLabelText(/^Acquisition floor/), { target: { value: "0,9" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save and continue" }));
+    await waitFor(() => expect(onSaved).toHaveBeenCalled());
+    const data = (calls.find((c) => c.url.endsWith("/steps/3"))!.body as { data: Record<string, unknown> }).data;
+    expect(data.acquisition_floor).toBe(0.9);
+  });
 });
