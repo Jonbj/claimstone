@@ -35,10 +35,10 @@ you confirm the last step, and confirming starts no search, no copy request and 
 1. **Topic** — a name, a description and the topics with their search terms.
 2. **Questions** — each with a kind; `operational` questions are tracked but never receive a verdict.
 3. **Sources and rigour** — the source classes that may count, the acquisition floor with its reason, whether
-   supplied copies count toward it, and the field's notation.
+   supplied copies count toward it, and your discipline's notation.
 4. **Review and create** — the exact files, an Advanced editor for the generated text, and the confirmation.
    Creating writes `topics.yaml`, `questions.yaml` and `sources.yaml`, freezes the question registry and the
-   floor at version 1 with today's date, and records each file's hash.
+   floor at version 1 with the UTC date of creation (shown on the review page), and records each file's hash.
 
 Authorizing and starting the research is a separate stage, not yet in the portal. To check the wizard end to end
 without touching a real project: `.venv/bin/python tools/check_new_project_wizard.py`. The routes are described in
