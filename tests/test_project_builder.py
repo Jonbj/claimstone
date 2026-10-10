@@ -292,3 +292,15 @@ def test_create_refuses_a_name_that_could_be_a_path(tmp_path, bad):
         pb.create_project(projects, bad, files, expected_protocol_sha256=info["protocol_sha256"],
                           lock_store=lock)
     assert list(projects.iterdir()) == []
+
+
+def test_inspect_refuses_a_name_that_could_leave_its_temp_dir(tmp_path):
+    files = pb.render(_state(), TEMPLATES, today="2026-10-10")
+    target = tmp_path / "escape-xyz"
+    for bad in (f"../../../{target}", str(target), "../escape-xyz"):
+        with pytest.raises(pb.DraftInvalid) as raised:
+            pb.inspect(files, name=bad, templates_dir=TEMPLATES, template_id="general",
+                       today="2026-10-10")
+        assert raised.value.problems[0].path == "name"
+    assert not target.exists()
+    assert not pathlib.Path("/tmp/escape-xyz").exists()

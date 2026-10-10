@@ -371,6 +371,8 @@ def inspect(files: dict[str, str], *, name: str, templates_dir: str | pathlib.Pa
     """Load the files with the real loader and derive the figures. Raises `DraftInvalid`.
 
     A new project is protocol v1, frozen `today`; an advanced override that says otherwise is refused."""
+    if not isinstance(name, str) or not NAME_RE.fullmatch(name):
+        raise DraftInvalid([Problem("name", "not a valid project name")])
     if set(files) != set(FILES):
         raise DraftInvalid([Problem("files", "need exactly " + ", ".join(FILES))])
     template = load_template(templates_dir, template_id)
