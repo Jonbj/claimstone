@@ -4771,3 +4771,28 @@ and leaves its host ungrouped. The same fixture lets the worker continue to a di
 malformed address. The ordinary batch planner also converts malformed
 candidate URLs into a skipped unit, so a later valid candidate remains
 reachable under its unit cap. The fetcher and its version are unchanged.
+
+## D126 — Periodic research ends in a cumulative evidence handoff, not a verdict (2026-10-10)
+
+D124 measures acquisition for every dated round and for the whole corpus, but
+its worker previously synthesized only the flow it was driving. Stage 6 already
+supports the whole-store selector; the missing piece was a scheduler gate and a
+stable handoff. `periodic_dossier_version 1` recomputes a live report from the
+schedule audit and the whole-store stage-6 preview. It refuses finalization
+unless the scheduled searches and ancestor rounds are complete, cumulative
+acquisition passes its declared floor, and every scientific question's profile
+has finished extraction and review. An empty search with no admissible corpus
+cannot produce a final dossier.
+
+When all gates pass, `periodic-finalize` appends current whole-store profiles
+only if their evidence hashes changed, then appends one content-addressed
+`periodic_dossiers.jsonl` snapshot. A repeated pass writes no duplicate;
+later evidence creates a new snapshot and the existing adjudication's
+staleness is computed by the existing stage-6 rule. Human signatures are read
+live and are deliberately excluded from the evidence snapshot identity. A
+local mandate driving a dated child flow attempts finalization on each pass;
+the read-only API and CLI can display blockers before then. The fixture
+passes an unfinished schedule with a final-looking profile and confirms no
+profile or dossier is written, then changes evidence and confirms a second
+snapshot. No verdict is generated, no real research request was made, and
+this does not create local mandates for future child flows automatically.

@@ -19,7 +19,7 @@ from http.server import ThreadingHTTPServer
 from typing import Any
 from urllib.parse import parse_qs, unquote, urlparse
 
-from claimstone import flows, portal_state, round_state, scope
+from claimstone import flows, operations, periodic_dossier, portal_state, round_state, scope
 from claimstone.config import (ConfigError, RegistryDrift, check_registry_drift,
                                discover_projects, load_project)
 from claimstone.store import LedgerCorrupt, Store
@@ -116,6 +116,15 @@ class _Handler(BaseHandler):
             return
         if len(rest) >= 3 and rest[0] == "projects":
             name, section = rest[1], rest[2]
+            if len(rest) == 4 and section == "periodic-dossiers":
+                project, store, _root = self._loaded(name)
+                try:
+                    self._payload(periodic_dossier.preview(project, store, rest[3]))
+                except operations.OperationError as exc:
+                    if str(exc) == 'unknown schedule':
+                        raise portal_state.NotFound('no such periodic schedule') from exc
+                    raise
+                return
             if len(rest) == 3 and section == "integrity":
                 project, store, root = self._loaded(name)
                 self._payload({"project": name, **portal_state.integrity(

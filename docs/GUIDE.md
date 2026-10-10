@@ -447,3 +447,13 @@ then run `copy-policy-authorize PROJECT POLICY_ID`. The worker prepares exact
 candidate acquisitions when matching scheduled search hits arrive.
 `copy-policy-status` shows permanent reservations; `copy-policy-revoke` stops
 future starts. Unknown hosts and classes remain outside the allowance.
+
+When the scheduled rounds and their readings finish, `scheduler
+periodic-dossier PROJECT SCHEDULE_ID` shows the live whole-corpus evidence
+handoff and its blockers without writing. `periodic-finalize PROJECT
+SCHEDULE_ID` appends the cumulative profiles and a content-addressed dossier
+only when every gate is final. A local mandate on a scheduled child flow
+attempts the same finalization after each pass. Read the five verdict states
+and sign per question in the usual human adjudication step; neither command
+chooses a verdict. The [dossier contract](contracts/periodic_dossiers.md)
+defines the report states and hashes.

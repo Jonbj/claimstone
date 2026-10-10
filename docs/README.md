@@ -10,7 +10,8 @@ Which file answers which question. *In italiano: [README.it.md](README.it.md).*
 | run a round and understand what comes out | [`GUIDE.md`](GUIDE.md) |
 | reproduce the production replay and remaining work | [`replays/2026-09-28-production-replay.md`](replays/2026-09-28-production-replay.md) |
 | know what is running and what is pending right now | [`HANDOFF.md`](HANDOFF.md) |
-| find automation requirements gathered during supervised use | [`SCHEDULER_BACKLOG.md`](SCHEDULER_BACKLOG.md) — pending work, not an implemented scheduler |
+| find implemented scheduler limits and remaining automation work | [`SCHEDULER_BACKLOG.md`](SCHEDULER_BACKLOG.md) |
+| adapt the frontend to the scheduler | [`design/portal/SCHEDULER_FRONTEND_HANDOFF.md`](design/portal/SCHEDULER_FRONTEND_HANDOFF.md) — UI states, available APIs, missing controls and acceptance walkthrough |
 | review the multi-flow research portal | [`superpowers/specs/2026-10-06-research-portal-design.md`](superpowers/specs/2026-10-06-research-portal-design.md) — proposal, corrected by its review; phases P0–P2b are implemented and specified in [`2026-10-06-research-portal-implementation-spec.md`](superpowers/specs/2026-10-06-research-portal-implementation-spec.md) |
 | serve the read-only portal over every project | `claimstone portal` — the dashboard's multi-project successor (D82); read-only, GET only, loopback by default |
 | run the portal in containers (React frontend + read-only API) | `./portal.sh` (`./portal.sh down` to stop) — D84; design and decisions in [`superpowers/specs/2026-10-06-portal-frontend-docker-design.md`](superpowers/specs/2026-10-06-portal-frontend-docker-design.md) §8; API contract [`contracts/portal-api.schema.json`](contracts/portal-api.schema.json) |
@@ -53,6 +54,7 @@ write to — several fields exist to prevent a specific defect and look optional
 | [`contracts/model_calls.md`](contracts/model_calls.md) | the file boundary every model-using stage crosses |
 | [`contracts/flows.md`](contracts/flows.md) | a round selector bound to the protocol digests it ran under |
 | [`contracts/local_mandates.md`](contracts/local_mandates.md) | bounded recurring local work for one flow |
+| [`contracts/periodic_dossiers.md`](contracts/periodic_dossiers.md) | whole-corpus periodic evidence handoff and its finalization gates |
 | [`contracts/exports.md`](contracts/exports.md) | a verifiable snapshot of one flow, and how it is checked |
 
 ## The stage designs

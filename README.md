@@ -85,6 +85,11 @@ batches. A finite schedule can prepare dated research rounds; a separately
 approved copy policy lets the worker acquire matching future candidates on
 exact hosts under lifetime caps. See [the scheduler contract](docs/contracts/scheduler_operations.md)
 for current limits.
+For a periodic schedule, `scheduler periodic-dossier` shows the live cumulative
+evidence handoff. `periodic-finalize` persists whole-corpus profiles and an
+append-only dossier only when every schedule, acquisition and reading gate
+passes; a dated child flow's local worker attempts this automatically. No
+scientific verdict is generated. See [the dossier contract](docs/contracts/periodic_dossiers.md).
 
 For one flow, `scheduler auto-enable PROJECT FLOW_ID --extract-model MODEL_A
 --review-model MODEL_B --max-total-local-calls N` records a bounded local-work

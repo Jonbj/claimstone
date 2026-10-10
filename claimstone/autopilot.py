@@ -220,7 +220,17 @@ def tick(project: Project, store: Store, mandate_id: str) -> dict[str, Any]:
             max_local_calls=state['remaining_local_calls'],
             authorization_identity=identity,
             authorization_label=mandate_id)
+        from claimstone import periodic_dossier
+        dossiers = []
+        for schedule_id in periodic_dossier.due_for_flow(store, mandate['flow_id']):
+            before = periodic_dossier.preview(project, store, schedule_id)
+            handoff = periodic_dossier.finalize(project, store, schedule_id)
+            dossiers.append({'schedule_id': schedule_id, 'state': handoff['state'],
+                             'blockers': handoff['blockers'],
+                             'dossier_id': handoff['finalized_dossier_id'],
+                             'new': handoff['history_count'] > before['history_count'],
+                             'snapshot_stale': handoff['snapshot_stale']})
         proposals = _propose(project, store, mandate)
         return result | {'mandate_id': mandate_id,
                          'remaining_total_local_calls': status(store, mandate_id)['remaining_local_calls'],
-                         'proposals': proposals}
+                         'proposals': proposals, 'periodic_dossiers': dossiers}

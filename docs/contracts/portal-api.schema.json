@@ -574,6 +574,124 @@
    "title": "integrity",
    "type": "object"
   },
+  "/projects/{p}/periodic-dossiers/{schedule_id}": {
+   "$schema": "https://json-schema.org/draft/2020-12/schema",
+   "additionalProperties": false,
+   "properties": {
+    "api_version": {
+     "enum": [
+      1
+     ],
+     "type": "integer"
+    },
+    "audit": {
+     "type": "object"
+    },
+    "blockers": {
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "finalized_at": {
+     "type": [
+      "string",
+      "null"
+     ]
+    },
+    "finalized_dossier_id": {
+     "type": [
+      "string",
+      "null"
+     ]
+    },
+    "history_count": {
+     "type": "integer"
+    },
+    "human_decisions": {
+     "items": {
+      "additionalProperties": false,
+      "properties": {
+       "question_id": {
+        "type": "string"
+       },
+       "stale": {
+        "type": "boolean"
+       },
+       "stored_profile_stale": {
+        "type": "boolean"
+       },
+       "unavailable": {
+        "type": "string"
+       },
+       "verdict": {
+        "type": [
+         "object",
+         "null"
+        ]
+       }
+      },
+      "required": [
+       "question_id",
+       "verdict",
+       "stale",
+       "stored_profile_stale",
+       "unavailable"
+      ],
+      "type": "object"
+     },
+     "type": "array"
+    },
+    "needs_finalization": {
+     "type": "boolean"
+    },
+    "profiles": {
+     "items": {
+      "type": "object"
+     },
+     "type": "array"
+    },
+    "schedule_id": {
+     "type": "string"
+    },
+    "snapshot_sha256": {
+     "type": "string"
+    },
+    "snapshot_stale": {
+     "type": "boolean"
+    },
+    "state": {
+     "enum": [
+      "INSUFFICIENT_ACQUISITION",
+      "WAITING_FOR_SCHEDULE",
+      "WAITING_FOR_EVIDENCE",
+      "READY_FOR_HUMAN_READING"
+     ],
+     "type": "string"
+    },
+    "verdict": {
+     "type": "null"
+    }
+   },
+   "required": [
+    "api_version",
+    "schedule_id",
+    "state",
+    "blockers",
+    "audit",
+    "profiles",
+    "human_decisions",
+    "snapshot_sha256",
+    "finalized_dossier_id",
+    "finalized_at",
+    "snapshot_stale",
+    "needs_finalization",
+    "history_count",
+    "verdict"
+   ],
+   "title": "periodic cumulative dossier",
+   "type": "object"
+  },
   "/projects/{p}/poll": {
    "$schema": "https://json-schema.org/draft/2020-12/schema",
    "additionalProperties": false,
@@ -2590,6 +2708,7 @@
   "/projects/{p}/activity",
   "/projects/{p}/flows/{flow_id}/exports",
   "/projects/{p}/integrity",
+  "/projects/{p}/periodic-dossiers/{schedule_id}",
   "/projects/{p}/poll",
   "/projects/{p}/{sel}/claims/{claim_id}",
   "/projects/{p}/{sel}/inbox",

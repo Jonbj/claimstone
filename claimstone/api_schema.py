@@ -785,6 +785,33 @@ SOURCE_DOSSIER = _payload("source dossier", {
     "counted_acquisition", "document", "active_chunks", "advisory", "advisory_note",
     "claims_by_question"])
 
+PERIODIC_DOSSIER = _payload('periodic cumulative dossier', {
+    'schedule_id': _STR,
+    'state': {'type': 'string', 'enum': [
+        'INSUFFICIENT_ACQUISITION', 'WAITING_FOR_SCHEDULE',
+        'WAITING_FOR_EVIDENCE', 'READY_FOR_HUMAN_READING']},
+    'blockers': {'type': 'array', 'items': _STR},
+    'audit': {'type': 'object'},
+    'profiles': {'type': 'array', 'items': {'type': 'object'}},
+    'human_decisions': {'type': 'array', 'items': {
+        'type': 'object', 'required': ['question_id', 'verdict', 'stale',
+                                     'stored_profile_stale', 'unavailable'],
+        'properties': {'question_id': _STR,
+                       'verdict': {'type': ['object', 'null']},
+                       'stale': _BOOL, 'stored_profile_stale': _BOOL,
+                       'unavailable': _STR},
+        'additionalProperties': False}},
+    'snapshot_sha256': _STR,
+    'finalized_dossier_id': _STR_OR_NULL,
+    'finalized_at': _STR_OR_NULL,
+    'snapshot_stale': _BOOL,
+    'needs_finalization': _BOOL,
+    'history_count': _INT,
+    'verdict': {'type': 'null'},
+}, ['schedule_id', 'state', 'blockers', 'audit', 'profiles', 'human_decisions',
+    'snapshot_sha256', 'finalized_dossier_id', 'finalized_at', 'snapshot_stale',
+    'needs_finalization', 'history_count', 'verdict'])
+
 ERROR = _payload("error", {
     "error": {
         "type": "object",
@@ -805,6 +832,7 @@ ROUTES: dict[str, dict[str, Any]] = {
     "/projects/{p}/integrity": INTEGRITY,
     "/projects/{p}/activity": ACTIVITY,
     "/projects/{p}/poll": POLL,
+    "/projects/{p}/periodic-dossiers/{schedule_id}": PERIODIC_DOSSIER,
     "/projects/{p}/{sel}/summary": SUMMARY,
     "/projects/{p}/{sel}/overview": OVERVIEW,
     "/projects/{p}/{sel}/inbox": INBOX,
