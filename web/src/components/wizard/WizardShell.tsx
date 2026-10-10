@@ -34,6 +34,7 @@ export default function WizardShell(
                   <span className="flex items-baseline gap-2 font-medium">
                     <span className="font-mono text-xs">{n}</span>
                     {t(`wizard.steps.${n}.name`)}
+                    {active ? <span className="sr-only">, {t("wizard.rail.current")}</span> : null}
                     {done ? <span className="ml-auto text-xs">✓ <span className="sr-only">{t("wizard.rail.done")}</span></span> : null}
                   </span>
                   <span className={cn("hidden text-xs min-[900px]:block", active ? "text-rail-muted" : "text-muted-foreground")}>

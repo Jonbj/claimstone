@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 import { control } from "@/lib/control";
 import { useLocale } from "@/lib/i18n";
+import Field, { StepHeading } from "./Field";
 import { ErrorSummary, FieldError, problemsOf } from "./problems";
 import { areaClass, cardClass, inputClass, primaryClass, quietClass } from "./stepTypes";
 import type { StepProps } from "./stepTypes";
@@ -61,21 +62,19 @@ export default function StepTopic({ draftId, draft, onSaved, onReload }: StepPro
   return (
     <form onSubmit={submit} className="flex flex-col gap-4">
       <section className={cardClass}>
-        <h2 className="text-base font-semibold">{t("wizard.step1.title")}</h2>
+        <StepHeading>{t("wizard.step1.title")}</StepHeading>
         <p className="mb-3 mt-0.5 text-[13px] text-muted-foreground">{t("wizard.step1.intro")}</p>
         <div className="flex flex-col gap-3">
-          <label className="flex flex-col gap-1 text-sm font-medium">
-            {t("wizard.step1.name")}
-            <input value={name} onChange={(e) => setName(e.target.value)} className={`${inputClass} font-mono`} />
-            <span className="text-[13px] font-normal text-muted-foreground">{t("wizard.step1.nameHelp")}</span>
-          </label>
-          <FieldError problems={problems} path="name" />
-          <label className="flex flex-col gap-1 text-sm font-medium">
-            {t("wizard.step1.description")}
-            <textarea value={description} onChange={(e) => setDescription(e.target.value)} className={areaClass} />
-            <span className="text-[13px] font-normal text-muted-foreground">{t("wizard.step1.descriptionHelp")}</span>
-          </label>
-          <FieldError problems={problems} path="description" />
+          <Field label={t("wizard.step1.name")} help={t("wizard.step1.nameHelp")} problems={problems} path="name">
+            {(props) => (
+              <input {...props} value={name} onChange={(e) => setName(e.target.value)} className={`${inputClass} font-mono`} />
+            )}
+          </Field>
+          <Field label={t("wizard.step1.description")} help={t("wizard.step1.descriptionHelp")} problems={problems} path="description">
+            {(props) => (
+              <textarea {...props} value={description} onChange={(e) => setDescription(e.target.value)} className={areaClass} />
+            )}
+          </Field>
         </div>
       </section>
 
@@ -83,31 +82,45 @@ export default function StepTopic({ draftId, draft, onSaved, onReload }: StepPro
         <h2 className="text-base font-semibold">{t("wizard.step1.topics")}</h2>
         <FieldError problems={problems} path="topics" />
         <div className="mt-3 flex flex-col gap-4">
-          {topics.map((row, index) => (
-            <fieldset key={row.id ?? `new-${index}`} className="flex flex-col gap-2 rounded-lg border border-border p-3">
-              <label className="flex flex-col gap-1 text-sm font-medium">
-                {t("wizard.step1.topicLabel")}
-                <input value={row.label} onChange={(e) => update(index, { label: e.target.value })} className={inputClass} />
-              </label>
-              <FieldError problems={problems} path={`topics[${index}].label`} />
-              <label className="flex flex-col gap-1 text-sm font-medium">
-                {t("wizard.step1.terms")}
-                <textarea value={row.terms} onChange={(e) => update(index, { terms: e.target.value })} className={`${areaClass} font-mono`} />
-                <span className="text-[13px] font-normal text-muted-foreground">{t("wizard.step1.termsHelp")}</span>
-              </label>
-              <FieldError problems={problems} path={`topics[${index}].terms`} />
-              <div>
-                <button
-                  type="button"
-                  disabled={topics.length === 1}
-                  onClick={() => setTopics((rows) => rows.filter((_, i) => i !== index))}
-                  className={quietClass}
+          {topics.map((row, index) => {
+            const legend = t("wizard.step1.topicLegend", { n: index + 1 });
+            return (
+              <fieldset key={row.id ?? `new-${index}`} className="flex flex-col gap-2 rounded-lg border border-border p-3">
+                <legend className="px-1 text-sm font-semibold">{legend}</legend>
+                <Field label={t("wizard.step1.topicLabel")} problems={problems} path={`topics[${index}].label`}>
+                  {(props) => (
+                    <input {...props} value={row.label} onChange={(e) => update(index, { label: e.target.value })} className={inputClass} />
+                  )}
+                </Field>
+                <Field
+                  label={t("wizard.step1.terms")}
+                  help={t("wizard.step1.termsHelp")}
+                  problems={problems}
+                  path={`topics[${index}].terms`}
                 >
-                  {t("wizard.step1.removeTopic")}
-                </button>
-              </div>
-            </fieldset>
-          ))}
+                  {(props) => (
+                    <textarea
+                      {...props}
+                      value={row.terms}
+                      onChange={(e) => update(index, { terms: e.target.value })}
+                      className={`${areaClass} font-mono`}
+                    />
+                  )}
+                </Field>
+                <div>
+                  <button
+                    type="button"
+                    disabled={topics.length === 1}
+                    aria-label={`${t("wizard.step1.removeTopic")} (${legend})`}
+                    onClick={() => setTopics((rows) => rows.filter((_, i) => i !== index))}
+                    className={quietClass}
+                  >
+                    {t("wizard.step1.removeTopic")}
+                  </button>
+                </div>
+              </fieldset>
+            );
+          })}
         </div>
         <button type="button" onClick={() => setTopics((rows) => [...rows, { label: "", terms: "" }])} className={`${quietClass} mt-3`}>
           {t("wizard.step1.addTopic")}

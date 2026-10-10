@@ -59,8 +59,9 @@ describe("problems", () => {
   });
 
   it("FieldError shows only its own path", () => {
-    render(<FieldError problems={problemsOf(error)} path="topics[0].terms" />);
-    expect(screen.getByRole("alert").textContent).toBe("add a term");
+    render(<FieldError problems={problemsOf(error)} path="topics[0].terms" id="e1" />);
+    expect(screen.getByText("add a term").id).toBe("e1");
+    expect(screen.queryByRole("alert")).toBeNull(); // the summary is the one announcement
   });
 
   it("ErrorSummary lists every problem, and a stale revision gets the reload advice", () => {

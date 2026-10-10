@@ -1,7 +1,8 @@
-import { LOCALES, useLocale } from "@/lib/i18n";
+import { LOCALES, LOCALE_NAMES, useLocale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
-// Two buttons, the current one pressed; the language's own name is the label, in that language.
+// Two buttons, the current one pressed. The label is the language code; the language's own name,
+// in that language, is the tooltip (the accessible name stays "EN" / "IT").
 export default function LocaleSwitch() {
   const { locale, setLocale, t } = useLocale();
   return (
@@ -11,6 +12,7 @@ export default function LocaleSwitch() {
           key={code}
           type="button"
           lang={code}
+          title={LOCALE_NAMES[code]}
           aria-pressed={locale === code}
           onClick={() => setLocale(code)}
           className={cn(

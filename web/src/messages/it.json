@@ -75,6 +75,7 @@
       "descriptionHelp": "Cosa è dentro e cosa è fuori ambito, in poche frasi. Resta con il progetto e nessuno stadio la legge.",
       "topics": "Argomenti",
       "topicLabel": "Argomento",
+      "topicLegend": "Argomento {n}",
       "terms": "Termini di ricerca, uno per riga",
       "termsHelp": "Ogni termine viene cercato così com'è scritto.",
       "addTopic": "Aggiungi un argomento",
@@ -90,6 +91,8 @@
       "kind": "Tipo",
       "addQuestion": "Aggiungi una domanda",
       "removeQuestion": "Rimuovi questa domanda",
+      "questionLegend": "Domanda {n}",
+      "questionLegendId": "Domanda {id}",
       "afterSave": "Claimstone controlla ogni domanda e conserva una bozza. Le domande non sono ancora congelate, quindi puoi ancora cambiarle.",
       "atCreation": "Il registro delle domande viene congelato alla versione 1, con la data di oggi. {literature} delle tue {total} domande sono di letteratura: ognuna avrà un profilo di evidenza che una persona legge e firma. {operational} sono operational: restano nel progetto, ma non ricevono mai un verdetto. Cambiare il registro più avanti è un aumento di versione datato, mai una modifica silenziosa.",
       "afterStart": "Ogni tipo è giudicato da una regola propria. Claimstone legge le fonti con queste domande in mente ed estrae affermazioni, ciascuna legata a una citazione esatta che il codice verifica."

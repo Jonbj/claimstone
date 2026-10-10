@@ -7,6 +7,7 @@ import { useApi } from "@/hooks/useApi";
 import { control } from "@/lib/control";
 import type { Created, DraftState, Preview } from "@/lib/control";
 import { useLocale } from "@/lib/i18n";
+import { StepHeading } from "./Field";
 import { ErrorSummary } from "./problems";
 import { explainParams } from "./figures";
 import { areaClass, cardClass, primaryClass, quietClass } from "./stepTypes";
@@ -32,7 +33,7 @@ export default function StepReview(props: ReviewProps) {
   if (missing.length) {
     return (
       <section className={cardClass}>
-        <h2 className="text-base font-semibold">{t("wizard.step4.title")}</h2>
+        <StepHeading>{t("wizard.step4.title")}</StepHeading>
         <p className="mt-2 text-sm text-muted-foreground">{t("wizard.step4.needSteps")}</p>
         <ul className="mt-2 flex gap-2">
           {missing.map((n) => (
@@ -131,7 +132,7 @@ function ReviewForm({ draftId, draft, onCreated, onChanged, onFigures, onReload 
   return (
     <form onSubmit={create} className="flex flex-col gap-4">
       <section className={cardClass}>
-        <h2 className="text-base font-semibold">{t("wizard.step4.title")}</h2>
+        <StepHeading>{t("wizard.step4.title")}</StepHeading>
         <p className="mb-3 mt-0.5 text-[13px] text-muted-foreground">{t("wizard.step4.intro")}</p>
         <p className="text-sm">{t("wizard.step4.summary", params)}</p>
         <h3 className="mt-4 text-sm font-semibold">{t("wizard.step4.files")}</h3>

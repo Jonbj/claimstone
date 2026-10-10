@@ -75,6 +75,7 @@
       "descriptionHelp": "In scope and out of scope, in a few sentences. It is kept with the project and read by no stage.",
       "topics": "Topics",
       "topicLabel": "Topic",
+      "topicLegend": "Topic {n}",
       "terms": "Search terms, one per line",
       "termsHelp": "Each term is searched as written.",
       "addTopic": "Add a topic",
@@ -90,6 +91,8 @@
       "kind": "Kind",
       "addQuestion": "Add a question",
       "removeQuestion": "Remove this question",
+      "questionLegend": "Question {n}",
+      "questionLegendId": "Question {id}",
       "afterSave": "Claimstone checks each question and keeps a draft. The questions are not frozen yet, so you can still change them.",
       "atCreation": "The question registry is frozen at version 1, dated today. {literature} of your {total} questions are literature questions: each will get an evidence profile that a person reads and signs. {operational} are operational: tracked, but they never receive a verdict. Changing the registry later is a dated version bump, never a silent edit.",
       "afterStart": "Each kind is judged by its own rule. Claimstone reads sources with these questions in mind and extracts claims, each bound to a verbatim quote that code checks."

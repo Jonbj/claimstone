@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import type { FormEvent } from "react";
 import ErrorState from "@/components/ErrorState";
 import Pending from "@/components/Pending";
@@ -6,7 +6,8 @@ import { useApi } from "@/hooks/useApi";
 import { control } from "@/lib/control";
 import type { WizardTemplate } from "@/lib/control";
 import { useLocale } from "@/lib/i18n";
-import { ErrorSummary, FieldError, problemsOf } from "./problems";
+import Field, { StepHeading } from "./Field";
+import { ErrorSummary, FieldError, messageFor, problemsOf } from "./problems";
 import { areaClass, cardClass, inputClass, primaryClass } from "./stepTypes";
 import type { StepProps } from "./stepTypes";
 
@@ -42,6 +43,7 @@ function SourcesForm({ draftId, draft, onSaved, onReload, template }: StepProps 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const problems = problemsOf(error);
+  const groupId = useId();
   const lines = (text: string) => text.split("\n").map((s) => s.trim()).filter(Boolean);
 
   async function submit(event: FormEvent) {
@@ -75,12 +77,15 @@ function SourcesForm({ draftId, draft, onSaved, onReload, template }: StepProps 
   return (
     <form onSubmit={submit} className="flex flex-col gap-4">
       <section className={cardClass}>
-        <h2 className="text-base font-semibold">{t("wizard.step3.title")}</h2>
+        <StepHeading>{t("wizard.step3.title")}</StepHeading>
         <p className="mb-3 mt-0.5 text-[13px] text-muted-foreground">{t("wizard.step3.intro")}</p>
 
-        <fieldset className="flex flex-col gap-2">
+        <fieldset
+          className="flex flex-col gap-2"
+          aria-describedby={`${groupId}-classes ${messageFor(problems, "classes") ? `${groupId}-classes-e` : ""}`.trim()}
+        >
           <legend className="text-sm font-medium">{t("wizard.step3.classes")}</legend>
-          <p className="text-[13px] text-muted-foreground">{t("wizard.step3.classesHelp")}</p>
+          <p id={`${groupId}-classes`} className="text-[13px] text-muted-foreground">{t("wizard.step3.classesHelp")}</p>
           {template.classes.map((c) => (
             <label key={c.id} className="flex items-start gap-2 rounded-lg border border-border p-2 text-sm">
               <input type="checkbox" checked={classes.includes(c.id)} onChange={() => toggle(c.id)} className="mt-1" />
@@ -90,22 +95,21 @@ function SourcesForm({ draftId, draft, onSaved, onReload, template }: StepProps 
               </span>
             </label>
           ))}
-          <FieldError problems={problems} path="classes" />
+          <FieldError problems={problems} path="classes" id={`${groupId}-classes-e`} />
         </fieldset>
 
         <div className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,160px)_minmax(0,1fr)]">
-          <label className="flex flex-col gap-1 text-sm font-medium">
-            {t("wizard.step3.floor")}
-            <input value={floor} onChange={(e) => setFloor(e.target.value)} inputMode="decimal" className={`${inputClass} font-mono`} />
-          </label>
-          <label className="flex flex-col gap-1 text-sm font-medium">
-            {t("wizard.step3.rationale")}
-            <textarea value={rationale} onChange={(e) => setRationale(e.target.value)} className={areaClass} />
-          </label>
+          <Field label={t("wizard.step3.floor")} help={t("wizard.step3.floorHelp")} problems={problems} path="acquisition_floor">
+            {(props) => (
+              <input {...props} value={floor} onChange={(e) => setFloor(e.target.value)} inputMode="decimal" className={`${inputClass} font-mono`} />
+            )}
+          </Field>
+          <Field label={t("wizard.step3.rationale")} help={t("wizard.step3.rationaleHelp")} problems={problems} path="floor_rationale">
+            {(props) => (
+              <textarea {...props} value={rationale} onChange={(e) => setRationale(e.target.value)} className={areaClass} />
+            )}
+          </Field>
         </div>
-        <p className="mt-1 text-[13px] text-muted-foreground">{t("wizard.step3.floorHelp")} {t("wizard.step3.rationaleHelp")}</p>
-        <FieldError problems={problems} path="acquisition_floor" />
-        <FieldError problems={problems} path="floor_rationale" />
 
         <fieldset className="mt-4 flex flex-col gap-2">
           <legend className="text-sm font-medium">{t("wizard.step3.supplied")}</legend>
@@ -120,31 +124,31 @@ function SourcesForm({ draftId, draft, onSaved, onReload, template }: StepProps 
         </fieldset>
 
         <div className="mt-4 flex flex-col gap-2">
-          <label className="flex flex-col gap-1 text-sm font-medium">
-            {t("wizard.step3.notation")}
-            <select value={notation} onChange={(e) => setNotation(e.target.value)} className={inputClass}>
-              {template.notation_presets.map((p) => (
-                <option key={p.id} value={p.id}>{p.label}</option>
-              ))}
-              <option value="custom">{t("wizard.step3.notationCustom")}</option>
-            </select>
-          </label>
-          <FieldError problems={problems} path="notation" />
+          <Field label={t("wizard.step3.notation")} problems={problems} path="notation">
+            {(props) => (
+              <select {...props} value={notation} onChange={(e) => setNotation(e.target.value)} className={inputClass}>
+                {template.notation_presets.map((p) => (
+                  <option key={p.id} value={p.id}>{p.label}</option>
+                ))}
+                <option value="custom">{t("wizard.step3.notationCustom")}</option>
+              </select>
+            )}
+          </Field>
           {notation === "custom" ? (
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              {t("wizard.step3.customLabels")}
-              <textarea value={custom} onChange={(e) => setCustom(e.target.value)} className={`${areaClass} font-mono`} />
-              <span className="text-[13px] font-normal text-muted-foreground">{t("wizard.step3.customLabelsHelp")}</span>
-            </label>
+            <Field label={t("wizard.step3.customLabels")} help={t("wizard.step3.customLabelsHelp")} problems={problems} path="custom_value_labels">
+              {(props) => (
+                <textarea {...props} value={custom} onChange={(e) => setCustom(e.target.value)} className={`${areaClass} font-mono`} />
+              )}
+            </Field>
           ) : null}
         </div>
 
         <div className="mt-4 flex flex-col gap-1">
-          <label className="flex flex-col gap-1 text-sm font-medium">
-            {t("wizard.step3.hosts")}
-            <textarea value={hosts} onChange={(e) => setHosts(e.target.value)} className={`${areaClass} font-mono`} />
-            <span className="text-[13px] font-normal text-muted-foreground">{t("wizard.step3.hostsHelp")}</span>
-          </label>
+          <Field label={t("wizard.step3.hosts")} help={t("wizard.step3.hostsHelp")} problems={problems} path="extra_excluded_hosts">
+            {(props) => (
+              <textarea {...props} value={hosts} onChange={(e) => setHosts(e.target.value)} className={`${areaClass} font-mono`} />
+            )}
+          </Field>
           <p className="text-[13px] text-muted-foreground">
             {t("wizard.step3.fixedHosts", { hosts: template.excluded_hosts.join(", ") })}
           </p>

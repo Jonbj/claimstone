@@ -68,7 +68,7 @@ describe("StepTopic", () => {
     expect((screen.getByLabelText(/Search terms/) as HTMLTextAreaElement).value).toBe("a\nb");
     fireEvent.click(screen.getByRole("button", { name: "Add a topic" }));
     expect(screen.getAllByLabelText(/Search terms/)).toHaveLength(2);
-    fireEvent.click(screen.getAllByRole("button", { name: "Remove this topic" })[1]);
+    fireEvent.click(screen.getAllByRole("button", { name: /^Remove this topic/ })[1]);
     expect(screen.getAllByLabelText(/Search terms/)).toHaveLength(1);
   });
 });
@@ -78,9 +78,9 @@ describe("StepQuestions", () => {
     mockFetch(200, { revision: 5, data: {}, figures: { questions_total: 1 } });
     const onSaved = vi.fn();
     wrap(<StepQuestions draftId="d1" draft={draft()} onSaved={onSaved} />);
-    fireEvent.change(screen.getByLabelText(/^Question/), { target: { value: "Does it work?" } });
-    expect((screen.getByLabelText(/^Kind/) as HTMLSelectElement).value).toBe("");
-    fireEvent.change(screen.getByLabelText(/^Kind/), { target: { value: "operational" } });
+    fireEvent.change(screen.getByLabelText("Question"), { target: { value: "Does it work?" } });
+    expect((screen.getByLabelText("Kind") as HTMLSelectElement).value).toBe("");
+    fireEvent.change(screen.getByLabelText("Kind"), { target: { value: "operational" } });
     expect(screen.getByText(/no literature verdict applies/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Save and continue" }));
     await waitFor(() => expect(onSaved).toHaveBeenCalled());
@@ -92,7 +92,7 @@ describe("StepQuestions", () => {
     mockFetch(422, { error: { code: "VALIDATION", message: "x", details: [
       { path: "questions[0].kind", message: "choose one of effect, heterogeneity" }] } });
     wrap(<StepQuestions draftId="d1" draft={draft()} onSaved={vi.fn()} />);
-    fireEvent.change(screen.getByLabelText(/^Question/), { target: { value: "x?" } });
+    fireEvent.change(screen.getByLabelText("Question"), { target: { value: "x?" } });
     fireEvent.click(screen.getByRole("button", { name: "Save and continue" }));
     await waitFor(() => expect(screen.getAllByText(/choose one of effect/).length).toBeGreaterThan(0));
   });

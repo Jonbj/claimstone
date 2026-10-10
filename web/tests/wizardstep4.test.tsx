@@ -154,4 +154,10 @@ describe("StepReview", () => {
     expect(create.disabled).toBe(false);
     expect(screen.queryByText(/You have unsaved file changes/)).toBeNull();
   });
+
+  it("takes focus on its heading once the review has loaded", async () => {
+    mount();
+    const heading = await screen.findByRole("heading", { level: 2, name: "4 · Review and create" });
+    expect(document.activeElement).toBe(heading);
+  });
 });

@@ -13,10 +13,11 @@ export function messageFor(problems: FieldProblem[], path: string): string | nul
 }
 
 /** The message under one field, for the exact path the server named. */
-export function FieldError({ problems, path }: { problems: FieldProblem[]; path: string }) {
+export function FieldError({ problems, path, id }: { problems: FieldProblem[]; path: string; id?: string }) {
   const message = messageFor(problems, path);
+  // Not an alert: the summary is the one announcement; this text is linked to its input instead.
   return message ? (
-    <p role="alert" className="text-[13px] text-destructive">
+    <p id={id} className="text-[13px] text-destructive">
       {message}
     </p>
   ) : null;
