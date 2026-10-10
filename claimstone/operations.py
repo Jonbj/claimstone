@@ -387,7 +387,8 @@ def plan(project: Project, store: Store, flow_id: str, stage: str, *,
 
 
 def authorize(store: Store, operation_id: str, *, batch_id: str | None = None,
-              identity: dict[str, Any] | None = None) -> dict[str, Any]:
+              identity: dict[str, Any] | None = None,
+              schedule_id: str | None = None) -> dict[str, Any]:
     """A local logged-in user authorizes exactly one offline plan.
 
     `identity` is for the control server (portal B12): the authenticated operator who held the
@@ -397,8 +398,18 @@ def authorize(store: Store, operation_id: str, *, batch_id: str | None = None,
         rows = _events(store).get(operation_id)
         if rows is None:
             raise OperationError(f'unknown operation: {operation_id}')
+        if schedule_id:
+            from claimstone import network_schedule
+            history = network_schedule._read(store).get(schedule_id)
+            if (not history or history[-1]['event'] != 'planned' or
+                    not any(operation_id in entry['operation_ids'] and
+                            batch_id == entry['batch_id']
+                            for entry in history[0]['plan']['entries'])):
+                raise OperationError('operation is absent from the planned schedule')
         if len(rows) > 1:
             if rows[1]['event'] == 'authorized':
+                if schedule_id and rows[1].get('schedule_id') != schedule_id:
+                    raise OperationError('operation belongs to another authorization')
                 return rows[1]
             raise OperationError('operation is no longer awaiting authorization')
         plan_row = rows[0]['plan']
@@ -421,7 +432,8 @@ def authorize(store: Store, operation_id: str, *, batch_id: str | None = None,
                        'operator', identity=identity, approved_limits={
                            'network_requests': rows[0]['plan']['max_network_requests'],
                            'model_calls': rows[0]['plan']['max_model_calls'],
-                           'spend_usd': plan_row['max_spend_usd']}, batch_id=batch_id)
+                           'spend_usd': plan_row['max_spend_usd']}, batch_id=batch_id,
+                       schedule_id=schedule_id)
 
 
 def plan_batch(project: Project, store: Store, flow_id: str, stage: str, *,
@@ -534,6 +546,11 @@ def execute(project: Project, store: Store, operation_id: str,
             raise OperationError('operation belongs to another project')
         if rows[-1]['event'] == 'completed':
             return rows[-1]['result']
+        schedule_id = rows[1].get('schedule_id')
+        if schedule_id:
+            from claimstone import network_schedule
+            if not network_schedule.due(store, schedule_id, operation_id):
+                raise OperationError('scheduled authorization is not currently active')
         if plan_row['code_sha256'] != _code_identity():
             raise OperationError('project or code identity changed; prepare a new plan')
         held, selector = _flow(project, store, plan_row['flow_id'])
@@ -756,6 +773,10 @@ def tick(project: Project, store: Store, *, max_operations: int = 1,
              and rows[0]['plan']['project'] == project.name
              and (flow_id is None or rows[0]['plan']['flow_id'] == flow_id)
              and (stages is None or rows[0]['plan']['stage'] in stages)]
+    from claimstone import network_schedule
+    ready = [operation_id for operation_id in ready
+             if not grouped[operation_id][1].get('schedule_id') or
+             network_schedule.due(store, grouped[operation_id][1]['schedule_id'], operation_id)]
     results: list[dict[str, Any]] = []
     for operation_id in ready[:max_operations]:
         try:

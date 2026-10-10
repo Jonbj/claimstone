@@ -978,7 +978,8 @@ def _scheduler_preview(args: argparse.Namespace) -> int:
 
 def _scheduler_operation(args: argparse.Namespace) -> int:
     import json
-    from claimstone import autopilot, operations
+    import pathlib
+    from claimstone import autopilot, network_schedule, operations
     from claimstone.store import LedgerCorrupt
 
     project, store = _flow_open(args)
@@ -1019,6 +1020,16 @@ def _scheduler_operation(args: argparse.Namespace) -> int:
                                            retry_reason=args.retry_reason)
         elif args.scheduler_command == 'authorize-batch':
             result = operations.authorize_batch(store, args.batch_id)
+        elif args.scheduler_command == 'schedule-plan':
+            entries = json.loads(pathlib.Path(args.entries_file).read_text(encoding='utf-8'))
+            result = network_schedule.plan(store, project.name, entries,
+                                           max_total_requests=args.max_total_requests)
+        elif args.scheduler_command == 'schedule-authorize':
+            result = network_schedule.authorize(store, args.schedule_id)
+        elif args.scheduler_command == 'schedule-revoke':
+            result = network_schedule.revoke(store, args.schedule_id)
+        elif args.scheduler_command == 'schedule-status':
+            result = network_schedule.status(store, args.schedule_id)
         elif args.scheduler_command == 'drive':
             result = operations.drive_local(project, store, args.flow_id,
                                             extract_model=args.extract_model,
@@ -1575,6 +1586,20 @@ def build_parser() -> argparse.ArgumentParser:
     scheduler_authorize_batch.add_argument('batch_id')
     scheduler_authorize_batch.add_argument('--store', default='store')
     scheduler_authorize_batch.set_defaults(func=_scheduler_operation)
+    scheduler_schedule_plan = scheduler_sub.add_parser(
+        'schedule-plan', help='freeze finite UTC windows for exact existing network batches')
+    scheduler_schedule_plan.add_argument('project')
+    scheduler_schedule_plan.add_argument('--entries-file', required=True,
+                                         help='JSON array of batch_id, not_before, expires_at')
+    scheduler_schedule_plan.add_argument('--max-total-requests', type=int, required=True)
+    scheduler_schedule_plan.add_argument('--store', default='store')
+    scheduler_schedule_plan.set_defaults(func=_scheduler_operation)
+    for action in ('schedule-authorize', 'schedule-revoke', 'schedule-status'):
+        command = scheduler_sub.add_parser(action)
+        command.add_argument('project')
+        command.add_argument('schedule_id')
+        command.add_argument('--store', default='store')
+        command.set_defaults(func=_scheduler_operation)
     scheduler_drive = scheduler_sub.add_parser(
         'drive', help='one bounded local pass through scoped research stages')
     scheduler_drive.add_argument('project')

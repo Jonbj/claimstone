@@ -343,20 +343,21 @@ The 2026-10-09 local mandate slice adds `scheduler auto-enable`, `auto-once`,
 `auto-worker`, `auto-status` and `auto-disable`. One approval covers recurring
 scoped local passes with a cumulative model-call ceiling that survives
 restarts. It executes only independently authorized external plans; it neither
-schedules a new search/copy request nor renews its own allowance. The next
-coordinator work is an operator-approved, versioned recurring network policy
-with per-run and lifetime limits, safe search-page/copy planning, incremental
-source selection and an end-of-run dossier. The local mandate authorizes no
-periodic network campaign.
+schedules a new search/copy request nor renews its own allowance. Its network
+proposal policy is separate from the later finite schedule. Safe search-page
+and copy planning, incremental source selection and an end-of-run dossier
+remain. The local mandate authorizes no periodic network campaign.
 Batch planning now scans past already settled query/candidate identities before
 applying its actionable-unit cap (D119), so repeated plans can reach later
 terms. It still does not generate cursor pages or approve a new sweep.
 The D120 coordinator now uses that planner after every pass when a version 2
 mandate names exact search/copy proposal limits. It reports pending batch IDs
-but leaves them unapproved. Remaining for periodic autonomous research: dated
-update rounds, a finite operator-approved network schedule or an explicit
-change to the current per-campaign authorization rule, cursor depth, controlled
-copy resolution and a concise end-of-run dossier.
+but leaves them unapproved. D122 adds a finite, revocable, operator-approved
+network schedule for batches already frozen, with exact UTC windows and a
+summed lifetime physical-request ceiling. Remaining for periodic autonomous
+research: dated update rounds with cumulative evidence semantics, safe cursor
+depth, controlled copy resolution and a concise end-of-run dossier. The
+schedule cannot approve candidates or queries that are not yet known.
 
 The following duties still need executable units:
 
