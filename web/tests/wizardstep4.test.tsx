@@ -74,7 +74,7 @@ describe("StepReview", () => {
 
   it("shows the summary from the server's preview, and the files", async () => {
     mount();
-    expect(await screen.findByText(/Project news-tone: 1 topics, 2 questions \(1 literature, 1 operational\)/)).toBeTruthy();
+    expect(await screen.findByText(/Project: news-tone · Topics: 1 · Questions: 2 \(literature 1, operational 1\) · Source classes: 1 · Floor: 0\.80/)).toBeTruthy();
     expect(screen.getAllByText("topics.yaml").length).toBeGreaterThan(0);
   });
 

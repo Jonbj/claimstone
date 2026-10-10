@@ -70,7 +70,7 @@ describe("StepSources", () => {
   it("a custom notation sends its own list", async () => {
     mount();
     await screen.findByLabelText(/ACA/);
-    fireEvent.change(screen.getByLabelText(/How this field writes/), { target: { value: "custom" } });
+    fireEvent.change(screen.getByLabelText(/How your discipline writes/), { target: { value: "custom" } });
     fireEvent.change(await screen.findByLabelText(/Notation, one per line/), { target: { value: "Sharpe\nalpha" } });
     fireEvent.click(screen.getByRole("button", { name: "Save and continue" }));
     await waitFor(() => expect(calls.some((c) => c.url.endsWith("/steps/3"))).toBe(true));

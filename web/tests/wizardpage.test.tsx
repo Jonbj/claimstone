@@ -105,7 +105,7 @@ describe("NewProjectsPage", () => {
   it("lists my drafts with their state, and a created one links to its project", async () => {
     mount("/new");
     expect(await screen.findByText("news-tone")).toBeTruthy();
-    expect(screen.getByText("2 of 3 steps saved")).toBeTruthy();
+    expect(screen.getByText("Steps saved: 2 of 3")).toBeTruthy();
     expect(screen.getByRole("link", { name: "Open the project" }).getAttribute("href")).toBe("/p/done-one");
   });
 
@@ -257,11 +257,11 @@ describe("WizardPage", () => {
     draftBody = { ...baseDraft, steps: { "1": step("news-tone"), "2": step("x"), "3": step("y") },
       figures: { "1": { terms: 2, topics: 1 } } };
     mount("/new/d1/4");
-    expect(await screen.findByText(/Project news-tone: 9 topics/)).toBeTruthy();
-    await waitFor(() => expect(screen.getAllByText(/Project news-tone/).length).toBeGreaterThan(0));
+    expect(await screen.findByText(/Project: news-tone · Topics: 9/)).toBeTruthy();
+    await waitFor(() => expect(screen.getAllByText(/Project: news-tone/).length).toBeGreaterThan(0));
     fireEvent.click(screen.getByRole("link", { name: /^1\s*Topic/ }));
     expect(await screen.findByText("1 · The topic")).toBeTruthy();
-    expect(screen.getByText(/2 terms in 1 topics/)).toBeTruthy();
+    expect(screen.getByText(/topics: 1, terms: 2/)).toBeTruthy();
     expect(screen.queryByText(/50 terms/)).toBeNull();
   });
 

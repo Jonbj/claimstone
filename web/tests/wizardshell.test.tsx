@@ -21,8 +21,8 @@ describe("ExplainPanel", () => {
     render(<LocaleProvider><ExplainPanel step={1} figures={{ topics: 2, terms: 5, searches_per_index: 5, searches_all_indexes: 15 }} /></LocaleProvider>);
     expect(screen.getAllByRole("heading", { level: 3 })).toHaveLength(3);
     expect(document.querySelectorAll("details")).toHaveLength(0);
-    expect(screen.getByText(/5 terms in 2 topics/)).toBeTruthy();
-    expect(screen.getByText(/15 if all three indexes are used/)).toBeTruthy();
+    expect(screen.getByText(/topics: 2, terms: 5, searches per index: 5/)).toBeTruthy();
+    expect(screen.getByText(/with all three indexes: 15/)).toBeTruthy();
   });
 
   it("narrow: the three moments are an accordion, the first one open", () => {
@@ -36,8 +36,8 @@ describe("ExplainPanel", () => {
   it("an unknown figure is a dash, not 0", () => {
     media(true);
     render(<LocaleProvider><ExplainPanel step={2} figures={{}} /></LocaleProvider>);
-    expect(screen.getByText(/— of your — questions/)).toBeTruthy();
-    expect(screen.queryByText(/0 of your 0/)).toBeNull();
+    expect(screen.getByText(/Questions: — \(literature: —, operational: —\)/)).toBeTruthy();
+    expect(screen.queryByText(/Questions: 0/)).toBeNull();
   });
 
   it("explains step 3 with the INSUFFICIENT_ACQUISITION token untouched", () => {
