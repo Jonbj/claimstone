@@ -166,3 +166,9 @@ def test_comparatives_replace_rather_than_extend(tmp_path):
     put back the stems it chose to leave out."""
     root = _sources(tmp_path, "extraction:\n  comparatives:\n    '>': [exceeds]\n")
     assert config.load_extraction(root)["comparatives"] == {">": ("exceeds",)}
+
+
+def test_discover_projects_skips_a_staging_directory(tmp_path):
+    for name in ("real", ".incoming-abc123"):
+        _write(tmp_path / name, questions=GOOD_QUESTIONS)
+    assert [p.name for p in discover_projects(tmp_path)] == ["real"]

@@ -768,4 +768,5 @@ def discover_projects(projects_dir: str | pathlib.Path = "projects") -> list[pat
     base = pathlib.Path(projects_dir)
     if not base.is_dir():
         return []
-    return sorted(p for p in base.iterdir() if p.is_dir() and (p / "questions.yaml").exists())
+    return sorted(p for p in base.iterdir()
+                  if p.is_dir() and not p.name.startswith(".") and (p / "questions.yaml").exists())
