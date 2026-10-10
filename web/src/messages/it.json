@@ -21,7 +21,6 @@
     "saving": "Salvataggio…",
     "draftNote": "Bozza salvata · nulla parte finché non crei il progetto",
     "problems": "Correggi questi punti prima di continuare:",
-    "stale": "Questa bozza è stata modificata altrove. Ricaricala per vedere l'ultima versione.",
     "reload": "Ricarica la bozza",
     "discarded": "Questa bozza è stata scartata. Non è stato creato nulla.",
     "backToDrafts": "Torna alle tue bozze",
@@ -153,7 +152,14 @@
       "another": "Inizia un altro progetto"
     },
     "errors": {
-      "generic": "Qualcosa è andato storto."
+      "generic": "Qualcosa è andato storto.",
+      "VALIDATION": "Qualcosa di quanto hai inserito non può essere accettato.",
+      "STALE_REVISION": "Questa bozza è stata modificata altrove. Ricaricala per vedere l'ultima versione.",
+      "DRAFT_CLOSED": "Questa bozza è chiusa: è stata scartata o è già diventata un progetto, quindi non si può più modificare.",
+      "PREVIEW_CHANGED": "La bozza è cambiata dopo che hai aperto questa revisione, quindi ciò che hai confermato non è più ciò che verrebbe creato. Ricarica per rivedere la versione attuale.",
+      "NAME_TAKEN": "Esiste già un progetto con questo nome. Torna alla fase 1 e scegli un altro nome.",
+      "INCOMPLETE": "La bozza non è ancora completa: prima vanno salvate le fasi da 1 a 3.",
+      "UNAUTHORIZED": "La sessione è terminata. Accedi di nuovo, poi ripeti l'azione."
     }
   }
 }

@@ -22,6 +22,8 @@ export interface ReviewProps {
   onChanged: () => void;
   /** Reports the preview's figures so the explanation panel can quote them. */
   onFigures?: (figures: Preview["figures"]) => void;
+  /** Re-reads the draft (stale revision, changed preview). */
+  onReload?: () => void;
 }
 
 export default function StepReview(props: ReviewProps) {
@@ -47,13 +49,17 @@ export default function StepReview(props: ReviewProps) {
   return <ReviewForm {...props} />;
 }
 
-function ReviewForm({ draftId, draft, onCreated, onChanged, onFigures }: ReviewProps) {
+function ReviewForm({ draftId, draft, onCreated, onChanged, onFigures, onReload }: ReviewProps) {
   const { t } = useLocale();
   const preview = useApi(() => control.newPreview(draftId), [draftId, draft.revision]);
   const [edits, setEdits] = useState<Record<string, string>>({});
   const [confirmed, setConfirmed] = useState(false);
   const [busy, setBusy] = useState<"create" | "files" | null>(null);
   const [error, setError] = useState<Error | null>(null);
+  const reload = () => {
+    onReload?.();
+    preview.reload();
+  };
 
   // Tell the page what the server computed, so the explanation panel can quote it. An effect, not a
   // call during render: setting the parent's state while rendering a child is a React error.
@@ -90,7 +96,7 @@ function ReviewForm({ draftId, draft, onCreated, onChanged, onFigures }: ReviewP
         {Object.keys(draft.advanced).length ? (
           <section className={cardClass}>
             <p className="text-[13px] text-muted-foreground">{t("wizard.step4.resetHelp")}</p>
-            <ErrorSummary error={error} />
+            <ErrorSummary error={error} onReload={reload} />
             <button type="button" disabled={busy !== null} onClick={() => void resetFiles()} className={`${quietClass} mt-2`}>
               {t("wizard.step4.resetFiles")}
             </button>
@@ -179,7 +185,7 @@ function ReviewForm({ draftId, draft, onCreated, onChanged, onFigures }: ReviewP
         <span>{t("wizard.step4.confirm")}</span>
       </label>
 
-      <ErrorSummary error={error} />
+      <ErrorSummary error={error} onReload={reload} />
       {unsaved ? <p className="text-sm text-destructive">{t("wizard.step4.unsaved")}</p> : null}
       <div className="flex flex-wrap items-center gap-3">
         <button type="submit" disabled={!confirmed || unsaved || busy !== null} className={primaryClass}>

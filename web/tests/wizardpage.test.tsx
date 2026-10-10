@@ -14,6 +14,7 @@ let requested: string[];
 let signedIn = true;
 let draftBody: Record<string, unknown>;
 let stepUnauthorized = false;
+let stepStale = false;
 const baseDraft = {
   draft_id: "d1", revision: 1, status: "open", steps: {}, advanced: {}, figures: {}, project: null,
   last_failure: null, started_at: "t", updated_at: "t",
@@ -40,6 +41,9 @@ function mount(path: string) {
       { draft_id: "d2", status: "created", revision: 9, steps_saved: [1, 2, 3], project_name: "done-one", project: "done-one", updated_at: "t" },
     ] });
     if (url === "/control/v1/new/d1") return json(200, draftBody);
+    if (url === "/control/v1/new/d1/steps/1" && stepStale) {
+      return json(409, { error: { code: "STALE_REVISION", message: "saved from revision 1" } });
+    }
     if (url === "/control/v1/new/d1/steps/1" && stepUnauthorized) {
       return json(401, { error: { code: "UNAUTHORIZED", message: "session ended" } });
     }
@@ -66,6 +70,7 @@ beforeEach(() => {
   setCsrfToken(null);
   signedIn = true;
   stepUnauthorized = false;
+  stepStale = false;
   draftBody = { ...baseDraft };
 });
 afterEach(() => {
@@ -180,5 +185,16 @@ describe("WizardPage", () => {
     mount("/new/d1/2");
     await screen.findByText("2 · The questions");
     expect(screen.queryByText(/Advanced edits are active/)).toBeNull();
+  });
+
+  it("a stale save offers Reload, which fetches the draft again", async () => {
+    mount("/new/d1/1");
+    await screen.findByText("1 · The topic");
+    stepStale = true;
+    fireEvent.click(screen.getByRole("button", { name: "Save and continue" }));
+    const reload = await screen.findByRole("button", { name: "Reload the draft" });
+    const before = requested.filter((r) => r === "GET /control/v1/new/d1").length;
+    fireEvent.click(reload);
+    await waitFor(() => expect(requested.filter((r) => r === "GET /control/v1/new/d1").length).toBe(before + 1));
   });
 });

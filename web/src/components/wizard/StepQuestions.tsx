@@ -15,7 +15,7 @@ interface QuestionRow {
   kind: string;
 }
 
-export default function StepQuestions({ draftId, draft, onSaved }: StepProps) {
+export default function StepQuestions({ draftId, draft, onSaved, onReload }: StepProps) {
   const { t } = useLocale();
   const saved = draft.steps["2"]?.data as { questions?: QuestionRow[] } | undefined;
   const [rows, setRows] = useState<QuestionRow[]>(saved?.questions ?? [{ text: "", kind: "" }]);
@@ -91,7 +91,7 @@ export default function StepQuestions({ draftId, draft, onSaved }: StepProps) {
         </button>
       </section>
 
-      <ErrorSummary error={error} />
+      <ErrorSummary error={error} onReload={onReload} />
       <div className="flex items-center gap-3">
         <button type="submit" disabled={busy} className={primaryClass}>
           {busy ? t("wizard.saving") : t("wizard.saveContinue")}

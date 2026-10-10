@@ -22,8 +22,24 @@ export function FieldError({ problems, path }: { problems: FieldProblem[]; path:
   ) : null;
 }
 
-/** Every problem in one place, focused when it appears so a keyboard or screen-reader user lands on it. */
-export function ErrorSummary({ error }: { error: Error | null }) {
+/** The sentence for a code the engine is known to send; the key is literal in every branch. */
+function sentenceFor(code: string, t: (key: string) => string): string | null {
+  switch (code) {
+    case "STALE_REVISION": return t("wizard.errors.STALE_REVISION");
+    case "DRAFT_CLOSED": return t("wizard.errors.DRAFT_CLOSED");
+    case "PREVIEW_CHANGED": return t("wizard.errors.PREVIEW_CHANGED");
+    case "NAME_TAKEN": return t("wizard.errors.NAME_TAKEN");
+    case "INCOMPLETE": return t("wizard.errors.INCOMPLETE");
+    case "UNAUTHORIZED": return t("wizard.errors.UNAUTHORIZED");
+    case "VALIDATION": return t("wizard.errors.VALIDATION");
+    default: return null;
+  }
+}
+
+/** Every problem in one place, focused when it appears so a keyboard or screen-reader user lands on it.
+ *  A known code gets a sentence in the page's language; the server's own message stays beneath it,
+ *  and field-level details stay exactly as the engine wrote them. */
+export function ErrorSummary({ error, onReload }: { error: Error | null; onReload?: () => void }) {
   const { t } = useLocale();
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -31,7 +47,9 @@ export function ErrorSummary({ error }: { error: Error | null }) {
   }, [error]);
   if (!error) return null;
   const problems = problemsOf(error);
-  const stale = error instanceof ControlError && error.code === "STALE_REVISION";
+  const code = error instanceof ControlError ? error.code : "";
+  const sentence = sentenceFor(code, t);
+  const reloadable = code === "STALE_REVISION" || code === "PREVIEW_CHANGED";
   return (
     <div
       ref={ref}
@@ -39,7 +57,6 @@ export function ErrorSummary({ error }: { error: Error | null }) {
       role="alert"
       className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm"
     >
-      {stale ? <p>{t("wizard.stale")}</p> : null}
       {problems.length ? (
         <>
           <p className="font-medium">{t("wizard.problems")}</p>
@@ -52,9 +69,19 @@ export function ErrorSummary({ error }: { error: Error | null }) {
             ))}
           </ul>
         </>
-      ) : stale ? null : (
-        <p>{error instanceof ControlError ? error.message : t("wizard.errors.generic")}</p>
+      ) : (
+        <>
+          <p>{sentence ?? (error instanceof ControlError ? error.message : t("wizard.errors.generic"))}</p>
+          {sentence && error instanceof ControlError && error.message ? (
+            <p className="mt-1 text-xs text-muted-foreground">{error.message}</p>
+          ) : null}
+        </>
       )}
+      {reloadable && onReload ? (
+        <button type="button" onClick={onReload} className="mt-2 min-h-11 rounded-lg border border-border px-3">
+          {t("wizard.reload")}
+        </button>
+      ) : null}
     </div>
   );
 }

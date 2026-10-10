@@ -18,7 +18,7 @@ interface SavedTopic {
   topics?: Array<{ id: string; label: string; terms: string[] }>;
 }
 
-export default function StepTopic({ draftId, draft, onSaved }: StepProps) {
+export default function StepTopic({ draftId, draft, onSaved, onReload }: StepProps) {
   const { t } = useLocale();
   const saved = draft.steps["1"]?.data as SavedTopic | undefined;
   const [name, setName] = useState(saved?.name ?? "");
@@ -114,7 +114,7 @@ export default function StepTopic({ draftId, draft, onSaved }: StepProps) {
         </button>
       </section>
 
-      <ErrorSummary error={error} />
+      <ErrorSummary error={error} onReload={onReload} />
       <div className="flex items-center gap-3">
         <button type="submit" disabled={busy} className={primaryClass}>
           {busy ? t("wizard.saving") : t("wizard.saveContinue")}

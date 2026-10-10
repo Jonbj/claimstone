@@ -105,7 +105,8 @@ describe("StepReview", () => {
     mount();
     fireEvent.click(await screen.findByLabelText(/I understand that the question registry/));
     fireEvent.click(screen.getByRole("button", { name: "Create the project" }));
-    expect(await screen.findByText(/already exists/)).toBeTruthy();
+    expect(await screen.findByText(/A project with this name already exists/)).toBeTruthy();
+    expect(screen.getByText("a project named news-tone already exists")).toBeTruthy();
   });
 
   it("Advanced sends only the changed files, keeping earlier overrides", async () => {

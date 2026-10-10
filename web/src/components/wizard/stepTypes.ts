@@ -10,6 +10,8 @@ export interface StepProps {
   draftId: string;
   draft: DraftState;
   onSaved: (saved: Saved) => void;
+  /** Re-reads the draft after a stale revision. */
+  onReload?: () => void;
 }
 
 export const inputClass = "min-h-11 rounded-lg border border-border bg-card px-3 text-sm font-normal";

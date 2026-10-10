@@ -21,7 +21,6 @@
     "saving": "Saving…",
     "draftNote": "Draft saved · nothing runs until you create the project",
     "problems": "Please fix these before continuing:",
-    "stale": "This draft was changed elsewhere. Reload it to see the latest version.",
     "reload": "Reload the draft",
     "discarded": "This draft was discarded. Nothing was created.",
     "backToDrafts": "Back to your drafts",
@@ -153,7 +152,14 @@
       "another": "Start another project"
     },
     "errors": {
-      "generic": "Something went wrong."
+      "generic": "Something went wrong.",
+      "VALIDATION": "Some of what you entered cannot be accepted.",
+      "STALE_REVISION": "This draft was changed elsewhere. Reload it to see the latest version.",
+      "DRAFT_CLOSED": "This draft is closed: it was discarded or already turned into a project, so it can no longer be changed.",
+      "PREVIEW_CHANGED": "The draft changed after you opened this review, so what you confirmed is no longer what would be created. Reload to review the current version.",
+      "NAME_TAKEN": "A project with this name already exists. Go back to step 1 and choose another name.",
+      "INCOMPLETE": "The draft is not complete yet: steps 1 to 3 must all be saved first.",
+      "UNAUTHORIZED": "Your session has ended. Sign in again, then repeat the action."
     }
   }
 }

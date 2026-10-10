@@ -95,9 +95,9 @@ function Wizard(
   };
 
   const form =
-    step === 1 ? <StepTopic draftId={draftId} draft={draft} onSaved={onSaved} />
-    : step === 2 ? <StepQuestions draftId={draftId} draft={draft} onSaved={onSaved} />
-    : step === 3 ? <StepSources draftId={draftId} draft={draft} onSaved={onSaved} />
+    step === 1 ? <StepTopic draftId={draftId} draft={draft} onSaved={onSaved} onReload={draftApi.reload} />
+    : step === 2 ? <StepQuestions draftId={draftId} draft={draft} onSaved={onSaved} onReload={draftApi.reload} />
+    : step === 3 ? <StepSources draftId={draftId} draft={draft} onSaved={onSaved} onReload={draftApi.reload} />
     : (
       <StepReview
         draftId={draftId}
@@ -105,6 +105,7 @@ function Wizard(
         onCreated={(result) => { setCreated(result); draftApi.reload(); }}
         onChanged={() => draftApi.reload()}
         onFigures={setPreviewFigures}
+        onReload={draftApi.reload}
       />
     );
 

@@ -29,7 +29,7 @@ export default function StepSources(props: StepProps) {
   return <SourcesForm {...props} template={template.data} />;
 }
 
-function SourcesForm({ draftId, draft, onSaved, template }: StepProps & { template: WizardTemplate }) {
+function SourcesForm({ draftId, draft, onSaved, onReload, template }: StepProps & { template: WizardTemplate }) {
   const { t } = useLocale();
   const saved = draft.steps["3"]?.data as SavedSources | undefined;
   const [classes, setClasses] = useState<string[]>(saved?.classes ?? []);
@@ -151,7 +151,7 @@ function SourcesForm({ draftId, draft, onSaved, template }: StepProps & { templa
         </div>
       </section>
 
-      <ErrorSummary error={error} />
+      <ErrorSummary error={error} onReload={onReload} />
       <div className="flex items-center gap-3">
         <button type="submit" disabled={busy} className={primaryClass}>
           {busy ? t("wizard.saving") : t("wizard.saveContinue")}

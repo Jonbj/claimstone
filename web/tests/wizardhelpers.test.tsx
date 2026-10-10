@@ -1,8 +1,9 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ErrorSummary, FieldError, messageFor, problemsOf } from "@/components/wizard/problems";
 import { explainParams, show } from "@/components/wizard/figures";
 import { ControlError } from "@/lib/control";
+import { LocaleProvider } from "@/lib/i18n";
 
 afterEach(cleanup);
 
@@ -57,11 +58,54 @@ describe("problems", () => {
   });
 
   it("ErrorSummary lists every problem, and a stale revision gets the reload advice", () => {
-    render(<ErrorSummary error={error} />);
+    render(<LocaleProvider><ErrorSummary error={error} /></LocaleProvider>);
     expect(screen.getByText("use lowercase")).toBeTruthy();
     cleanup();
-    render(<ErrorSummary error={new ControlError(409, "STALE_REVISION", "saved from revision 1")} />);
+    render(<LocaleProvider><ErrorSummary error={new ControlError(409, "STALE_REVISION", "saved from revision 1")} /></LocaleProvider>);
     expect(screen.getByRole("alert").textContent).toContain("changed elsewhere");
+  });
+
+  const inEnglish = (node: React.ReactElement) => render(<LocaleProvider>{node}</LocaleProvider>);
+
+  it("ErrorSummary gives each known code a sentence of its own, with the server's message beneath", () => {
+    const cases: Array<[string, RegExp]> = [
+      ["DRAFT_CLOSED", /This draft is closed/],
+      ["NAME_TAKEN", /A project with this name already exists/],
+      ["INCOMPLETE", /steps 1 to 3 must all be saved/],
+      ["UNAUTHORIZED", /Your session has ended/],
+      ["PREVIEW_CHANGED", /no longer what would be created/],
+      ["STALE_REVISION", /changed elsewhere/],
+    ];
+    for (const [code, sentence] of cases) {
+      inEnglish(<ErrorSummary error={new ControlError(409, code, "the engine's own sentence")} />);
+      expect(screen.getByText(sentence)).toBeTruthy();
+      expect(screen.getByText("the engine's own sentence")).toBeTruthy();
+      cleanup();
+    }
+  });
+
+  it("ErrorSummary keeps the server's details under a generic validation heading", () => {
+    inEnglish(<ErrorSummary error={error} />);
+    expect(screen.getByText("Please fix these before continuing:")).toBeTruthy();
+    expect(screen.getByText("use lowercase")).toBeTruthy();
+  });
+
+  it("ErrorSummary offers Reload only for a stale draft or a changed preview, and it calls back", () => {
+    const onReload = vi.fn();
+    inEnglish(<ErrorSummary error={new ControlError(409, "STALE_REVISION", "x")} onReload={onReload} />);
+    fireEvent.click(screen.getByRole("button", { name: "Reload the draft" }));
+    expect(onReload).toHaveBeenCalledTimes(1);
+    cleanup();
+    inEnglish(<ErrorSummary error={new ControlError(409, "PREVIEW_CHANGED", "x")} onReload={onReload} />);
+    expect(screen.getByRole("button", { name: "Reload the draft" })).toBeTruthy();
+    cleanup();
+    inEnglish(<ErrorSummary error={new ControlError(409, "NAME_TAKEN", "x")} onReload={onReload} />);
+    expect(screen.queryByRole("button", { name: "Reload the draft" })).toBeNull();
+  });
+
+  it("ErrorSummary takes focus when an error appears", () => {
+    inEnglish(<ErrorSummary error={new ControlError(409, "DRAFT_CLOSED", "x")} />);
+    expect(document.activeElement).toBe(screen.getByRole("alert"));
   });
 
   it("ErrorSummary shows nothing without an error", () => {
