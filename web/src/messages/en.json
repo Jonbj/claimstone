@@ -2,5 +2,149 @@
   "shell": {
     "newProject": "+ New project",
     "language": "Language"
+  },
+  "wizard": {
+    "title": "New project",
+    "lede": "Describe a topic, ask your questions, declare the sources and the bar. Claimstone checks each step and keeps a draft. Nothing runs until you create the project, and creating it does not start any research.",
+    "signIn": "Sign in to create a project.",
+    "signInLink": "Sign in",
+    "loading": "Loading the draft…",
+    "back": "Back",
+    "saveContinue": "Save and continue",
+    "saving": "Saving…",
+    "draftNote": "Draft saved · nothing runs until you create the project",
+    "problems": "Please fix these before continuing:",
+    "stale": "This draft was changed elsewhere. Reload it to see the latest version.",
+    "reload": "Reload the draft",
+    "discarded": "This draft was discarded. Nothing was created.",
+    "backToDrafts": "Back to your drafts",
+    "rail": {
+      "label": "Steps",
+      "done": "done",
+      "current": "current"
+    },
+    "steps": {
+      "1": { "name": "Topic", "hint": "what you need to know, and why" },
+      "2": { "name": "Questions", "hint": "literature questions get a verdict you sign" },
+      "3": { "name": "Sources and rigour", "hint": "where evidence may come from, and the bar" },
+      "4": { "name": "Review and create", "hint": "freeze the protocol" }
+    },
+    "explain": {
+      "title": "What Claimstone will do",
+      "afterSave": "After you save this step",
+      "atCreation": "When you create the project",
+      "afterStart": "After you start research (next stage)"
+    },
+    "drafts": {
+      "title": "Your drafts",
+      "empty": "You have no drafts yet.",
+      "start": "Start a new project",
+      "resume": "Continue",
+      "discard": "Discard",
+      "untitled": "Untitled draft",
+      "stepsSaved": "{n} of 3 steps saved",
+      "openProject": "Open the project",
+      "status": {
+        "open": "open",
+        "discarded": "discarded",
+        "created": "created"
+      }
+    },
+    "kind": {
+      "effect": "effect — judged on results that test it: estimates, uncertainty, horizon, sample, design.",
+      "heterogeneity": "heterogeneity — judged on the contrast between subgroups, with its uncertainty and whether the subgroup analysis was prespecified.",
+      "method": "method — judged on what kind of support each source gives the methodological claim.",
+      "premise": "premise — judged on the explicit statement of it, or a contradiction of it.",
+      "operational": "operational — tracked in this project; no literature verdict applies, and it is never shown as awaiting your signature."
+    },
+    "step1": {
+      "title": "1 · The topic",
+      "intro": "Name the project and list what to search for. Terms are broad on purpose: their job is to find works, not to define what is learned.",
+      "name": "Project name",
+      "nameHelp": "2 to 63 lowercase letters, digits or hyphens. It becomes the folder name and cannot be changed.",
+      "description": "What you need to know, and why (optional)",
+      "descriptionHelp": "In scope and out of scope, in a few sentences. It is kept with the project and read by no stage.",
+      "topics": "Topics",
+      "topicLabel": "Topic",
+      "terms": "Search terms, one per line",
+      "termsHelp": "Each term is searched as written.",
+      "addTopic": "Add a topic",
+      "removeTopic": "Remove this topic",
+      "afterSave": "Claimstone checks the name and the topics, then keeps a draft. Nothing is created and nothing runs.",
+      "atCreation": "Each search term will become one query on each index you choose later. So far: {terms} terms in {topics} topics, which means {searches} searches per index, or {searchesAll} if all three indexes are used.",
+      "afterStart": "Terms find works; they do not define what is learned. Widening a topic is cheap and cannot by itself change a verdict."
+    },
+    "step2": {
+      "title": "2 · The questions",
+      "intro": "Write each literature question as a statement the literature can support or contradict. Claimstone does not judge your wording: it only checks that a question is not empty and has a kind.",
+      "question": "Question",
+      "kind": "Kind",
+      "addQuestion": "Add a question",
+      "removeQuestion": "Remove this question",
+      "afterSave": "Claimstone checks each question and keeps a draft. The questions are not frozen yet, so you can still change them.",
+      "atCreation": "The question registry is frozen at version 1, dated today. {literature} of your {total} questions are literature questions: each will get an evidence profile that a person reads and signs. {operational} are operational: tracked, but they never receive a verdict. Changing the registry later is a dated version bump, never a silent edit.",
+      "afterStart": "Each kind is judged by its own rule. Claimstone reads sources with these questions in mind and extracts claims, each bound to a verbatim quote that code checks."
+    },
+    "step3": {
+      "title": "3 · Sources and rigour",
+      "intro": "Declare which kinds of source may count and the bar a round must clear before it can conclude anything. These are declared now and recorded with today's date.",
+      "classes": "Source classes",
+      "classesHelp": "Every source carries its class, and classes are never mixed silently. Choose at least one.",
+      "floor": "Acquisition floor",
+      "floorHelp": "The share of found works that must be obtained as confirmed copies. Between 0 and 1.",
+      "rationale": "Why this floor",
+      "rationaleHelp": "At least 20 characters. A bar without a reason is a bar somebody can move.",
+      "supplied": "Copies you supply yourself",
+      "suppliedCount": "Count toward the floor once verified",
+      "suppliedSeparate": "Read them, but report them separately from the floor",
+      "suppliedHelp": "Declared now, before any copy exists. It cannot change under this protocol.",
+      "notation": "How this field writes its figures",
+      "notationCustom": "Custom list",
+      "customLabels": "Notation, one per line",
+      "customLabelsHelp": "For example the abbreviations a paper writes next to a number.",
+      "hosts": "Hosts never to contact, besides the standing list",
+      "hostsHelp": "One bare host name per line, with no scheme, path or wildcard.",
+      "fixedHosts": "Always excluded: {hosts}",
+      "afterSave": "Claimstone checks the classes, the floor and its reason, and keeps a draft.",
+      "atCreation": "The floor {floor} is written with today's date and your reason, and it has no override. Every source will carry one of {classes} classes. Excluded hosts are never contacted ({added} added by you). Copies you supply: {supplied}.",
+      "afterStart": "After the search, Claimstone counts how many of the works it found it could obtain as confirmed copies. Below the floor it reports INSUFFICIENT_ACQUISITION and produces no verdicts at all: a corpus read at 42% that certifies itself complete is worse than no corpus."
+    },
+    "step4": {
+      "title": "4 · Review and create",
+      "intro": "This is exactly what will be created. Check it, then confirm.",
+      "summary": "Project {name}: {topics} topics, {total} questions ({literature} literature, {operational} operational), {classes} source classes, floor {floor}.",
+      "needSteps": "Steps 1 to 3 must be saved before you can review the project.",
+      "files": "The files that will be created",
+      "advanced": "Advanced: edit the generated files",
+      "advancedHelp": "An edit replaces a whole file and must still load with the same checks. If you change an earlier step after editing here, reset the files so they are generated again.",
+      "saveFiles": "Save file changes",
+      "resetFiles": "Reset to generated files",
+      "confirm": "I understand that the question registry and the floor are frozen at version 1 with today's date, and that changing them later needs a dated new version.",
+      "create": "Create the project",
+      "creating": "Creating…",
+      "startDisabled": "Start research",
+      "startNote": "Not available yet: authorizing and starting research comes with the next stage of the portal.",
+      "notStartedTitle": "What does not start",
+      "notStarted": "Creating the project starts no search, no copy request and no model call, and spends nothing.",
+      "nextTitle": "What comes next",
+      "next1": "You authorize one exact plan: the searches, the copy requests and any paid model work, up to a cap you set.",
+      "next2": "Claimstone searches the indexes and obtains legal copies, recording every attempt.",
+      "next3": "It prepares the documents, extracts claims bound to verbatim quotes, and a different model reviews each one.",
+      "next4": "It builds an evidence profile for each literature question.",
+      "next5": "A person reads each profile and signs a verdict. Nothing is signed for you.",
+      "afterSave": "There is nothing to save here: the draft is complete once steps 1 to 3 are saved. Creating the project is the one action on this page.",
+      "atCreation": "Claimstone writes three files under projects/{name}/, freezes the question registry and the floor at version 1 dated today, and records each file's hash. It starts nothing.",
+      "afterStart": "You will authorize one exact plan. Claimstone then searches, obtains legal copies, prepares the documents, extracts claims bound to verbatim quotes, has a different model review each one, and builds an evidence profile per literature question. A person reads it and signs. This stage of the portal does not do any of that yet."
+    },
+    "created": {
+      "title": "Project created",
+      "body": "{name} now exists, frozen at version 1. Nothing has started.",
+      "files": "Recorded files",
+      "projects": "Go to the projects",
+      "another": "Start another project"
+    },
+    "errors": {
+      "generic": "Something went wrong."
+    }
   }
 }
