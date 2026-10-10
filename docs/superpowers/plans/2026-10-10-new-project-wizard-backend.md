@@ -1338,6 +1338,15 @@ def test_a_taken_name_is_refused_at_step_1(ws):
     assert error.status == 422 and error.details[0]["path"] == "name"
 
 
+def test_reading_a_draft_returns_the_figures_of_its_saved_steps(ws):
+    draft, _ = _fill(ws)
+    payload, _ = _call(svc.read, ws, draft)
+    assert set(payload["steps"]) == {"1", "2", "3"}
+    assert payload["figures"]["1"]["searches_per_index"] == 2
+    assert payload["figures"]["2"]["questions_operational"] == 1
+    assert payload["figures"]["3"]["classes"] == ["ACA"]
+
+
 def test_the_preview_needs_all_three_steps_then_shows_files_and_figures(ws):
     draft = _call(svc.start, ws)[0]["draft_id"]
     assert _refused(svc.preview, ws, draft).status == 409
@@ -1507,6 +1516,8 @@ def list_drafts(projects_dir, store_dir, actor, code_revision):
 def read(projects_dir, store_dir, actor, code_revision, draft_id):
     current = wd.state(_store(store_dir), draft_id, actor)
     current["steps"] = {str(k): v for k, v in current["steps"].items()}
+    # What the explanation panel quotes for each saved step, so a resumed draft shows its figures.
+    current["figures"] = {n: _step_figures(int(n), v["data"]) for n, v in current["steps"].items()}
     return current, 200
 
 
@@ -2026,7 +2037,7 @@ A draft is what an operator typed before a project existed. The ledger lives in
 |---|---|
 | `POST /new` | 201 `{draft_id, revision}` |
 | `GET /new` | `{drafts: [...]}`, the operator's own |
-| `GET /new/{id}` | the replayed state; another operator's id is 404 |
+| `GET /new/{id}` | the replayed state plus `figures` per saved step; another operator's id is 404 |
 | `POST /new/{id}/steps/{1-3}` `{base_revision, data}` | 200 `{revision, data, figures}`; 422 with `details: [{path, message}]` and nothing written; 409 `STALE_REVISION`, `DRAFT_CLOSED` |
 | `POST /new/{id}/advanced` `{base_revision, files}` | 200 `{revision}`; the files must still load; `{}` clears |
 | `GET /new/{id}/preview` | `{figures, protocol_sha256, files, revision}`; needs steps 1–3 |
