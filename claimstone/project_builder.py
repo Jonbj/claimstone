@@ -91,3 +91,176 @@ def list_templates(templates_dir: str | pathlib.Path) -> list[dict[str, str]]:
             found.append({"id": raw["id"], "label": raw["label"],
                           "description": str(raw.get("description") or "").strip()})
     return found
+
+
+# --- steps --------------------------------------------------------------------------------------
+
+
+def _text(value: Any, path: str, limit: int, problems: list[Problem], *, required: bool = True) -> str:
+    if value is None:
+        value = ""
+    if not isinstance(value, str):
+        problems.append(Problem(path, "must be text"))
+        return ""
+    cleaned = value.strip()
+    if required and not cleaned:
+        problems.append(Problem(path, "is required"))
+    if len(cleaned) > limit:
+        problems.append(Problem(path, f"is over {limit} characters"))
+    return cleaned
+
+
+def _object(data: Any, allowed: set[str], problems: list[Problem]) -> dict[str, Any]:
+    if not isinstance(data, dict):
+        raise DraftInvalid([Problem("", "step data must be an object")])
+    for key in sorted(set(data) - allowed):
+        problems.append(Problem(key, "is not a field of this step"))
+    return data
+
+
+def normalize_step(step: int, data: Any, templates_dir: str | pathlib.Path) -> dict[str, Any]:
+    """The step's content as the ledger stores it, or `DraftInvalid` naming every problem."""
+    problems: list[Problem] = []
+    if step == 1:
+        out = _topic_step(data, problems)
+    elif step == 2:
+        out = _questions_step(data, problems)
+    elif step == 3:
+        out = _sources_step(data, templates_dir, problems)
+    else:
+        raise DraftInvalid([Problem("step", "steps are 1 to 3")])
+    if problems:
+        raise DraftInvalid(problems)
+    return out
+
+
+def _topic_step(data: Any, problems: list[Problem]) -> dict[str, Any]:
+    data = _object(data, {"name", "description", "topics"}, problems)
+    name = _text(data.get("name"), "name", 63, problems)
+    if name and not NAME_RE.fullmatch(name):
+        problems.append(Problem("name", "use 2 to 63 lowercase letters, digits or hyphens, "
+                                        "starting with a letter or digit"))
+    description = _text(data.get("description"), "description", MAX_TEXT, problems, required=False)
+    entries = data.get("topics")
+    topics: list[dict[str, Any]] = []
+    if not isinstance(entries, list) or not entries:
+        problems.append(Problem("topics", "add at least one topic"))
+        entries = []
+    if len(entries) > MAX_TOPICS:
+        problems.append(Problem("topics", f"at most {MAX_TOPICS} topics"))
+    seen: set[str] = set()
+    for i, entry in enumerate(entries[:MAX_TOPICS]):
+        base = f"topics[{i}]"
+        if not isinstance(entry, dict):
+            problems.append(Problem(base, "must be an object"))
+            continue
+        topic_id = str(entry.get("id") or "").strip() or f"T{i + 1:02d}"
+        if not ID_RE.fullmatch(topic_id):
+            problems.append(Problem(f"{base}.id", "use letters, digits, - or _ (at most 20)"))
+        if topic_id in seen:
+            problems.append(Problem(f"{base}.id", "is used by another topic"))
+        seen.add(topic_id)
+        label = _text(entry.get("label"), f"{base}.label", MAX_LABEL, problems)
+        terms: list[str] = []
+        raw_terms = entry.get("terms")
+        if not isinstance(raw_terms, list) or not raw_terms:
+            problems.append(Problem(f"{base}.terms", "add at least one search term"))
+            raw_terms = []
+        if len(raw_terms) > MAX_TERMS:
+            problems.append(Problem(f"{base}.terms", f"at most {MAX_TERMS} terms"))
+        for j, term in enumerate(raw_terms[:MAX_TERMS]):
+            cleaned = _text(term, f"{base}.terms[{j}]", MAX_TERM, problems)
+            if cleaned and cleaned in terms:
+                problems.append(Problem(f"{base}.terms[{j}]", "is repeated in this topic"))
+            if cleaned:
+                terms.append(cleaned)
+        topics.append({"id": topic_id, "label": label, "terms": terms})
+    return {"name": name, "description": description, "topics": topics}
+
+
+def _questions_step(data: Any, problems: list[Problem]) -> dict[str, Any]:
+    data = _object(data, {"questions"}, problems)
+    entries = data.get("questions")
+    if not isinstance(entries, list) or not entries:
+        problems.append(Problem("questions", "add at least one question"))
+        entries = []
+    if len(entries) > MAX_QUESTIONS:
+        problems.append(Problem("questions", f"at most {MAX_QUESTIONS} questions"))
+    questions: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for i, entry in enumerate(entries[:MAX_QUESTIONS]):
+        base = f"questions[{i}]"
+        if not isinstance(entry, dict):
+            problems.append(Problem(base, "must be an object"))
+            continue
+        qid = str(entry.get("id") or "").strip() or f"Q{i + 1:02d}"
+        if not ID_RE.fullmatch(qid):
+            problems.append(Problem(f"{base}.id", "use letters, digits, - or _ (at most 20)"))
+        if qid in seen:
+            problems.append(Problem(f"{base}.id", "is used by another question"))
+        seen.add(qid)
+        text = _text(entry.get("text"), f"{base}.text", MAX_QUESTION, problems)
+        kind = str(entry.get("kind") or "").strip()
+        if kind not in QUESTION_KINDS:
+            problems.append(Problem(f"{base}.kind", "choose one of " + ", ".join(QUESTION_KINDS)))
+        questions.append({"id": qid, "text": text, "kind": kind})
+    return {"questions": questions}
+
+
+def _sources_step(data: Any, templates_dir: str | pathlib.Path,
+                  problems: list[Problem]) -> dict[str, Any]:
+    allowed = {"template", "classes", "acquisition_floor", "floor_rationale", "supplied_copies",
+               "notation", "custom_value_labels", "extra_excluded_hosts"}
+    data = _object(data, allowed, problems)
+    template = load_template(templates_dir, data.get("template", "general"))
+    known = [c["id"] for c in template["classes"]]
+    chosen = data.get("classes")
+    if not isinstance(chosen, list) or not chosen:
+        problems.append(Problem("classes", "choose at least one source class"))
+        chosen = []
+    unknown = [c for c in chosen if c not in known]
+    if unknown:
+        problems.append(Problem("classes", "unknown class: " + ", ".join(map(str, unknown))))
+    floor = data.get("acquisition_floor")
+    if isinstance(floor, bool) or not isinstance(floor, (int, float)) or not 0 < float(floor) <= 1:
+        problems.append(Problem("acquisition_floor", "must be a number above 0 and at most 1"))
+        floor = 0.0
+    rationale = _text(data.get("floor_rationale"), "floor_rationale", MAX_TEXT, problems)
+    if rationale and len(rationale) < MIN_FLOOR_RATIONALE:
+        problems.append(Problem("floor_rationale",
+                                f"say why, in at least {MIN_FLOOR_RATIONALE} characters"))
+    supplied = data.get("supplied_copies")
+    if supplied not in SUPPLIED_COPIES:
+        problems.append(Problem("supplied_copies", "choose count or separate"))
+    notation = data.get("notation", "none")
+    presets = {p["id"]: p for p in template["notation_presets"]}
+    value_labels: list[str] = []
+    if notation == "custom":
+        raw = data.get("custom_value_labels")
+        if not isinstance(raw, list):
+            problems.append(Problem("custom_value_labels", "must be a list"))
+            raw = []
+        for j, label in enumerate(raw[:200]):
+            cleaned = _text(label, f"custom_value_labels[{j}]", MAX_LABEL, problems)
+            if cleaned and cleaned not in value_labels:
+                value_labels.append(cleaned)
+    elif notation in presets:
+        value_labels = list(presets[notation]["value_labels"])
+    else:
+        problems.append(Problem("notation", "unknown notation"))
+    hosts: list[str] = []
+    raw_hosts = data.get("extra_excluded_hosts", [])
+    if not isinstance(raw_hosts, list):
+        problems.append(Problem("extra_excluded_hosts", "must be a list"))
+        raw_hosts = []
+    for j, host in enumerate(raw_hosts[:100]):
+        cleaned = str(host).strip().lower() if isinstance(host, str) else ""
+        if not HOST_RE.fullmatch(cleaned):
+            problems.append(Problem(f"extra_excluded_hosts[{j}]", "use a bare host name, no scheme, path or wildcard"))
+        elif cleaned not in hosts and cleaned not in template["excluded_hosts"]:
+            hosts.append(cleaned)
+    return {"template": template["id"], "classes": [c for c in known if c in chosen],
+            "acquisition_floor": float(floor), "floor_rationale": rationale,
+            "supplied_copies": supplied if supplied in SUPPLIED_COPIES else "",
+            "notation": notation if notation in presets or notation == "custom" else "none",
+            "value_labels": value_labels, "extra_excluded_hosts": hosts}
