@@ -366,3 +366,13 @@ def test_deeply_nested_yaml_is_a_draft_problem_and_leaves_no_staging(tmp_path):
         pb.create_project(projects, "news-tone", nested, expected_protocol_sha256="0" * 64,
                           lock_store=Store("_new-projects", base=tmp_path / "store"))
     assert list(projects.iterdir()) == []
+
+
+def test_too_many_excluded_hosts_or_value_labels_is_a_problem_not_a_truncation():
+    hosts = [f"h{i}.example.org" for i in range(101)]
+    assert "extra_excluded_hosts" in _problems(3, {**STEP3, "extra_excluded_hosts": hosts})
+    labels = [f"label{i}" for i in range(201)]
+    assert "custom_value_labels" in _problems(
+        3, {**STEP3, "notation": "custom", "custom_value_labels": labels})
+    ok = pb.normalize_step(3, {**STEP3, "extra_excluded_hosts": hosts[:100]}, TEMPLATES)
+    assert len(ok["extra_excluded_hosts"]) == 100

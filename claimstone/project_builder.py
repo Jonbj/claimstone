@@ -34,6 +34,7 @@ FILES = ("topics.yaml", "questions.yaml", "sources.yaml")
 SUPPLIED_COPIES = ("count", "separate")
 
 MAX_TOPICS, MAX_TERMS, MAX_QUESTIONS = 50, 40, 200
+MAX_VALUE_LABELS, MAX_HOSTS = 200, 100
 MAX_LABEL, MAX_TERM, MAX_QUESTION, MAX_TEXT = 200, 300, 1000, 4000
 MIN_FLOOR_RATIONALE = 20  # the loader asks for this length once a floor is bumped; a first floor gets the same bar
 
@@ -259,7 +260,9 @@ def _sources_step(data: Any, templates_dir: str | pathlib.Path,
         if not isinstance(raw, list):
             problems.append(Problem("custom_value_labels", "must be a list"))
             raw = []
-        for j, label in enumerate(raw[:200]):
+        if len(raw) > MAX_VALUE_LABELS:
+            problems.append(Problem("custom_value_labels", f"at most {MAX_VALUE_LABELS} labels"))
+        for j, label in enumerate(raw[:MAX_VALUE_LABELS]):
             cleaned = _text(label, f"custom_value_labels[{j}]", MAX_LABEL, problems)
             if cleaned and cleaned not in value_labels:
                 value_labels.append(cleaned)
@@ -272,7 +275,9 @@ def _sources_step(data: Any, templates_dir: str | pathlib.Path,
     if not isinstance(raw_hosts, list):
         problems.append(Problem("extra_excluded_hosts", "must be a list"))
         raw_hosts = []
-    for j, host in enumerate(raw_hosts[:100]):
+    if len(raw_hosts) > MAX_HOSTS:
+        problems.append(Problem("extra_excluded_hosts", f"at most {MAX_HOSTS} hosts"))
+    for j, host in enumerate(raw_hosts[:MAX_HOSTS]):
         cleaned = str(host).strip().lower() if isinstance(host, str) else ""
         if not HOST_RE.fullmatch(cleaned):
             problems.append(Problem(f"extra_excluded_hosts[{j}]", "use a bare host name, no scheme, path or wildcard"))
