@@ -264,3 +264,98 @@ def _sources_step(data: Any, templates_dir: str | pathlib.Path,
             "supplied_copies": supplied if supplied in SUPPLIED_COPIES else "",
             "notation": notation if notation in presets or notation == "custom" else "none",
             "value_labels": value_labels, "extra_excluded_hosts": hosts}
+
+
+# --- rendering ----------------------------------------------------------------------------------
+
+
+def _dump(obj: Any) -> str:
+    return yaml.safe_dump(obj, sort_keys=False, allow_unicode=True, default_flow_style=False, width=100)
+
+
+def render(state: dict[int, dict[str, Any]], templates_dir: str | pathlib.Path, *, today: str,
+           overrides: dict[str, str] | None = None) -> dict[str, str]:
+    """The three files' text. A fixed serializer, never string concatenation. `today` is the day the
+    protocol is frozen: registry v1 and floor v1 both carry it."""
+    missing = [Problem(f"step {n}", "is not saved yet") for n in (1, 2, 3) if n not in state]
+    if missing:
+        raise DraftInvalid(missing)
+    one, two, three = state[1], state[2], state[3]
+    template = load_template(templates_dir, three["template"])
+    topics: dict[str, Any] = {}
+    if one.get("description"):
+        topics["description"] = one["description"]  # not read by the loader: the digest ignores it
+    topics["topics"] = one["topics"]
+    questions = {"registry_version": 1, "frozen_at": today,
+                 "questions": [{"id": q["id"], "text": q["text"], "kind": q["kind"]}
+                               for q in two["questions"]]}
+    sources: dict[str, Any] = {
+        "classes": [c for c in template["classes"] if c["id"] in three["classes"]],
+        "acquisition_floor": three["acquisition_floor"],
+        "floor_version": 1, "floor_set_at": today, "floor_rationale": three["floor_rationale"],
+        "excluded_hosts": list(template["excluded_hosts"]) + list(three["extra_excluded_hosts"]),
+        "supplied_copies": three["supplied_copies"],
+    }
+    if three["value_labels"]:
+        sources["extraction"] = {"value_labels": three["value_labels"]}
+    files = {"topics.yaml": _dump(topics), "questions.yaml": _dump(questions),
+             "sources.yaml": _dump(sources)}
+    for name, text in (overrides or {}).items():
+        if name not in FILES:
+            raise DraftInvalid([Problem(str(name), "is not one of the project's files")])
+        if not isinstance(text, str):
+            raise DraftInvalid([Problem(name, "must be text")])
+        files[name] = text
+    return files
+
+
+def _file_of(message: str) -> str:
+    for name in FILES:
+        if message.startswith(name):
+            return name
+    return ""
+
+
+def figures(project: Any) -> dict[str, Any]:
+    """Everything the explanation panel may quote, derived from the loaded project and nothing else.
+    A figure not knowable here is None and renders as a dash."""
+    kinds: dict[str, int] = {}
+    for question in project.questions:
+        kinds[question.kind or "unassigned"] = kinds.get(question.kind or "unassigned", 0) + 1
+    operational = kinds.get("operational", 0)
+    total = len(project.questions)
+    terms = sum(len(topic.terms) for topic in project.topics)
+    return {
+        "topics": len(project.topics), "terms": terms,
+        "searches_per_index": terms, "indexes_available": list(SEARCH_INDEXES),
+        "searches_all_indexes": terms * len(SEARCH_INDEXES),
+        "questions_total": total, "questions_literature": total - operational,
+        "questions_operational": operational, "questions_by_kind": kinds,
+        "classes": [c.id for c in project.classes],
+        "acquisition_floor": project.acquisition_floor, "floor_version": project.floor_version,
+        "excluded_hosts": len(project.excluded_hosts), "supplied_copies": project.supplied_copies,
+        "registry_version": project.registry_version, "frozen_at": project.frozen_at,
+        "requests_max": None,  # known only when an exact plan is frozen (stage 2)
+    }
+
+
+def inspect(files: dict[str, str], *, name: str, templates_dir: str | pathlib.Path,
+            template_id: str) -> dict[str, Any]:
+    """Load the files with the real loader and derive the figures. Raises `DraftInvalid`."""
+    if set(files) != set(FILES):
+        raise DraftInvalid([Problem("files", "need exactly " + ", ".join(FILES))])
+    template = load_template(templates_dir, template_id)
+    with tempfile.TemporaryDirectory() as tmp:
+        root = pathlib.Path(tmp) / name
+        root.mkdir()
+        for filename, text in files.items():
+            (root / filename).write_text(text, encoding="utf-8")
+        try:
+            project = load_project(root)
+            lost = sorted(set(template["excluded_hosts"]) - set(project.excluded_hosts))
+            if lost:
+                raise DraftInvalid([Problem("sources.yaml", "the template's excluded hosts cannot "
+                                            "be removed: " + ", ".join(lost))])
+            return {"figures": figures(project), "protocol_sha256": flows.protocol_digest(project)}
+        except ConfigError as exc:
+            raise DraftInvalid([Problem(_file_of(str(exc)), str(exc))]) from exc
