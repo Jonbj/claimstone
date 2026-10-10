@@ -194,3 +194,23 @@ def test_templates_are_served(ws):
         assert [t["id"] for t in client.get("/new-templates")[2]["templates"]] == ["general"]
         assert client.get("/new-templates/general")[2]["default_floor"] == 0.8
         assert client.get("/new-templates/nope")[0] == 404
+
+
+@pytest.mark.parametrize("step", ["01", "%C2%B2", "%E2%91%A0", "%D9%A3", "%EF%BC%91", "4", "0"])
+def test_only_ascii_steps_one_to_three_are_routes(ws, step):
+    with _served(ws) as base:
+        client = Client(base)
+        _, _, started = client.post("/new", {})
+        draft = started["draft_id"]
+        status, _h, body = client.post(f"/new/{draft}/steps/{step}", {"base_revision": 1, "data": STEP1})
+        assert (status, body["error"]["code"]) == (404, "NOT_FOUND")
+        assert client.get(f"/new/{draft}")[2]["revision"] == 1
+
+
+def test_step_3_is_still_a_route(ws):
+    with _served(ws) as base:
+        client = Client(base)
+        _, _, started = client.post("/new", {})
+        status, _h, body = client.post(f"/new/{started['draft_id']}/steps/3",
+                                       {"base_revision": 1, "data": STEP3})
+        assert status == 200, body

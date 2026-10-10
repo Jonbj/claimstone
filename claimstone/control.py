@@ -1199,7 +1199,7 @@ def _new_read(self: _Handler, params: dict[str, str], query: Any,
 def _new_step(self: _Handler, params: dict[str, str], query: Any,
               body: dict[str, Any]) -> tuple[Any, int]:
     self._only_keys(body, frozenset({"base_revision", "data"}))
-    if not params["step"].isdigit():
+    if not re.fullmatch(r"[1-3]", params["step"]):
         raise ControlError(404, "NOT_FOUND", "no such step")
     return _new_call(self, new_project_service.save_step, params["draft_id"],
                      int(params["step"]), _revision(body), body.get("data"))
