@@ -139,4 +139,18 @@ describe("StepReview", () => {
     await waitFor(() => expect(onChanged).toHaveBeenCalled());
     expect(calls.find((c) => c.url.endsWith("/advanced"))!.body).toEqual({ base_revision: 6, files: {} });
   });
+
+  it("unsaved file edits disable Create and say why; discarding them re-enables it", async () => {
+    mount();
+    fireEvent.click(await screen.findByLabelText(/I understand that the question registry/));
+    const create = screen.getByRole("button", { name: "Create the project" }) as HTMLButtonElement;
+    expect(create.disabled).toBe(false);
+    fireEvent.click(screen.getByText("Advanced: edit the generated files"));
+    fireEvent.change(screen.getByLabelText("topics.yaml"), { target: { value: "T2" } });
+    expect(create.disabled).toBe(true);
+    expect(screen.getByText(/You have unsaved file changes/)).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("topics.yaml"), { target: { value: "T" } });
+    expect(create.disabled).toBe(false);
+    expect(screen.queryByText(/You have unsaved file changes/)).toBeNull();
+  });
 });

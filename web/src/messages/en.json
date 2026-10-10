@@ -127,6 +127,7 @@
       "saveFiles": "Save file changes",
       "resetFiles": "Reset to generated files",
       "resetHelp": "If you edited the files and the date has changed, reset them so they are generated again.",
+      "unsaved": "You have unsaved file changes: save or discard them first.",
       "confirm": "I understand that the question registry and the floor are frozen at version 1 with today's date, and that changing them later needs a dated new version.",
       "create": "Create the project",
       "creating": "Creating…",

@@ -127,6 +127,7 @@
       "saveFiles": "Salva le modifiche ai file",
       "resetFiles": "Ripristina i file generati",
       "resetHelp": "Se hai modificato i file e la data è cambiata, ripristinali: verranno generati di nuovo.",
+      "unsaved": "Hai modifiche ai file non salvate: salvale o annullale prima di continuare.",
       "confirm": "So che il registro delle domande e la soglia vengono congelati alla versione 1 con la data di oggi, e che cambiarli più avanti richiede una nuova versione datata.",
       "create": "Crea il progetto",
       "creating": "Creazione…",

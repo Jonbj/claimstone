@@ -104,9 +104,11 @@ function ReviewForm({ draftId, draft, onCreated, onChanged, onFigures }: ReviewP
   const name = String((draft.steps["1"].data as { name?: string }).name ?? "");
   const params = explainParams(data.figures, { name });
 
+  const unsaved = Object.entries(edits).some(([file, text]) => text !== data.files[file]);
+
   const create = (event: FormEvent) => {
     event.preventDefault(); // the CSP has form-action 'none'
-    if (!confirmed) return;
+    if (!confirmed || unsaved) return;
     void run("create", async () => onCreated(await control.newCreate(draftId, data.protocol_sha256)));
   };
 
@@ -178,8 +180,9 @@ function ReviewForm({ draftId, draft, onCreated, onChanged, onFigures }: ReviewP
       </label>
 
       <ErrorSummary error={error} />
+      {unsaved ? <p className="text-sm text-destructive">{t("wizard.step4.unsaved")}</p> : null}
       <div className="flex flex-wrap items-center gap-3">
-        <button type="submit" disabled={!confirmed || busy !== null} className={primaryClass}>
+        <button type="submit" disabled={!confirmed || unsaved || busy !== null} className={primaryClass}>
           {busy === "create" ? t("wizard.step4.creating") : t("wizard.step4.create")}
         </button>
         <button type="button" disabled className={`${quietClass} opacity-50`} aria-describedby="start-note">
