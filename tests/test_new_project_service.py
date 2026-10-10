@@ -247,3 +247,14 @@ def test_create_refuses_a_name_with_leftover_store_data_and_creates_nothing(ws):
     assert not (ws["projects"] / "news-tone").exists()
     current = _call(svc.read, ws, draft)[0]
     assert current["status"] == "open" and current["last_failure"]
+
+
+def test_ownership_and_status_are_checked_before_the_data(ws):
+    draft = _call(svc.start, ws)[0]["draft_id"]
+    bad = {**STEP1, "name": "Bad Name"}
+    with pytest.raises(svc.ServiceError) as other:
+        svc.save_step(ws["projects"], ws["store"], "op2", "rev", draft, 1, 1, bad)
+    assert other.value.status == 404
+    _call(svc.discard, ws, draft, 1)
+    error = _refused(svc.save_step, ws, draft, 1, 2, bad)
+    assert (error.status, error.code) == (409, "DRAFT_CLOSED")

@@ -114,6 +114,9 @@ def save_step(projects_dir, store_dir, actor, code_revision, draft_id, step, bas
         raise ServiceError(404, "NOT_FOUND", "no such step")
     store = _store(store_dir)
     with store.writer_lock():
+        current = wd.state(store, draft_id, actor)  # ownership and status before the data is looked at
+        if current["status"] != "open":
+            raise ServiceError(409, "DRAFT_CLOSED", f"this draft is {current['status']}")
         normalized = pb.normalize_step(step, data, _templates_dir(projects_dir))
         if step == 1 and (pathlib.Path(projects_dir) / normalized["name"]).exists():
             raise pb.DraftInvalid([pb.Problem("name", "a project with this name already exists")])
