@@ -24,10 +24,12 @@ describe("explainParams", () => {
       topics: 2, terms: 5, searches_per_index: 5, searches_all_indexes: 15,
       questions_total: 8, questions_literature: 7, questions_operational: 1,
       acquisition_floor: 0.8, classes: ["ACA", "WP"], excluded_hosts_added: 1, supplied_copies: "separate",
+      frozen_at: "2026-10-10",
     });
     expect(params).toMatchObject({
       topics: "2", terms: "5", searches: "5", searchesAll: "15", total: "8", literature: "7",
       operational: "1", floor: "0.80", classes: "2", added: "1", supplied: "separate",
+      frozenAt: "2026-10-10",
     });
   });
 

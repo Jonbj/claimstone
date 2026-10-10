@@ -109,6 +109,10 @@
       "supplied": "Copie che fornisci tu",
       "suppliedCount": "Contano per la soglia una volta verificate",
       "suppliedSeparate": "Vengono lette, ma riportate a parte rispetto alla soglia",
+      "suppliedValue": {
+        "count": "count — contano per la soglia una volta verificate",
+        "separate": "separate — vengono lette, ma riportate a parte rispetto alla soglia"
+      },
       "suppliedHelp": "Si dichiara ora, prima che esista una copia. Non può cambiare sotto questo protocollo.",
       "notation": "Come questo campo scrive le sue cifre",
       "notationCustom": "Elenco personalizzato",
@@ -127,13 +131,14 @@
       "summary": "Progetto {name}: {topics} argomenti, {total} domande ({literature} di letteratura, {operational} operational), {classes} classi di fonte, soglia {floor}.",
       "needSteps": "I passi da 1 a 3 devono essere salvati prima di poter rivedere il progetto.",
       "files": "I file che verranno creati",
+      "digest": "Impronta del protocollo (sha256): ciò che vedi è ciò che viene creato",
       "advanced": "Avanzate: modifica i file generati",
       "advancedHelp": "Una modifica sostituisce un file intero e deve comunque superare gli stessi controlli. Se cambi un passo precedente dopo aver modificato qui, ripristina i file perché vengano generati di nuovo.",
       "saveFiles": "Salva le modifiche ai file",
       "resetFiles": "Ripristina i file generati",
       "resetHelp": "Se hai modificato i file e la data è cambiata, ripristinali: verranno generati di nuovo.",
       "unsaved": "Hai modifiche ai file non salvate: salvale o annullale prima di continuare.",
-      "confirm": "So che il registro delle domande e la soglia vengono congelati alla versione 1 con la data di oggi, e che cambiarli più avanti richiede una nuova versione datata.",
+      "confirm": "Ho capito che il registro delle domande e la soglia vengono congelati alla versione 1 il {frozenAt} (data UTC), e che cambiarli più avanti richiede una nuova versione datata.",
       "create": "Crea il progetto",
       "creating": "Creazione…",
       "startDisabled": "Avvia la ricerca",
@@ -148,12 +153,13 @@
       "next4": "Costruisce un profilo di evidenza per ogni domanda di letteratura.",
       "next5": "Una persona legge ogni profilo e firma un verdetto. Nulla viene firmato al tuo posto.",
       "afterSave": "Qui non c'è nulla da salvare: la bozza è completa quando i passi da 1 a 3 sono salvati. Creare il progetto è l'unica azione di questa pagina.",
-      "atCreation": "Claimstone scrive tre file sotto projects/{name}/, congela il registro delle domande e la soglia alla versione 1 con la data di oggi e registra l'impronta di ciascun file. Non avvia nulla.",
+      "atCreation": "Claimstone scrive tre file sotto projects/{name}/, congela il registro delle domande e la soglia alla versione 1 il {frozenAt} (data UTC) e registra l'impronta di ciascun file. Non avvia nulla.",
       "afterStart": "Autorizzerai un piano esatto. Claimstone poi cerca, ottiene copie legali, prepara i documenti, estrae affermazioni legate a citazioni esatte, fa rivedere ciascuna a un modello diverso e costruisce un profilo di evidenza per ogni domanda di letteratura. Una persona lo legge e firma. Questa tappa del portale non fa ancora nulla di tutto ciò."
     },
     "created": {
       "title": "Progetto creato",
-      "body": "{name} ora esiste, congelato alla versione 1. Non è partito nulla.",
+      "body": "Il progetto {name} ora esiste, congelato alla versione 1 il {frozenAt} (data UTC). Non è stato avviato nulla.",
+      "bodyUndated": "Il progetto {name} ora esiste, congelato alla versione 1. Non è stato avviato nulla.",
       "files": "File registrati",
       "projects": "Vai ai progetti",
       "another": "Inizia un altro progetto"

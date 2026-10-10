@@ -16,7 +16,7 @@ const full = (): DraftState => ({
 
 const preview = {
   figures: { topics: 1, terms: 2, questions_total: 2, questions_literature: 1, questions_operational: 1,
-             classes: ["ACA"], acquisition_floor: 0.8 },
+             classes: ["ACA"], acquisition_floor: 0.8, frozen_at: "2026-10-10" },
   protocol_sha256: "a".repeat(64), revision: 6,
   files: { "topics.yaml": "T", "questions.yaml": "Q", "sources.yaml": "S" },
 };
@@ -76,6 +76,13 @@ describe("StepReview", () => {
     mount();
     expect(await screen.findByText(/Project news-tone: 1 topics, 2 questions \(1 literature, 1 operational\)/)).toBeTruthy();
     expect(screen.getAllByText("topics.yaml").length).toBeGreaterThan(0);
+  });
+
+  it("captions the protocol digest, and the confirmation names the UTC date that will be written", async () => {
+    mount();
+    expect(await screen.findByText(/Protocol fingerprint \(sha256\)/)).toBeTruthy();
+    expect(screen.getByText("a".repeat(64))).toBeTruthy();
+    expect(screen.getByLabelText(/frozen at version 1 on 2026-10-10/)).toBeTruthy();
   });
 
   it("Create needs the confirmation, and Start research is disabled with its reason", async () => {

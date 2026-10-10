@@ -32,6 +32,7 @@ export function explainParams(figures: Figures, extra: Record<string, string> = 
     classes,
     added: show(figures.excluded_hosts_added),
     supplied: show(figures.supplied_copies),
+    frozenAt: show(figures.frozen_at),
     ...extra,
   };
 }

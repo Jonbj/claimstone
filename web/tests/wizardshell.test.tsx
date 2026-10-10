@@ -46,6 +46,12 @@ describe("ExplainPanel", () => {
     expect(screen.getByText(/INSUFFICIENT_ACQUISITION/)).toBeTruthy();
     expect(screen.getByText(/floor 0\.80/)).toBeTruthy();
   });
+
+  it("quotes the supplied-copies policy as its label, with the canonical token beside it", () => {
+    media(true);
+    render(<LocaleProvider><ExplainPanel step={3} figures={{ supplied_copies: "separate" }} /></LocaleProvider>);
+    expect(screen.getByText(/separate — read, but reported apart from the floor/)).toBeTruthy();
+  });
 });
 
 describe("WizardShell", () => {

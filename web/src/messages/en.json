@@ -109,6 +109,10 @@
       "supplied": "Copies you supply yourself",
       "suppliedCount": "Count toward the floor once verified",
       "suppliedSeparate": "Read them, but report them separately from the floor",
+      "suppliedValue": {
+        "count": "count — counted toward the floor once verified",
+        "separate": "separate — read, but reported apart from the floor"
+      },
       "suppliedHelp": "Declared now, before any copy exists. It cannot change under this protocol.",
       "notation": "How this field writes its figures",
       "notationCustom": "Custom list",
@@ -127,13 +131,14 @@
       "summary": "Project {name}: {topics} topics, {total} questions ({literature} literature, {operational} operational), {classes} source classes, floor {floor}.",
       "needSteps": "Steps 1 to 3 must be saved before you can review the project.",
       "files": "The files that will be created",
+      "digest": "Protocol fingerprint (sha256): what you see is what is created",
       "advanced": "Advanced: edit the generated files",
       "advancedHelp": "An edit replaces a whole file and must still load with the same checks. If you change an earlier step after editing here, reset the files so they are generated again.",
       "saveFiles": "Save file changes",
       "resetFiles": "Reset to generated files",
       "resetHelp": "If you edited the files and the date has changed, reset them so they are generated again.",
       "unsaved": "You have unsaved file changes: save or discard them first.",
-      "confirm": "I understand that the question registry and the floor are frozen at version 1 with today's date, and that changing them later needs a dated new version.",
+      "confirm": "I understand that the question registry and the floor are frozen at version 1 on {frozenAt} (UTC date), and that changing them later needs a dated new version.",
       "create": "Create the project",
       "creating": "Creating…",
       "startDisabled": "Start research",
@@ -148,12 +153,13 @@
       "next4": "It builds an evidence profile for each literature question.",
       "next5": "A person reads each profile and signs a verdict. Nothing is signed for you.",
       "afterSave": "There is nothing to save here: the draft is complete once steps 1 to 3 are saved. Creating the project is the one action on this page.",
-      "atCreation": "Claimstone writes three files under projects/{name}/, freezes the question registry and the floor at version 1 dated today, and records each file's hash. It starts nothing.",
+      "atCreation": "Claimstone writes three files under projects/{name}/, freezes the question registry and the floor at version 1 on {frozenAt} (UTC date), and records each file's hash. It starts nothing.",
       "afterStart": "You will authorize one exact plan. Claimstone then searches, obtains legal copies, prepares the documents, extracts claims bound to verbatim quotes, has a different model review each one, and builds an evidence profile per literature question. A person reads it and signs. This stage of the portal does not do any of that yet."
     },
     "created": {
       "title": "Project created",
-      "body": "{name} now exists, frozen at version 1. Nothing has started.",
+      "body": "The project {name} now exists, frozen at version 1 on {frozenAt} (UTC date). Nothing has started.",
+      "bodyUndated": "The project {name} now exists, frozen at version 1. Nothing has started.",
       "files": "Recorded files",
       "projects": "Go to the projects",
       "another": "Start another project"

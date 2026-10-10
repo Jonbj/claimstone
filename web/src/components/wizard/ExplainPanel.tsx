@@ -1,6 +1,6 @@
 import type { Figures } from "@/lib/control";
 import { useLocale } from "@/lib/i18n";
-import { explainParams } from "./figures";
+import { DASH, explainParams } from "./figures";
 import { useWide } from "./useWide";
 
 const MOMENTS = ["afterSave", "atCreation", "afterStart"] as const;
@@ -12,7 +12,10 @@ export default function ExplainPanel(
 ) {
   const { t } = useLocale();
   const wide = useWide();
-  const params = explainParams(figures, extra);
+  // The supplied-copies policy is quoted as its localized label, with the canonical token beside it.
+  const token = figures.supplied_copies;
+  const supplied = token === "count" || token === "separate" ? t(`wizard.step3.suppliedValue.${token}`) : DASH;
+  const params = explainParams(figures, { supplied, ...extra });
   const sections = MOMENTS.map((moment) => ({
     moment,
     title: t(`wizard.explain.${moment}`),

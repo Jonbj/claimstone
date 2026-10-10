@@ -60,7 +60,12 @@ function Wizard(
   const createdScreen = (result: Created | null, project: string) => (
     <section className="flex flex-col gap-3 pt-6">
       <h1 className="text-[44px] leading-tight">{t("wizard.created.title")}</h1>
-      <p className="text-sm">{t("wizard.created.body", { name: project })}</p>
+      {/* the creation date is known only from the create response; a resumed created draft has none */}
+      <p className="text-sm">
+        {result
+          ? t("wizard.created.body", { name: project, frozenAt: result.frozen.frozen_at })
+          : t("wizard.created.bodyUndated", { name: project })}
+      </p>
       {result ? (
         <ul className="font-mono text-xs text-muted-foreground">
           {Object.entries(result.files).map(([file, hash]) => (

@@ -143,6 +143,7 @@ function ReviewForm({ draftId, draft, onCreated, onChanged, onFigures, onReload 
             <li key={file}>{file}</li>
           ))}
         </ul>
+        <p className="mt-3 text-[13px] text-muted-foreground">{t("wizard.step4.digest")}</p>
         <p className="mt-1 break-all font-mono text-xs text-muted-foreground">{data.protocol_sha256}</p>
 
         <details className="mt-4 rounded-lg border border-border p-3">
@@ -186,7 +187,7 @@ function ReviewForm({ draftId, draft, onCreated, onChanged, onFigures, onReload 
 
       <label className="flex items-start gap-2 text-sm">
         <input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} className="mt-1" />
-        <span>{t("wizard.step4.confirm")}</span>
+        <span>{t("wizard.step4.confirm", params)}</span>
       </label>
 
       <ErrorSummary error={error} onReload={reload} />

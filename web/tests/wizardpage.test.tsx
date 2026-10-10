@@ -276,6 +276,7 @@ describe("WizardPage", () => {
     await waitFor(() => expect(created).toBe(true));
     await waitFor(() => expect(requested.filter((r) => r === "GET /control/v1/new/d1").length).toBeGreaterThan(1));
     expect(screen.getByText("Project created")).toBeTruthy();
+    expect(screen.getByText(/frozen at version 1 on 2026-10-10 \(UTC date\)/)).toBeTruthy();
     expect(screen.queryByText("boom")).toBeNull();
   });
 
