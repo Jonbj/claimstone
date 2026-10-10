@@ -178,7 +178,8 @@ def test_the_control_service_writes_only_what_it_must_and_publishes_nothing():
     assert "profiles" not in control
     assert "ports" not in control
     assert control["image"] == document["services"]["claimstone"]["image"]
-    assert set(control["volumes"]) == {"./store:/app/store", "./projects:/app/projects:ro",
+    assert set(control["volumes"]) == {"./store:/app/store", "./projects:/app/projects",
+                                       "./templates:/app/templates:ro",
                                        "./.claimstone:/app/.claimstone"}
     assert control.get("read_only") is True
     assert "portal_internal" in control["networks"]

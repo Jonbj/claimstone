@@ -54,6 +54,7 @@ write to — several fields exist to prevent a specific defect and look optional
 | [`contracts/flows.md`](contracts/flows.md) | a round selector bound to the protocol digests it ran under |
 | [`contracts/local_mandates.md`](contracts/local_mandates.md) | bounded recurring local work for one flow |
 | [`contracts/exports.md`](contracts/exports.md) | a verifiable snapshot of one flow, and how it is checked |
+| [`contracts/new_project.md`](contracts/new_project.md) | the new-project wizard's drafts and routes |
 
 ## The stage designs
 

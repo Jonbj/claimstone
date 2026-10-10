@@ -33,6 +33,8 @@ authority, as `api` does.
   table above.
 - It never decides scientific policy. Policies are declared in the project's input files
   or recorded by the operator, and the server enforces them.
+  The new-project wizard records the policy the operator declares; the server checks it against the
+  engine's loaders and decides none of it.
 - It never ranks access, intake or purchase items by anything derived from claims, reviews
   or stances (F13).
 - It never runs stage commands: discover, acquire, normalize, extract, review, synthesize.
@@ -343,6 +345,13 @@ Precondition: the scheduler track has committed an operations ledger module impl
 - `GET …/operations` returns state, worker last heartbeat, last completed unit, and spent,
   reserved and remaining per authorization. An expired lease is `INTERRUPTED`, shown as
   "Status being checked".
+
+### New project — drafts and creation
+
+See `docs/contracts/new_project.md`. These routes keep a private draft ledger and, on confirmation, create
+one new directory under `projects/` through `project_builder.create_project`, the only code that writes
+there. The `control` service therefore mounts `projects/` read-write; it still never runs a stage and never
+starts network or paid work.
 
 ## New ledgers (all append-only JSONL, `store/<project>/`)
 

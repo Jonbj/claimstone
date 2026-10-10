@@ -253,7 +253,11 @@ services:
       OPENALEX_API_KEY: ${OPENALEX_API_KEY:+present}
     volumes:
       - ./store:/app/store
-      - ./projects:/app/projects:ro
+      # Writable, for one reason: `claimstone/project_builder.py` creates a NEW directory here when an
+      # operator confirms the new-project wizard. It never opens a file of an existing project for
+      # writing (tests/test_control_new_project.py hashes the tree before and after).
+      - ./projects:/app/projects
+      - ./templates:/app/templates:ro
       - ./.claimstone:/app/.claimstone
     user: "${UID:-1000}:${GID:-1000}"
     networks: [portal_internal, claimstone, control_egress]
