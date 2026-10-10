@@ -115,6 +115,12 @@ function Wizard(
         <h1 className="text-[44px] leading-tight">{t("wizard.title")}</h1>
         <p className="mt-1 max-w-[70ch] text-sm text-muted-foreground">{t("wizard.lede")}</p>
       </header>
+      {Object.keys(draft.advanced).length ? (
+        <div role="status" className="rounded-lg border border-amber-400 bg-amber-50 p-3 text-sm dark:bg-amber-950/30">
+          <p>{t("wizard.advancedActive")}</p>
+          <Link className="underline" to={`/new/${encodeURIComponent(draftId)}/4`}>{t("wizard.advancedLink")}</Link>
+        </div>
+      ) : null}
       {expired ? (
         <div role="status" className="flex flex-col gap-2 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm">
           <p>{t("wizard.expired.text")}</p>

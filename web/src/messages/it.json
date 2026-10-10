@@ -8,6 +8,8 @@
     "lede": "Descrivi un argomento, scrivi le domande, dichiara le fonti e la soglia. Claimstone controlla ogni passo e conserva una bozza. Nulla parte finché non crei il progetto, e crearlo non avvia nessuna ricerca.",
     "signIn": "Accedi per creare un progetto.",
     "signInLink": "Accedi",
+    "advancedActive": "Le modifiche avanzate sono attive: le modifiche nelle fasi da 1 a 3 potrebbero non comparire nei file generati. Ripristinale nella fase 4 per generare di nuovo i file.",
+    "advancedLink": "Vai alla fase 4",
     "expired": {
       "text": "La sessione è scaduta. Accedi in un'altra scheda, poi premi il pulsante qui sotto e salva di nuovo. Quello che hai scritto è ancora qui.",
       "signIn": "Accedi in un'altra scheda",

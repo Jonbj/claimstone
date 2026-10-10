@@ -8,6 +8,8 @@
     "lede": "Describe a topic, ask your questions, declare the sources and the bar. Claimstone checks each step and keeps a draft. Nothing runs until you create the project, and creating it does not start any research.",
     "signIn": "Sign in to create a project.",
     "signInLink": "Sign in",
+    "advancedActive": "Advanced edits are active: changes in steps 1 to 3 may not appear in the generated files. Reset them in step 4 to generate the files again.",
+    "advancedLink": "Go to step 4",
     "expired": {
       "text": "Your session ended. Sign in in another tab, then press the button below and save again. What you typed is still here.",
       "signIn": "Sign in in another tab",

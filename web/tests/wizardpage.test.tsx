@@ -168,4 +168,17 @@ describe("WizardPage", () => {
     await waitFor(() => expect(requested.filter((r) => r.includes("/session")).length).toBeGreaterThan(1));
     expect(screen.getByText(/Your session ended/)).toBeTruthy();
   });
+
+  it("active Advanced edits are announced on every step, with a link to step 4", async () => {
+    draftBody = { ...baseDraft, advanced: { "sources.yaml": "x" } };
+    mount("/new/d1/2");
+    expect(await screen.findByText(/Advanced edits are active/)).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Go to step 4" }).getAttribute("href")).toBe("/new/d1/4");
+  });
+
+  it("no notice without Advanced edits", async () => {
+    mount("/new/d1/2");
+    await screen.findByText("2 · The questions");
+    expect(screen.queryByText(/Advanced edits are active/)).toBeNull();
+  });
 });
