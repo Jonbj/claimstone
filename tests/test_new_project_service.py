@@ -258,3 +258,13 @@ def test_ownership_and_status_are_checked_before_the_data(ws):
     _call(svc.discard, ws, draft, 1)
     error = _refused(svc.save_step, ws, draft, 1, 2, bad)
     assert (error.status, error.code) == (409, "DRAFT_CLOSED")
+
+
+def test_one_date_serves_the_rendering_and_the_response(ws, monkeypatch):
+    draft, _ = _fill(ws)
+    shown = _shown(ws, draft)
+    days = iter(["2026-10-10", "2026-10-11", "2026-10-12", "2026-10-13"])
+    monkeypatch.setattr(svc, "_today", lambda: next(days))
+    payload, _ = _call(svc.create, ws, draft, True, shown)
+    written = (ws["projects"] / "news-tone" / "questions.yaml").read_text("utf-8")
+    assert f"frozen_at: '{payload['frozen']['frozen_at']}'" in written

@@ -70,7 +70,7 @@ def state(store: Store, draft_id: str, actor: str) -> dict[str, Any]:
         elif event == "discarded":
             status = "discarded"
         elif event == "created":
-            status, project = "created", row["project"]
+            status, project, failure = "created", row["project"], None
         elif event == "create_failed":
             failure = row["note"]
     return {"draft_id": str(draft_id), "revision": rows[-1]["revision"], "status": status,

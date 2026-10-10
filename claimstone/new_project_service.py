@@ -23,7 +23,7 @@ class ServiceError(Exception):
 
 
 def _today() -> str:
-    return _dt.date.today().isoformat()
+    return _dt.datetime.now(_dt.timezone.utc).date().isoformat()
 
 
 def _guard(fn):
@@ -128,12 +128,11 @@ def save_step(projects_dir, store_dir, actor, code_revision, draft_id, step, bas
             "figures": _step_figures(step, normalized)}, 200
 
 
-def _files_and_info(projects_dir, current: dict[str, Any]):
+def _files_and_info(projects_dir, current: dict[str, Any], today: str):
     state = {int(n): v["data"] for n, v in current["steps"].items()}
     missing = [n for n in (1, 2, 3) if n not in state]
     if missing:
         raise ServiceError(409, "INCOMPLETE", "steps not saved yet: " + ", ".join(map(str, missing)))
-    today = _today()
     files = pb.render(state, _templates_dir(projects_dir), today=today,
                       overrides=current["advanced"] or None)
     # `today` is required: inspect refuses an override that breaks "registry v1, floor v1, frozen today".
@@ -149,7 +148,7 @@ def save_advanced(projects_dir, store_dir, actor, code_revision, draft_id, base_
         current = wd.state(store, draft_id, actor)
         candidate = {**current, "advanced": files}
         if files:
-            _files_and_info(projects_dir, candidate)  # raises DraftInvalid when it would not load
+            _files_and_info(projects_dir, candidate, _today())  # raises DraftInvalid when it would not load
         row = wd.save_advanced(store, actor=actor, draft_id=draft_id, base_revision=base_revision,
                                files=files, code_revision=code_revision)
     return {"revision": row["revision"]}, 200
@@ -160,7 +159,7 @@ def preview(projects_dir, store_dir, actor, code_revision, draft_id):
     current = wd.state(_store(store_dir), draft_id, actor)
     if current["status"] != "open":
         raise ServiceError(409, "DRAFT_CLOSED", f"this draft is {current['status']}")
-    _state, files, info = _files_and_info(projects_dir, current)
+    _state, files, info = _files_and_info(projects_dir, current, _today())
     return {"figures": info["figures"], "protocol_sha256": info["protocol_sha256"],
             "files": files, "revision": current["revision"]}, 200
 
@@ -184,7 +183,8 @@ def create(projects_dir, store_dir, actor, code_revision, draft_id, confirm, sho
         current = wd.state(store, draft_id, actor)
         if current["status"] != "open":
             raise ServiceError(409, "DRAFT_CLOSED", f"this draft is {current['status']}")
-        state, files, info = _files_and_info(projects_dir, current)
+        today = _today()
+        state, files, info = _files_and_info(projects_dir, current, today)
         if shown_sha256 != info["protocol_sha256"]:
             raise ServiceError(409, "PREVIEW_CHANGED",
                                "the project changed since you reviewed it; review it again before creating")
@@ -204,4 +204,4 @@ def create(projects_dir, store_dir, actor, code_revision, draft_id, confirm, sho
         wd.mark_created(store, actor=actor, draft_id=draft_id, project=name, files=made["files"],
                         code_revision=code_revision)
         return {"project": name, "protocol_sha256": made["protocol_sha256"], "files": made["files"],
-                "frozen": {"registry_version": 1, "frozen_at": _today(), "floor_version": 1}}, 201
+                "frozen": {"registry_version": 1, "frozen_at": today, "floor_version": 1}}, 201

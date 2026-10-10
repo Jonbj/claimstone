@@ -83,3 +83,11 @@ def test_the_list_summarizes_only_my_drafts_newest_first(store):
     listed = wd.list_drafts(store, "op1")
     assert [d["draft_id"] for d in listed] == [first, second]  # first was updated last
     assert listed[0]["project_name"] == "news-tone" and listed[0]["steps_saved"] == [1]
+
+
+def test_a_created_draft_no_longer_reports_an_earlier_failure(store):
+    draft = _start(store)
+    wd.mark_failed(store, actor="op1", draft_id=draft, reason="name taken", code_revision=None)
+    wd.mark_created(store, actor="op1", draft_id=draft, project="news-tone",
+                    files={"topics.yaml": "h"}, code_revision=None)
+    assert wd.state(store, draft, "op1")["last_failure"] is None
