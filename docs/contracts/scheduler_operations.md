@@ -17,6 +17,11 @@ worker` polls for it. It never invents permission for a later candidate or
 API call. A failed offline operation needs a new named attempt; an unsettled
 physical request blocks automatic retry.
 
+A finite advance approval can instead bind already frozen batches to exact
+UTC windows and a summed lifetime request ceiling. See
+[`network_schedules.md`](network_schedules.md). The operator approves that
+concrete list once; due-time and revocation are checked at execution.
+
 `scheduler drive` is a single operator-invoked pass. It first runs only the
 flow's external operations already authorized at invocation, then chains the
 scoped local stages with at most the specified total number of local model

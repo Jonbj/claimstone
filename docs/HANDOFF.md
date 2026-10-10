@@ -9,6 +9,15 @@ what order.
 
 ## Where the work stands
 
+2026-10-10 finite network schedule (D122): existing frozen discovery or
+acquisition batches may be placed in exact UTC windows under one summed
+physical-request ceiling and approved once by the operator. `schedule-plan`
+is offline; `schedule-authorize` records the approval, and `schedule-revoke`
+stops later starts. Direct execution and polling both enforce the window.
+This change created no schedule for a real project and made no network
+request. Unknown future candidates, new search rounds and scientific
+decisions still cannot be preapproved by this schedule.
+
 2026-10-10 coordinator proposals (D120): version 2 local mandates may include
 exact discovery APIs/hosts, copy hosts and per-batch caps. `auto-worker`
 automatically prepares the next bounded discovery/acquisition batches after a

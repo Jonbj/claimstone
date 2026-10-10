@@ -4668,3 +4668,17 @@ idempotently, and observes zero network request rows. The worker remains the
 only executor. The frontend session may connect this route to its approval
 view; this backend change does not alter frontend files or approve any real
 campaign.
+
+## D122 — A finite schedule can preapprove exact network batches (2026-10-10)
+
+D120/D121 remove manual batch assembly but still require a fresh approval
+click for each batch. To support unattended execution at known times, a
+schedule now binds 1–32 already frozen batches to UTC start/expiry windows,
+their exact units and one summed physical request ceiling. The operator
+approves the complete finite list once; each operation records the schedule
+ID on its authorization. The executor checks the window and revocation even
+for a direct `scheduler run`, while the worker skips operations outside the
+active window. Tests verify a future batch makes zero requests, direct run
+refuses it, approval and revocation are idempotent, and an incorrect lifetime
+ceiling is refused. This does not authorize unknown future candidates or
+create a new research round. No real network campaign was scheduled here.
