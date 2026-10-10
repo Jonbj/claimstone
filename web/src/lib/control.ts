@@ -16,17 +16,25 @@
 
 const PREFIX = "/control/v1";
 
+export interface FieldProblem {
+  path: string;
+  message: string;
+}
+
 export class ControlError extends Error {
   readonly status: number;
   readonly code: string;
   readonly message: string;
+  /** Field paths of a 422, or an empty list. */
+  readonly details: FieldProblem[];
 
-  constructor(status: number, code: string, message: string) {
+  constructor(status: number, code: string, message: string, details: FieldProblem[] = []) {
     super(`[${code}] ${message}`);
     this.name = "ControlError";
     this.status = status;
     this.code = code;
     this.message = message;
+    this.details = details;
   }
 }
 
@@ -239,6 +247,67 @@ export interface OperationsList {
 }
 export type OperationLimits = OperationSummary["limits"];
 
+// new project (plan 1; docs/contracts/new_project.md)
+export type Figures = Record<string, unknown>;
+
+export interface WizardTemplateSummary {
+  id: string;
+  label: string;
+  description: string;
+}
+
+export interface WizardTemplate {
+  id: string;
+  label: string;
+  default_floor: number;
+  classes: Array<{ id: string; name: string; weight_hint: string; notes: string }>;
+  excluded_hosts: string[];
+  notation_presets: Array<{ id: string; label: string }>;
+}
+
+export interface DraftSummary {
+  draft_id: string;
+  status: "open" | "discarded" | "created";
+  revision: number;
+  steps_saved: number[];
+  project_name: string | null;
+  project: string | null;
+  updated_at: string;
+}
+
+export interface DraftState {
+  draft_id: string;
+  revision: number;
+  status: "open" | "discarded" | "created";
+  steps: Record<string, { data: Row; revision: number }>;
+  advanced: Record<string, string>;
+  figures: Record<string, Figures>;
+  project: string | null;
+  last_failure: string | null;
+  started_at: string;
+  updated_at: string;
+}
+
+export interface StepSaved {
+  revision: number;
+  data: Row;
+  figures: Figures;
+}
+
+export interface Preview {
+  figures: Figures;
+  protocol_sha256: string;
+  files: Record<string, string>;
+  revision: number;
+}
+
+export interface Created {
+  project: string;
+  protocol_sha256: string;
+  files: Record<string, string>;
+  frozen: { registry_version: number; frozen_at: string; floor_version: number };
+}
+
 // --- transport ------------------------------------------------------------------------------
 
 // The token is held here and nowhere else; `setCsrfToken(null)` is a sign-out.
@@ -254,7 +323,7 @@ export function setUnauthorizedHandler(handler: (() => void) | null): void {
   onUnauthorized = handler;
 }
 
-type Envelope = { error?: { code?: string; message?: string } };
+type Envelope = { error?: { code?: string; message?: string; details?: FieldProblem[] } };
 
 async function parse<T>(response: Response, auth: boolean): Promise<T> {
   let body: (T & Envelope) | null;
@@ -270,7 +339,8 @@ async function parse<T>(response: Response, auth: boolean): Promise<T> {
       onUnauthorized?.();
     }
     throw new ControlError(response.status, String(body.error.code ?? "UNKNOWN"),
-                           String(body.error.message ?? ""));
+                           String(body.error.message ?? ""),
+                           Array.isArray(body.error.details) ? body.error.details : []);
   }
   if (!response.ok) {
     throw new Error(`HTTP ${response.status}: an error without the control API's envelope`);
@@ -368,6 +438,22 @@ export const control = {
                   body: { answer: IdentityAnswer; reason?: string }) =>
     post<{ decision: Row; intake: Row }>(
       `${flowBase(project, flowId)}/intake/${enc(intakeId)}/resolve`, body),
+
+  // new project
+  newTemplates: () => get<{ templates: WizardTemplateSummary[] }>("/new-templates"),
+  newTemplate: (id: string) => get<WizardTemplate>(`/new-templates/${enc(id)}`),
+  newDrafts: () => get<{ drafts: DraftSummary[] }>("/new"),
+  newStart: () => post<{ draft_id: string; revision: number }>("/new", {}),
+  newRead: (id: string) => get<DraftState>(`/new/${enc(id)}`),
+  newSaveStep: (id: string, step: number, baseRevision: number, data: unknown) =>
+    post<StepSaved>(`/new/${enc(id)}/steps/${step}`, { base_revision: baseRevision, data }),
+  newSaveAdvanced: (id: string, baseRevision: number, files: Record<string, string>) =>
+    post<{ revision: number }>(`/new/${enc(id)}/advanced`, { base_revision: baseRevision, files }),
+  newPreview: (id: string) => get<Preview>(`/new/${enc(id)}/preview`),
+  newDiscard: (id: string, baseRevision: number) =>
+    post<{ revision: number; status: string }>(`/new/${enc(id)}/discard`, { base_revision: baseRevision }),
+  newCreate: (id: string, protocolSha256: string) =>
+    post<Created>(`/new/${enc(id)}/create`, { confirm: true, protocol_sha256: protocolSha256 }),
 
   // decisions
   decisions: (project: string, flowId: string) =>
