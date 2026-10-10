@@ -304,3 +304,65 @@ def test_inspect_refuses_a_name_that_could_leave_its_temp_dir(tmp_path):
         assert raised.value.problems[0].path == "name"
     assert not target.exists()
     assert not pathlib.Path("/tmp/escape-xyz").exists()
+
+
+@pytest.mark.parametrize("bad", [[1], {}, None, 5, ["none"]])
+def test_step_3_notation_must_be_text(bad):
+    assert "notation" in _problems(3, {**STEP3, "notation": bad})
+
+
+def test_step_3_floor_too_large_for_a_float_is_a_problem():
+    assert "acquisition_floor" in _problems(3, {**STEP3, "acquisition_floor": 10**400})
+
+
+@pytest.mark.parametrize("step", [True, False, 1.0, "1", None, 0, 4])
+def test_a_step_must_be_an_int_from_1_to_3(step):
+    with pytest.raises(pb.DraftInvalid):
+        pb.normalize_step(step, STEP1, TEMPLATES)
+
+
+@pytest.mark.parametrize("bad", [5, True, 0, ["T1"], {"a": 1}])
+def test_a_non_text_id_is_a_problem_not_coerced(bad):
+    topic = {"id": bad, "label": "a", "terms": ["t"]}
+    assert "topics[0].id" in _problems(1, {**STEP1, "topics": [topic]})
+    question = {"id": bad, "text": "x?", "kind": "effect"}
+    assert "questions[0].id" in _problems(2, {"questions": [question]})
+
+
+def test_an_absent_or_empty_id_still_auto_assigns():
+    topics = [{"label": "a", "terms": ["t"]}, {"id": "", "label": "b", "terms": ["u"]}]
+    out = pb.normalize_step(1, {**STEP1, "topics": topics}, TEMPLATES)
+    assert [t["id"] for t in out["topics"]] == ["T01", "T02"]
+    questions = [{"text": "x?", "kind": "effect"}, {"id": "", "text": "y?", "kind": "effect"}]
+    out = pb.normalize_step(2, {"questions": questions}, TEMPLATES)
+    assert [q["id"] for q in out["questions"]] == ["Q01", "Q02"]
+
+
+def test_non_text_file_values_are_refused_by_inspect_and_create(tmp_path):
+    files = pb.render(_state(), TEMPLATES, today="2026-10-10")
+    bad = {**files, "topics.yaml": 5}
+    with pytest.raises(pb.DraftInvalid) as raised:
+        pb.inspect(bad, name="news-tone", templates_dir=TEMPLATES, template_id="general",
+                   today="2026-10-10")
+    assert raised.value.problems[0].path == "files"
+    projects = tmp_path / "projects"
+    projects.mkdir()
+    with pytest.raises(pb.DraftInvalid) as raised:
+        pb.create_project(projects, "news-tone", bad, expected_protocol_sha256="0" * 64,
+                          lock_store=Store("_new-projects", base=tmp_path / "store"))
+    assert raised.value.problems[0].path == "files"
+    assert list(projects.iterdir()) == []
+
+
+def test_deeply_nested_yaml_is_a_draft_problem_and_leaves_no_staging(tmp_path):
+    files = pb.render(_state(), TEMPLATES, today="2026-10-10")
+    nested = {**files, "topics.yaml": "topics: " + "[" * 100000 + "]" * 100000 + "\n"}
+    with pytest.raises(pb.DraftInvalid):
+        pb.inspect(nested, name="news-tone", templates_dir=TEMPLATES, template_id="general",
+                   today="2026-10-10")
+    projects = tmp_path / "projects"
+    projects.mkdir()
+    with pytest.raises(pb.DraftInvalid):
+        pb.create_project(projects, "news-tone", nested, expected_protocol_sha256="0" * 64,
+                          lock_store=Store("_new-projects", base=tmp_path / "store"))
+    assert list(projects.iterdir()) == []

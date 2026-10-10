@@ -110,6 +110,16 @@ def _text(value: Any, path: str, limit: int, problems: list[Problem], *, require
     return cleaned
 
 
+def _identifier(value: Any, default: str, path: str, problems: list[Problem]) -> str:
+    """An id as typed, or the default when absent or empty. A non-text id is never coerced."""
+    if value is None:
+        return default
+    if not isinstance(value, str):
+        problems.append(Problem(path, "must be text"))
+        return default
+    return value.strip() or default
+
+
 def _object(data: Any, allowed: set[str], problems: list[Problem]) -> dict[str, Any]:
     if not isinstance(data, dict):
         raise DraftInvalid([Problem("", "step data must be an object")])
@@ -121,6 +131,8 @@ def _object(data: Any, allowed: set[str], problems: list[Problem]) -> dict[str, 
 def normalize_step(step: int, data: Any, templates_dir: str | pathlib.Path) -> dict[str, Any]:
     """The step's content as the ledger stores it, or `DraftInvalid` naming every problem."""
     problems: list[Problem] = []
+    if type(step) is not int:
+        raise DraftInvalid([Problem("step", "steps are 1 to 3")])
     if step == 1:
         out = _topic_step(data, problems)
     elif step == 2:
@@ -154,7 +166,7 @@ def _topic_step(data: Any, problems: list[Problem]) -> dict[str, Any]:
         if not isinstance(entry, dict):
             problems.append(Problem(base, "must be an object"))
             continue
-        topic_id = str(entry.get("id") or "").strip() or f"T{i + 1:02d}"
+        topic_id = _identifier(entry.get("id"), f"T{i + 1:02d}", f"{base}.id", problems)
         if not ID_RE.fullmatch(topic_id):
             problems.append(Problem(f"{base}.id", "use letters, digits, - or _ (at most 20)"))
         if topic_id in seen:
@@ -193,7 +205,7 @@ def _questions_step(data: Any, problems: list[Problem]) -> dict[str, Any]:
         if not isinstance(entry, dict):
             problems.append(Problem(base, "must be an object"))
             continue
-        qid = str(entry.get("id") or "").strip() or f"Q{i + 1:02d}"
+        qid = _identifier(entry.get("id"), f"Q{i + 1:02d}", f"{base}.id", problems)
         if not ID_RE.fullmatch(qid):
             problems.append(Problem(f"{base}.id", "use letters, digits, - or _ (at most 20)"))
         if qid in seen:
@@ -222,7 +234,11 @@ def _sources_step(data: Any, templates_dir: str | pathlib.Path,
     if unknown:
         problems.append(Problem("classes", "unknown class: " + ", ".join(map(str, unknown))))
     floor = data.get("acquisition_floor")
-    if isinstance(floor, bool) or not isinstance(floor, (int, float)) or not 0 < float(floor) <= 1:
+    try:
+        floor_ok = not isinstance(floor, bool) and isinstance(floor, (int, float)) and 0 < float(floor) <= 1
+    except (OverflowError, ValueError):
+        floor_ok = False
+    if not floor_ok:
         problems.append(Problem("acquisition_floor", "must be a number above 0 and at most 1"))
         floor = 0.0
     rationale = _text(data.get("floor_rationale"), "floor_rationale", MAX_TEXT, problems)
@@ -233,6 +249,9 @@ def _sources_step(data: Any, templates_dir: str | pathlib.Path,
     if supplied not in SUPPLIED_COPIES:
         problems.append(Problem("supplied_copies", "choose count or separate"))
     notation = data.get("notation", "none")
+    if not isinstance(notation, str):
+        problems.append(Problem("notation", "must be text"))
+        notation = ""
     presets = {p["id"]: p for p in template["notation_presets"]}
     value_labels: list[str] = []
     if notation == "custom":
@@ -366,6 +385,14 @@ def _require_fresh_protocol(project: Any, today: str) -> None:
                                      + ", ".join(QUESTION_KINDS) + ": the kind decides which rule judges it")
 
 
+def _require_files(files: Any) -> None:
+    if not isinstance(files, dict) or set(files) != set(FILES):
+        raise DraftInvalid([Problem("files", "need exactly " + ", ".join(FILES))])
+    for filename in FILES:
+        if not isinstance(files[filename], str):
+            raise DraftInvalid([Problem("files", f"{filename} must be text")])
+
+
 def inspect(files: dict[str, str], *, name: str, templates_dir: str | pathlib.Path,
             template_id: str, today: str) -> dict[str, Any]:
     """Load the files with the real loader and derive the figures. Raises `DraftInvalid`.
@@ -373,8 +400,7 @@ def inspect(files: dict[str, str], *, name: str, templates_dir: str | pathlib.Pa
     A new project is protocol v1, frozen `today`; an advanced override that says otherwise is refused."""
     if not isinstance(name, str) or not NAME_RE.fullmatch(name):
         raise DraftInvalid([Problem("name", "not a valid project name")])
-    if set(files) != set(FILES):
-        raise DraftInvalid([Problem("files", "need exactly " + ", ".join(FILES))])
+    _require_files(files)
     template = load_template(templates_dir, template_id)
     with tempfile.TemporaryDirectory() as tmp:
         root = pathlib.Path(tmp) / name
@@ -391,6 +417,8 @@ def inspect(files: dict[str, str], *, name: str, templates_dir: str | pathlib.Pa
             return {"figures": figures(project), "protocol_sha256": flows.protocol_digest(project)}
         except ConfigError as exc:
             raise DraftInvalid([Problem(_file_of(str(exc)), str(exc))]) from exc
+        except RecursionError as exc:
+            raise DraftInvalid([Problem("files", "a file is nested too deeply to read")]) from exc
 
 
 # --- creation -----------------------------------------------------------------------------------
@@ -408,8 +436,7 @@ def create_project(projects_dir: str | pathlib.Path, name: str, files: dict[str,
     """
     if not isinstance(name, str) or not NAME_RE.fullmatch(name):
         raise DraftInvalid([Problem("name", "not a valid project name")])
-    if set(files) != set(FILES):
-        raise DraftInvalid([Problem("files", "need exactly " + ", ".join(FILES))])
+    _require_files(files)
     projects = pathlib.Path(projects_dir)
     final = projects / name
     with lock_store.writer_lock():
@@ -425,6 +452,8 @@ def create_project(projects_dir: str | pathlib.Path, name: str, files: dict[str,
                 loaded = flows.protocol_digest(load_project(staging))
             except ConfigError as exc:
                 raise DraftInvalid([Problem(_file_of(str(exc)), str(exc))]) from exc
+            except RecursionError as exc:
+                raise DraftInvalid([Problem("files", "a file is nested too deeply to read")]) from exc
             if loaded != expected_protocol_sha256:
                 raise RoundTripMismatch(f"files carry {loaded}, the preview promised "
                                         f"{expected_protocol_sha256}")
