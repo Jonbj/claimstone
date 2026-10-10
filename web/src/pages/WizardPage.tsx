@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import ErrorState from "@/components/ErrorState";
 import Pending from "@/components/Pending";
@@ -53,6 +53,11 @@ function Wizard(
   const [previewFigures, setPreviewFigures] = useState<Figures>({});
   const [created, setCreated] = useState<Created | null>(null);
 
+  // The preview belongs to step 4: on any other step its figures would be quoted out of context.
+  useEffect(() => {
+    setPreviewFigures({});
+  }, [step]);
+
   if (draftApi.error) return <ErrorState error={draftApi.error} context="draft" />;
   // While a save is being reloaded the form would hold a stale revision; show a pending line instead.
   if (draftApi.pending || draftApi.refreshing || !draftApi.data) return <Pending label={t("wizard.loading")} />;
@@ -85,7 +90,7 @@ function Wizard(
     );
   }
 
-  const figures: Figures = Object.assign({}, ...Object.values(draft.figures), ...Object.values(justSaved), previewFigures);
+  const figures: Figures = Object.assign({}, ...Object.values(draft.figures), ...Object.values(justSaved), step === 4 ? previewFigures : {});
   const saved = Object.keys(draft.steps).map(Number);
 
   const onSaved = (result: Saved) => {

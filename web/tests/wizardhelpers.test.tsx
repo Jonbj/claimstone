@@ -31,6 +31,12 @@ describe("explainParams", () => {
     });
   });
 
+  it("never rounds the floor away: 0.8 is 0.80, 0.825 stays 0.825", () => {
+    expect(explainParams({ acquisition_floor: 0.8 }).floor).toBe("0.80");
+    expect(explainParams({ acquisition_floor: 0.825 }).floor).toBe("0.825");
+    expect(explainParams({ acquisition_floor: 1 }).floor).toBe("1.00");
+  });
+
   it("shows a dash for what the server has not said", () => {
     const params = explainParams({});
     expect(params.floor).toBe("—");

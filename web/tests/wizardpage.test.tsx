@@ -41,6 +41,10 @@ function mount(path: string) {
       { draft_id: "d2", status: "created", revision: 9, steps_saved: [1, 2, 3], project_name: "done-one", project: "done-one", updated_at: "t" },
     ] });
     if (url === "/control/v1/new/d1") return json(200, draftBody);
+    if (url === "/control/v1/new/d1/preview") {
+      return json(200, { figures: { terms: 50, topics: 9 }, protocol_sha256: "a".repeat(64), revision: 1,
+        files: { "topics.yaml": "T", "questions.yaml": "Q", "sources.yaml": "S" } });
+    }
     if (url === "/control/v1/new/d1/steps/1" && stepStale) {
       return json(409, { error: { code: "STALE_REVISION", message: "saved from revision 1" } });
     }
@@ -196,5 +200,18 @@ describe("WizardPage", () => {
     const before = requested.filter((r) => r === "GET /control/v1/new/d1").length;
     fireEvent.click(reload);
     await waitFor(() => expect(requested.filter((r) => r === "GET /control/v1/new/d1").length).toBe(before + 1));
+  });
+
+  it("the preview's figures are quoted on step 4 only, and gone when the step changes", async () => {
+    const step = (name: string) => ({ data: { name }, revision: 1 });
+    draftBody = { ...baseDraft, steps: { "1": step("news-tone"), "2": step("x"), "3": step("y") },
+      figures: { "1": { terms: 2, topics: 1 } } };
+    mount("/new/d1/4");
+    expect(await screen.findByText(/Project news-tone: 9 topics/)).toBeTruthy();
+    await waitFor(() => expect(screen.getAllByText(/Project news-tone/).length).toBeGreaterThan(0));
+    fireEvent.click(screen.getByRole("link", { name: /^1\s*Topic/ }));
+    expect(await screen.findByText("1 · The topic")).toBeTruthy();
+    expect(screen.getByText(/2 terms in 1 topics/)).toBeTruthy();
+    expect(screen.queryByText(/50 terms/)).toBeNull();
   });
 });

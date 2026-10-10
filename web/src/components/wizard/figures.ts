@@ -10,9 +10,15 @@ export function show(value: unknown): string {
   return DASH;
 }
 
+/** The floor as stored: two decimals when that loses nothing (0.8 -> "0.80"), else every digit. */
+function floorText(value: number): string {
+  const two = value.toFixed(2);
+  return Number(two) === value ? two : String(value);
+}
+
 /** The placeholders of the explanation copy, from whatever figures the server has given so far. */
 export function explainParams(figures: Figures, extra: Record<string, string> = {}): Record<string, string> {
-  const floor = typeof figures.acquisition_floor === "number" ? figures.acquisition_floor.toFixed(2) : DASH;
+  const floor = typeof figures.acquisition_floor === "number" ? floorText(figures.acquisition_floor) : DASH;
   const classes = Array.isArray(figures.classes) ? String(figures.classes.length) : DASH;
   return {
     topics: show(figures.topics),
