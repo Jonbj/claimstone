@@ -376,3 +376,51 @@ def test_too_many_excluded_hosts_or_value_labels_is_a_problem_not_a_truncation()
         3, {**STEP3, "notation": "custom", "custom_value_labels": labels})
     ok = pb.normalize_step(3, {**STEP3, "extra_excluded_hosts": hosts[:100]}, TEMPLATES)
     assert len(ok["extra_excluded_hosts"]) == 100
+
+
+@pytest.mark.parametrize("bad", ["a..b", "a.-b", "-a.b", "a-.b", "a.b-", ".a.b", "a.b.", "a" * 64 + ".org",
+                                 "a_b.org"])
+def test_a_malformed_host_label_is_refused(bad):
+    assert "extra_excluded_hosts" in {p.split("[")[0] for p in _problems(
+        3, {**STEP3, "extra_excluded_hosts": [bad]})}
+
+
+@pytest.mark.parametrize("good", ["example.org", "a-b.example.co.uk", "localhost", "x"])
+def test_a_well_formed_host_is_kept(good):
+    out = pb.normalize_step(3, {**STEP3, "extra_excluded_hosts": [good]}, TEMPLATES)
+    assert out["extra_excluded_hosts"] == [good]
+
+
+GOOD_TEMPLATE = {
+    "id": "t1", "label": "T", "default_floor": 0.8, "excluded_hosts": ["bad.example"],
+    "classes": [{"id": "A", "name": "a", "weight_hint": "high"}],
+    "notation_presets": [{"id": "none", "label": "None", "value_labels": []}],
+}
+
+
+def _template_dir(tmp_path, **changes):
+    import yaml
+    raw = {**GOOD_TEMPLATE, **changes}
+    (tmp_path / "t1.yaml").write_text(yaml.safe_dump(raw), encoding="utf-8")
+    return tmp_path
+
+
+def test_a_well_formed_template_loads(tmp_path):
+    assert pb.load_template(_template_dir(tmp_path), "t1")["id"] == "t1"
+
+
+@pytest.mark.parametrize("changes", [
+    {"id": "other"},
+    {"classes": []}, {"classes": "ACA"}, {"classes": ["A"]},
+    {"classes": [{"id": "A", "name": "a"}]},
+    {"classes": [{"id": 5, "name": "a", "weight_hint": "high"}]},
+    {"classes": [{"id": "A", "name": ["a"], "weight_hint": "high"}]},
+    {"excluded_hosts": "bad.example"}, {"excluded_hosts": [5]},
+    {"notation_presets": "none"}, {"notation_presets": ["none"]},
+    {"notation_presets": [{"id": "none", "label": "None"}]},
+    {"notation_presets": [{"id": "none", "label": "None", "value_labels": "x"}]},
+    {"notation_presets": [{"id": "none", "label": 5, "value_labels": []}]},
+])
+def test_a_broken_template_is_the_installations_fault(tmp_path, changes):
+    with pytest.raises(pb.ConfigError, match="t1"):
+        pb.load_template(_template_dir(tmp_path, **changes), "t1")

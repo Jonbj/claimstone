@@ -27,7 +27,8 @@ from claimstone.store import Store, sha256_text
 NAME_RE = re.compile(r"^[a-z0-9][a-z0-9-]{1,62}$")
 TEMPLATE_ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,39}$")
 ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,20}$")
-HOST_RE = re.compile(r"^[a-z0-9]([a-z0-9.-]{0,251}[a-z0-9])?$")
+_LABEL = r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?"  # 1-63 characters, not starting or ending with '-'
+HOST_RE = re.compile(rf"^(?=.{{1,253}}$){_LABEL}(?:\.{_LABEL})*$")
 
 SEARCH_INDEXES = ("openalex", "crossref", "arxiv")
 FILES = ("topics.yaml", "questions.yaml", "sources.yaml")
@@ -81,7 +82,32 @@ def load_template(templates_dir: str | pathlib.Path, template_id: str) -> dict[s
     if missing:
         # A broken template is the installation's fault, not the operator's.
         raise ConfigError(f"template {template_id}: missing {', '.join(missing)}")
+    _check_template(raw, template_id)
     return raw
+
+
+def _check_template(raw: dict[str, Any], template_id: str) -> None:
+    def broken(why: str) -> ConfigError:
+        return ConfigError(f"template {template_id}: {why}")
+
+    def all_text(entry: Any, keys: tuple[str, ...]) -> bool:
+        return isinstance(entry, dict) and all(isinstance(entry.get(k), str) for k in keys)
+
+    if raw["id"] != template_id:
+        raise broken(f"its id is {raw['id']!r}, not the file's name")
+    classes = raw["classes"]
+    if not isinstance(classes, list) or not classes or not all(
+            all_text(c, ("id", "name", "weight_hint")) for c in classes):
+        raise broken("classes must be a non-empty list, each with text id, name and weight_hint")
+    hosts = raw["excluded_hosts"]
+    if not isinstance(hosts, list) or not all(isinstance(h, str) for h in hosts):
+        raise broken("excluded_hosts must be a list of host names")
+    presets = raw["notation_presets"]
+    if not isinstance(presets, list) or not all(
+            all_text(p, ("id", "label")) and isinstance(p.get("value_labels"), list)
+            and all(isinstance(v, str) for v in p["value_labels"]) for p in presets):
+        raise broken("notation_presets must be a list, each with text id and label and a "
+                     "list of value_labels")
 
 
 def list_templates(templates_dir: str | pathlib.Path) -> list[dict[str, str]]:
@@ -438,6 +464,15 @@ def create_project(projects_dir: str | pathlib.Path, name: str, files: dict[str,
     rename is atomic; `discover_projects` ignores the dot), loaded with the real loader, compared with
     the protocol the preview promised, and only then renamed. Everything is serialized under one
     lock so two creations cannot race for a name.
+
+    Callers must run `inspect` first with the same files: it enforces the template's excluded hosts
+    and the "registry v1, floor v1, frozen today" freeze, which this function does not re-check (it
+    checks only that the files load and carry the promised digest).
+
+    Known limit: on Linux `os.rename` onto a path replaces an EMPTY directory, so a directory created
+    under `projects/` by a process outside the lock between the existence check and the rename could be
+    replaced. Nothing is lost (it was empty), and only this function is supposed to create directories
+    under `projects/`.
     """
     if not isinstance(name, str) or not NAME_RE.fullmatch(name):
         raise DraftInvalid([Problem("name", "not a valid project name")])
