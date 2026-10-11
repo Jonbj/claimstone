@@ -15,6 +15,8 @@ a later step is covered the moment it is registered.
 from __future__ import annotations
 
 import hashlib
+import base64
+import binascii
 import ipaddress
 import json
 import re
@@ -35,8 +37,8 @@ from urllib.parse import unquote, urlparse
 
 from claimstone import (admin, autopilot, copy_policy, decisions, drafts, export, flows,
                         intake, network_schedule, new_project_service, operations,
-                        operations_view, operators, periodic, portal_state, scope,
-                        synthesize, today)
+                        operations_view, operators, periodic, periodic_export, portal_state, scope,
+                        synthesize, today, worker_runtime)
 from claimstone.config import ConfigError, RegistryDrift
 from claimstone.store import LedgerCorrupt, Store
 from claimstone.transport import LOOPBACK_HOSTS, BaseHandler
@@ -280,6 +282,14 @@ ROUTES: tuple[Route, ...] = (
           "_schedule_authorize"),
     Route("POST", ("p", "{project}", "schedules", "{schedule_id}", "revoke"),
           "_schedule_revoke"),
+    Route("POST", ("p", "{project}", "schedules", "{schedule_id}", "export"),
+          "_periodic_export_create"),
+    Route("GET", ("p", "{project}", "periodic-exports", "{export_id}"),
+          "_periodic_export_read"),
+    Route("GET", ("p", "{project}", "periodic-exports", "{export_id}", "download"),
+          "_periodic_export_download"),
+    Route("POST", ("p", "{project}", "periodic-exports", "{export_id}", "verify"),
+          "_periodic_export_verify"),
     Route("POST", ("p", "{project}", "copy-policies"), "_copy_policy_plan"),
     Route("GET", ("p", "{project}", "copy-policies", "{policy_id}"),
           "_copy_policy_read"),
@@ -345,7 +355,7 @@ class _Handler(BaseHandler):
     # --- responses, with the read API's envelope ------------------------------------------------
 
     def _respond(self, body: bytes, code: int, content_type: str,
-                 cookies: tuple[str, ...] = ()) -> None:
+                 cookies: tuple[str, ...] = (), download_name: str | None = None) -> None:
         self.send_response(code)
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(body)))
@@ -353,6 +363,8 @@ class _Handler(BaseHandler):
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("Referrer-Policy", "no-referrer")
         self.send_header("Content-Security-Policy", self.csp)
+        if download_name is not None:
+            self.send_header("Content-Disposition", f'attachment; filename="{download_name}"')
         for cookie in cookies:
             self.send_header("Set-Cookie", cookie)
         self.end_headers()
@@ -1188,16 +1200,52 @@ def _scheduler_index(self: _Handler, params: dict[str, str], query: Any,
                      body: dict[str, Any]) -> tuple[Any, int]:
     project, store = _scheduler_context(self, params)
     try:
-        schedules = [network_schedule.status(store, key)
-                     for key in sorted(network_schedule._read(store))]
-        policies = [copy_policy.status(store, key)
-                    for key in sorted(copy_policy._read(store))]
-        mandates = [autopilot.status(store, key)
-                    for key in sorted(autopilot._rows(store))]
+        keys = {'schedules': sorted(network_schedule._read(store)),
+                'copy_policies': sorted(copy_policy._read(store)),
+                'local_mandates': sorted(autopilot._rows(store))}
+        requested = urllib.parse.parse_qs(urlparse(self.path).query, keep_blank_values=True)
+        if set(requested) - {'limit', 'cursor'} or any(len(v) != 1 for v in requested.values()):
+            raise ControlError(400, 'BAD_REQUEST', 'scheduler accepts only one limit and cursor')
+        raw_limit = (requested.get('limit') or ['25'])[0]
+        if not raw_limit.isdigit() or not 1 <= int(raw_limit) <= 100:
+            raise ControlError(400, 'BAD_REQUEST', 'limit must be 1-100')
+        limit = int(raw_limit)
+        revision = operations._digest(keys)
+        offset = 0
+        if 'cursor' in requested:
+            try:
+                token = requested['cursor'][0]
+                if len(token) > 256:
+                    raise ValueError('long cursor')
+                decoded = json.loads(base64.urlsafe_b64decode(token + '=' * (-len(token) % 4)))
+                if (not isinstance(decoded, dict) or set(decoded) != {'revision', 'offset'} or
+                        type(decoded['offset']) is not int or decoded['offset'] < 0 or
+                        not isinstance(decoded['revision'], str)):
+                    raise ValueError('invalid cursor')
+            except (ValueError, UnicodeError, TypeError, binascii.Error) as exc:
+                raise ControlError(400, 'BAD_REQUEST', 'invalid scheduler cursor') from exc
+            if decoded['revision'] != revision:
+                raise ControlError(409, 'ARCHIVE_CHANGED', 'scheduler archive changed; restart paging')
+            offset = decoded['offset']
+        selected = {name: values[offset:offset + limit] for name, values in keys.items()}
+        schedules = [network_schedule.status(store, key) for key in selected['schedules']]
+        policies = [copy_policy.status(store, key) for key in selected['copy_policies']]
+        mandates = [autopilot.status(store, key) for key in selected['local_mandates']]
     except operations.OperationError as exc:
         raise _scheduler_refusal(exc) from None
+    next_offset = offset + limit
+    has_more = any(len(values) > next_offset for values in keys.values())
+    next_cursor = (base64.urlsafe_b64encode(json.dumps(
+        {'revision': revision, 'offset': next_offset}, sort_keys=True).encode('utf-8'))
+        .decode('ascii').rstrip('=') if has_more else None)
     return {'project': project.name, 'schedules': schedules,
-            'copy_policies': policies, 'local_mandates': mandates}, 200
+            'copy_policies': policies, 'local_mandates': mandates,
+            'workers': {'operations': worker_runtime.status(store, 'operations'),
+                        'mandates': {row['mandate_id']: worker_runtime.status(
+                            store, row['mandate_id']) for row in mandates}},
+            'archive': {'limit': limit, 'offset': offset, 'total': {
+                name: len(values) for name, values in keys.items()},
+                'revision': revision, 'next_cursor': next_cursor}}, 200
 
 
 def _periodic_plan(self: _Handler, params: dict[str, str], query: Any,
@@ -1268,6 +1316,66 @@ def _schedule_revoke(self: _Handler, params: dict[str, str], query: Any,
     except operations.OperationError as exc:
         raise _scheduler_refusal(exc) from None
     return result, 200
+
+
+def _periodic_export_create(self: _Handler, params: dict[str, str], query: Any,
+                            body: dict[str, Any]) -> tuple[Any, int]:
+    _required_body(self, body, {'dossier_id'})
+    shown, _ = _schedule_read(self, params, query, {})
+    if not EXPORT_ID.fullmatch(str(body['dossier_id'])):
+        raise ControlError(422, 'VALIDATION', 'dossier_id must be a SHA-256 identity')
+    project, store = _scheduler_context(self, params)
+    try:
+        directory, created = periodic_export.create(
+            project, store, shown['schedule_id'], dossier_id=body['dossier_id'],
+            actor=self._require_session().operator_id)
+    except operations.OperationError as exc:
+        raise _scheduler_refusal(exc) from None
+    return {'export_id': directory.name, 'schedule_id': shown['schedule_id'],
+            'dossier_id': body['dossier_id'], 'created_now': created,
+            'download': f'/control/v1/p/{project.name}/periodic-exports/{directory.name}/download'}, (
+                201 if created else 200)
+
+
+def _periodic_export_record(self: _Handler, params: dict[str, str]) -> tuple[Any, Store,
+                                                                             dict[str, Any]]:
+    project, store = _scheduler_context(self, params)
+    export_id = params['export_id']
+    if not EXPORT_ID.fullmatch(export_id):
+        raise portal_state.NotFound('no such periodic export')
+    row = next((row for row in store.read(periodic_export.LEDGER)
+                if row.get('export_id') == export_id), None)
+    if row is None or not (store.root / 'periodic_exports' / export_id / 'manifest.json').is_file():
+        raise portal_state.NotFound('no such periodic export')
+    return project, store, row
+
+
+def _periodic_export_read(self: _Handler, params: dict[str, str], query: Any,
+                          body: dict[str, Any]) -> tuple[Any, int]:
+    _project, store, row = _periodic_export_record(self, params)
+    manifest = json.loads((store.root / 'periodic_exports' / row['export_id'] /
+                           'manifest.json').read_text(encoding='utf-8'))
+    return {'export': row, 'manifest': manifest}, 200
+
+
+def _periodic_export_download(self: _Handler, params: dict[str, str], query: Any,
+                              body: dict[str, Any]) -> None:
+    project, store, row = _periodic_export_record(self, params)
+    problems = periodic_export.verify(project, store, row['export_id'])
+    if problems:
+        raise ControlError(409, 'EXPORT_INVALID', ', '.join(problems))
+    directory = store.root / 'periodic_exports' / row['export_id']
+    self._respond(periodic_export.archive(directory), 200, 'application/zip',
+                  download_name=f'claimstone-{row["export_id"]}.zip')
+
+
+def _periodic_export_verify(self: _Handler, params: dict[str, str], query: Any,
+                            body: dict[str, Any]) -> tuple[Any, int]:
+    _required_body(self, body, set())
+    project, store, row = _periodic_export_record(self, params)
+    problems = periodic_export.verify(project, store, row['export_id'])
+    return {'export_id': row['export_id'], 'holds': not problems,
+            'problems': problems}, 200
 
 
 def _copy_policy_plan(self: _Handler, params: dict[str, str], query: Any,
@@ -1432,6 +1540,10 @@ for _name, _function in (("_operations_list", _operations_list),
                          ("_schedule_read", _schedule_read),
                          ("_schedule_authorize", _schedule_authorize),
                          ("_schedule_revoke", _schedule_revoke),
+                         ("_periodic_export_create", _periodic_export_create),
+                         ("_periodic_export_read", _periodic_export_read),
+                         ("_periodic_export_download", _periodic_export_download),
+                         ("_periodic_export_verify", _periodic_export_verify),
                          ("_copy_policy_plan", _copy_policy_plan),
                          ("_copy_policy_read", _copy_policy_read),
                          ("_copy_policy_authorize", _copy_policy_authorize),

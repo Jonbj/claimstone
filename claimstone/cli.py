@@ -979,7 +979,8 @@ def _scheduler_preview(args: argparse.Namespace) -> int:
 def _scheduler_operation(args: argparse.Namespace) -> int:
     import json
     import pathlib
-    from claimstone import autopilot, copy_policy, network_schedule, operations, periodic, periodic_dossier
+    from claimstone import (autopilot, copy_policy, network_schedule, operations, periodic,
+                            periodic_dossier, periodic_export, worker_runtime)
     from claimstone.store import LedgerCorrupt
 
     project, store = _flow_open(args)
@@ -1037,6 +1038,17 @@ def _scheduler_operation(args: argparse.Namespace) -> int:
             result = periodic_dossier.preview(project, store, args.schedule_id)
         elif args.scheduler_command == 'periodic-finalize':
             result = periodic_dossier.finalize(project, store, args.schedule_id)
+        elif args.scheduler_command == 'periodic-export':
+            directory, created = periodic_export.create(
+                project, store, args.schedule_id, dossier_id=args.dossier_id)
+            result = {'export_id': directory.name, 'path': str(directory),
+                      'created_now': created}
+        elif args.scheduler_command == 'periodic-export-verify':
+            problems = periodic_export.verify(project, store, args.export_id)
+            result = {'export_id': args.export_id, 'holds': not problems,
+                      'problems': problems}
+        elif args.scheduler_command == 'worker-status':
+            result = worker_runtime.status(store, args.worker_key)
         elif args.scheduler_command == 'copy-policy-plan':
             result = copy_policy.plan(project, store, args.schedule_id,
                                       allowed_hosts=args.allow_host,
@@ -1096,14 +1108,22 @@ def _scheduler_operation(args: argparse.Namespace) -> int:
             previous_sigterm = signal.signal(signal.SIGTERM,
                                              lambda signum, frame: stopping.set())
             try:
-                while not stopping.is_set():
-                    result = autopilot.tick(load_project(args.project), store,
-                                            args.mandate_id)
-                    if (result.get('local_calls') or result.get('network', {}).get('processed') or
-                            any(item['new'] for item in result.get('proposals', [])) or
-                            any(item['new'] for item in result.get('periodic_dossiers', []))):
-                        print(json.dumps(result, ensure_ascii=False), flush=True)
-                    stopping.wait(args.poll_seconds)
+                with worker_runtime.Beacon(store, args.mandate_id) as beacon:
+                    while not stopping.is_set():
+                        beacon.set_phase('DRIVING')
+                        try:
+                            result = autopilot.tick(load_project(args.project), store,
+                                                    args.mandate_id)
+                        finally:
+                            beacon.set_phase('IDLE')
+                        if (result.get('local_calls') or result.get('network', {}).get('processed') or
+                                any(item['new'] for item in result.get('proposals', [])) or
+                                any(item['new'] for item in result.get('periodic_dossiers', []))):
+                            print(json.dumps(result, ensure_ascii=False), flush=True)
+                        if result.get('stopped_reason') in {
+                                'MANDATE_DISABLED', 'SCHEDULE_NOT_AUTHORIZED'}:
+                            break
+                        stopping.wait(args.poll_seconds)
             except KeyboardInterrupt:
                 pass
             finally:
@@ -1126,12 +1146,17 @@ def _scheduler_operation(args: argparse.Namespace) -> int:
             previous_sigterm = signal.signal(signal.SIGTERM,
                                              lambda signum, frame: stopping.set())
             try:
-                while not stopping.is_set():
-                    tick_result = operations.tick(load_project(args.project), store,
-                                                  max_operations=args.max_operations)
-                    if tick_result['processed']:
-                        print(json.dumps(tick_result, ensure_ascii=False), flush=True)
-                    stopping.wait(args.poll_seconds)
+                with worker_runtime.Beacon(store, 'operations') as beacon:
+                    while not stopping.is_set():
+                        beacon.set_phase('DRIVING')
+                        try:
+                            tick_result = operations.tick(load_project(args.project), store,
+                                                          max_operations=args.max_operations)
+                        finally:
+                            beacon.set_phase('IDLE')
+                        if tick_result['processed']:
+                            print(json.dumps(tick_result, ensure_ascii=False), flush=True)
+                        stopping.wait(args.poll_seconds)
             except KeyboardInterrupt:
                 pass
             finally:
@@ -1143,7 +1168,8 @@ def _scheduler_operation(args: argparse.Namespace) -> int:
         print(f'scheduler refused: {exc}', file=sys.stderr)
         return 2
     print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
-    return 0
+    return (5 if args.scheduler_command == 'periodic-export-verify' and
+            not result['holds'] else 0)
 
 
 def _flow_create(args: argparse.Namespace) -> int:
@@ -1654,6 +1680,25 @@ def build_parser() -> argparse.ArgumentParser:
         command.add_argument('schedule_id')
         command.add_argument('--store', default='store')
         command.set_defaults(func=_scheduler_operation)
+    scheduler_periodic_export = scheduler_sub.add_parser(
+        'periodic-export', help='package a current finalized cumulative dossier')
+    scheduler_periodic_export.add_argument('project')
+    scheduler_periodic_export.add_argument('schedule_id')
+    scheduler_periodic_export.add_argument('--dossier-id', required=True)
+    scheduler_periodic_export.add_argument('--store', default='store')
+    scheduler_periodic_export.set_defaults(func=_scheduler_operation)
+    scheduler_periodic_verify = scheduler_sub.add_parser(
+        'periodic-export-verify', help='verify a packaged cumulative dossier')
+    scheduler_periodic_verify.add_argument('project')
+    scheduler_periodic_verify.add_argument('export_id')
+    scheduler_periodic_verify.add_argument('--store', default='store')
+    scheduler_periodic_verify.set_defaults(func=_scheduler_operation)
+    scheduler_worker_status = scheduler_sub.add_parser(
+        'worker-status', help='inspect ephemeral worker liveness')
+    scheduler_worker_status.add_argument('project')
+    scheduler_worker_status.add_argument('worker_key')
+    scheduler_worker_status.add_argument('--store', default='store')
+    scheduler_worker_status.set_defaults(func=_scheduler_operation)
     scheduler_copy_policy_plan = scheduler_sub.add_parser(
         'copy-policy-plan', help='freeze a finite copy allowance for unknown scheduled discoveries')
     scheduler_copy_policy_plan.add_argument('project')

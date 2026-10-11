@@ -439,3 +439,30 @@ approval alone covers only its frozen discovery operations. Future copies
 require the separate policy and local extraction/review requires the separate
 mandate. The worker still uses the same ledger gates as CLI authorizations.
 
+### Worker observation, archive paging and cumulative download (D129)
+
+`GET /control/v1/p/{p}/scheduler` now returns at most 25 of **each** schedule,
+copy policy and local mandate by default. `?limit=N` accepts 1–100;
+`archive.total` has the three total counts, `archive.next_cursor` advances
+each collection by one page, and `archive.revision` names the ID inventory.
+Pass the opaque cursor back as `?limit=N&cursor=...`. If an item is added,
+409 `ARCHIVE_CHANGED` requires restarting at page one. An invalid cursor is
+400 `BAD_REQUEST`. The index also returns `workers.operations` and
+`workers.mandates[mandate_id]` for the mandates on that page. Worker status is
+ephemeral process liveness, never evidence that an operation completed; see
+`worker_runtime.md`.
+
+The following authenticated routes package a current finalized cumulative
+dossier (see `periodic_exports.md`):
+
+| Route | Body or result |
+|---|---|
+| `POST /schedules/{schedule_id}/export` | `{dossier_id}`; echo the current final dossier ID from the read API. 201 on creation, 200 on an identical repeat, 409 for stale or unfinished evidence. |
+| `GET /periodic-exports/{export_id}` | Export ledger row and manifest. |
+| `GET /periodic-exports/{export_id}/download` | `application/zip` attachment containing four report files, no copies. |
+| `POST /periodic-exports/{export_id}/verify` | `{}`; returns `{holds, problems}` after recomputation. |
+
+These four paths are under `/control/v1/p/{p}`. A valid session is required
+for reads and downloads; POST also requires Origin and CSRF. Export IDs are
+looked up in the ledger and may not be arbitrary filesystem paths.
+

@@ -67,7 +67,7 @@ def snapshot(store: Store) -> tuple[list[dict[str, Any]], list[str]]:
         for path in paths:
             relative = str(path.relative_to(store.root))
             if (relative.startswith(("audits/", "exports/"))
-                    or relative in (EXPORTS_LEDGER, drafts.LEDGER)):
+                    or relative in (EXPORTS_LEDGER, 'periodic_exports.jsonl', drafts.LEDGER)):
                 continue
             data = path.read_bytes()
             cut = data.rfind(b"\n")

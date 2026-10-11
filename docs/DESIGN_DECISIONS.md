@@ -4849,3 +4849,36 @@ one-call cap across two children spent one reservation in total and did not
 reset the cap on the next pass. All historical version 1/2 mandates remain
 readable. No real project was granted a mandate or new network campaign.
 
+## D129 — Observe worker processes and package current cumulative evidence (2026-10-11)
+
+D128 left three interface gaps: the scheduler index could grow without a
+page boundary, an operation event could not prove the worker process was
+alive, and the cumulative dossier could only be saved as live JSON. The
+authenticated index now returns at most 25 IDs per collection by default,
+with a bounded 1–100 limit, total counts and an opaque cursor bound to the
+inventory digest. Adding an ID invalidates an old cursor with a named 409;
+the test pages two historical mandates and observes that refusal after a
+third is added. This is stable archive enumeration, not a claim that the
+first page contains all research.
+
+The worker writes an atomic, ephemeral sidecar every three seconds from a
+separate thread, so a long stage holding the project writer lock cannot
+silence its process heartbeat. An advisory lock prevents two processes for
+the same worker key. A normal exit is `STOPPED`; after 15 seconds without an
+update an unclosed process is `STALE`, and malformed state is `UNKNOWN`.
+The test proves exclusivity, expiry and that damaged JSON never becomes
+`ALIVE`. The operation ledger remains the only authority for completed
+units; this sidecar is not a distributed lease.
+
+The cumulative exporter uses `export_version 1` and freezes all evidence ledger prefixes under the
+writer lock, recomputes a current finalized whole-corpus dossier from those
+bytes, and packages JSON, CSV, Markdown and a manifest. The operator echoes
+the `finalized_dossier_id` that was displayed; an unfinished or stale
+dossier is refused. The manifest binds protocol, registry, instrument
+versions, prefix hashes and output hashes. Repeating the same export creates
+no duplicate row; an append-only later observation does not invalidate the
+historical package. Tests change an output and a ledger prefix separately
+and observe named verification failures, and exercise the authenticated ZIP
+route. No source copies are included, no verdict is generated and no real
+network or model call ran.
+

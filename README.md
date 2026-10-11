@@ -105,6 +105,10 @@ that worker prepare the next bounded batches; `auto-status` shows those still
 awaiting approval. Preparing a batch makes no network request.
 The authenticated control API can list and authorize one frozen batch in a
 single action; the worker remains responsible for execution.
+The project scheduler index now pages its archives and reports a worker
+process heartbeat separately from ledger progress. A finalized, current
+cumulative dossier can be downloaded as a verifiable ZIP containing JSON,
+CSV, Markdown and a manifest; no source copies are bundled.
 
 All six stages are implemented and one round has run end to end on literature deposited in PubMed
 Central: 37 of 40 sources confirmed against a floor of 0.80, 1,721 accepted annotations and 271 rejections.

@@ -9,6 +9,18 @@ what order.
 
 ## Where the work stands
 
+2026-10-11 scheduler observation and cumulative export (D129): the CLI
+workers now publish an ephemeral, expiring heartbeat and refuse a second
+process for the same key. The authenticated scheduler index pages up to 100
+IDs per collection with a revision-bound cursor. A current finalized dossier
+can be packaged, downloaded as a ZIP and verified against frozen ledger
+prefixes and output hashes. Tests used local fixtures and an authenticated
+local HTTP server; no research request, model call or real-project export was
+made. The frontend session should follow the updated
+`docs/design/portal/SCHEDULER_FRONTEND_HANDOFF.md`. A live event stream,
+distributed leases, search-depth paging and verified work/version relations
+remain separate tasks.
+
 2026-10-11 finite series mandate and portal controls (D128): one version 3
 local mandate can cover the exact child flows in an approved dated discovery
 schedule, sharing a lifetime model-call cap. Its worker advances each child,
@@ -18,8 +30,8 @@ authorizes and revokes schedules/copy policies and enables/disables local
 mandates. A local integration test exercised the full approval and revocation
 sequence without any external request or real-project mandate. Frontend pages
 have not been modified; the contract and wiring guide are in
-`docs/design/portal/SCHEDULER_FRONTEND_HANDOFF.md`. Worker heartbeat,
-pagination for large archives and a packaged cumulative export remain open.
+`docs/design/portal/SCHEDULER_FRONTEND_HANDOFF.md`. The worker heartbeat,
+archive paging and cumulative export gaps named here were closed by D129.
 
 2026-10-10 cumulative periodic handoff (D126): `scheduler periodic-dossier`
 and the read-only API now show full-corpus evidence profiles, dated-round and

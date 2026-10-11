@@ -4,7 +4,7 @@ Read this before adapting `web/` to the scheduler. This is an implementation
 handoff, not a visual redesign. The current portal design under
 `docs/design/portal/` remains the visual source; `CLAUDE.md`, the contracts and
 the server determine scientific and authorization meaning. This document
-describes the backend after D128. No frontend file was changed for D123–D128.
+describes the backend after D129. No frontend file was changed for D123–D129.
 
 ## What the operator is doing
 
@@ -126,8 +126,30 @@ sequence is ready for the frontend to wire:
    authorization against a changed limit automatically.
 
 These routes record permission only. The separate scheduler worker performs
-due work. The server has no worker heartbeat yet, so label permission and
-operation state separately from process health.
+due work. The scheduler index now also reports `workers.operations` and
+`workers.mandates[id]`. `ALIVE` means a process updated its heartbeat within
+15 seconds; `STALE` means the last update is older; `STOPPED` is a normal
+exit; `NOT_STARTED` means no sidecar exists; `UNKNOWN` means it cannot be
+read safely. `phase: DRIVING` means a pass is being attempted, not that an
+operation succeeded. Continue to use operation ledgers for work outcomes.
+See [`worker_runtime.md`](../../contracts/worker_runtime.md).
+
+The scheduler index is paginated: `GET /scheduler?limit=25` returns up to
+25 of each schedule, policy and mandate. Use `archive.next_cursor` for the
+next page, and `archive.total` for counts. A 409 `ARCHIVE_CHANGED` means the
+ID inventory changed while paging; restart from page one. Do not treat the
+first page as the whole history. Detail routes still accept a known ID.
+
+For a finished cumulative dossier, enable **Download verified package**
+only when `state` is `READY_FOR_HUMAN_READING`,
+`finalized_dossier_id` is present and `snapshot_stale` is false. POST
+`/schedules/{id}/export` with `{dossier_id: finalized_dossier_id}`. The
+response gives an authenticated `/periodic-exports/{export_id}/download`
+path serving a ZIP of `dossier.json`, `questions.csv`, `report.md` and
+`manifest.json`. `POST /periodic-exports/{id}/verify` with `{}` verifies the
+package; show `holds` and named problems. The ZIP contains no PDFs. A 409
+on creation requires a fresh dossier read. The live JSON remains available
+before finalization and must be labelled as a live report.
 
 ## Scheduler commands and what they mean
 
@@ -144,6 +166,8 @@ The CLI is authoritative for behavior until matching control endpoints exist.
 | Inspect round and cumulative acquisition | `scheduler periodic-audit PROJECT SCHEDULE_ID` | None |
 | Inspect live cumulative evidence | `scheduler periodic-dossier PROJECT SCHEDULE_ID` | None |
 | Persist eligible handoff | `scheduler periodic-finalize PROJECT SCHEDULE_ID` | None; appends profiles and a dossier only after all gates pass. |
+| Package and verify final dossier | `scheduler periodic-export PROJECT SCHEDULE_ID --dossier-id ID`; `periodic-export-verify PROJECT EXPORT_ID` | None; freezes ledger prefixes and report files. |
+| Inspect worker process | `scheduler worker-status PROJECT operations` or a mandate ID | None; ephemeral process heartbeat, not stage completion. |
 
 A series mandate calls periodic finalization after driving all its named
 children. Creating child flows still does not authorize work: the operator
@@ -151,16 +175,11 @@ approves the schedule, optional copy policy and local mandate separately.
 
 ## Backend work still needed for a fully interactive scheduler UI
 
-1. A server event/heartbeat read model for real-time status. Current activity
-   and operation ledgers support polling; they do not prove a live worker is
-   healthy. Never derive "scheduler on" from a Docker container icon alone.
-2. If the browser needs a packaged downloadable dossier rather than the live
-   JSON, add an authenticated export action that snapshots the whole corpus
-   and returns a verifiable artifact. The existing export action is flow
-   scoped; `periodic-dossier` is a live JSON handoff.
-3. The scheduler index lists schedule IDs but does not embed dossier reports.
+1. The scheduler index lists schedule IDs but does not embed dossier reports.
    Load `/api/v1/projects/{project}/periodic-dossiers/{schedule_id}` for each
-   selected schedule. A large archive needs pagination and summary endpoints.
+   selected schedule. Archive ID paging exists; a cheap summary endpoint and
+   an event stream remain future optimizations. The current heartbeat is a
+   single-machine liveness signal, not a distributed lease or progress count.
 
 Implement the backend routes before wiring their buttons. Keep server enums
 and block reasons as the single source of meaning; a frontend type must not
@@ -186,15 +205,23 @@ create a new interpretation of `COMPLETED`, admission or staleness.
 - The browser can save the live dossier JSON. It labels this a live report
   unless a matching `finalized_dossier_id` is present and `snapshot_stale` is
   false.
+- When final and current, the browser can request and download the packaged
+  dossier with an authenticated session. Verification names any changed
+  ledger prefix or output. A stale package remains a historical export.
+- A stale worker heartbeat does not erase the last ledger event or imply a
+  failed search. The UI shows process liveness and scientific progress in
+  separate places.
 
 ## Where to read next
 
 - [`scheduler_operations.md`](../../contracts/scheduler_operations.md),
   [`network_schedules.md`](../../contracts/network_schedules.md),
   [`copy_policies.md`](../../contracts/copy_policies.md),
-  [`periodic_dossiers.md`](../../contracts/periodic_dossiers.md).
+  [`periodic_dossiers.md`](../../contracts/periodic_dossiers.md),
+  [`periodic_exports.md`](../../contracts/periodic_exports.md),
+  [`worker_runtime.md`](../../contracts/worker_runtime.md).
 - `claimstone/periodic.py`, `claimstone/periodic_dossier.py`,
   `claimstone/autopilot.py`, `claimstone/api.py`, `claimstone/control.py`.
 - `web/src/components/OperationsPanel.tsx`, `web/src/lib/control.ts`,
   `web/src/pages/FlowOverviewPage.tsx`.
-- D123–D128 in `docs/DESIGN_DECISIONS.md`; `docs/HANDOFF.md` for live state.
+- D123–D129 in `docs/DESIGN_DECISIONS.md`; `docs/HANDOFF.md` for live state.

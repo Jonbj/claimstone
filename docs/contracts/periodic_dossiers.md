@@ -41,5 +41,7 @@ The live report is a generated export of current evidence. Its
 `finalized_dossier_id` points to the latest persisted snapshot, while
 `snapshot_stale` says whether that snapshot still represents current evidence.
 The ordinary flow export can carry the append-only dossier ledger in its
-verifiable byte snapshot; the report itself can be saved as JSON through the
-CLI or API. No stored dossier row is rewritten.
+verifiable byte snapshot. A current finalized dossier can also be packaged
+as a whole-corpus ZIP with an authenticated download and independent
+verification; see `periodic_exports.md`. The live report itself can be saved
+as JSON through the CLI or API. No stored dossier row is rewritten.

@@ -486,3 +486,13 @@ attempts the same finalization after each pass. Read the five verdict states
 and sign per question in the usual human adjudication step; neither command
 chooses a verdict. The [dossier contract](contracts/periodic_dossiers.md)
 defines the report states and hashes.
+
+`scheduler worker-status PROJECT operations` (or a mandate ID) reports
+recent worker process activity. `ALIVE` is a heartbeat, not proof that a
+query or model call finished; inspect the operation ledger for that. For a
+current finalized dossier, `scheduler periodic-export PROJECT SCHEDULE_ID
+--dossier-id FINALIZED_ID` creates an idempotent report package;
+`periodic-export-verify PROJECT EXPORT_ID` checks its frozen ledger prefixes
+and derived files. The authenticated portal can create, download and verify
+the same package. Its scheduler index uses `limit` and an opaque cursor;
+restart paging if it returns `ARCHIVE_CHANGED`.

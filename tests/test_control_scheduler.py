@@ -131,3 +131,86 @@ def test_portal_rejects_unmatched_child_flows_and_anonymous_scheduler_read(tmp_p
                         payload={'schedule_id': 'missing', 'flow_ids': [],
                                  'extract_model': 'a', 'review_model': 'b',
                                  'max_total_local_calls': 1})[0] == 404
+
+
+def test_scheduler_archive_pages_and_refuses_a_stale_cursor(tmp_path):
+    from urllib.parse import quote
+
+    ws = _workspace(tmp_path)
+    with _served(ws) as (base, headers):
+        count = sum(len(topic.terms) for topic in ws['project'].topics)
+        planned = _request(base + '/periodic-plans', method='POST', headers=headers,
+                           payload={'source_flow_id': ws['source_flow'],
+                                    'rounds': ws['rounds'], 'apis': ['crossref'],
+                                    'allowed_hosts': ['api.crossref.org'],
+                                    'max_units_each': count, 'max_requests_each': 2,
+                                    'per_query': 1})[2]
+        sid = planned['schedule_id']
+        _request(base + f'/schedules/{sid}/authorize', method='POST', headers=headers,
+                 payload={'plan_sha256': sid,
+                          'max_total_requests': planned['max_total_requests']})
+        request = {'schedule_id': sid,
+                   'flow_ids': [row['flow_id'] for row in planned['rounds']],
+                   'extract_model': 'a', 'review_model': 'b',
+                   'max_total_local_calls': 1}
+        first = _request(base + '/local-mandates/series', method='POST',
+                         headers=headers, payload=request)[2]['mandate_id']
+        _request(base + f'/local-mandates/{first}/disable', method='POST',
+                 headers=headers, payload={'mandate_id': first})
+        second = _request(base + '/local-mandates/series', method='POST',
+                          headers=headers, payload=request)[2]['mandate_id']
+        page1 = _request(base + '/scheduler?limit=1',
+                         headers={'Cookie': headers['Cookie']})[2]
+        assert page1['archive']['total']['local_mandates'] == 2
+        cursor = page1['archive']['next_cursor']
+        assert cursor
+        page2 = _request(base + '/scheduler?limit=1&cursor=' + quote(cursor),
+                         headers={'Cookie': headers['Cookie']})[2]
+        assert {page1['local_mandates'][0]['mandate_id'],
+                page2['local_mandates'][0]['mandate_id']} == {first, second}
+        _request(base + f'/local-mandates/{second}/disable', method='POST',
+                 headers=headers, payload={'mandate_id': second})
+        _request(base + '/local-mandates/series', method='POST',
+                 headers=headers, payload=request)
+        changed = _request(base + '/scheduler?limit=1&cursor=' + quote(cursor),
+                           headers={'Cookie': headers['Cookie']})
+        assert changed[0] == 409 and changed[2]['error']['code'] == 'ARCHIVE_CHANGED'
+
+
+def test_portal_packages_and_serves_only_a_current_cumulative_dossier(tmp_path, monkeypatch):
+    import urllib.request
+    import zipfile
+    from io import BytesIO
+
+    from claimstone import periodic_dossier
+    from tests.test_periodic_export import _report
+
+    ws = _workspace(tmp_path)
+    monkeypatch.setattr(periodic_dossier, 'preview', _report)
+    with _served(ws) as (base, headers):
+        count = sum(len(topic.terms) for topic in ws['project'].topics)
+        planned = _request(base + '/periodic-plans', method='POST', headers=headers,
+                           payload={'source_flow_id': ws['source_flow'],
+                                    'rounds': ws['rounds'], 'apis': ['crossref'],
+                                    'allowed_hosts': ['api.crossref.org'],
+                                    'max_units_each': count, 'max_requests_each': 2,
+                                    'per_query': 1})[2]
+        sid = planned['schedule_id']
+        denied = _request(base + f'/schedules/{sid}/export', method='POST',
+                          headers=headers, payload={'dossier_id': 'b' * 64})
+        assert denied[0] == 409
+        created = _request(base + f'/schedules/{sid}/export', method='POST',
+                           headers=headers, payload={'dossier_id': 'a' * 64})
+        assert created[0] == 201
+        export_id = created[2]['export_id']
+        assert _request(base + f'/periodic-exports/{export_id}',
+                        headers={'Cookie': headers['Cookie']})[0] == 200
+        with urllib.request.urlopen(urllib.request.Request(
+                base + f'/periodic-exports/{export_id}/download',
+                headers={'Cookie': headers['Cookie']})) as response:
+            assert response.headers['Content-Type'] == 'application/zip'
+            with zipfile.ZipFile(BytesIO(response.read())) as package:
+                assert 'dossier.json' in package.namelist()
+        checked = _request(base + f'/periodic-exports/{export_id}/verify',
+                           method='POST', headers=headers, payload={})
+        assert checked[0] == 200 and checked[2]['holds'] is True

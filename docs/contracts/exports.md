@@ -15,8 +15,9 @@ Stage writers share no lock with the exporter (review F5), so the export never a
 quiescent file. It takes the one lock that exists — `.flows.lock`, the flow writers' lock —
 briefly around the byte snapshot, cuts every covered ledger at its last `\n` (a torn tail is
 excluded and recorded), and releases. Covered files: `store/<project>/*.jsonl` and
-`store/<project>/calls/**/*.jsonl`. `audits/`, `exports/` and `exports.jsonl` are never
-snapshotted: none of them is evidence for the outputs, and the exports ledger is bookkeeping
+`store/<project>/calls/**/*.jsonl`. `audits/`, `exports/`, `exports.jsonl` and
+`periodic_exports.jsonl` are never snapshotted: none of them is evidence for
+the outputs, and the export ledgers are bookkeeping
 whose growth must not change an export's identity.
 
 Each prefix records `{path, bytes, rows, sha256}` relative to the project store root.

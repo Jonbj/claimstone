@@ -5,8 +5,9 @@ extract-build, review-build, harvest or synthesize stage per operation, a
 bounded local `llamacpp` or explicitly budgeted `ollama-cloud` drain, a
 bounded one-candidate acquisition from an existing URL, or one bounded
 scholarly-API query. `claimstone scheduler-preview` remains read-only. Batch
-plans cover multiple frozen queries or candidates; lease heartbeats, portal
-control routes and automatic paid-lane planning remain design requirements.
+plans cover multiple frozen queries or candidates; durable operation leases
+and automatic paid-lane planning remain design requirements. D129 adds an
+ephemeral **process** heartbeat, which is not an operation lease.
 
 `claimstone scheduler batch-plan` groups at most `--max-units` one-query or
 one-candidate plans in `operation_batches.jsonl`. Its batch ID hashes the
@@ -186,7 +187,9 @@ the OS login. The control server passes `{signer_auth: "portal-session", operato
 operator whose session made the request, after checking that the request repeats the plan's limits
 exactly. Without `identity` the OS login is recorded as before. The ledger has no `stopping`,
 `stopped` or `heartbeat` events yet, so the portal offers no pause or resume and reports no worker
-heartbeat.
+heartbeat in this ledger. The project scheduler index separately reports an
+ephemeral worker process sidecar; see `worker_runtime.md`. It never changes
+the operation state or unlocks a failed request.
 `authorize_batch` accepts the same authenticated identity and records it on
 each newly authorized operation. The portal exposes a read view of each batch
 and accepts a batch authorization only when the submitted operation IDs and
