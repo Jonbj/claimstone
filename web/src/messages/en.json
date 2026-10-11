@@ -102,6 +102,8 @@
       "intro": "Declare which kinds of source may count and the bar a round must clear before it can conclude anything. Both are declared now and recorded on the day you create the project (UTC date).",
       "classes": "Source classes",
       "selectAll": "Select all source classes",
+      "technical": "Technical settings (optional)",
+      "technicalHelp": "Defaults suit most projects: the notation for outcome values and extra hosts never to contact.",
       "classesHelp": "Every source carries its class, and classes are never mixed silently. Choose at least one.",
       "floor": "Acquisition floor",
       "floorHelp": "The share of found works that must be obtained as confirmed copies. Above 0 and at most 1, for example 0.80 = 80%.",

@@ -46,6 +46,7 @@ function SourcesForm({ draftId, draft, onSaved, onReload, template }: StepProps 
   const problems = problemsOf(error);
   const snapshot = JSON.stringify([classes, floor, rationale, supplied, notation, custom, hosts]);
   const markSaved = useLeaveWarning(snapshot);
+  const technicalTouched = notation !== "none" || hosts.trim() !== "";
   const groupId = useId();
   const lines = (text: string) => text.split("\n").map((s) => s.trim()).filter(Boolean);
 
@@ -135,7 +136,13 @@ function SourcesForm({ draftId, draft, onSaved, onReload, template }: StepProps 
           <FieldError problems={problems} path="supplied_copies" />
         </fieldset>
 
-        <div className="mt-4 flex flex-col gap-2">
+        <details
+          className="mt-4 rounded-lg border border-border p-3"
+          open={technicalTouched || Boolean(messageFor(problems, "notation") || messageFor(problems, "custom_value_labels") || messageFor(problems, "extra_excluded_hosts"))}
+        >
+          <summary className="cursor-pointer text-sm font-medium">{t("wizard.step3.technical")}</summary>
+          <p className="mb-3 mt-1 text-[13px] text-muted-foreground">{t("wizard.step3.technicalHelp")}</p>
+        <div className="flex flex-col gap-2">
           <Field label={t("wizard.step3.notation")} problems={problems} path="notation">
             {(props) => (
               <select {...props} value={notation} onChange={(e) => setNotation(e.target.value)} className={inputClass}>
@@ -165,6 +172,7 @@ function SourcesForm({ draftId, draft, onSaved, onReload, template }: StepProps 
             {t("wizard.step3.fixedHosts", { hosts: template.excluded_hosts.join(", ") })}
           </p>
         </div>
+        </details>
       </section>
 
       <ErrorSummary error={error} onReload={onReload} />

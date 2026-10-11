@@ -102,6 +102,8 @@
       "intro": "Dichiara quali tipi di fonte possono contare e la soglia che un ciclo di ricerca deve superare prima di poter concludere qualcosa. Entrambi si dichiarano ora e vengono registrati alla data (UTC) in cui crei il progetto.",
       "classes": "Classi di fonte",
       "selectAll": "Seleziona tutte le classi di fonte",
+      "technical": "Impostazioni tecniche (facoltative)",
+      "technicalHelp": "I valori predefiniti vanno bene per la maggior parte dei progetti: la notazione dei valori e gli host in più da non contattare.",
       "classesHelp": "Ogni fonte è etichettata con la sua classe, e le classi non vengono mai mescolate senza registrarlo. Scegline almeno una.",
       "floor": "Soglia di acquisizione",
       "floorHelp": "La quota delle pubblicazioni trovate che deve essere ottenuta come copie confermate. Maggiore di 0 e al massimo 1, per esempio 0,80 = 80%.",
