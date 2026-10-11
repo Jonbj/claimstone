@@ -51,6 +51,21 @@ describe("StepSources", () => {
     expect((screen.getByLabelText(/Read them, but report them separately/) as HTMLInputElement).checked).toBe(false);
   });
 
+  it("selects and clears every source class with the select-all box", async () => {
+    mount();
+    const all = (await screen.findByLabelText(/Select all source classes/)) as HTMLInputElement;
+    expect(all.checked).toBe(false);
+    fireEvent.click(all);
+    expect((screen.getByLabelText(/ACA/) as HTMLInputElement).checked).toBe(true);
+    expect((screen.getByLabelText(/^WP/) as HTMLInputElement).checked).toBe(true);
+    expect(all.checked).toBe(true);
+    fireEvent.click(screen.getByLabelText(/ACA/));
+    expect(all.checked).toBe(false);
+    fireEvent.click(all);
+    fireEvent.click(all);
+    expect((screen.getByLabelText(/^WP/) as HTMLInputElement).checked).toBe(false);
+  });
+
   it("sends the declarations exactly as chosen", async () => {
     const onSaved = mount();
     fireEvent.click(await screen.findByLabelText(/ACA/));

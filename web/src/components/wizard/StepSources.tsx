@@ -78,6 +78,10 @@ function SourcesForm({ draftId, draft, onSaved, onReload, template }: StepProps 
   const toggle = (id: string) =>
     setClasses((held) => (held.includes(id) ? held.filter((x) => x !== id) : [...held, id]));
 
+  const allIds = template.classes.map((c) => c.id);
+  const allSelected = allIds.length > 0 && allIds.every((id) => classes.includes(id));
+  const toggleAll = () => setClasses(allSelected ? [] : allIds);
+
   return (
     <form onSubmit={submit} className="flex flex-col gap-4">
       <section className={cardClass}>
@@ -90,6 +94,10 @@ function SourcesForm({ draftId, draft, onSaved, onReload, template }: StepProps 
         >
           <legend className="text-sm font-medium">{t("wizard.step3.classes")}</legend>
           <p id={`${groupId}-classes`} className="text-[13px] text-muted-foreground">{t("wizard.step3.classesHelp")}</p>
+          <label className="flex items-center gap-2 text-sm font-medium">
+            <input type="checkbox" checked={allSelected} onChange={toggleAll} />
+            {t("wizard.step3.selectAll")}
+          </label>
           {template.classes.map((c) => (
             <label key={c.id} className="flex items-start gap-2 rounded-lg border border-border p-2 text-sm">
               <input type="checkbox" checked={classes.includes(c.id)} onChange={() => toggle(c.id)} className="mt-1" />
