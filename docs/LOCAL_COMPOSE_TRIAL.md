@@ -6,13 +6,23 @@ The worker reads the append-only operation ledger for `alembic-s4-lungo` and run
 only operations that were already authorized. Starting the stack does not plan
 or authorize discovery, acquisition, model calls, purchases or verdicts.
 
+For new projects, `./portal.sh up` starts a single installation supervisor
+alongside the portal. It discovers every enabled mandate under `projects/`
+every 30 seconds; no per-mandate container or environment variables are
+needed. `./portal.sh down` stops it. Check it with
+`./claimstone.sh scheduler supervisor-status --store store`, or read
+`workers.supervisor` in the authenticated project scheduler index. A mandate
+still needs its own explicit local-call ceiling and separate network/copy
+authorizations before any external work. `./trial.sh` below remains the
+older, project-specific operations-worker smoke test.
+
 ```bash
 ./trial.sh up       # build and wait for all four services
 ./trial.sh status   # container status
 ./trial.sh down     # stop the worker; leave portal and GROBID running
 ```
 
-An optional local coordinator can revisit one bound flow after an operator
+The older optional `auto-worker` can revisit one bound flow after an operator
 records a mandate. Replace the project, flow, model names, copy host and ID with values
 from that flow; keep the returned `mandate_id` for the second command:
 

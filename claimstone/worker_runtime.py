@@ -23,7 +23,7 @@ from claimstone.store import Store
 
 INTERVAL_SECONDS = 3
 STALE_SECONDS = 15
-KEY = re.compile(r"^(operations|[0-9a-f]{64})$")
+KEY = re.compile(r"^(operations|supervisor|[0-9a-f]{64})$")
 
 
 def _path(store: Store, key: str) -> pathlib.Path:

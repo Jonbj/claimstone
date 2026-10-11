@@ -9,6 +9,18 @@ what order.
 
 ## Where the work stands
 
+2026-10-11 installation supervisor (D130): `portal.sh up` now starts one
+single-machine scheduler supervisor. It scans all projects for enabled local
+mandates every 30 seconds and drives them with the existing bounded tick;
+its installation heartbeat appears in the authenticated scheduler index.
+There is no need to pass a mandate ID to a new container after portal approval.
+An offline fixture proved discovery, disable, liveness and isolation of a
+broken project. No real-project mandate was enabled or research request made
+by this change. The frontend session should display `workers.supervisor`
+separately from mandate and operation state. The current code digest still
+requires renewal of an older mandate after a code change. Distributed leases
+and automated scientific verdicts are outside this single-machine design.
+
 2026-10-11 scheduler observation and cumulative export (D129): the CLI
 workers now publish an ephemeral, expiring heartbeat and refuse a second
 process for the same key. The authenticated scheduler index pages up to 100

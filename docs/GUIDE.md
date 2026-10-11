@@ -477,6 +477,14 @@ mandate stops later passes. The authenticated control API exposes the same
 planning and approval actions under `/control/v1/p/{project}`; see
 [the control API contract](contracts/control_api.md).
 
+On this machine, `./portal.sh up` starts one supervisor for all enabled
+mandates. It scans `projects/` every 30 seconds and uses the same guarded tick
+as `auto-worker`; no mandate ID needs to be passed to another container.
+`scheduler supervisor-status --store store` reports the installation heartbeat.
+`scheduler supervise-once --projects-dir projects --store store` runs one pass
+and reports named project errors, which is useful for offline diagnosis.
+Neither command grants network access, model budget or a verdict.
+
 When the scheduled rounds and their readings finish, `scheduler
 periodic-dossier PROJECT SCHEDULE_ID` shows the live whole-corpus evidence
 handoff and its blockers without writing. `periodic-finalize PROJECT

@@ -1240,7 +1240,9 @@ def _scheduler_index(self: _Handler, params: dict[str, str], query: Any,
         .decode('ascii').rstrip('=') if has_more else None)
     return {'project': project.name, 'schedules': schedules,
             'copy_policies': policies, 'local_mandates': mandates,
-            'workers': {'operations': worker_runtime.status(store, 'operations'),
+            'workers': {'supervisor': worker_runtime.status(
+                            Store('_installation', base=store.root.parent), 'supervisor'),
+                        'operations': worker_runtime.status(store, 'operations'),
                         'mandates': {row['mandate_id']: worker_runtime.status(
                             store, row['mandate_id']) for row in mandates}},
             'archive': {'limit': limit, 'offset': offset, 'total': {

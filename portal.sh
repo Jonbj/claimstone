@@ -3,8 +3,8 @@
 # `docker compose up -d --build` starts the same services plus GROBID; this script adds the revision
 # stamp, the state directory and the operator commands.
 #
-#   ./portal.sh                   build if needed, start `api`, `control` and `web`, wait until healthy
-#   ./portal.sh down              stop and remove those three containers (GROBID and the store stay)
+#   ./portal.sh                   build if needed, start the portal and supervisor
+#   ./portal.sh down              stop and remove the portal and supervisor (store stays)
 #   ./portal.sh operator add ID --name "Display name"   record an operator; prompts for the password
 #   ./portal.sh operator disable ID
 #
@@ -25,7 +25,7 @@ case "${1:-up}" in
   up) ;;
   down)
     # Not `compose down`: that would also remove GROBID, which belongs to the stages, not the portal.
-    exec docker compose --profile portal rm --stop --force web control api
+    exec docker compose --profile portal --profile supervisor rm --stop --force web control api supervisor
     ;;
   operator)
     # Interactive: the password is read by getpass inside the container, never passed as an argument.
@@ -46,7 +46,7 @@ if [[ "$revision" != unknown ]] && ! { git diff --quiet && git diff --cached --q
 fi
 export CLAIMSTONE_CODE_REVISION="$revision"
 
-docker compose --profile portal up -d --build --wait api control web
+docker compose --profile portal --profile supervisor up -d --build --wait api control web supervisor
 
 port="${CLAIMSTONE_PORTAL_PORT:-8788}"
 echo "claimstone portal — http://127.0.0.1:${port}/  (writes need an operator: ./portal.sh operator add; ./portal.sh down to stop)"

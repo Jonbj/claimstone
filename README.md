@@ -100,6 +100,9 @@ mandate. `scheduler auto-worker PROJECT MANDATE_ID` revisits that flow after new
 data arrives; `auto-status`, `auto-once` and `auto-disable` inspect, run one pass
 and stop it. The total local-call allowance survives worker restarts. Network
 operations still need separate exact-plan authorization.
+`./portal.sh up` starts one installation supervisor that discovers all enabled
+mandates; a separate `auto-worker` container is no longer needed for each new
+flow. `scheduler supervisor-status` reports its heartbeat.
 Optional `--discover-api`, `--discover-host` and `--acquire-host` settings let
 that worker prepare the next bounded batches; `auto-status` shows those still
 awaiting approval. Preparing a batch makes no network request.

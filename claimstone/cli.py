@@ -976,6 +976,56 @@ def _scheduler_preview(args: argparse.Namespace) -> int:
     return 0
 
 
+def _scheduler_supervise(args: argparse.Namespace) -> int:
+    import json
+    import signal
+    import threading
+    from claimstone import operations, scheduler_supervisor, worker_runtime
+
+    if args.scheduler_command == 'supervisor-status':
+        print(json.dumps(scheduler_supervisor.status(args.store), ensure_ascii=False))
+        return 0
+    if args.poll_seconds < 1:
+        print('--poll-seconds must be at least 1', file=sys.stderr)
+        return 2
+    if args.scheduler_command == 'supervise-once':
+        report = scheduler_supervisor.scan_once(args.projects_dir, args.store)
+        print(json.dumps(report, ensure_ascii=False, default=str))
+        return 1 if report['errors'] else 0
+
+    stopping = threading.Event()
+    previous_sigterm = signal.signal(signal.SIGTERM,
+                                     lambda signum, frame: stopping.set())
+    try:
+        with worker_runtime.Beacon(
+                scheduler_supervisor.installation_store(args.store), 'supervisor') as beacon:
+            print('scheduler supervisor running; Ctrl-C stops after the current pass',
+                  file=sys.stderr, flush=True)
+            while not stopping.is_set():
+                report = scheduler_supervisor.scan_once(args.projects_dir, args.store,
+                                                        beacon=beacon)
+                for item in report['errors']:
+                    print(json.dumps({'event': 'supervisor_error'} | item,
+                                     ensure_ascii=False), file=sys.stderr, flush=True)
+                for item in report['results']:
+                    result = item['result']
+                    if (result.get('local_calls') or
+                            result.get('network', {}).get('processed') or
+                            any(row.get('new') for row in result.get('proposals', [])) or
+                            any(row.get('new') for row in result.get('periodic_dossiers', []))):
+                        print(json.dumps({'event': 'supervisor_progress'} | item,
+                                         ensure_ascii=False, default=str), flush=True)
+                stopping.wait(args.poll_seconds)
+    except KeyboardInterrupt:
+        pass
+    except operations.OperationError as exc:
+        print(f'supervisor refused: {exc}', file=sys.stderr)
+        return 1
+    finally:
+        signal.signal(signal.SIGTERM, previous_sigterm)
+    return 0
+
+
 def _scheduler_operation(args: argparse.Namespace) -> int:
     import json
     import pathlib
@@ -1580,6 +1630,14 @@ def build_parser() -> argparse.ArgumentParser:
 
     scheduler = sub.add_parser('scheduler', help='bounded operations for a protocol-bound flow')
     scheduler_sub = scheduler.add_subparsers(dest='scheduler_command', required=True)
+    for action in ('supervise', 'supervise-once', 'supervisor-status'):
+        command = scheduler_sub.add_parser(action,
+            help='coordinate enabled mandates across projects on this machine')
+        command.add_argument('--store', default='store')
+        if action != 'supervisor-status':
+            command.add_argument('--projects-dir', default='projects')
+            command.add_argument('--poll-seconds', type=int, default=30)
+        command.set_defaults(func=_scheduler_supervise)
     scheduler_plan = scheduler_sub.add_parser('plan', help='freeze one scoped offline stage')
     scheduler_plan.add_argument('project')
     scheduler_plan.add_argument('flow_id')

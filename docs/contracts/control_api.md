@@ -418,7 +418,7 @@ records the authenticated operator; the control server never executes a stage.
 
 | Route | Request body | Response |
 |---|---|---|
-| `GET /scheduler` | — | `{project, schedules, copy_policies, local_mandates}` |
+| `GET /scheduler` | — | `{project, schedules, copy_policies, local_mandates, workers, archive}` |
 | `POST /periodic-plans` | `{source_flow_id, rounds, apis, allowed_hosts, max_units_each, max_requests_each, per_query}` | 201; dated child flows and frozen schedule plan |
 | `GET /schedules/{schedule_id}` | — | Frozen plan, state and events |
 | `POST /schedules/{schedule_id}/authorize` | `{plan_sha256, max_total_requests}` | 201/200; finite schedule authorization |
@@ -447,7 +447,8 @@ copy policy and local mandate by default. `?limit=N` accepts 1–100;
 each collection by one page, and `archive.revision` names the ID inventory.
 Pass the opaque cursor back as `?limit=N&cursor=...`. If an item is added,
 409 `ARCHIVE_CHANGED` requires restarting at page one. An invalid cursor is
-400 `BAD_REQUEST`. The index also returns `workers.operations` and
+400 `BAD_REQUEST`. The index also returns `workers.supervisor` (the
+installation-wide D130 coordinator), `workers.operations` and
 `workers.mandates[mandate_id]` for the mandates on that page. Worker status is
 ephemeral process liveness, never evidence that an operation completed; see
 `worker_runtime.md`.

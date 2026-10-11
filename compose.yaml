@@ -1,7 +1,8 @@
 # Everything that runs: `docker compose up -d --build` starts GROBID, the read-only API (`api`), the write
 # boundary (`control`) and the portal (`web`, http://127.0.0.1:8788/). Two services are not started by it:
 # the engine job `claimstone` (profile `cli`, run with `docker compose run --rm claimstone …`) and the trial
-# scheduler worker (profile `trial`).
+# scheduler worker (profile `trial`). `portal.sh up` explicitly includes the
+# installation supervisor (profile `supervisor`) for enabled mandates.
 #
 # Of the long-running services, one is still not a service.
 #
@@ -155,6 +156,35 @@ services:
     image: claimstone:local
     profiles: [autopilot]
     command: ["scheduler", "auto-worker", "${CLAIMSTONE_AUTO_PROJECT:-projects/example-news-and-returns}", "${CLAIMSTONE_AUTO_MANDATE:-}", "--store", "store", "--poll-seconds", "30"]
+    depends_on:
+      grobid:
+        condition: service_healthy
+    environment:
+      CLAIMSTONE_CONTACT_EMAIL: ${CLAIMSTONE_CONTACT_EMAIL:?set it in .env}
+      CLAIMSTONE_GROBID_URL: http://grobid:8070
+      OLLAMA_API_KEY: ${OLLAMA_API_KEY:-}
+      OPENALEX_API_KEY: ${OPENALEX_API_KEY:-}
+      PYTHONDONTWRITEBYTECODE: "1"
+    volumes:
+      - ./store:/app/store
+      - ./projects:/app/projects:ro
+    user: "${UID:-1000}:${GID:-1000}"
+    networks: [claimstone]
+    restart: unless-stopped
+    stop_grace_period: 10m
+
+  # One local coordinator for every enabled mandate in projects/. A mandate
+  # alone cannot authorize network requests; exact schedule/copy gates apply.
+  supervisor:
+    build:
+      context: .
+      args:
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
+        CLAIMSTONE_CODE_REVISION: ${CLAIMSTONE_CODE_REVISION:-unknown}
+    image: claimstone:local
+    profiles: [supervisor]
+    command: ["scheduler", "supervise", "--projects-dir", "projects", "--store", "store", "--poll-seconds", "30"]
     depends_on:
       grobid:
         condition: service_healthy

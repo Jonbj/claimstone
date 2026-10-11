@@ -4,7 +4,7 @@ Read this before adapting `web/` to the scheduler. This is an implementation
 handoff, not a visual redesign. The current portal design under
 `docs/design/portal/` remains the visual source; `CLAUDE.md`, the contracts and
 the server determine scientific and authorization meaning. This document
-describes the backend after D129. No frontend file was changed for D123–D129.
+describes the backend after D130. No frontend file was changed for D123–D130.
 
 ## What the operator is doing
 
@@ -21,6 +21,16 @@ The interface should answer four questions at a glance:
 2. What needs my action, and what will that action permit or spend?
 3. What stopped, why, and what can safely happen next?
 4. Is the whole-corpus result current, ready for my reading, or superseded?
+
+`./portal.sh up` now starts one installation supervisor (D130). It discovers
+enabled mandates across projects at each poll. The portal no longer needs to
+launch a container per mandate. The authenticated scheduler index includes
+`workers.supervisor` with `state` and `phase`. `ALIVE` means the process is
+scanning; it does not mean a project advanced. Individual mandate workers are
+briefly `ALIVE` while a tick runs and ordinarily `STOPPED` between ticks.
+Show the global supervisor state separately from the mandate permission
+(`ENABLED`/`DISABLED`) and the operation outcome. If it is `STALE`, `UNKNOWN`
+or `STOPPED`, show an operational alert, never a scientific failure.
 
 Use server values as facts. `COMPLETED` on an operation means its finite unit
 ended; it does **not** mean a research round or a question is scientifically
@@ -159,6 +169,7 @@ The CLI is authoritative for behavior until matching control endpoints exist.
 |---|---|---|
 | Inspect one flow | `scheduler-preview PROJECT FLOW_ID` | None |
 | Start/revisit bounded local work | `scheduler auto-enable`, `auto-once`, `auto-worker`, `auto-status`, `auto-disable` | Local calls under the mandate's lifetime cap; already authorized network operations may run. |
+| Run every enabled mandate locally | `scheduler supervise`, `supervise-once`, `supervisor-status` | `portal.sh up` starts the single-machine supervisor; it grants no new permissions. |
 | Cover exact dated child flows with one cap | `scheduler auto-enable-series PROJECT SCHEDULE_ID --extract-model A --review-model B --max-total-local-calls N` | Shared local-call cap; already approved dated queries and matching future-copy policy may run in their windows. |
 | Plan dated updates | `scheduler periodic-plan PROJECT SOURCE_FLOW_ID --rounds-file ...` | None; writes flow and operation plans. |
 | Approve finite query windows | `scheduler schedule-authorize PROJECT SCHEDULE_ID` | Authorization only; worker later makes bounded requests. |
@@ -224,4 +235,4 @@ create a new interpretation of `COMPLETED`, admission or staleness.
   `claimstone/autopilot.py`, `claimstone/api.py`, `claimstone/control.py`.
 - `web/src/components/OperationsPanel.tsx`, `web/src/lib/control.ts`,
   `web/src/pages/FlowOverviewPage.tsx`.
-- D123–D129 in `docs/DESIGN_DECISIONS.md`; `docs/HANDOFF.md` for live state.
+- D123–D130 in `docs/DESIGN_DECISIONS.md`; `docs/HANDOFF.md` for live state.

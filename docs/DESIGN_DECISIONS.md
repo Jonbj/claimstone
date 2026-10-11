@@ -4882,3 +4882,26 @@ and observe named verification failures, and exercise the authenticated ZIP
 route. No source copies are included, no verdict is generated and no real
 network or model call ran.
 
+## D130 — Discover enabled mandates with one installation supervisor (2026-10-11)
+
+D128 let the portal record a finite local mandate, but a separate process
+still had to be started with that mandate's ID. That manual step made a new
+project appear idle after approval. A single supervisor now scans projects
+with `questions.yaml` and existing mandate ledgers each pass. It invokes
+the guarded `autopilot.tick` only for enabled mandates. The installation
+heartbeat and advisory lock use the existing D129 mechanism; each mandate
+also takes its own worker lock during a tick, so a manually started
+`auto-worker` cannot run the same mandate simultaneously. Project errors are
+reported by name without preventing other projects from advancing.
+
+An offline fixture enabled a mandate after creating a flow, then observed
+one automatic pass without supplying its ID. Disabling that mandate led to
+zero further attempts. It also observed the installation heartbeat as
+`ALIVE` during the pass and `STOPPED` on exit; an invalid second project did
+not prevent the valid project's pass. The supervisor adds no authorization:
+network windows, exact hosts, request ceilings, model-call reservations and
+human verdict gates remain in their existing ledgers. `portal.sh up` starts
+the supervisor on the local Compose deployment; no live mandate or external
+request was made while developing it. This is a single-machine lock and
+heartbeat, not a distributed lease.
+
