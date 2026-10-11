@@ -13,6 +13,7 @@ export interface ClaimstonePortalAPIV1 {
   "/projects/{p}/activity": Activity;
   "/projects/{p}/flows/{flow_id}/exports": FlowExports;
   "/projects/{p}/integrity": Integrity;
+  "/projects/{p}/periodic-dossiers/{schedule_id}": PeriodicCumulativeDossier;
   "/projects/{p}/poll": Poll;
   "/projects/{p}/{sel}/claims/{claim_id}": Lineage;
   "/projects/{p}/{sel}/inbox": Inbox;
@@ -145,6 +146,34 @@ export interface Integrity {
     error: string | null;
     state: "OK" | "RegistryDrift";
   };
+}
+export interface PeriodicCumulativeDossier {
+  api_version: 1;
+  audit: {
+    [k: string]: unknown;
+  };
+  blockers: string[];
+  finalized_at: string | null;
+  finalized_dossier_id: string | null;
+  history_count: number;
+  human_decisions: {
+    question_id: string;
+    stale: boolean;
+    stored_profile_stale: boolean;
+    unavailable: string;
+    verdict: {
+      [k: string]: unknown;
+    } | null;
+  }[];
+  needs_finalization: boolean;
+  profiles: {
+    [k: string]: unknown;
+  }[];
+  schedule_id: string;
+  snapshot_sha256: string;
+  snapshot_stale: boolean;
+  state: "INSUFFICIENT_ACQUISITION" | "WAITING_FOR_SCHEDULE" | "WAITING_FOR_EVIDENCE" | "READY_FOR_HUMAN_READING";
+  verdict: null;
 }
 export interface Poll {
   api_version: 1;
