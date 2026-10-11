@@ -467,6 +467,16 @@ candidate acquisitions when matching scheduled search hits arrive.
 `copy-policy-status` shows permanent reservations; `copy-policy-revoke` stops
 future starts. Unknown hosts and classes remain outside the allowance.
 
+For the dated children, `scheduler auto-enable-series PROJECT SCHEDULE_ID
+--extract-model MODEL_A --review-model MODEL_B --max-total-local-calls N`
+records one local mandate with a shared lifetime cap. The schedule must
+already be authorized. `scheduler auto-worker PROJECT MANDATE_ID` revisits
+every named child and attempts the cumulative dossier; `auto-status` shows
+the remaining shared allowance. Revoking the schedule or disabling the
+mandate stops later passes. The authenticated control API exposes the same
+planning and approval actions under `/control/v1/p/{project}`; see
+[the control API contract](contracts/control_api.md).
+
 When the scheduled rounds and their readings finish, `scheduler
 periodic-dossier PROJECT SCHEDULE_ID` shows the live whole-corpus evidence
 handoff and its blockers without writing. `periodic-finalize PROJECT

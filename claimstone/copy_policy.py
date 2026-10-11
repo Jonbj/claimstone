@@ -152,7 +152,8 @@ def status(store: Store, policy_id: str) -> dict[str, Any]:
         return {'policy_id': policy_id, 'state': history[-1]['event'].upper(),
                 'policy': spec, 'reserved_candidates': len(reserved),
                 'remaining_candidates': spec['max_candidates'] - len(reserved),
-                'reserved_requests': sum(item['max_network_requests'] for item in reserved)}
+                'reserved_requests': sum(item['max_network_requests'] for item in reserved),
+                'events': history[1:]}
 
 
 def due(store: Store, policy_id: str) -> bool:

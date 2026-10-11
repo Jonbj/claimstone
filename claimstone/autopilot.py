@@ -15,19 +15,19 @@ import pwd
 import time
 from typing import Any
 
-from claimstone import operations, scheduler_preview, scope
+from claimstone import flows, operations, scheduler_preview, scope
 from claimstone.config import Project
 from claimstone.store import Store
 
 LEDGER = 'local_mandates.jsonl'
-VERSION = 2
+VERSION = 3
 
 
 def _rows(store: Store) -> dict[str, list[dict[str, Any]]]:
     grouped: dict[str, list[dict[str, Any]]] = {}
     for row in store.read(LEDGER):
         mandate_id = row.get('mandate_id')
-        if row.get('version') not in {1, VERSION} or not isinstance(mandate_id, str):
+        if row.get('version') not in {1, 2, VERSION} or not isinstance(mandate_id, str):
             raise operations.OperationError('invalid local mandate event')
         if row.get('event') == 'enabled':
             mandate = row.get('mandate')
@@ -55,7 +55,8 @@ def enable(project: Project, store: Store, flow_id: str, *, extract_model: str,
            acquire_hosts: list[str] | None = None,
            proposal_max_units: int = 10,
            proposal_max_requests_each: int = 3,
-           proposal_per_query: int = 25) -> dict[str, Any]:
+           proposal_per_query: int = 25,
+           identity: dict[str, Any] | None = None) -> dict[str, Any]:
     """Record local permission and optional bounded, unapproved batch proposals."""
     if (not extract_model or not review_model or extract_model == review_model or
             type(max_total_local_calls) is not int or max_total_local_calls < 0):
@@ -83,11 +84,13 @@ def enable(project: Project, store: Store, flow_id: str, *, extract_model: str,
         if preview['state'] == 'BLOCKED':
             raise operations.OperationError(f'flow preview blocked: {preview["blockers"]}')
         for rows in _rows(store).values():
-            if len(rows) == 1 and rows[0]['mandate']['flow_id'] == flow_id:
+            if (len(rows) == 1 and flow_id in
+                    rows[0]['mandate'].get('flow_ids', [rows[0]['mandate']['flow_id']])):
                 raise operations.OperationError('flow already has an active local mandate')
-        identity = {'uid': os.getuid(), 'login': pwd.getpwuid(os.getuid()).pw_name}
+        if identity is None:
+            identity = {'uid': os.getuid(), 'login': pwd.getpwuid(os.getuid()).pw_name}
         mandate = {
-            'version': VERSION, 'project': project.name, 'flow_id': flow_id,
+            'version': 2, 'project': project.name, 'flow_id': flow_id,
             'protocol_sha256': held['binding']['protocol_sha256'],
             'code_sha256': operations._code_identity(),
             'extract_model': extract_model, 'review_model': review_model,
@@ -103,23 +106,73 @@ def enable(project: Project, store: Store, flow_id: str, *, extract_model: str,
             'authorized_by': identity, 'created_ns': time.time_ns(),
         }
         mandate_id = operations._digest(mandate)
+        store.append(LEDGER, {'version': 2, 'mandate_id': mandate_id,
+                              'event': 'enabled', 'mandate': mandate,
+                              'at': dt.datetime.now(dt.timezone.utc).isoformat()})
+        return {'mandate_id': mandate_id, 'mandate': mandate}
+
+
+def enable_series(project: Project, store: Store, schedule_id: str, *,
+                  extract_model: str, review_model: str,
+                  max_total_local_calls: int,
+                  identity: dict[str, Any] | None = None) -> dict[str, Any]:
+    """One bounded local mandate for the exact child flows in a finite schedule."""
+    from claimstone import network_schedule
+    if (not extract_model or not review_model or extract_model == review_model or
+            type(max_total_local_calls) is not int or
+            not 0 <= max_total_local_calls <= 100_000):
+        raise operations.OperationError('series needs two distinct models and a finite local call cap')
+    with store.writer_lock():
+        schedule = network_schedule.status(store, schedule_id)
+        if schedule['state'] != 'AUTHORIZED' or schedule['plan']['project'] != project.name:
+            raise operations.OperationError('series requires an authorized schedule for this project')
+        entries = schedule['plan']['entries']
+        if any(entry['stage'] != 'discover' for entry in entries):
+            raise operations.OperationError('series requires discovery-only dated flows')
+        flow_ids = [entry['flow_id'] for entry in entries]
+        if len(flow_ids) != len(set(flow_ids)):
+            raise operations.OperationError('series repeats a child flow')
+        for flow_id in flow_ids:
+            held, selector = operations._flow(project, store, flow_id)
+            if selector.round is None or not held['binding'].get('derived_from'):
+                raise operations.OperationError('series contains a non-dated flow')
+        for rows in _rows(store).values():
+            if (len(rows) == 1 and set(flow_ids) & set(
+                    rows[0]['mandate'].get('flow_ids', [rows[0]['mandate']['flow_id']]))):
+                raise operations.OperationError('series flow already has an active local mandate')
+        if identity is None:
+            identity = {'uid': os.getuid(), 'login': pwd.getpwuid(os.getuid()).pw_name}
+        mandate = {
+            'version': VERSION, 'project': project.name,
+            'flow_id': flow_ids[0], 'flow_ids': flow_ids,
+            'schedule_id': schedule_id,
+            'protocol_sha256': flows.protocol_digest(project),
+            'code_sha256': operations._code_identity(),
+            'extract_model': extract_model, 'review_model': review_model,
+            'max_total_local_calls': max_total_local_calls,
+            'proposal_policy': {}, 'authorized_by': identity,
+            'created_ns': time.time_ns(),
+        }
+        mandate_id = operations._digest(mandate)
         store.append(LEDGER, {'version': VERSION, 'mandate_id': mandate_id,
                               'event': 'enabled', 'mandate': mandate,
                               'at': dt.datetime.now(dt.timezone.utc).isoformat()})
         return {'mandate_id': mandate_id, 'mandate': mandate}
 
 
-def disable(store: Store, mandate_id: str) -> dict[str, Any]:
+def disable(store: Store, mandate_id: str, *,
+            identity: dict[str, Any] | None = None) -> dict[str, Any]:
     with store.writer_lock():
         rows = _rows(store).get(mandate_id)
         if rows is None:
             raise operations.OperationError('unknown local mandate')
         if len(rows) == 2:
             return {'mandate_id': mandate_id, 'state': 'DISABLED'}
+        if identity is None:
+            identity = {'uid': os.getuid(),
+                        'login': pwd.getpwuid(os.getuid()).pw_name}
         store.append(LEDGER, {'version': rows[0]['version'], 'mandate_id': mandate_id,
-                              'event': 'disabled', 'by': {
-                                  'uid': os.getuid(),
-                                  'login': pwd.getpwuid(os.getuid()).pw_name},
+                              'event': 'disabled', 'by': identity,
                               'at': dt.datetime.now(dt.timezone.utc).isoformat()})
         return {'mandate_id': mandate_id, 'state': 'DISABLED'}
 
@@ -146,7 +199,7 @@ def status(store: Store, mandate_id: str) -> dict[str, Any]:
         pending = []
         events = operations._events(store)
         for batch in store.read(operations.BATCH_LEDGER):
-            if batch.get('flow_id') != mandate['flow_id']:
+            if batch.get('flow_id') not in mandate.get('flow_ids', [mandate['flow_id']]):
                 continue
             awaiting = [operation_id for operation_id in batch.get('operation_ids', [])
                         if operation_id in events and len(events[operation_id]) == 1]
@@ -157,6 +210,8 @@ def status(store: Store, mandate_id: str) -> dict[str, Any]:
         return {'mandate_id': mandate_id,
                 'state': 'ENABLED' if len(rows) == 1 else 'DISABLED',
                 'flow_id': mandate['flow_id'],
+                'flow_ids': mandate.get('flow_ids', [mandate['flow_id']]),
+                'disabled_by': rows[-1].get('by') if len(rows) == 2 else None,
                 'reserved_local_calls': reserved,
                 'remaining_local_calls': mandate['max_total_local_calls'] - reserved,
                 'pending_batches': pending,
@@ -206,6 +261,8 @@ def tick(project: Project, store: Store, mandate_id: str) -> dict[str, Any]:
         mandate = state['mandate']
         if mandate['project'] != project.name:
             raise operations.OperationError('local mandate belongs to another project')
+        if mandate['version'] == 3:
+            return _tick_series(project, store, mandate_id, state)
         held, _ = operations._flow(project, store, mandate['flow_id'])
         if (held['binding']['protocol_sha256'] != mandate['protocol_sha256'] or
                 operations._code_identity() != mandate['code_sha256']):
@@ -234,3 +291,50 @@ def tick(project: Project, store: Store, mandate_id: str) -> dict[str, Any]:
         return result | {'mandate_id': mandate_id,
                          'remaining_total_local_calls': status(store, mandate_id)['remaining_local_calls'],
                          'proposals': proposals, 'periodic_dossiers': dossiers}
+
+
+def _tick_series(project: Project, store: Store, mandate_id: str,
+                 state: dict[str, Any]) -> dict[str, Any]:
+    """Drive every named child flow under one lifetime reservation counter."""
+    from claimstone import copy_policy, network_schedule, periodic_dossier
+    mandate = state['mandate']
+    schedule = network_schedule.status(store, mandate['schedule_id'])
+    if schedule['state'] != 'AUTHORIZED' or schedule['plan']['project'] != project.name:
+        return state | {'stopped_reason': 'SCHEDULE_NOT_AUTHORIZED', 'steps': [],
+                        'periodic_dossiers': []}
+    if (mandate['protocol_sha256'] != flows.protocol_digest(project) or
+            mandate['code_sha256'] != operations._code_identity() or
+            mandate['flow_ids'] != [entry['flow_id'] for entry in schedule['plan']['entries']]):
+        raise operations.OperationError('series protocol, code or child flows changed; renew mandate')
+    identity = dict(mandate['authorized_by']) | {'mandate_id': mandate_id}
+    children = []
+    for flow_id in mandate['flow_ids']:
+        held, _ = operations._flow(project, store, flow_id)
+        if held['binding']['protocol_sha256'] != mandate['protocol_sha256']:
+            raise operations.OperationError('series child protocol changed; renew mandate')
+        copy_policy.materialize_due(project, store, flow_id=flow_id)
+        result = operations.drive_local(
+            project, store, flow_id,
+            extract_model=mandate['extract_model'],
+            review_model=mandate['review_model'],
+            max_local_calls=status(store, mandate_id)['remaining_local_calls'],
+            authorization_identity=identity,
+            authorization_label=mandate_id)
+        children.append(result)
+    before = periodic_dossier.preview(project, store, mandate['schedule_id'])
+    handoff = periodic_dossier.finalize(project, store, mandate['schedule_id'])
+    dossier = {'schedule_id': mandate['schedule_id'], 'state': handoff['state'],
+               'blockers': handoff['blockers'],
+               'dossier_id': handoff['finalized_dossier_id'],
+               'new': handoff['history_count'] > before['history_count'],
+               'snapshot_stale': handoff['snapshot_stale']}
+    return {'mandate_id': mandate_id, 'flow_ids': mandate['flow_ids'],
+            'children': children,
+            'steps': [step for child in children for step in child['steps']],
+            'network': {'processed': sum(child['network']['processed'] for child in children),
+                        'operations': [row for child in children
+                                       for row in child['network']['operations']]},
+            'local_calls': sum(child['local_calls'] for child in children),
+            'remaining_total_local_calls': status(store, mandate_id)['remaining_local_calls'],
+            'proposals': [], 'periodic_dossiers': [dossier],
+            'stopped_reason': 'HUMAN_READING_OR_MORE_EVIDENCE'}

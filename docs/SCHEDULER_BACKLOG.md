@@ -13,6 +13,14 @@ no operation. The worker and append-only execution contract are described in
 `docs/contracts/scheduler_operations.md`. The dated entries in `docs/HANDOFF.md`
 state which operations have actually been exercised.
 
+2026-10-11 (D128): the exact child flows of an authorized dated discovery
+schedule can share one bounded local mandate, and the control API now exposes
+planning, approvals, revocation and inspection for schedules, future-copy
+policies and mandates. Remaining production work includes a truthful worker
+heartbeat/lease, archive pagination, a packaged cumulative export and the
+provider/search-depth items below. The user interface must consume these
+server routes before representing any of these permissions as active.
+
 2026-10-09 retrieval calibration (D117): an authorized six-request L02 variant
 probe returned 100 OpenAlex, 100 Crossref and 6 arXiv rows. The 172 distinct
 candidate keys and 34 multi-provider keys are retrieval observations, not

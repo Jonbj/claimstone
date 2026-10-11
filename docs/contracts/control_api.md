@@ -410,3 +410,32 @@ As built (B12):
 - Today (B9) now reports `continues_without_you` per project: the authorized, running or
   interrupted operations.
 
+### Finite periodic scheduler controls (D128)
+
+All routes below have prefix `/control/v1/p/{p}` and use the ordinary session,
+Origin and CSRF checks. Planning appends frozen local plans only. Authorizing
+records the authenticated operator; the control server never executes a stage.
+
+| Route | Request body | Response |
+|---|---|---|
+| `GET /scheduler` | — | `{project, schedules, copy_policies, local_mandates}` |
+| `POST /periodic-plans` | `{source_flow_id, rounds, apis, allowed_hosts, max_units_each, max_requests_each, per_query}` | 201; dated child flows and frozen schedule plan |
+| `GET /schedules/{schedule_id}` | — | Frozen plan, state and events |
+| `POST /schedules/{schedule_id}/authorize` | `{plan_sha256, max_total_requests}` | 201/200; finite schedule authorization |
+| `POST /schedules/{schedule_id}/revoke` | `{plan_sha256}` | 200; stops later starts |
+| `POST /copy-policies` | `{schedule_id, allowed_hosts, source_classes, max_candidates, max_requests_each, not_before, expires_at}` | 201; frozen future-copy policy |
+| `GET /copy-policies/{policy_id}` | — | Policy, reservations, state and events |
+| `POST /copy-policies/{policy_id}/authorize` | `{policy_sha256, max_candidates, max_requests_each, max_total_requests}` | 201/200; contingent copy permission |
+| `POST /copy-policies/{policy_id}/revoke` | `{policy_sha256}` | 200; stops later copy starts |
+| `GET /local-mandates/{mandate_id}` | — | Mandate, child IDs, reservations and state |
+| `POST /local-mandates/series` | `{schedule_id, flow_ids, extract_model, review_model, max_total_local_calls}` | 201; one shared lifetime cap over the exact child flows |
+| `POST /flows/{flow_id}/local-mandates` | `{flow_id, extract_model, review_model, max_total_local_calls}` | 201; one-flow local mandate |
+| `POST /local-mandates/{mandate_id}/disable` | `{mandate_id}` | 200; stops later local passes |
+
+All request bodies require exactly the shown keys. The client must repeat the
+hash and limits from GET before authorization; mismatch is 409 `PLAN_DIFFERS`.
+Unknown IDs are 404. The engine's policy refusal is 409 `REFUSED`. Schedule
+approval alone covers only its frozen discovery operations. Future copies
+require the separate policy and local extraction/review requires the separate
+mandate. The worker still uses the same ledger gates as CLI authorizations.
+

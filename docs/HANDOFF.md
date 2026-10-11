@@ -9,6 +9,18 @@ what order.
 
 ## Where the work stands
 
+2026-10-11 finite series mandate and portal controls (D128): one version 3
+local mandate can cover the exact child flows in an approved dated discovery
+schedule, sharing a lifetime model-call cap. Its worker advances each child,
+uses separately authorized network and copy permissions, and attempts the
+cumulative dossier. The authenticated control server now plans, displays,
+authorizes and revokes schedules/copy policies and enables/disables local
+mandates. A local integration test exercised the full approval and revocation
+sequence without any external request or real-project mandate. Frontend pages
+have not been modified; the contract and wiring guide are in
+`docs/design/portal/SCHEDULER_FRONTEND_HANDOFF.md`. Worker heartbeat,
+pagination for large archives and a packaged cumulative export remain open.
+
 2026-10-10 cumulative periodic handoff (D126): `scheduler periodic-dossier`
 and the read-only API now show full-corpus evidence profiles, dated-round and
 cumulative admission, unfinished obligations and any human signatures.

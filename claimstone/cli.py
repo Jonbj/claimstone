@@ -1073,6 +1073,12 @@ def _scheduler_operation(args: argparse.Namespace) -> int:
                                       proposal_max_units=args.proposal_max_units,
                                       proposal_max_requests_each=args.proposal_max_requests_each,
                                       proposal_per_query=args.proposal_per_query)
+        elif args.scheduler_command == 'auto-enable-series':
+            result = autopilot.enable_series(
+                project, store, args.schedule_id,
+                extract_model=args.extract_model,
+                review_model=args.review_model,
+                max_total_local_calls=args.max_total_local_calls)
         elif args.scheduler_command == 'auto-disable':
             result = autopilot.disable(store, args.mandate_id)
         elif args.scheduler_command == 'auto-status':
@@ -1699,6 +1705,16 @@ def build_parser() -> argparse.ArgumentParser:
     scheduler_auto_enable.add_argument('--proposal-max-requests-each', type=int, default=3)
     scheduler_auto_enable.add_argument('--proposal-per-query', type=int, default=25)
     scheduler_auto_enable.set_defaults(func=_scheduler_operation)
+    scheduler_auto_series = scheduler_sub.add_parser(
+        'auto-enable-series',
+        help='authorize one lifetime local-call cap across exact dated child flows')
+    scheduler_auto_series.add_argument('project')
+    scheduler_auto_series.add_argument('schedule_id')
+    scheduler_auto_series.add_argument('--store', default='store')
+    scheduler_auto_series.add_argument('--extract-model', required=True)
+    scheduler_auto_series.add_argument('--review-model', required=True)
+    scheduler_auto_series.add_argument('--max-total-local-calls', type=int, required=True)
+    scheduler_auto_series.set_defaults(func=_scheduler_operation)
     for action in ('auto-disable', 'auto-status', 'auto-once', 'auto-worker'):
         command = scheduler_sub.add_parser(action)
         command.add_argument('project')

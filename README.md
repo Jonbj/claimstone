@@ -83,7 +83,10 @@ batches. An operator can approve exact batches through the authenticated
 control service or approve a finite, revocable schedule of already frozen
 batches. A finite schedule can prepare dated research rounds; a separately
 approved copy policy lets the worker acquire matching future candidates on
-exact hosts under lifetime caps. See [the scheduler contract](docs/contracts/scheduler_operations.md)
+exact hosts under lifetime caps. One series mandate can cover the exact dated
+child flows with a shared lifetime cap on local model calls. The authenticated
+control service can plan and approve these three permissions separately.
+See [the scheduler contract](docs/contracts/scheduler_operations.md)
 for current limits.
 For a periodic schedule, `scheduler periodic-dossier` shows the live cumulative
 evidence handoff. `periodic-finalize` persists whole-corpus profiles and an

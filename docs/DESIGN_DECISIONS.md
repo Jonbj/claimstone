@@ -4824,3 +4824,28 @@ the operator on 2026-10-10:
   different protocol.
 - Not built here, by design: flow binding, opening a round, any search, copy or model call (stage 2).
 
+## D128 — One finite local mandate across dated children, with portal controls (2026-10-11)
+
+D123–D126 established finite discovery windows, a separate contingent copy
+policy and a cumulative dossier. The remaining repeated approval was local
+reading: each future child needed its own mandate, even though D124 freezes
+all child IDs before the schedule is approved. Version 3 of
+`local_mandates.jsonl` binds one mandate to that exact ordered list, the
+schedule ID, current protocol/code digests, two distinct local models and one
+lifetime model-call ceiling. Every child uses the same `mandate_id` in its
+authorized model-call reservations. A revoked schedule stops the series; a
+disabled mandate stops it independently. This does not enlarge a network
+grant or permit a verdict.
+
+The authenticated control service now exposes a project scheduler index and
+the planning, inspection, authorization and revocation actions for finite
+schedules, copy policies and local mandates. The authorization POSTs echo the
+exact hash and caps displayed by GET. The control process only records the
+decision; the worker uses the existing due-window and ledger gates. A local
+HTTP integration test logged in, planned two dated children, rejected a
+changed limit, approved the three separate permissions, listed them and
+revoked them; it recorded zero external requests. A worker fixture with a
+one-call cap across two children spent one reservation in total and did not
+reset the cap on the next pass. All historical version 1/2 mandates remain
+readable. No real project was granted a mandate or new network campaign.
+

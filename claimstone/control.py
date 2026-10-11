@@ -33,9 +33,10 @@ from typing import Any, Callable
 import urllib.parse
 from urllib.parse import unquote, urlparse
 
-from claimstone import (admin, decisions, drafts, export, flows, intake, new_project_service,
-                        operations, operations_view, operators, portal_state, scope, synthesize,
-                        today)
+from claimstone import (admin, autopilot, copy_policy, decisions, drafts, export, flows,
+                        intake, network_schedule, new_project_service, operations,
+                        operations_view, operators, periodic, portal_state, scope,
+                        synthesize, today)
 from claimstone.config import ConfigError, RegistryDrift
 from claimstone.store import LedgerCorrupt, Store
 from claimstone.transport import LOOPBACK_HOSTS, BaseHandler
@@ -271,6 +272,29 @@ ROUTES: tuple[Route, ...] = (
                    "pause"), "_operation_not_built"),
     Route("POST", ("p", "{project}", "flows", "{flow_id}", "operations", "{operation_id}",
                    "resume"), "_operation_not_built"),
+    # Finite scheduler permissions and one shared local cap for dated child flows.
+    Route("GET", ("p", "{project}", "scheduler"), "_scheduler_index"),
+    Route("POST", ("p", "{project}", "periodic-plans"), "_periodic_plan"),
+    Route("GET", ("p", "{project}", "schedules", "{schedule_id}"), "_schedule_read"),
+    Route("POST", ("p", "{project}", "schedules", "{schedule_id}", "authorize"),
+          "_schedule_authorize"),
+    Route("POST", ("p", "{project}", "schedules", "{schedule_id}", "revoke"),
+          "_schedule_revoke"),
+    Route("POST", ("p", "{project}", "copy-policies"), "_copy_policy_plan"),
+    Route("GET", ("p", "{project}", "copy-policies", "{policy_id}"),
+          "_copy_policy_read"),
+    Route("POST", ("p", "{project}", "copy-policies", "{policy_id}", "authorize"),
+          "_copy_policy_authorize"),
+    Route("POST", ("p", "{project}", "copy-policies", "{policy_id}", "revoke"),
+          "_copy_policy_revoke"),
+    Route("GET", ("p", "{project}", "local-mandates", "{mandate_id}"),
+          "_local_mandate_read"),
+    Route("POST", ("p", "{project}", "local-mandates", "series"),
+          "_local_mandate_series"),
+    Route("POST", ("p", "{project}", "flows", "{flow_id}", "local-mandates"),
+          "_local_mandate_single"),
+    Route("POST", ("p", "{project}", "local-mandates", "{mandate_id}", "disable"),
+          "_local_mandate_disable"),
     # New project: drafts, preview and creation. Nothing here starts a stage or any request; the
     # only write outside `store/` is `project_builder.create_project`, which creates one directory.
     Route("POST", ("new",), "_new_start"),
@@ -1125,7 +1149,297 @@ def _operation_not_built(self: _Handler, params: dict[str, str], query: Any,
         "yet; appending one would make the ledger invalid. They belong to the scheduler track")
 
 
+def _scheduler_context(self: _Handler, params: dict[str, str]) -> tuple[Any, Store]:
+    project, store, _root = self._loaded(params['project'])
+    return project, store
+
+
+def _operator_identity(self: _Handler) -> dict[str, str]:
+    session = self._require_session()
+    return {'signer_auth': 'portal-session', 'operator': session.operator_id,
+            'name': session.operator_name}
+
+
+def _scheduler_refusal(exc: operations.OperationError) -> ControlError:
+    return ControlError(409, 'REFUSED', str(exc))
+
+
+def _required_body(self: _Handler, body: dict[str, Any], fields: set[str]) -> None:
+    self._only_keys(body, frozenset(fields))
+    if set(body) != fields:
+        raise ControlError(422, 'VALIDATION',
+                           'required fields: ' + ', '.join(sorted(fields)))
+
+
+def _strings(value: Any, name: str) -> list[str]:
+    if (not isinstance(value, list) or not value or
+            any(not isinstance(item, str) or not item for item in value)):
+        raise ControlError(422, 'VALIDATION', f'{name} must be a nonempty list of strings')
+    return value
+
+
+def _integer(value: Any, name: str) -> int:
+    if type(value) is not int or value < 1:
+        raise ControlError(422, 'VALIDATION', f'{name} must be a positive integer')
+    return value
+
+
+def _scheduler_index(self: _Handler, params: dict[str, str], query: Any,
+                     body: dict[str, Any]) -> tuple[Any, int]:
+    project, store = _scheduler_context(self, params)
+    try:
+        schedules = [network_schedule.status(store, key)
+                     for key in sorted(network_schedule._read(store))]
+        policies = [copy_policy.status(store, key)
+                    for key in sorted(copy_policy._read(store))]
+        mandates = [autopilot.status(store, key)
+                    for key in sorted(autopilot._rows(store))]
+    except operations.OperationError as exc:
+        raise _scheduler_refusal(exc) from None
+    return {'project': project.name, 'schedules': schedules,
+            'copy_policies': policies, 'local_mandates': mandates}, 200
+
+
+def _periodic_plan(self: _Handler, params: dict[str, str], query: Any,
+                   body: dict[str, Any]) -> tuple[Any, int]:
+    fields = {'source_flow_id', 'rounds', 'apis', 'allowed_hosts',
+              'max_units_each', 'max_requests_each', 'per_query'}
+    _required_body(self, body, fields)
+    project, store = _scheduler_context(self, params)
+    if (not isinstance(body['source_flow_id'], str) or
+            not isinstance(body['rounds'], list) or
+            any(not isinstance(row, dict) for row in body['rounds'])):
+        raise ControlError(422, 'VALIDATION', 'source flow and dated rounds are required')
+    apis = _strings(body['apis'], 'apis')
+    hosts = _strings(body['allowed_hosts'], 'allowed_hosts')
+    try:
+        result = periodic.plan(
+            project, store, body['source_flow_id'], body['rounds'],
+            apis=apis, allowed_hosts=hosts,
+            max_units_each=_integer(body['max_units_each'], 'max_units_each'),
+            max_requests_each=_integer(body['max_requests_each'], 'max_requests_each'),
+            per_query=_integer(body['per_query'], 'per_query'))
+    except operations.OperationError as exc:
+        raise _scheduler_refusal(exc) from None
+    return result, 201
+
+
+def _schedule_read(self: _Handler, params: dict[str, str], query: Any,
+                   body: dict[str, Any]) -> tuple[Any, int]:
+    project, store = _scheduler_context(self, params)
+    try:
+        result = network_schedule.status(store, params['schedule_id'])
+    except operations.OperationError as exc:
+        if str(exc) == 'unknown schedule':
+            raise portal_state.NotFound('no such schedule') from None
+        raise _scheduler_refusal(exc) from None
+    if result['plan']['project'] != project.name:
+        raise portal_state.NotFound('no such schedule in this project')
+    return result, 200
+
+
+def _schedule_authorize(self: _Handler, params: dict[str, str], query: Any,
+                        body: dict[str, Any]) -> tuple[Any, int]:
+    _required_body(self, body, {'plan_sha256', 'max_total_requests'})
+    shown, _ = _schedule_read(self, params, query, {})
+    if (type(body['max_total_requests']) is not int or
+            body['plan_sha256'] != shown['schedule_id'] or
+            body['max_total_requests'] != shown['plan']['max_total_requests']):
+        raise ControlError(409, 'PLAN_DIFFERS', 'schedule hash or request ceiling changed')
+    _project, store = _scheduler_context(self, params)
+    try:
+        result = network_schedule.authorize(store, shown['schedule_id'],
+                                            identity=_operator_identity(self))
+    except operations.OperationError as exc:
+        raise _scheduler_refusal(exc) from None
+    return result, 201 if shown['state'] == 'PLANNED' else 200
+
+
+def _schedule_revoke(self: _Handler, params: dict[str, str], query: Any,
+                     body: dict[str, Any]) -> tuple[Any, int]:
+    _required_body(self, body, {'plan_sha256'})
+    shown, _ = _schedule_read(self, params, query, {})
+    if body['plan_sha256'] != shown['schedule_id']:
+        raise ControlError(409, 'PLAN_DIFFERS', 'schedule hash changed')
+    _project, store = _scheduler_context(self, params)
+    try:
+        result = network_schedule.revoke(store, shown['schedule_id'],
+                                         identity=_operator_identity(self))
+    except operations.OperationError as exc:
+        raise _scheduler_refusal(exc) from None
+    return result, 200
+
+
+def _copy_policy_plan(self: _Handler, params: dict[str, str], query: Any,
+                      body: dict[str, Any]) -> tuple[Any, int]:
+    fields = {'schedule_id', 'allowed_hosts', 'source_classes', 'max_candidates',
+              'max_requests_each', 'not_before', 'expires_at'}
+    _required_body(self, body, fields)
+    project, store = _scheduler_context(self, params)
+    if any(not isinstance(body[name], str) for name in
+           ('schedule_id', 'not_before', 'expires_at')):
+        raise ControlError(422, 'VALIDATION', 'schedule ID and UTC window are required')
+    try:
+        result = copy_policy.plan(
+            project, store, body['schedule_id'],
+            allowed_hosts=_strings(body['allowed_hosts'], 'allowed_hosts'),
+            source_classes=_strings(body['source_classes'], 'source_classes'),
+            max_candidates=_integer(body['max_candidates'], 'max_candidates'),
+            max_requests_each=_integer(body['max_requests_each'], 'max_requests_each'),
+            not_before=body['not_before'], expires_at=body['expires_at'])
+    except operations.OperationError as exc:
+        raise _scheduler_refusal(exc) from None
+    return result, 201
+
+
+def _copy_policy_read(self: _Handler, params: dict[str, str], query: Any,
+                      body: dict[str, Any]) -> tuple[Any, int]:
+    project, store = _scheduler_context(self, params)
+    try:
+        result = copy_policy.status(store, params['policy_id'])
+    except operations.OperationError as exc:
+        if str(exc) == 'unknown copy policy':
+            raise portal_state.NotFound('no such copy policy') from None
+        raise _scheduler_refusal(exc) from None
+    if result['policy']['project'] != project.name:
+        raise portal_state.NotFound('no such copy policy in this project')
+    return result, 200
+
+
+def _copy_policy_authorize(self: _Handler, params: dict[str, str], query: Any,
+                           body: dict[str, Any]) -> tuple[Any, int]:
+    fields = {'policy_sha256', 'max_candidates', 'max_requests_each',
+              'max_total_requests'}
+    _required_body(self, body, fields)
+    shown, _ = _copy_policy_read(self, params, query, {})
+    policy = shown['policy']
+    if (body['policy_sha256'] != shown['policy_id'] or
+            any(type(body[name]) is not int or body[name] != policy[name] for name in
+                ('max_candidates', 'max_requests_each', 'max_total_requests'))):
+        raise ControlError(409, 'PLAN_DIFFERS', 'copy policy hash or limits changed')
+    _project, store = _scheduler_context(self, params)
+    try:
+        result = copy_policy.authorize(store, shown['policy_id'],
+                                       identity=_operator_identity(self))
+    except operations.OperationError as exc:
+        raise _scheduler_refusal(exc) from None
+    return result, 201 if shown['state'] == 'PLANNED' else 200
+
+
+def _copy_policy_revoke(self: _Handler, params: dict[str, str], query: Any,
+                        body: dict[str, Any]) -> tuple[Any, int]:
+    _required_body(self, body, {'policy_sha256'})
+    shown, _ = _copy_policy_read(self, params, query, {})
+    if body['policy_sha256'] != shown['policy_id']:
+        raise ControlError(409, 'PLAN_DIFFERS', 'copy policy hash changed')
+    _project, store = _scheduler_context(self, params)
+    try:
+        result = copy_policy.revoke(store, shown['policy_id'],
+                                    identity=_operator_identity(self))
+    except operations.OperationError as exc:
+        raise _scheduler_refusal(exc) from None
+    return result, 200
+
+
+def _local_mandate_read(self: _Handler, params: dict[str, str], query: Any,
+                        body: dict[str, Any]) -> tuple[Any, int]:
+    project, store = _scheduler_context(self, params)
+    try:
+        result = autopilot.status(store, params['mandate_id'])
+    except operations.OperationError as exc:
+        if str(exc) == 'unknown local mandate':
+            raise portal_state.NotFound('no such local mandate') from None
+        raise _scheduler_refusal(exc) from None
+    if result['mandate']['project'] != project.name:
+        raise portal_state.NotFound('no such local mandate in this project')
+    return result, 200
+
+
+def _local_mandate_series(self: _Handler, params: dict[str, str], query: Any,
+                          body: dict[str, Any]) -> tuple[Any, int]:
+    fields = {'schedule_id', 'flow_ids', 'extract_model', 'review_model',
+              'max_total_local_calls'}
+    _required_body(self, body, fields)
+    project, store = _scheduler_context(self, params)
+    if not isinstance(body['schedule_id'], str):
+        raise ControlError(422, 'VALIDATION', 'schedule_id is required')
+    try:
+        shown = network_schedule.status(store, body['schedule_id'])
+    except operations.OperationError as exc:
+        if str(exc) == 'unknown schedule':
+            raise portal_state.NotFound('no such schedule') from None
+        raise _scheduler_refusal(exc) from None
+    if (shown['plan']['project'] != project.name or
+            body['flow_ids'] != [entry['flow_id'] for entry in shown['plan']['entries']]):
+        raise ControlError(409, 'PLAN_DIFFERS', 'schedule child flows changed')
+    if (not isinstance(body['extract_model'], str) or
+            not isinstance(body['review_model'], str) or
+            type(body['max_total_local_calls']) is not int):
+        raise ControlError(422, 'VALIDATION', 'models and call cap are required')
+    try:
+        result = autopilot.enable_series(
+            project, store, body['schedule_id'],
+            extract_model=body['extract_model'],
+            review_model=body['review_model'],
+            max_total_local_calls=body['max_total_local_calls'],
+            identity=_operator_identity(self))
+    except operations.OperationError as exc:
+        raise _scheduler_refusal(exc) from None
+    return result, 201
+
+
+def _local_mandate_single(self: _Handler, params: dict[str, str], query: Any,
+                          body: dict[str, Any]) -> tuple[Any, int]:
+    fields = {'flow_id', 'extract_model', 'review_model', 'max_total_local_calls'}
+    _required_body(self, body, fields)
+    project, store, flow, _selector = _flow_only(self, params)
+    if body['flow_id'] != flow['flow_id']:
+        raise ControlError(409, 'PLAN_DIFFERS', 'flow ID changed')
+    if (not isinstance(body['extract_model'], str) or
+            not isinstance(body['review_model'], str) or
+            type(body['max_total_local_calls']) is not int):
+        raise ControlError(422, 'VALIDATION', 'models and call cap are required')
+    try:
+        result = autopilot.enable(
+            project, store, flow['flow_id'],
+            extract_model=body['extract_model'],
+            review_model=body['review_model'],
+            max_total_local_calls=body['max_total_local_calls'],
+            identity=_operator_identity(self))
+    except operations.OperationError as exc:
+        raise _scheduler_refusal(exc) from None
+    return result, 201
+
+
+def _local_mandate_disable(self: _Handler, params: dict[str, str], query: Any,
+                           body: dict[str, Any]) -> tuple[Any, int]:
+    _required_body(self, body, {'mandate_id'})
+    shown, _ = _local_mandate_read(self, params, query, {})
+    if body['mandate_id'] != shown['mandate_id']:
+        raise ControlError(409, 'PLAN_DIFFERS', 'local mandate ID changed')
+    _project, store = _scheduler_context(self, params)
+    try:
+        result = autopilot.disable(store, shown['mandate_id'],
+                                   identity=_operator_identity(self))
+    except operations.OperationError as exc:
+        raise _scheduler_refusal(exc) from None
+    return result, 200
+
+
 for _name, _function in (("_operations_list", _operations_list),
+                         ("_scheduler_index", _scheduler_index),
+                         ("_periodic_plan", _periodic_plan),
+                         ("_schedule_read", _schedule_read),
+                         ("_schedule_authorize", _schedule_authorize),
+                         ("_schedule_revoke", _schedule_revoke),
+                         ("_copy_policy_plan", _copy_policy_plan),
+                         ("_copy_policy_read", _copy_policy_read),
+                         ("_copy_policy_authorize", _copy_policy_authorize),
+                         ("_copy_policy_revoke", _copy_policy_revoke),
+                         ("_local_mandate_read", _local_mandate_read),
+                         ("_local_mandate_series", _local_mandate_series),
+                         ("_local_mandate_single", _local_mandate_single),
+                         ("_local_mandate_disable", _local_mandate_disable),
                          ("_batches_list", _batches_list),
                          ("_batch_authorize", _batch_authorize),
                          ("_operation_authorize", _operation_authorize),

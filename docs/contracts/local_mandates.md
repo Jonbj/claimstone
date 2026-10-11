@@ -37,3 +37,18 @@ an authorization from another mandate or a manual pass. Sum
 plans to obtain the consumed allowance, including interrupted and failed
 plans. The project writer lock spans checking this sum, planning,
 authorization and the local drive. No worker restart can reset the cap.
+
+Version 3 is a **series mandate**. It stores `schedule_id` and the exact ordered
+`flow_ids` from an authorized, discovery-only, dated schedule. Its `flow_id`
+is the first child for old readers, but its lifetime `max_total_local_calls`
+applies to **all** children together. The mandate binds the current protocol
+and code digests, distinct extraction/review model names, and the approving
+identity. A child cannot have a second active mandate. The worker checks the
+schedule, child list and digests on every pass, uses the remaining shared
+reservation allowance, then attempts the cumulative periodic dossier.
+Revoking the schedule stops the series pass; disabling the mandate stops it
+independently. It does not authorize a network request, purchase, paid model
+call or verdict. `auto-status` returns `flow_ids`, `reserved_local_calls`,
+`remaining_local_calls` and `disabled_by` when set. The CLI command is
+`scheduler auto-enable-series PROJECT SCHEDULE_ID --extract-model A
+--review-model B --max-total-local-calls N`.
