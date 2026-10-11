@@ -4796,3 +4796,31 @@ passes an unfinished schedule with a final-looking profile and confirms no
 profile or dossier is written, then changes evidence and confirms a second
 snapshot. No verdict is generated, no real research request was made, and
 this does not create local mandates for future child flows automatically.
+
+## D127 — A project can be created from the portal, as a draft and then one atomic write (2026-10-10)
+
+Projects were three hand-written files. The wizard lets an authenticated operator build a **draft**,
+step by step, and create a frozen project (registry v1, floor v1, both dated) on confirmation. Decided with
+the operator on 2026-10-10:
+
+- A step save is a draft only. Nothing exists under `projects/` until the final confirmation, so a half
+  project is impossible and the registry is never written before it is frozen (invariant 5).
+- The control server creates the project through `project_builder.create_project`, which creates a new
+  directory and never opens an existing project's file for writing. Measured by
+  `tests/test_control_new_project.py::test_no_route_changes_an_existing_project`, which hashes every file of
+  an existing project before and after a full wizard run. The `control` service's `projects/` mount changes
+  from read-only to read-write for this reason alone. A separate builder service and a host-side command
+  were weighed and set aside (one more service for a once-per-project write; the last step leaving the
+  interface).
+- Conventions of a field (source classes, notation, excluded hosts) are **data** in `templates/project/`, so
+  the engine stays free of domain knowledge (invariant 4). The staging directory is `projects/.incoming-*`;
+  `discover_projects` ignores names starting with a dot.
+- The wizard refuses nothing a loader accepts except an empty question `kind`, and judges no wording:
+  a vague question is not detected, because that would be a semantic judgement the engine does not make.
+- A description is kept in `topics.yaml` under a key the loader does not read; the protocol digest ignores
+  it (`test_a_description_does_not_change_the_protocol_digest`).
+- Creation is bound to what was reviewed: the create request carries the `protocol_sha256` the review
+  page displayed, and the server refuses with 409 `PREVIEW_CHANGED` when the draft now renders to a
+  different protocol.
+- Not built here, by design: flow binding, opening a round, any search, copy or model call (stage 2).
+

@@ -1,0 +1,181 @@
+{
+  "shell": {
+    "newProject": "+ Nuovo progetto",
+    "language": "Lingua"
+  },
+  "wizard": {
+    "title": "Nuovo progetto",
+    "lede": "Descrivi un argomento, scrivi le domande, dichiara le fonti e la soglia. Claimstone controlla ogni passo e conserva una bozza. Mentre compili questi passi non viene avviato nulla, e nemmeno la creazione del progetto avvia qualcosa: la ricerca comincia solo in una fase successiva, dopo che l'avrai autorizzata.",
+    "signIn": "Accedi per creare un progetto.",
+    "signInLink": "Accedi",
+    "advancedActive": "Sono attive modifiche fatte nell'editor avanzato: ciò che cambi nei passi da 1 a 3 potrebbe non comparire nei file generati. Ripristina i file nel passo 4 per generarli di nuovo.",
+    "advancedLink": "Vai al passo 4",
+    "lastFailure": "L'ultimo tentativo di creare il progetto è stato rifiutato:",
+    "expired": {
+      "text": "La sessione è scaduta. Accedi in un'altra scheda, poi premi il pulsante qui sotto e salva di nuovo. Quello che hai scritto è ancora qui.",
+      "signIn": "Accedi in un'altra scheda",
+      "recheck": "Ho effettuato l'accesso: controlla di nuovo"
+    },
+    "loading": "Caricamento della bozza…",
+    "saveContinue": "Salva e continua",
+    "saving": "Salvataggio in corso…",
+    "draftNote": "Il salvataggio conserva una bozza · non viene avviato nulla, nemmeno alla creazione del progetto",
+    "problems": "Correggi questi punti prima di continuare:",
+    "reload": "Ricarica la bozza",
+    "discarded": "Questa bozza è stata scartata. Non è stato creato nulla.",
+    "backToDrafts": "Torna alle tue bozze",
+    "rail": {
+      "label": "Passi",
+      "done": "completato",
+      "current": "attuale"
+    },
+    "steps": {
+      "1": { "name": "Argomento", "hint": "cosa ti serve sapere, e perché" },
+      "2": { "name": "Domande", "hint": "ogni verdetto sulla letteratura lo firma una persona; le domande operational non ne ricevono" },
+      "3": { "name": "Fonti e rigore", "hint": "da dove possono venire le prove, e la soglia" },
+      "4": { "name": "Riepilogo e creazione", "hint": "congela il protocollo" }
+    },
+    "explain": {
+      "title": "Cosa farà Claimstone",
+      "afterSave": "Dopo il salvataggio di questo passo",
+      "atCreation": "Quando crei il progetto",
+      "afterStart": "Dopo l'avvio della ricerca (prossima fase del portale)"
+    },
+    "drafts": {
+      "title": "Le tue bozze",
+      "empty": "Non hai ancora nessuna bozza.",
+      "start": "Inizia un nuovo progetto",
+      "resume": "Continua",
+      "discard": "Scarta",
+      "discardSure": "Vuoi scartare questa bozza?",
+      "discardYes": "Sì, scarta",
+      "discardNo": "No, tienila",
+      "untitled": "Bozza senza titolo",
+      "stepsSaved": "Passi salvati: {n} su 3",
+      "openProject": "Apri il progetto",
+      "status": {
+        "open": "aperta",
+        "discarded": "scartata",
+        "created": "creata"
+      }
+    },
+    "kind": {
+      "effect": "effect — giudicata sui risultati che la mettono alla prova: stime, incertezza, orizzonte temporale, campione, disegno dello studio.",
+      "heterogeneity": "heterogeneity — giudicata sul contrasto fra sottogruppi, con la sua incertezza, e tenendo conto se l'analisi per sottogruppi era stata specificata in anticipo.",
+      "method": "method — giudicata su quali fonti sostengono la pratica e quali ne dimostrano il fallimento, tenute separate, ciascuna con il ruolo della sua fonte.",
+      "premise": "premise — giudicata su un'affermazione esplicita della premessa, o su una sua contraddizione.",
+      "operational": "operational — viene registrata nel progetto; non riceve alcun verdetto basato sulla letteratura e non compare mai tra quelle in attesa della tua firma."
+    },
+    "step1": {
+      "title": "1 · L'argomento",
+      "intro": "Dai un nome al progetto ed elenca cosa cercare. I termini sono ampi di proposito: servono a trovare pubblicazioni, non a definire che cosa se ne conclude.",
+      "name": "Nome del progetto",
+      "nameHelp": "Da 2 a 63 lettere minuscole, cifre o trattini; il primo carattere deve essere una lettera o una cifra. Diventa il nome della cartella e non si può cambiare.",
+      "description": "Nota sul progetto (facoltativa)",
+      "descriptionHelp": "Una nota libera per chi leggerà il progetto: cosa rientra nell'ambito e cosa no, in poche frasi. Non sono le domande a cui rispondere: quelle le scrivi al passo 2. Nessuna fase dell'analisi legge questa nota.",
+      "topics": "Argomenti",
+      "topicLabel": "Argomento",
+      "topicLegend": "Argomento {n}",
+      "terms": "Termini di ricerca, uno per riga",
+      "termsHelp": "Ogni termine viene cercato così com'è scritto.",
+      "addTopic": "Aggiungi un argomento",
+      "removeTopic": "Rimuovi questo argomento",
+      "afterSave": "Claimstone controlla il nome e gli argomenti e conserva una bozza. Non viene creato né avviato nulla.",
+      "atCreation": "Gli argomenti e i termini vengono scritti in topics.yaml. Più avanti, ogni termine diventa una ricerca su ciascun indice che sceglierai quando autorizzerai un piano. Finora — argomenti: {topics}, termini: {terms}, ricerche per indice: {searches}, con tutti e tre gli indici: {searchesAll}.",
+      "afterStart": "I termini trovano le pubblicazioni; non definiscono che cosa se ne conclude. Un argomento più ampio trova più candidati, e ogni candidato trovato si aggiunge al denominatore su cui si misura la soglia di acquisizione."
+    },
+    "step2": {
+      "title": "2 · Le domande",
+      "intro": "Questo passo è l'elenco delle domande a cui Claimstone deve rispondere, una per riga; ricevono i numeri Q01, Q02… Scrivi ogni domanda sulla letteratura come un'affermazione che la letteratura può sostenere o contraddire. Claimstone non giudica la tua formulazione: controlla soltanto che la domanda non sia vuota e abbia un tipo.",
+      "question": "Domanda",
+      "kind": "Tipo",
+      "addQuestion": "Aggiungi una domanda",
+      "removeQuestion": "Rimuovi questa domanda",
+      "questionLegend": "Domanda {n}",
+      "questionLegendId": "Domanda {id}",
+      "afterSave": "Claimstone controlla ogni domanda e conserva una bozza. Le domande non sono ancora congelate: puoi modificarle.",
+      "atCreation": "Il registro delle domande viene congelato alla versione 1 alla data (UTC) in cui crei il progetto. Domande: {total} (sulla letteratura: {literature}, operational: {operational}). Le domande sulla letteratura possono ricevere un verdetto, e solo una persona lo firma; quelle operational restano nel progetto ma non ne ricevono mai. Cambiare il registro più avanti richiede una nuova versione datata, mai una modifica silenziosa.",
+      "afterStart": "Ogni tipo è giudicato con una regola propria. Claimstone legge le fonti con queste domande in mente ed estrae affermazioni, ciascuna legata a una citazione letterale, verificata automaticamente carattere per carattere. Se un ciclo di ricerca supera la soglia, ogni domanda sulla letteratura riceve un profilo delle evidenze; una persona lo legge e firma uno di cinque stati: SUPPORTED, CONTRADICTED, CONTESTED_IN_LITERATURE, UNANSWERED_IN_LITERATURE o NEVER_ASKED. «Non abbiamo trovato nulla» non viene mai riportato come «nessun effetto»."
+    },
+    "step3": {
+      "title": "3 · Fonti e rigore",
+      "intro": "Dichiara quali tipi di fonte possono contare e la soglia che un ciclo di ricerca deve superare prima di poter concludere qualcosa. Entrambi si dichiarano ora e vengono registrati alla data (UTC) in cui crei il progetto.",
+      "classes": "Classi di fonte",
+      "selectAll": "Seleziona tutte le classi di fonte",
+      "technical": "Impostazioni tecniche (facoltative)",
+      "technicalHelp": "I valori predefiniti vanno bene per la maggior parte dei progetti: la notazione dei valori e gli host in più da non contattare.",
+      "classesHelp": "Ogni fonte è etichettata con la sua classe, e le classi non vengono mai mescolate senza registrarlo. Scegline almeno una.",
+      "floor": "Soglia di acquisizione",
+      "floorHelp": "La quota delle pubblicazioni trovate che deve essere ottenuta come copie confermate. Maggiore di 0 e al massimo 1, per esempio 0,80 = 80%.",
+      "rationale": "Perché questa soglia",
+      "rationaleHelp": "Almeno 20 caratteri. Una soglia senza motivo è una soglia che qualcuno può spostare.",
+      "supplied": "Copie che fornisci tu",
+      "suppliedCount": "Contano per la soglia una volta verificate",
+      "suppliedSeparate": "Vengono lette, ma riportate a parte rispetto alla soglia",
+      "suppliedValue": {
+        "count": "count — contano per la soglia una volta verificate",
+        "separate": "separate — vengono lette, ma riportate a parte rispetto alla soglia"
+      },
+      "suppliedHelp": "Si dichiara ora, prima che esista una copia, e non può cambiare finché vale questo protocollo.",
+      "notation": "Come la tua disciplina scrive i valori numerici",
+      "notationCustom": "Elenco personalizzato",
+      "customLabels": "Notazione, una per riga",
+      "customLabelsHelp": "Per esempio le sigle che un articolo scrive accanto a un numero.",
+      "hosts": "Host da non contattare mai, oltre all'elenco fisso",
+      "hostsHelp": "Un nome di host per riga, senza https://, percorso né caratteri jolly.",
+      "fixedHosts": "Sempre esclusi: {hosts}",
+      "afterSave": "Claimstone controlla le classi, la soglia e il suo motivo, e conserva una bozza.",
+      "atCreation": "La soglia {floor} viene scritta con il tuo motivo, alla data (UTC) in cui crei il progetto, e non ammette deroghe. Classi di fonte scelte: {classes}; ogni fonte porterà una di queste. Gli host esclusi non vengono mai contattati (aggiunti da te: {added}). Copie che fornisci tu: {supplied}.",
+      "afterStart": "Dopo la ricerca, Claimstone conta quante delle pubblicazioni trovate è riuscito a ottenere come copie confermate. Sotto la soglia segna il ciclo come INSUFFICIENT_ACQUISITION: non viene costruito nessun profilo e non si può firmare nessun verdetto. Un corpus letto al 42% che si dichiara completo è peggio di nessun corpus."
+    },
+    "step4": {
+      "title": "4 · Riepilogo e creazione",
+      "intro": "Questo è esattamente ciò che verrà creato. Controllalo, poi conferma.",
+      "summary": "Progetto: {name} · Argomenti: {topics} · Domande: {total} (sulla letteratura {literature}, operational {operational}) · Classi di fonte: {classes} · Soglia: {floor}",
+      "needSteps": "I passi da 1 a 3 devono essere salvati prima di poter rivedere il progetto.",
+      "files": "I file che verranno creati",
+      "digest": "Impronta del protocollo (sha256): ciò che vedi è ciò che viene creato",
+      "advanced": "Opzioni avanzate: modifica i file generati",
+      "advancedHelp": "Una modifica sostituisce un intero file, che deve comunque superare gli stessi controlli. Se dopo aver modificato qui cambi un passo precedente, ripristina i file perché vengano generati di nuovo.",
+      "saveFiles": "Salva le modifiche ai file",
+      "resetFiles": "Ripristina i file generati",
+      "resetHelp": "Se hai modificato i file e da allora la data UTC è cambiata, ripristinali: verranno generati di nuovo.",
+      "unsaved": "Hai modifiche ai file non salvate: salvale o annullale prima di continuare.",
+      "confirm": "Ho capito che il registro delle domande e la soglia vengono congelati alla versione 1 il {frozenAt} (data UTC), e che cambiarli più avanti richiede una nuova versione datata.",
+      "create": "Crea il progetto",
+      "creating": "Creazione in corso…",
+      "startDisabled": "Avvia la ricerca",
+      "startNote": "Non ancora disponibile: autorizzare e avviare la ricerca arriverà con la prossima fase del portale.",
+      "notStartedTitle": "Cosa non viene avviato",
+      "notStarted": "Creare il progetto non avvia nessuna ricerca, nessuna richiesta di copie e nessuna chiamata a un modello, e non spende nulla.",
+      "privacy": "Il progetto viene creato nella cartella projects/, che Git ignora: resta su questa macchina e non viene pubblicato.",
+      "nextTitle": "Cosa viene dopo",
+      "next1": "Autorizzerai un piano esatto (ricerche, richieste di copie, eventuale lavoro a pagamento dei modelli) prima che venga avviato qualcosa.",
+      "next2": "Claimstone cerca negli indici e ottiene copie legali, registrando ogni tentativo.",
+      "next3": "Prepara i documenti ed estrae affermazioni legate a citazioni letterali, e un secondo lettore indipendente le rivede una per una.",
+      "next4": "Se il ciclo di ricerca supera la soglia, costruisce un profilo delle evidenze per ogni domanda sulla letteratura.",
+      "next5": "Una persona legge ogni profilo e firma un verdetto. Nessun verdetto viene firmato al posto tuo.",
+      "afterSave": "Qui salvi solo le modifiche ai file fatte nell'editor avanzato: vengono controllate con gli stessi caricatori e conservate nella bozza. Non viene creato nulla finché non premi «Crea il progetto».",
+      "atCreation": "Claimstone scrive tre file sotto projects/{name}/, congela il registro delle domande e la soglia alla versione 1 il {frozenAt} (data UTC) e registra l'impronta di ciascun file. Non avvia nulla.",
+      "afterStart": "Autorizzerai un piano esatto prima che venga avviato qualcosa. Claimstone poi cerca, ottiene copie legali, prepara i documenti, estrae affermazioni legate a citazioni letterali, le fa rivedere una per una da un secondo lettore indipendente e, se il ciclo di ricerca supera la soglia, costruisce un profilo delle evidenze per ogni domanda sulla letteratura. Una persona lo legge e firma. Questa versione del portale non fa ancora nulla di tutto ciò."
+    },
+    "created": {
+      "title": "Progetto creato",
+      "body": "Il progetto {name} ora esiste, congelato alla versione 1 il {frozenAt} (data UTC). Non è stato avviato nulla.",
+      "bodyUndated": "Il progetto {name} ora esiste, congelato alla versione 1. Non è stato avviato nulla.",
+      "files": "File registrati",
+      "projects": "Vai ai progetti",
+      "another": "Inizia un altro progetto"
+    },
+    "errors": {
+      "generic": "Qualcosa è andato storto.",
+      "VALIDATION": "Una parte di ciò che hai inserito non può essere accettata.",
+      "STALE_REVISION": "Questa bozza è stata modificata altrove. Ricaricala per vedere l'ultima versione.",
+      "DRAFT_CLOSED": "Questa bozza è chiusa: è stata scartata o è già diventata un progetto, quindi non si può più modificare.",
+      "PREVIEW_CHANGED": "La bozza è cambiata dopo che hai aperto questo riepilogo, quindi ciò che hai confermato non è più ciò che verrebbe creato. Ricarica per rivedere la versione attuale.",
+      "NAME_TAKEN": "Esiste già un progetto con questo nome. Torna al passo 1 e scegli un altro nome.",
+      "INCOMPLETE": "La bozza non è ancora completa: prima vanno salvati i passi da 1 a 3.",
+      "UNAUTHORIZED": "La sessione è terminata. Accedi di nuovo, poi ripeti l'azione."
+    }
+  }
+}

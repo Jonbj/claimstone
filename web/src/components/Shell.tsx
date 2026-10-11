@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { Link, Outlet, useLocation } from "react-router";
+import LocaleSwitch from "@/components/LocaleSwitch";
 import ThemeToggle from "@/components/ThemeToggle";
 import { api } from "@/lib/api";
+import { useLocale } from "@/lib/i18n";
 import { useSession } from "@/lib/session";
 import { cn } from "@/lib/utils";
 
-// v2.1 shell (spec F1): a dark left rail, 232 px wide, with New project (disabled: nothing
-// builds projects from the web yet), Today, Projects and Administration, and a footer with the
+// v2.1 shell (spec F1): a dark left rail, 232 px wide, with New project (the wizard link), Today, Projects and Administration, and a footer with the
 // signed-in operator and Sign out, or Sign in. Under 900 px the rail becomes a top bar. The
 // rail is dark in both themes (`bg-rail`); the content area follows the theme tokens. The old
 // Inbox tab is gone from the rail, but `/inbox` is still routable.
@@ -90,6 +91,8 @@ function Operator() {
 export default function Shell() {
   const { pathname } = useLocation();
   const rev = useRevision();
+  const session = useSession();
+  const { t } = useLocale();
   return (
     <div className="min-h-screen bg-muted/40 text-foreground min-[900px]:flex">
       <nav
@@ -100,18 +103,12 @@ export default function Shell() {
           Claimstone
         </Link>
         <div className="flex flex-col min-[900px]:mb-3">
-          <button
-            type="button"
-            disabled
-            aria-describedby="new-project-note"
-            title="creating projects from the web is not built yet"
-            className="min-h-11 rounded-lg bg-rail-active px-3 text-sm font-semibold text-rail-muted opacity-60"
+          <Link
+            to={session.operator ? "/new" : `/login?next=${encodeURIComponent("/new")}`}
+            className="flex min-h-11 items-center justify-center rounded-lg bg-rail-active px-3 text-sm font-semibold text-rail-foreground"
           >
-            + New project
-          </button>
-          <span id="new-project-note" className="mt-1 hidden text-xs text-rail-muted min-[900px]:block">
-            creating projects from the web is not built yet
-          </span>
+            {t("shell.newProject")}
+          </Link>
         </div>
         <div className="flex flex-wrap gap-1 min-[900px]:flex-col">
           {NAV.map((item) => {
@@ -135,6 +132,7 @@ export default function Shell() {
         </div>
         <div className="ml-auto flex items-center gap-3 min-[900px]:mt-auto min-[900px]:ml-0 min-[900px]:flex-col min-[900px]:items-stretch min-[900px]:border-t min-[900px]:border-rail-border min-[900px]:pt-3">
           <Operator />
+          <LocaleSwitch />
           <span className="font-mono text-xs text-rail-muted" title={rev.title}>
             {rev.text}
           </span>

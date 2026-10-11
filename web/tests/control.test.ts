@@ -144,4 +144,68 @@ describe("F1: control client transport", () => {
     Object.defineProperty(big, "size", { value: 50 * 1024 * 1024 + 1 });
     await expect(uploadIntakeFile("p", "f", "c1", big)).rejects.toMatchObject({ code: "TOO_LARGE" });
   });
+
+  it("keeps the field-path details of a 422", async () => {
+    setCsrfToken("tok");
+    mockFetch(reply(422, { error: { code: "VALIDATION", message: "name: bad",
+      details: [{ path: "name", message: "use lowercase" }] } }));
+    const error = await control.newSaveStep("d1", 1, 1, {}).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(ControlError);
+    expect((error as ControlError).details).toEqual([{ path: "name", message: "use lowercase" }]);
+  });
+
+  it("an error without details has an empty list", async () => {
+    setCsrfToken("tok");
+    mockFetch(reply(409, { error: { code: "STALE_REVISION", message: "old" } }));
+    const error = await control.newSaveStep("d1", 1, 1, {}).catch((e: unknown) => e);
+    expect((error as ControlError).details).toEqual([]);
+  });
+
+  it("the new-project methods use their routes, the CSRF token and an Idempotency-Key", async () => {
+    setCsrfToken("tok");
+    mockFetch(reply(200, {}));
+    await control.newStart();
+    await control.newSaveStep("d 1", 2, 5, { a: 1 });
+    await control.newSaveAdvanced("d1", 6, { "sources.yaml": "x" });
+    await control.newDiscard("d1", 7);
+    await control.newCreate("d1", "a".repeat(64));
+    expect(calls.map((c) => `${c.init.method} ${c.url}`)).toEqual([
+      "POST /control/v1/new",
+      "POST /control/v1/new/d%201/steps/2",
+      "POST /control/v1/new/d1/advanced",
+      "POST /control/v1/new/d1/discard",
+      "POST /control/v1/new/d1/create",
+    ]);
+    for (const call of calls) {
+      expect(headersOf(call)["X-CSRF-Token"]).toBe("tok");
+      expect(headersOf(call)["Idempotency-Key"]).toBeTruthy();
+    }
+    expect(JSON.parse(String(calls[1].init.body))).toEqual({ base_revision: 5, data: { a: 1 } });
+    expect(JSON.parse(String(calls[4].init.body))).toEqual({ confirm: true, protocol_sha256: "a".repeat(64) });
+  });
+
+  it("create sends the same Idempotency-Key for the same draft and digest, so a retry replays", async () => {
+    setCsrfToken("tok");
+    mockFetch(reply(200, {}));
+    await control.newCreate("d1", "a".repeat(64));
+    await control.newCreate("d1", "a".repeat(64));
+    await control.newCreate("d1", "b".repeat(64));
+    const keys = calls.map((c) => headersOf(c)["Idempotency-Key"]);
+    expect(keys[0]).toBe(`create-d1-${"a".repeat(16)}`);
+    expect(keys[1]).toBe(keys[0]);
+    expect(keys[2]).not.toBe(keys[0]);
+  });
+
+  it("the new-project reads are plain GETs", async () => {
+    mockFetch(reply(200, {}));
+    await control.newDrafts();
+    await control.newRead("d1");
+    await control.newPreview("d1");
+    await control.newTemplates();
+    await control.newTemplate("general");
+    expect(calls.map((c) => `${c.init.method} ${c.url}`)).toEqual([
+      "GET /control/v1/new", "GET /control/v1/new/d1", "GET /control/v1/new/d1/preview",
+      "GET /control/v1/new-templates", "GET /control/v1/new-templates/general",
+    ]);
+  });
 });

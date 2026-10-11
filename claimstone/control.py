@@ -33,8 +33,9 @@ from typing import Any, Callable
 import urllib.parse
 from urllib.parse import unquote, urlparse
 
-from claimstone import (admin, decisions, drafts, export, flows, intake, operations,
-                        operations_view, operators, portal_state, scope, synthesize, today)
+from claimstone import (admin, decisions, drafts, export, flows, intake, new_project_service,
+                        operations, operations_view, operators, portal_state, scope, synthesize,
+                        today)
 from claimstone.config import ConfigError, RegistryDrift
 from claimstone.store import LedgerCorrupt, Store
 from claimstone.transport import LOOPBACK_HOSTS, BaseHandler
@@ -270,15 +271,29 @@ ROUTES: tuple[Route, ...] = (
                    "pause"), "_operation_not_built"),
     Route("POST", ("p", "{project}", "flows", "{flow_id}", "operations", "{operation_id}",
                    "resume"), "_operation_not_built"),
+    # New project: drafts, preview and creation. Nothing here starts a stage or any request; the
+    # only write outside `store/` is `project_builder.create_project`, which creates one directory.
+    Route("POST", ("new",), "_new_start"),
+    Route("GET", ("new",), "_new_list"),
+    Route("GET", ("new-templates",), "_new_templates"),
+    Route("GET", ("new-templates", "{template_id}"), "_new_template"),
+    Route("GET", ("new", "{draft_id}"), "_new_read"),
+    Route("POST", ("new", "{draft_id}", "steps", "{step}"), "_new_step"),
+    Route("POST", ("new", "{draft_id}", "advanced"), "_new_advanced"),
+    Route("GET", ("new", "{draft_id}", "preview"), "_new_preview"),
+    Route("POST", ("new", "{draft_id}", "discard"), "_new_discard"),
+    Route("POST", ("new", "{draft_id}", "create"), "_new_create"),
 )
 
 
 class ControlError(Exception):
-    """A route's named answer: the status, the envelope code and the message."""
+    """A route's named answer: the status, the envelope code and the message. `details` is an
+    optional list of `{path, message}` for a 422 that names form fields."""
 
-    def __init__(self, status: int, code: str, message: str) -> None:
+    def __init__(self, status: int, code: str, message: str,
+                 details: list[dict[str, str]] | None = None) -> None:
         super().__init__(message)
-        self.status, self.code, self.message = status, code, message
+        self.status, self.code, self.message, self.details = status, code, message, details
 
 
 # --- the handler ----------------------------------------------------------------------------------
@@ -327,9 +342,11 @@ class _Handler(BaseHandler):
         self._respond(body, code, "application/json; charset=utf-8", cookies)
 
     def _error(self, code: int, name: str, message: str,
-               cookies: tuple[str, ...] = ()) -> None:
-        self._json({"error": {"code": name, "message": message}}, code=code,
-                   cookies=cookies)
+               cookies: tuple[str, ...] = (), details: list[dict[str, str]] | None = None) -> None:
+        envelope: dict[str, Any] = {"code": name, "message": message}
+        if details:
+            envelope["details"] = details
+        self._json({"error": envelope}, code=code, cookies=cookies)
 
     def _refuse(self) -> None:  # the base answers unknown verbs; this server allows POST
         body = b"405: not a routed GET or POST\n"
@@ -435,7 +452,7 @@ class _Handler(BaseHandler):
     def _answer_exception(self, exc: Exception) -> None:
         """One mapping from what the engine and the lookups raise to the envelope."""
         if isinstance(exc, ControlError):
-            self._error(exc.status, exc.code, exc.message)
+            self._error(exc.status, exc.code, exc.message, details=exc.details)
         elif isinstance(exc, portal_state.NotFound):
             self._error(404, "NOT_FOUND", str(exc))
         elif isinstance(exc, RegistryDrift):  # a ConfigError subclass: the named state first
@@ -1132,6 +1149,98 @@ _Handler._intake_list = _intake_list      # type: ignore[attr-defined]
 _Handler._adjudicate = _adjudicate      # type: ignore[attr-defined]
 _Handler._draft_save = _draft_save      # type: ignore[attr-defined]
 _Handler._draft_read = _draft_read      # type: ignore[attr-defined]
+
+
+# --- new project ----------------------------------------------------------------------------------
+
+
+def _revision(body: dict[str, Any]) -> int:
+    value = body.get("base_revision")
+    if type(value) is not int or value < 1:
+        raise ControlError(422, "VALIDATION", "base_revision must be the draft's current revision")
+    return value
+
+
+def _new_call(self: _Handler, function: Callable[..., Any], *args: Any) -> tuple[Any, int]:
+    session = self._require_session()
+    try:
+        return function(self.projects_dir, self.store_dir, session.operator_id,
+                        self.code_revision, *args)
+    except new_project_service.ServiceError as exc:
+        raise ControlError(exc.status, exc.code, exc.message, exc.details) from None
+
+
+def _new_start(self: _Handler, params: dict[str, str], query: Any,
+               body: dict[str, Any]) -> tuple[Any, int]:
+    self._only_keys(body, frozenset())
+    return _new_call(self, new_project_service.start)
+
+
+def _new_list(self: _Handler, params: dict[str, str], query: Any,
+              body: dict[str, Any]) -> tuple[Any, int]:
+    return _new_call(self, new_project_service.list_drafts)
+
+
+def _new_templates(self: _Handler, params: dict[str, str], query: Any,
+                   body: dict[str, Any]) -> tuple[Any, int]:
+    return _new_call(self, new_project_service.templates)
+
+
+def _new_template(self: _Handler, params: dict[str, str], query: Any,
+                  body: dict[str, Any]) -> tuple[Any, int]:
+    return _new_call(self, new_project_service.template, params["template_id"])
+
+
+def _new_read(self: _Handler, params: dict[str, str], query: Any,
+              body: dict[str, Any]) -> tuple[Any, int]:
+    return _new_call(self, new_project_service.read, params["draft_id"])
+
+
+def _new_step(self: _Handler, params: dict[str, str], query: Any,
+              body: dict[str, Any]) -> tuple[Any, int]:
+    self._only_keys(body, frozenset({"base_revision", "data"}))
+    if not re.fullmatch(r"[1-3]", params["step"]):
+        raise ControlError(404, "NOT_FOUND", "no such step")
+    return _new_call(self, new_project_service.save_step, params["draft_id"],
+                     int(params["step"]), _revision(body), body.get("data"))
+
+
+def _new_advanced(self: _Handler, params: dict[str, str], query: Any,
+                  body: dict[str, Any]) -> tuple[Any, int]:
+    self._only_keys(body, frozenset({"base_revision", "files"}))
+    files = body.get("files")
+    if not isinstance(files, dict) or any(not isinstance(v, str) for v in files.values()):
+        raise ControlError(422, "VALIDATION", "files must map a file name to its text")
+    return _new_call(self, new_project_service.save_advanced, params["draft_id"],
+                     _revision(body), files)
+
+
+def _new_preview(self: _Handler, params: dict[str, str], query: Any,
+                 body: dict[str, Any]) -> tuple[Any, int]:
+    return _new_call(self, new_project_service.preview, params["draft_id"])
+
+
+def _new_discard(self: _Handler, params: dict[str, str], query: Any,
+                 body: dict[str, Any]) -> tuple[Any, int]:
+    self._only_keys(body, frozenset({"base_revision"}))
+    return _new_call(self, new_project_service.discard, params["draft_id"], _revision(body))
+
+
+def _new_create(self: _Handler, params: dict[str, str], query: Any,
+                body: dict[str, Any]) -> tuple[Any, int]:
+    self._only_keys(body, frozenset({"confirm", "protocol_sha256"}))
+    shown = body.get("protocol_sha256")
+    if body.get("confirm") is True and (not isinstance(shown, str) or not PROFILE_SHA.match(shown)):
+        raise ControlError(422, "VALIDATION", "protocol_sha256 must be the digest the review page showed")
+    return _new_call(self, new_project_service.create, params["draft_id"], body.get("confirm"), shown)
+
+
+for _name, _function in (("_new_start", _new_start), ("_new_list", _new_list),
+                         ("_new_templates", _new_templates), ("_new_template", _new_template),
+                         ("_new_read", _new_read), ("_new_step", _new_step),
+                         ("_new_advanced", _new_advanced), ("_new_preview", _new_preview),
+                         ("_new_discard", _new_discard), ("_new_create", _new_create)):
+    setattr(_Handler, _name, _function)
 
 
 # --- the server -----------------------------------------------------------------------------------

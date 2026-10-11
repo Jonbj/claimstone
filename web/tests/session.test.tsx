@@ -70,4 +70,21 @@ describe("F1: SessionProvider", () => {
     });
     await waitFor(() => expect(screen.getByTestId("who").textContent).toBe("signed-out"));
   });
+
+  it("recheck restores the operator when the server knows the session, and never throws on 401", async () => {
+    let signedIn = false;
+    vi.stubGlobal("fetch", () =>
+      signedIn ? json(200, SIGNED_IN) : json(401, { error: { code: "UNAUTHORIZED", message: "no" } }));
+    function Again() {
+      const s = useSession();
+      return <button type="button" onClick={() => void s.recheck()}>again</button>;
+    }
+    render(<SessionProvider><Probe /><Again /></SessionProvider>);
+    await waitFor(() => expect(screen.getByTestId("who").textContent).toBe("signed-out"));
+    await act(async () => { screen.getByText("again").click(); });
+    expect(screen.getByTestId("who").textContent).toBe("signed-out");
+    signedIn = true;
+    await act(async () => { screen.getByText("again").click(); });
+    await waitFor(() => expect(screen.getByTestId("who").textContent).toBe("Ada"));
+  });
 });

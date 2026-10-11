@@ -1,7 +1,6 @@
 // F1: the shell. Signed out it offers Sign in (with the page to come back to); signed in it
-// shows the operator and Sign out. The rail has no Inbox link, and New project is disabled
-// with its reason.
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+// shows the operator and Sign out. The rail has no Inbox link, and New project links to the wizard.
+import { cleanup, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import Shell from "@/components/Shell";
@@ -67,11 +66,13 @@ describe("F1: Shell v2", () => {
     expect(screen.getByRole("link", { name: "Today" }).getAttribute("aria-current")).toBe("page");
   });
 
-  it("disables New project and says why", async () => {
+  it("links New project to the wizard when signed in, and through the login when signed out", async () => {
+    mount(true);
+    const signedIn = await screen.findByRole("link", { name: "+ New project" });
+    expect(signedIn.getAttribute("href")).toBe("/new");
+    cleanup();
     mount(false);
-    const button = screen.getByRole("button", { name: "+ New project" }) as HTMLButtonElement;
-    expect(button.disabled).toBe(true);
-    expect(screen.getByText("creating projects from the web is not built yet")).toBeTruthy();
-    await waitFor(() => expect(screen.getByText(/rev abcdef012345/)).toBeTruthy());
+    const signedOut = await screen.findByRole("link", { name: "+ New project" });
+    expect(signedOut.getAttribute("href")).toBe("/login?next=%2Fnew");
   });
 });

@@ -1,6 +1,7 @@
 import { createBrowserRouter, RouterProvider } from "react-router";
 import Shell from "@/components/Shell";
 import AdminPage from "@/pages/AdminPage";
+import { LocaleProvider } from "@/lib/i18n";
 import { SessionProvider } from "@/lib/session";
 import ClaimPage from "@/pages/ClaimPage";
 import DecisionsPage from "@/pages/DecisionsPage";
@@ -10,11 +11,13 @@ import IndexPage from "@/pages/IndexPage";
 import InboxPage from "@/pages/InboxPage";
 import LoginPage from "@/pages/LoginPage";
 import MaterialPage from "@/pages/MaterialPage";
+import NewProjectsPage from "@/pages/NewProjectsPage";
 import NotFoundPage from "@/pages/NotFoundPage";
 import ProjectPage from "@/pages/ProjectPage";
 import QuestionPage from "@/pages/QuestionPage";
 import SourcePage from "@/pages/SourcePage";
 import TodayPage from "@/pages/TodayPage";
+import WizardPage from "@/pages/WizardPage";
 
 // §8.2: client-side routing with `createBrowserRouter`; nginx `try_files … /index.html`.
 // `f`/`u` are a prop so no page ever guesses the selector kind; the question, claim and
@@ -25,15 +28,19 @@ const router = createBrowserRouter([
     // The provider sits inside the router so the login page can navigate, and above the Shell
     // so the sidebar and every page read the same session.
     element: (
-      <SessionProvider>
-        <Shell />
-      </SessionProvider>
+      <LocaleProvider>
+        <SessionProvider>
+          <Shell />
+        </SessionProvider>
+      </LocaleProvider>
     ),
     children: [
       // F2: Today is `/`; `/projects` is the projects index.
       { index: true, element: <TodayPage /> },
       { path: "projects", element: <IndexPage /> },
       { path: "login", element: <LoginPage /> },
+      { path: "new", element: <NewProjectsPage /> },
+      { path: "new/:draft/:step", element: <WizardPage /> },
       { path: "inbox", element: <InboxPage /> },
       { path: "admin", element: <AdminPage /> },
       { path: "p/:project", element: <ProjectPage /> },

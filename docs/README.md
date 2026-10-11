@@ -56,6 +56,7 @@ write to — several fields exist to prevent a specific defect and look optional
 | [`contracts/local_mandates.md`](contracts/local_mandates.md) | bounded recurring local work for one flow |
 | [`contracts/periodic_dossiers.md`](contracts/periodic_dossiers.md) | whole-corpus periodic evidence handoff and its finalization gates |
 | [`contracts/exports.md`](contracts/exports.md) | a verifiable snapshot of one flow, and how it is checked |
+| [`contracts/new_project.md`](contracts/new_project.md) | the new-project wizard's drafts and routes |
 
 ## The stage designs
 

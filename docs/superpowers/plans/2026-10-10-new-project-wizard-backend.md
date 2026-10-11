@@ -629,7 +629,7 @@ def _sources_step(data: Any, templates_dir: str | pathlib.Path,
 - [ ] **Step 4: Run to verify pass**
 
 Run: `.venv/bin/pytest -q tests/test_project_builder.py`
-Expected: all pass. (`test_step_3_keeps_the_floor_with_no_override_key` asserts unknown keys such as `override` are named.)
+Expected: all pass. (`test_step_3_has_no_override_field_and_names_unknown_keys` asserts unknown keys such as `override` are named.)
 
 - [ ] **Step 5: Commit**
 
@@ -1308,6 +1308,11 @@ def _fill(ws):
     return draft, rev
 
 
+def _shown(ws, draft):
+    """The digest the review page would have displayed."""
+    return _call(svc.preview, ws, draft)[0]["protocol_sha256"]
+
+
 def _refused(fn, ws, *args):
     with pytest.raises(svc.ServiceError) as raised:
         _call(fn, ws, *args)
@@ -1370,24 +1375,34 @@ def test_advanced_text_is_validated_and_shown_in_the_preview(ws):
 
 def test_create_makes_a_frozen_project_and_closes_the_draft(ws):
     draft, _ = _fill(ws)
-    payload, status = _call(svc.create, ws, draft, True)
+    payload, status = _call(svc.create, ws, draft, True, _shown(ws, draft))
     assert status == 201 and payload["project"] == "news-tone"
     project = load_project(ws["projects"] / "news-tone")
     assert (project.registry_version, project.frozen_at, project.floor_version) == (1, "2026-10-10", 1)
     assert _call(svc.read, ws, draft)[0]["status"] == "created"
-    assert _refused(svc.create, ws, draft, True).code == "DRAFT_CLOSED"
+    assert _refused(svc.create, ws, draft, True, "0" * 64).code == "DRAFT_CLOSED"
+
+
+def test_create_refuses_a_project_that_changed_since_it_was_reviewed(ws):
+    draft, rev = _fill(ws)
+    shown = _shown(ws, draft)
+    _call(svc.save_step, ws, draft, 2, rev, {"questions": [{"text": "A different question?", "kind": "effect"}]})
+    error = _refused(svc.create, ws, draft, True, shown)
+    assert (error.status, error.code) == (409, "PREVIEW_CHANGED")
+    assert not (ws["projects"] / "news-tone").exists()
 
 
 def test_create_needs_the_literal_confirmation(ws):
     draft, _ = _fill(ws)
-    assert _refused(svc.create, ws, draft, False).status == 422
+    assert _refused(svc.create, ws, draft, False, _shown(ws, draft)).status == 422
     assert not (ws["projects"] / "news-tone").exists()
 
 
 def test_a_name_taken_after_step_1_is_a_409_and_recorded(ws):
     draft, _ = _fill(ws)
+    shown = _shown(ws, draft)
     (ws["projects"] / "news-tone").mkdir()
-    error = _refused(svc.create, ws, draft, True)
+    error = _refused(svc.create, ws, draft, True, shown)
     assert (error.status, error.code) == (409, "NAME_TAKEN")
     assert _call(svc.read, ws, draft)[0]["last_failure"]
     assert _call(svc.read, ws, draft)[0]["status"] == "open"
@@ -1536,10 +1551,12 @@ def save_step(projects_dir, store_dir, actor, code_revision, draft_id, step, bas
 
 def _files_and_info(projects_dir, current: dict[str, Any]):
     state = {int(n): v["data"] for n, v in current["steps"].items()}
-    files = pb.render(state, _templates_dir(projects_dir), today=_today(),
+    today = _today()
+    files = pb.render(state, _templates_dir(projects_dir), today=today,
                       overrides=current["advanced"] or None)
+    # `today` is required: inspect refuses an override that breaks "registry v1, floor v1, frozen today".
     info = pb.inspect(files, name=state[1]["name"], templates_dir=_templates_dir(projects_dir),
-                      template_id=state[3]["template"])
+                      template_id=state[3]["template"], today=today)
     return state, files, info
 
 
@@ -1573,7 +1590,10 @@ def discard(projects_dir, store_dir, actor, code_revision, draft_id, base_revisi
 
 
 @_guard
-def create(projects_dir, store_dir, actor, code_revision, draft_id, confirm):
+def create(projects_dir, store_dir, actor, code_revision, draft_id, confirm, shown_sha256):
+    """Create the project the operator reviewed. `shown_sha256` is the protocol digest the review page
+    displayed; if the draft now renders to a different protocol (another tab, a changed step) the
+    request is refused, so what is created is always what was seen."""
     if confirm is not True:
         raise ServiceError(422, "VALIDATION", "confirm must be the literal true")
     store = _store(store_dir)
@@ -1581,6 +1601,9 @@ def create(projects_dir, store_dir, actor, code_revision, draft_id, confirm):
     if current["status"] != "open":
         raise ServiceError(409, "DRAFT_CLOSED", f"this draft is {current['status']}")
     state, files, info = _files_and_info(projects_dir, current)
+    if shown_sha256 != info["protocol_sha256"]:
+        raise ServiceError(409, "PREVIEW_CHANGED",
+                           "the project changed since you reviewed it; review it again before creating")
     name = state[1]["name"]
     try:
         made = pb.create_project(projects_dir, name, files,
@@ -1694,6 +1717,11 @@ class Client:
         return _request(f"{self.base}/control/v1{path}", headers={"Cookie": self.cookie})
 
 
+def _create_body(client, draft):
+    """What the review page sends: the confirmation and the digest it displayed."""
+    return {"confirm": True, "protocol_sha256": client.get(f"/new/{draft}/preview")[2]["protocol_sha256"]}
+
+
 def _tree(root):
     return {str(p.relative_to(root)): hashlib.sha256(p.read_bytes()).hexdigest()
             for p in sorted(root.rglob("*")) if p.is_file()}
@@ -1726,7 +1754,7 @@ def test_the_whole_wizard_creates_a_project_that_validates(ws):
         draft, _rev = _fill(client)
         status, _h, preview = client.get(f"/new/{draft}/preview")
         assert status == 200 and preview["figures"]["questions_literature"] == 1
-        status, _h, made = client.post(f"/new/{draft}/create", {"confirm": True}, key=str(uuid.uuid4()))
+        status, _h, made = client.post(f"/new/{draft}/create", _create_body(client, draft), key=str(uuid.uuid4()))
     assert status == 201 and made["project"] == "news-tone"
     from claimstone.config import load_project
     assert load_project(ws["projects"] / "news-tone").registry_version == 1
@@ -1737,8 +1765,9 @@ def test_create_is_idempotent_for_one_key(ws):
         client = Client(base)
         draft, _ = _fill(client)
         key = str(uuid.uuid4())
-        first = client.post(f"/new/{draft}/create", {"confirm": True}, key=key)
-        again = client.post(f"/new/{draft}/create", {"confirm": True}, key=key)
+        body = _create_body(client, draft)
+        first = client.post(f"/new/{draft}/create", body, key=key)
+        again = client.post(f"/new/{draft}/create", body, key=key)
     assert first[0] == again[0] == 201 and first[2] == again[2]
 
 
@@ -1750,6 +1779,17 @@ def test_a_validation_error_carries_field_paths(ws):
                                        {"base_revision": 1, "data": {**STEP1, "name": "Bad Name"}})
     assert status == 422 and body["error"]["code"] == "VALIDATION"
     assert body["error"]["details"][0]["path"] == "name"
+
+
+def test_create_needs_the_digest_the_page_showed(ws):
+    with _served(ws) as base:
+        client = Client(base)
+        draft, _ = _fill(client)
+        assert client.post(f"/new/{draft}/create", {"confirm": True})[0] == 422
+        assert client.post(f"/new/{draft}/create", {"confirm": True, "protocol_sha256": "x"})[0] == 422
+        status, _h, body = client.post(f"/new/{draft}/create", {"confirm": True, "protocol_sha256": "0" * 64})
+    assert (status, body["error"]["code"]) == (409, "PREVIEW_CHANGED")
+    assert not (ws["projects"] / "news-tone").exists()
 
 
 def test_a_stale_revision_is_409(ws):
@@ -1788,7 +1828,7 @@ def test_no_route_changes_an_existing_project(ws):
         draft, rev = _fill(client)
         client.post(f"/new/{draft}/advanced", {"base_revision": rev, "files": {}})
         client.get(f"/new/{draft}/preview")
-        client.post(f"/new/{draft}/create", {"confirm": True})
+        client.post(f"/new/{draft}/create", _create_body(client, draft))
         # a second draft aiming at the existing name is refused and still changes nothing
         _, _, second = client.post("/new", {})
         client.post(f"/new/{second['draft_id']}/steps/1",
@@ -1947,8 +1987,11 @@ def _new_discard(self: _Handler, params: dict[str, str], query: Any,
 
 def _new_create(self: _Handler, params: dict[str, str], query: Any,
                 body: dict[str, Any]) -> tuple[Any, int]:
-    self._only_keys(body, frozenset({"confirm"}))
-    return _new_call(self, new_project_service.create, params["draft_id"], body.get("confirm"))
+    self._only_keys(body, frozenset({"confirm", "protocol_sha256"}))
+    shown = body.get("protocol_sha256")
+    if body.get("confirm") is True and (not isinstance(shown, str) or not PROFILE_SHA.match(shown)):
+        raise ControlError(422, "VALIDATION", "protocol_sha256 must be the digest the review page showed")
+    return _new_call(self, new_project_service.create, params["draft_id"], body.get("confirm"), shown)
 
 
 for _name, _function in (("_new_start", _new_start), ("_new_list", _new_list),
@@ -2042,7 +2085,7 @@ A draft is what an operator typed before a project existed. The ledger lives in
 | `POST /new/{id}/advanced` `{base_revision, files}` | 200 `{revision}`; the files must still load; `{}` clears |
 | `GET /new/{id}/preview` | `{figures, protocol_sha256, files, revision}`; needs steps 1–3 |
 | `POST /new/{id}/discard` `{base_revision}` | 200 |
-| `POST /new/{id}/create` `{confirm: true}` | 201 `{project, protocol_sha256, files, frozen}`; 409 `NAME_TAKEN`, `ROUND_TRIP`, `DRAFT_CLOSED` |
+| `POST /new/{id}/create` `{confirm: true, protocol_sha256}` | 201 `{project, protocol_sha256, files, frozen}`; `protocol_sha256` is the digest the review page showed; 409 `PREVIEW_CHANGED` when the draft now renders differently, `NAME_TAKEN`, `ROUND_TRIP`, `DRAFT_CLOSED` |
 | `GET /new-templates`, `GET /new-templates/{id}` | the data templates (`templates/project/*.yaml`) |
 
 ## What creation does, and does not do

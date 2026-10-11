@@ -96,7 +96,7 @@ Claude-Session: https://claude.ai/code/session_01XK9eTSwsZuStkHXC6YAaAE"
     await control.newSaveStep("d 1", 2, 5, { a: 1 });
     await control.newSaveAdvanced("d1", 6, { "sources.yaml": "x" });
     await control.newDiscard("d1", 7);
-    await control.newCreate("d1");
+    await control.newCreate("d1", "a".repeat(64));
     expect(calls.map((c) => `${c.init.method} ${c.url}`)).toEqual([
       "POST /control/v1/new",
       "POST /control/v1/new/d%201/steps/2",
@@ -109,7 +109,7 @@ Claude-Session: https://claude.ai/code/session_01XK9eTSwsZuStkHXC6YAaAE"
       expect(headersOf(call)["Idempotency-Key"]).toBeTruthy();
     }
     expect(JSON.parse(String(calls[1].init.body))).toEqual({ base_revision: 5, data: { a: 1 } });
-    expect(JSON.parse(String(calls[4].init.body))).toEqual({ confirm: true });
+    expect(JSON.parse(String(calls[4].init.body))).toEqual({ confirm: true, protocol_sha256: "a".repeat(64) });
   });
 
   it("the new-project reads are plain GETs", async () => {
@@ -251,7 +251,8 @@ export interface Created {
   newPreview: (id: string) => get<Preview>(`/new/${enc(id)}/preview`),
   newDiscard: (id: string, baseRevision: number) =>
     post<{ revision: number; status: string }>(`/new/${enc(id)}/discard`, { base_revision: baseRevision }),
-  newCreate: (id: string) => post<Created>(`/new/${enc(id)}/create`, { confirm: true }),
+  newCreate: (id: string, protocolSha256: string) =>
+    post<Created>(`/new/${enc(id)}/create`, { confirm: true, protocol_sha256: protocolSha256 }),
 ```
 
 - [ ] **Step 4: Run to verify pass, then typecheck**
@@ -2192,7 +2193,7 @@ describe("StepReview", () => {
     await waitFor(() => expect(onCreated).toHaveBeenCalled());
     const writes = calls.filter((c) => c.method !== "GET");
     expect(writes.map((c) => c.url)).toEqual(["/control/v1/new/d1/create"]);
-    expect(writes[0].body).toEqual({ confirm: true });
+    expect(writes[0].body).toEqual({ confirm: true, protocol_sha256: "a".repeat(64) });
     expect(onCreated.mock.calls[0][0].project).toBe("news-tone");
   });
 
@@ -2320,7 +2321,7 @@ function ReviewForm({ draftId, draft, onCreated, onChanged, onFigures }: ReviewP
   const create = (event: FormEvent) => {
     event.preventDefault(); // the CSP has form-action 'none'
     if (!confirmed) return;
-    void run("create", async () => onCreated(await control.newCreate(draftId)));
+    void run("create", async () => onCreated(await control.newCreate(draftId, data.protocol_sha256)));
   };
 
   const saveFiles = () =>
@@ -3034,7 +3035,8 @@ def main() -> int:
                 print(f"step {step} saved, figures: {saved['figures']}")
             status, preview = call(base, cookie, csrf, "GET", f"/new/{draft}/preview")
             assert status == 200, preview
-            status, made = call(base, cookie, csrf, "POST", f"/new/{draft}/create", {"confirm": True})
+            status, made = call(base, cookie, csrf, "POST", f"/new/{draft}/create",
+                               {"confirm": True, "protocol_sha256": preview["protocol_sha256"]})
             assert status == 201, made
             project = load_project(root / "projects" / made["project"])
             digest = flows.protocol_digest(project)

@@ -223,8 +223,10 @@ services:
 
   # `control` is the authenticated write boundary (D89): sessions, signing, intake, decisions, exports,
   # administration. The read-only `api` above is unchanged; a defect in a read route still cannot write.
-  # It writes the store (append-only ledgers, quarantine) and its own state (operator accounts), reads the
-  # projects, and reaches nothing on the internet except through `control_egress`, which only the explicit
+  # It writes the store (append-only ledgers, quarantine) and its own state (operator accounts), and reads the
+  # projects, with one exception: the new-project wizard creates exactly one thing there, a new project
+  # directory (never a file of an existing project), because a project has to exist before anything else can
+  # be done with it. It reaches nothing on the internet except through `control_egress`, which only the explicit
   # admin checks use. It publishes no port: the browser reaches it through `web` at /control/.
   control:
     build:
@@ -253,7 +255,11 @@ services:
       OPENALEX_API_KEY: ${OPENALEX_API_KEY:+present}
     volumes:
       - ./store:/app/store
-      - ./projects:/app/projects:ro
+      # Writable, for one reason: `claimstone/project_builder.py` creates a NEW directory here when an
+      # operator confirms the new-project wizard. It never opens a file of an existing project for
+      # writing (tests/test_control_new_project.py hashes the tree before and after).
+      - ./projects:/app/projects
+      - ./templates:/app/templates:ro
       - ./.claimstone:/app/.claimstone
     user: "${UID:-1000}:${GID:-1000}"
     networks: [portal_internal, claimstone, control_egress]

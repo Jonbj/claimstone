@@ -1,0 +1,59 @@
+# A template is DATA: the conventions a field brings to a project. The engine reads it as input
+# (claimstone/project_builder.py) and holds none of it, so a project in an unrelated field can ship
+# its own template without touching the package (CLAUDE.md invariant 4).
+id: general
+label: General literature review
+description: >
+  Six source classes from refereed papers to primary documentation, the engine's standing excluded
+  hosts, and two notation presets. Derived from the worked example, which is built from public literature.
+default_floor: 0.80
+excluded_hosts:
+  - sci-hub.se
+  - sci-hub.st
+  - libgen.is
+classes:
+  - id: ACA
+    name: peer-reviewed academic
+    weight_hint: highest
+    notes: version of record in a refereed venue
+    assign_when:
+      openalex_source_type: [journal]
+      crossref_type: [journal-article]
+  - id: WP
+    name: working paper / preprint
+    weight_hint: high
+    notes: not refereed, never silently promoted to peer-reviewed
+    assign_when:
+      source_api: [arxiv]
+      openalex_source_type: [repository]
+  - id: MET
+    name: methodological reference
+    weight_hint: high
+    notes: textbook, handbook chapter, methods guide; supports design, not effect size
+    assign_when:
+      crossref_type: [book, book-chapter, monograph, reference-book]
+    role: methodological
+  - id: IND
+    name: industry / practitioner research
+    weight_hint: medium
+    notes: vendor and practitioner research; disclose the commercial interest
+  - id: NEW
+    name: journalism / secondary reporting
+    weight_hint: low
+    notes: admissible as a pointer to a primary source, never as evidence for an effect
+  - id: DOC
+    name: primary documentation
+    weight_hint: context
+    notes: rules, provider documentation, regulatory filings
+    gate_policy:
+      structural_signal: none
+notation_presets:
+  - id: none
+    label: No special notation
+    value_labels: []
+  - id: health
+    label: Health and epidemiology (ratios, coefficients, intervals)
+    value_labels:
+      [OR, aOR, AOR, adjusted OR, odds ratio, adjusted odds ratio, RR, aRR, risk ratio, relative risk,
+       HR, aHR, hazard ratio, IRR, incidence rate ratio, PR, prevalence ratio, beta, ß, β, b, B, d,
+       "Cohen's d", g, "Hedges' g", r, rho, ρ, R2, R², eta2, η2, CI, 95% CI, 99% CI, IQR, SEM]
