@@ -2,9 +2,10 @@
 // journey and on the scheduler pages; the Flows link never bounces a single-flow project back.
 import { cleanup, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import ProjectTabs from "@/components/ProjectTabs";
 import { LocaleProvider, STORAGE_KEY } from "@/lib/i18n";
+import { SessionProvider } from "@/lib/session";
 import CumulativeResultPage from "@/pages/CumulativeResultPage";
 import NewSeriesPage from "@/pages/NewSeriesPage";
 import SchedulerPage from "@/pages/SchedulerPage";
@@ -13,6 +14,7 @@ import SeriesPage from "@/pages/SeriesPage";
 function mount(path: string) {
   render(
     <LocaleProvider>
+      <SessionProvider>
       <MemoryRouter initialEntries={[path]}>
         <Routes>
           <Route path="/p/:project" element={<ProjectTabs project="news" />} />
@@ -23,12 +25,19 @@ function mount(path: string) {
           <Route path="/p/:project/scheduler/s/:schedule/result" element={<CumulativeResultPage />} />
         </Routes>
       </MemoryRouter>
+      </SessionProvider>
     </LocaleProvider>,
   );
 }
 
 describe("ProjectTabs", () => {
-  afterEach(() => { cleanup(); localStorage.clear(); });
+  // The scheduler pages need a session; nobody is signed in here, and the tabs do not care.
+  beforeEach(() => {
+    vi.stubGlobal("fetch", () => Promise.resolve(new Response(
+      JSON.stringify({ error: { code: "UNAUTHORIZED", message: "not signed in" } }),
+      { status: 401, headers: { "Content-Type": "application/json" } })));
+  });
+  afterEach(() => { cleanup(); vi.unstubAllGlobals(); localStorage.clear(); });
 
   it("on the project page: Flows is current and keeps the details view; Scheduler points to the index", () => {
     mount("/p/news");
@@ -49,7 +58,7 @@ describe("ProjectTabs", () => {
   it.each([
     ["/p/news/scheduler", "Scheduler"],
     ["/p/news/scheduler/new", "New series"],
-    ["/p/news/scheduler/s/abc", "Series"],
+    ["/p/news/scheduler/s/abc", "Series abc"],
     ["/p/news/scheduler/s/abc/result", "Cumulative result"],
   ])("%s renders its title with Scheduler current", (path, title) => {
     mount(path);

@@ -274,7 +274,25 @@
       "scheduler": "Scheduler"
     },
     "series": {
-      "title": "Series"
+      "title": "Series",
+      "back": "All series",
+      "notFound": "Series not found.",
+      "id": "Plan hash",
+      "copy": "Copy",
+      "copied": "Copied",
+      "grantsNotLoaded": "Grants not loaded: the list has more pages than this page reads, so a copy policy or a local mandate may be missing here.",
+      "grantsFailed": "The grants could not be read.",
+      "timeline": "Rounds",
+      "timelineLoading": "Loading the rounds…",
+      "timelineBlocked": "The rounds cannot be shown until this is fixed:",
+      "planned": "planned",
+      "noCandidates": "no candidates found yet",
+      "searches": "searches done",
+      "confirmed": "copies confirmed / candidates found",
+      "rate": "rate {rate}",
+      "operations": "operations",
+      "noOperations": "none",
+      "noData": "no data for this round yet"
     },
     "result": {
       "title": "Cumulative result"
@@ -329,6 +347,65 @@
       "model": "Local model",
       "undecided": "not decided",
       "notLoaded": "not loaded yet"
+    },
+    "step": {
+      "heading": "Step {n}: {title}",
+      "permits": "What it permits",
+      "forbids": "What it does not permit",
+      "spend": "What it can spend"
+    },
+    "plan": {
+      "title": "Plan",
+      "permits": "Nothing by itself: the plan is a list of dated searches.",
+      "forbids": "It does not start any search.",
+      "spend": "Nothing. The plan states a ceiling of {n} network requests in total.",
+      "flow": "Flow",
+      "window": "Window (UTC)",
+      "searches": "Searches",
+      "max": "Max requests",
+      "total": "Total ceiling: {n} requests"
+    },
+    "calendar": {
+      "title": "Calendar",
+      "permits": "Once authorized, the planned searches may run inside their windows, up to their request ceilings.",
+      "forbids": "Nothing outside the windows and nothing beyond the ceiling of the plan.",
+      "spend": "Up to {n} network requests in total.",
+      "none": "No request is permitted yet."
+    },
+    "policy": {
+      "title": "Future copies",
+      "permits": "Fetching a copy of a candidate only when it matches a successful hit, from the allowed hosts and source classes, within the caps.",
+      "forbids": "The rules of robots.txt, redirects, the refusal of non-global addresses and the per-domain failure budgets still apply. A candidate without a matching successful hit stays for operator review.",
+      "spend": "Up to {line} requests.",
+      "spendNone": "Nothing until it is decided.",
+      "hosts": "Allowed hosts: {hosts}",
+      "classes": "Source classes: {classes}",
+      "reserved": "Candidates reserved: {ratio}",
+      "requests": "Requests reserved: {n}"
+    },
+    "mandate": {
+      "title": "Local model",
+      "permits": "A local model may read and review documents for the flows of this series, within the call ceiling.",
+      "forbids": "It does not sign anything: a verdict still takes a person.",
+      "spend": "Up to {n} local model calls.",
+      "spendNone": "Nothing until it is decided.",
+      "models": "Models: extract {extract}, review {review}",
+      "calls": "Local calls reserved: {ratio}",
+      "remaining": "{n} calls left",
+      "pending": "{stage}: {n} awaiting approval, up to {max} requests",
+      "disabledBy": "Disabled by {name}",
+      "process": "Process"
+    },
+    "resultStep": {
+      "title": "Result",
+      "permits": "Nothing runs from here: the dossier is read from what the rounds already stored.",
+      "forbids": "It gives no verdict: a verdict takes a person's signature.",
+      "spend": "Nothing.",
+      "state": "Dossier state",
+      "firstBlocker": "First blocker",
+      "noBlockers": "no blockers",
+      "unavailable": "The dossier could not be read, so its state is not shown.",
+      "open": "Open the cumulative result"
     }
   }
 }

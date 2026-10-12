@@ -274,7 +274,25 @@
       "scheduler": "Scheduler"
     },
     "series": {
-      "title": "Serie"
+      "title": "Serie",
+      "back": "Tutte le serie",
+      "notFound": "Serie non trovata.",
+      "id": "Impronta del piano",
+      "copy": "Copia",
+      "copied": "Copiato",
+      "grantsNotLoaded": "Autorizzazioni non caricate: l'elenco ha più pagine di quelle che questa pagina legge, quindi qui può mancare una regola per le copie o un mandato locale.",
+      "grantsFailed": "Non è stato possibile leggere le autorizzazioni.",
+      "timeline": "Round",
+      "timelineLoading": "Carico i round…",
+      "timelineBlocked": "I round non si possono mostrare finché questo non è risolto:",
+      "planned": "pianificato",
+      "noCandidates": "ancora nessun candidato trovato",
+      "searches": "ricerche fatte",
+      "confirmed": "copie confermate / candidati trovati",
+      "rate": "tasso {rate}",
+      "operations": "operazioni",
+      "noOperations": "nessuna",
+      "noData": "ancora nessun dato per questo round"
     },
     "result": {
       "title": "Risultato cumulativo"
@@ -329,6 +347,65 @@
       "model": "Modello locale",
       "undecided": "non deciso",
       "notLoaded": "non ancora caricato"
+    },
+    "step": {
+      "heading": "Passo {n}: {title}",
+      "permits": "Cosa permette",
+      "forbids": "Cosa non permette",
+      "spend": "Cosa può consumare"
+    },
+    "plan": {
+      "title": "Piano",
+      "permits": "Niente, da solo: il piano è un elenco di ricerche con le loro date.",
+      "forbids": "Non avvia nessuna ricerca.",
+      "spend": "Niente. Il piano fissa un tetto di {n} richieste di rete in totale.",
+      "flow": "Flusso",
+      "window": "Finestra (UTC)",
+      "searches": "Ricerche",
+      "max": "Richieste al massimo",
+      "total": "Tetto totale: {n} richieste"
+    },
+    "calendar": {
+      "title": "Calendario",
+      "permits": "Una volta autorizzato, le ricerche pianificate possono partire dentro le loro finestre, fino al tetto di richieste.",
+      "forbids": "Niente fuori dalle finestre e niente oltre il tetto del piano.",
+      "spend": "Fino a {n} richieste di rete in totale.",
+      "none": "Per ora non è permessa nessuna richiesta."
+    },
+    "policy": {
+      "title": "Copie future",
+      "permits": "Prendere la copia di un candidato solo se corrisponde a un riscontro riuscito, dagli host consentiti e dalle classi di fonte indicate, entro i limiti.",
+      "forbids": "Restano in vigore le regole di robots.txt, i reindirizzamenti, il rifiuto degli indirizzi non globali e i limiti di errori per dominio. Un candidato senza un riscontro riuscito corrispondente resta all'operatore per la revisione.",
+      "spend": "Fino a {line} richieste.",
+      "spendNone": "Niente finché non lo decidi.",
+      "hosts": "Host consentiti: {hosts}",
+      "classes": "Classi di fonte: {classes}",
+      "reserved": "Candidati riservati: {ratio}",
+      "requests": "Richieste riservate: {n}"
+    },
+    "mandate": {
+      "title": "Modello locale",
+      "permits": "Un modello locale può leggere e rivedere i documenti dei flussi di questa serie, entro il tetto di chiamate.",
+      "forbids": "Non firma nulla: per un verdetto serve sempre una persona.",
+      "spend": "Fino a {n} chiamate al modello locale.",
+      "spendNone": "Niente finché non lo decidi.",
+      "models": "Modelli: estrazione {extract}, revisione {review}",
+      "calls": "Chiamate locali riservate: {ratio}",
+      "remaining": "{n} chiamate rimaste",
+      "pending": "{stage}: {n} in attesa di approvazione, fino a {max} richieste",
+      "disabledBy": "Disabilitato da {name}",
+      "process": "Processo"
+    },
+    "resultStep": {
+      "title": "Risultato",
+      "permits": "Da qui non parte nulla: il dossier si legge da quello che i round hanno già salvato.",
+      "forbids": "Non dà un verdetto: per un verdetto serve la firma di una persona.",
+      "spend": "Niente.",
+      "state": "Stato del dossier",
+      "firstBlocker": "Primo blocco",
+      "noBlockers": "nessun blocco",
+      "unavailable": "Il dossier non si è potuto leggere, quindi non ne mostro lo stato.",
+      "open": "Apri il risultato cumulativo"
     }
   }
 }
