@@ -454,7 +454,11 @@
       "copies": "Copie",
       "model": "Modello locale",
       "undecided": "non deciso",
-      "notLoaded": "non ancora caricato"
+      "notLoaded": "non ancora caricato",
+      "read": "Ho letto cosa permette e i suoi limiti.",
+      "differs": "Il piano è cambiato dopo che hai aperto questa pagina; qui sotto è stato ricaricato. Rileggilo prima di decidere.",
+      "working": "Un momento…",
+      "done": "Fatto. La pagina ha riletto il risultato."
     },
     "step": {
       "heading": "Passo {n}: {title}",
@@ -478,7 +482,13 @@
       "permits": "Solo queste ricerche di scoperta già fissate, in queste finestre, fino a questo tetto.",
       "forbids": "Non prende copie, non usa il modello locale e non dà un verdetto.",
       "spend": "Fino a {n} richieste di rete in totale.",
-      "none": "Per ora non è permessa nessuna richiesta."
+      "none": "Per ora non è permessa nessuna richiesta.",
+      "authorize": "Autorizza il calendario",
+      "revoke": "Revoca il calendario",
+      "revokeNote": "Impedisce gli avvii successivi. Una ricerca già in corso finisce.",
+      "revokeConfirm": "Voglio fermare questo calendario.",
+      "revokedNote": "Un calendario revocato non si può autorizzare di nuovo: pianifica una nuova serie.",
+      "summary": "{rounds} round, {searches} ricerche in tutto, {window}; fino a {n} richieste."
     },
     "policy": {
       "title": "Copie future",

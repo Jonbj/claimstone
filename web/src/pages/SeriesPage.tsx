@@ -32,6 +32,9 @@ function Body({ project, id }: { project: string; id: string }) {
   usePoll(project || null, refresh);
   useVisibleInterval(refresh, REFRESH_MS);
   const dossierAsOf = useAsOf(dossier.data);
+  // After a write the page reads what it changed again (no local state says "done"): the schedule and,
+  // since its state is in the audit, the dossier.
+  const afterCalendar = () => { schedule.reload(); dossier.reload(); };
 
   if (schedule.error) {
     if (schedule.error instanceof ControlError && schedule.error.status === 404) {
@@ -59,7 +62,7 @@ function Body({ project, id }: { project: string; id: string }) {
         </>
       )}
       <PlanStep schedule={s} />
-      <CalendarStep schedule={s} />
+      <CalendarStep project={project} schedule={s} onChanged={afterCalendar} />
       {grants.error ? <ErrorState error={grants.error} context="scheduler" /> : null}
       {grants.pending && !grants.error ? <Pending label={t("sched.loading")} /> : null}
       {!grants.pending ? (

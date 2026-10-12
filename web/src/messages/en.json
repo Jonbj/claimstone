@@ -454,7 +454,11 @@
       "copies": "Copies",
       "model": "Local model",
       "undecided": "not decided",
-      "notLoaded": "not loaded yet"
+      "notLoaded": "not loaded yet",
+      "read": "I have read what this permits and its limits.",
+      "differs": "The plan changed after you opened this page; it has been reloaded below. Read it again before deciding.",
+      "working": "Working…",
+      "done": "Done. The page has read the result again."
     },
     "step": {
       "heading": "Step {n}: {title}",
@@ -478,7 +482,13 @@
       "permits": "Only these frozen discovery searches, in these windows, up to this ceiling.",
       "forbids": "It does not fetch copies, run the local model or give a verdict.",
       "spend": "Up to {n} network requests in total.",
-      "none": "No request is permitted yet."
+      "none": "No request is permitted yet.",
+      "authorize": "Authorize the calendar",
+      "revoke": "Revoke the calendar",
+      "revokeNote": "Stops later starts. A search already running finishes.",
+      "revokeConfirm": "I want to stop this calendar.",
+      "revokedNote": "A revoked schedule cannot be authorized again; plan a new series.",
+      "summary": "{rounds} rounds, {searches} searches in all, {window}; up to {n} requests."
     },
     "policy": {
       "title": "Future copies",

@@ -171,8 +171,9 @@ export interface Routes {
 export const sent: Array<{ url: string; method: string; body: unknown }> = [];
 
 export const topic = (id: string, terms: string[]) => ({ id, label: id, terms });
-export const overviewOf = (topics: Array<{ id: string; label: string; terms: string[] }>) =>
-  ({ api_version: 1, journey: { topics } });
+export const overviewOf = (topics: Array<{ id: string; label: string; terms: string[] }>,
+                           byClass: Record<string, unknown> = {}) =>
+  ({ api_version: 1, journey: { topics }, floor_panel: { by_class: byClass, disclosure: "", overall: {}, sentences: [] } });
 
 /** Stubs fetch by URL and records every request's URL. */
 export function stub(routes: Routes): string[] {

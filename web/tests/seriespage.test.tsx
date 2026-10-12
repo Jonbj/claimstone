@@ -47,7 +47,8 @@ describe("Series page", () => {
     expect(within(timeline).getAllByText("planned")).toHaveLength(2);
     expect(within(timeline).getByText("1 Jan 2099, 00:00 UTC → 31 Jan 2099, 00:00 UTC")).toBeTruthy();
     expect(screen.getByText("No request is permitted yet.")).toBeTruthy();
-    expect(screen.queryByRole("button", { name: /authori[sz]e|create/i })).toBeNull();
+    // Authorize exists but permits nothing by itself: it waits for the box to be ticked.
+    expect(screen.getByRole("button", { name: "Authorize the calendar" }).hasAttribute("disabled")).toBe(true);
   });
 
   it("AUTHORIZED: shows who authorized and when, from the events", async () => {
