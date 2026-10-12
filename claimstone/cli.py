@@ -1367,6 +1367,10 @@ def _control(args: argparse.Namespace) -> int:
     return 0
 
 
+# True because the control server re-reads the ledger credential stamp on every request.
+_SESSIONS_END = "sessions of a running control server end on their next request"
+
+
 def _operator(args: argparse.Namespace) -> int:
     import getpass
 
@@ -1379,11 +1383,36 @@ def _operator(args: argparse.Namespace) -> int:
             if password != getpass.getpass("again: "):
                 print("passwords do not match", file=sys.stderr)
                 return 2
-            operators.add_operator(directory, args.id, args.name, password)
-            print(f"operator recorded: {args.id} ({args.name}) in {directory}/")
+            row = operators.add_operator(directory, args.id, args.name, password,
+                                         role=args.role, email=args.email, by="cli")
+            print(f"operator recorded: {args.id} ({args.name}, {row['role']}) in {directory}/")
         elif args.operator_command == "disable":
-            operators.disable_operator(directory, args.id)
+            operators.disable_operator(directory, args.id, by="cli")
             print(f"operator disabled: {args.id}")
+            print(_SESSIONS_END)
+        elif args.operator_command == "enable":
+            operators.enable_operator(directory, args.id, by="cli")
+            print(f"operator enabled: {args.id}")
+        elif args.operator_command == "set-password":
+            password = getpass.getpass("new password: ")
+            if password != getpass.getpass("again: "):
+                print("passwords do not match", file=sys.stderr)
+                return 2
+            operators.set_password(directory, args.id, password, by="cli",
+                                   must_change=args.must_change)
+            print(f"password replaced: {args.id}")
+            print(_SESSIONS_END)
+        elif args.operator_command == "set-email":
+            operators.set_email(directory, args.id, args.email, by="cli")
+            print(f"email set: {args.id}")
+        elif args.operator_command == "set-role":
+            operators.set_role(directory, args.id, args.role, by="cli")
+            print(f"role set: {args.id} {args.role}")
+        elif args.operator_command == "list":
+            for person in operators.people(directory).values():
+                print("\t".join([person["id"], person["name"], person["role"],
+                                 "enabled" if person["enabled"] else "disabled",
+                                 person["email"] or "-"]))
         else:  # argparse makes this unreachable; kept honest anyway
             return 2
     except operators.OperatorError as exc:
@@ -1906,9 +1935,27 @@ def build_parser() -> argparse.ArgumentParser:
     operator_add.add_argument("id", help="the id a session authenticates")
     operator_add.add_argument("--name", required=True,
                               help="display name, recorded with the row and shown when signed")
+    operator_add.add_argument("--role", choices=("operator", "admin"), default=None,
+                              help="default: admin while no active admin exists, else operator")
+    operator_add.add_argument("--email", default=None, help="the address allowlisted for this id")
     operator_disable = operator_sub.add_parser(
         "disable", help="append a disabling row; the id can no longer log in")
     operator_disable.add_argument("id", help="the operator id to disable")
+    operator_enable = operator_sub.add_parser(
+        "enable", help="append an enabling row; the password is unchanged")
+    operator_enable.add_argument("id", help="the operator id to enable")
+    operator_password = operator_sub.add_parser(
+        "set-password", help="replace a password; prompts twice")
+    operator_password.add_argument("id", help="the operator id")
+    operator_password.add_argument("--must-change", action="store_true",
+                                   help="the person must choose their own at the next sign-in")
+    operator_email = operator_sub.add_parser("set-email", help="record the address allowlisted for an id")
+    operator_email.add_argument("id", help="the operator id")
+    operator_email.add_argument("email", help="the address")
+    operator_role = operator_sub.add_parser("set-role", help="make an id an operator or an admin")
+    operator_role.add_argument("id", help="the operator id")
+    operator_role.add_argument("role", choices=("operator", "admin"))
+    operator_sub.add_parser("list", help="every id: id, name, role, enabled|disabled, email")
     operator_cmd.set_defaults(func=_operator)
 
     export_cmd = sub.add_parser("export", help="freeze one flow's ledgers into a verifiable snapshot")
