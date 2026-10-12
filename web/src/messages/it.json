@@ -458,13 +458,15 @@
       "read": "Ho letto cosa permette e i suoi limiti.",
       "differs": "Il piano è cambiato dopo che hai aperto questa pagina; qui sotto è stato ricaricato. Rileggilo prima di decidere.",
       "working": "Un momento…",
-      "done": "Fatto. La pagina ha riletto il risultato."
+      "done": "Fatto. La pagina ha riletto il risultato.",
+      "cancel": "Chiudi il modulo"
     },
     "step": {
       "heading": "Passo {n}: {title}",
       "permits": "Cosa permette",
       "forbids": "Cosa non permette",
-      "spend": "Cosa può consumare"
+      "spend": "Cosa può consumare",
+      "undecided": "Non deciso."
     },
     "plan": {
       "title": "Piano",
@@ -500,7 +502,32 @@
       "classes": "Classi di fonte: {classes}",
       "reserved": "Candidati riservati: {ratio}",
       "requests": "Richieste riservate: {n}",
-      "spendMany": "Ogni regola qui sotto indica il proprio tetto."
+      "spendMany": "Ogni regola qui sotto indica il proprio tetto.",
+      "rowLabel": "Regola per le copie {id}",
+      "plan": "Pianifica una regola per le copie",
+      "authorize": "Autorizza la regola per le copie",
+      "revoke": "Revoca la regola per le copie",
+      "plannedNote": "Solo pianificata: non è permesso niente finché non la autorizzi.",
+      "revokeNote": "Impedisce gli avvii successivi. Una copia già in corso finisce.",
+      "revokeConfirm": "Voglio fermare questa regola per le copie.",
+      "revokedNote": "Revocata: da questa regola non partirà più nessuna copia.",
+      "form": {
+        "hosts": "Host da cui possono arrivare le copie (uno per riga, solo https)",
+        "hostsHelp": "Nomi esatti, in minuscolo. Non c'è un valore predefinito: gli host li indichi tu.",
+        "classes": "Classi di fonte",
+        "other": "Altri id di classe (separati da virgola)",
+        "classesHelp": "Suggerimento: le classi viste nel primo flusso di questa serie. Il server rifiuta una classe che il progetto non ha dichiarato.",
+        "candidates": "Candidati, al massimo",
+        "each": "Richieste per candidato, al massimo",
+        "product": "Tetto: {line} richieste",
+        "planning": "Pianificare non permette niente: non parte nessuna richiesta finché non autorizzi la regola.",
+        "save": "Salva la regola"
+      },
+      "reason": {
+        "classes": "Scegli almeno una classe di fonte.",
+        "numbers": "Candidati: da 1 a 1000. Richieste per candidato: da 1 a 20.",
+        "window": "Indica i due estremi della finestra in UTC."
+      }
     },
     "mandate": {
       "title": "Modello locale",
@@ -515,7 +542,25 @@
       "disabledBy": "Disabilitato da {name}",
       "process": "Processo",
       "spendMany": "Ogni mandato qui sotto indica il proprio tetto.",
-      "enabledBy": "Abilitato da {name}, {at}"
+      "enabledBy": "Abilitato da {name}, {at}",
+      "rowLabel": "Modello locale {id}",
+      "enable": "Abilita un modello locale",
+      "enableAction": "Abilita il modello locale",
+      "disableAction": "Disabilita il modello locale",
+      "disableNote": "Disabilitare ferma i passaggi successivi; una chiamata già in corso non viene annullata.",
+      "disableConfirm": "Voglio fermare questo modello locale.",
+      "needsCalendar": "Prima autorizza il calendario: un modello locale si può abilitare solo per un calendario autorizzato.",
+      "form": {
+        "extract": "Modello per l'estrazione",
+        "review": "Modello per la revisione",
+        "cap": "Chiamate locali, al massimo",
+        "flows": "Vale per i {n} flussi di questa serie, come elencati sopra."
+      },
+      "sameModels": "I due modelli devono essere diversi.",
+      "reason": {
+        "models": "Indica tutti e due i modelli.",
+        "cap": "Il limite deve essere un numero intero da 1 a 100000."
+      }
     },
     "resultStep": {
       "title": "Risultato",

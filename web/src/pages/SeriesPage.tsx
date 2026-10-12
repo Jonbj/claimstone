@@ -35,6 +35,8 @@ function Body({ project, id }: { project: string; id: string }) {
   // After a write the page reads what it changed again (no local state says "done"): the schedule and,
   // since its state is in the audit, the dossier.
   const afterCalendar = () => { schedule.reload(); dossier.reload(); };
+  // A new policy or mandate has an id the remembered list does not hold: walk the index again.
+  const afterGrant = (full: boolean) => { schedule.reload(); void grants.reload(full); };
 
   if (schedule.error) {
     if (schedule.error instanceof ControlError && schedule.error.status === 404) {
@@ -67,9 +69,9 @@ function Body({ project, id }: { project: string; id: string }) {
       {grants.pending && !grants.error ? <Pending label={t("sched.loading")} /> : null}
       {!grants.pending ? (
         <>
-          <PolicyStep rows={rows ? rows.policies : null} complete={rows?.complete ?? false} />
-          <MandateStep rows={rows ? rows.mandates : null} workers={rows?.mandateWorkers ?? {}}
-                       complete={rows?.complete ?? false} />
+          <PolicyStep project={project} schedule={s} rows={rows ? rows.policies : null} complete={rows?.complete ?? false} onChanged={afterGrant} />
+          <MandateStep project={project} schedule={s} rows={rows ? rows.mandates : null} workers={rows?.mandateWorkers ?? {}}
+                       complete={rows?.complete ?? false} onChanged={afterGrant} />
         </>
       ) : null}
       {rows && !rows.complete ? <p className="text-sm">{t("sched.series.grantsNotLoaded")}</p> : null}

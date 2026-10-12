@@ -458,13 +458,15 @@
       "read": "I have read what this permits and its limits.",
       "differs": "The plan changed after you opened this page; it has been reloaded below. Read it again before deciding.",
       "working": "Working…",
-      "done": "Done. The page has read the result again."
+      "done": "Done. The page has read the result again.",
+      "cancel": "Close the form"
     },
     "step": {
       "heading": "Step {n}: {title}",
       "permits": "What it permits",
       "forbids": "What it does not permit",
-      "spend": "What it can spend"
+      "spend": "What it can spend",
+      "undecided": "Not decided."
     },
     "plan": {
       "title": "Plan",
@@ -500,7 +502,32 @@
       "classes": "Source classes: {classes}",
       "reserved": "Candidates reserved: {ratio}",
       "requests": "Requests reserved: {n}",
-      "spendMany": "Each policy below states its own ceiling."
+      "spendMany": "Each policy below states its own ceiling.",
+      "rowLabel": "Copy policy {id}",
+      "plan": "Plan a copy policy",
+      "authorize": "Authorize the copy policy",
+      "revoke": "Revoke the copy policy",
+      "plannedNote": "Planned only: nothing is permitted until you authorize it.",
+      "revokeNote": "Stops later starts. A copy already running finishes.",
+      "revokeConfirm": "I want to stop this copy policy.",
+      "revokedNote": "Revoked: no later copy will start from this policy.",
+      "form": {
+        "hosts": "Hosts copies may come from (one per line, https only)",
+        "hostsHelp": "Exact lowercase names. There is no default: you name the hosts.",
+        "classes": "Source classes",
+        "other": "Other class ids (comma separated)",
+        "classesHelp": "Suggested: the classes seen in the first flow of this series. The server refuses a class the project has not declared.",
+        "candidates": "Candidates, at most",
+        "each": "Requests per candidate, at most",
+        "product": "Ceiling: {line} requests",
+        "planning": "Planning permits nothing: no request is made until you authorize the policy.",
+        "save": "Save the policy"
+      },
+      "reason": {
+        "classes": "Choose at least one source class.",
+        "numbers": "Candidates: 1 to 1000. Requests per candidate: 1 to 20.",
+        "window": "Give both ends of the UTC window."
+      }
     },
     "mandate": {
       "title": "Local model",
@@ -515,7 +542,25 @@
       "disabledBy": "Disabled by {name}",
       "process": "Process",
       "spendMany": "Each mandate below states its own ceiling.",
-      "enabledBy": "Enabled by {name}, {at}"
+      "enabledBy": "Enabled by {name}, {at}",
+      "rowLabel": "Local model {id}",
+      "enable": "Enable a local model",
+      "enableAction": "Enable the local model",
+      "disableAction": "Disable the local model",
+      "disableNote": "Disabling stops later passes; a call already running is not undone.",
+      "disableConfirm": "I want to stop this local model.",
+      "needsCalendar": "Authorize the calendar first; a local model can be enabled only for an authorized calendar.",
+      "form": {
+        "extract": "Model for extraction",
+        "review": "Model for review",
+        "cap": "Local calls, at most",
+        "flows": "It applies to the {n} flows of this series, as listed above."
+      },
+      "sameModels": "The two models must be different.",
+      "reason": {
+        "models": "Name both models.",
+        "cap": "The cap must be a whole number from 1 to 100000."
+      }
     },
     "resultStep": {
       "title": "Result",

@@ -122,7 +122,8 @@ describe("Series page", () => {
     mount();
     const step = await screen.findByRole("region", { name: /Local model/ });
     await within(step).findByText(/Normally stopped between supervisor passes/);
-    expect(within(step).queryByRole("status")).toBeNull();
+    // an always-present live region of the grant panel is empty; no process alert is ever spoken here
+    expect(within(step).queryAllByRole("status").filter((e) => e.textContent)).toHaveLength(0);
     expect(within(step).getByText("Process")).toBeTruthy();
     expect(within(step).getByTitle(state)).toBeTruthy();
     expect(within(step).getAllByTitle("ENABLED").length).toBeGreaterThan(0);

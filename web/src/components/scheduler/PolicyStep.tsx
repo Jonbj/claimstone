@@ -1,18 +1,26 @@
-import { useLocale } from "@/lib/i18n";
+import { useState } from "react";
+import { control } from "@/lib/control";
 import { formatUtc } from "@/lib/datetime";
-import type { PolicyStatus } from "@/lib/scheduler";
+import { useLocale } from "@/lib/i18n";
+import type { PolicyStatus, ScheduleStatus } from "@/lib/scheduler";
+import { quietClass } from "@/components/wizard/stepTypes";
+import GrantPanel from "./GrantPanel";
+import PolicyForm from "./PolicyForm";
 import StateWord from "./StateWord";
 import StepCard from "./StepCard";
 import { identityName, ratio, requestsLine, utcRange } from "./format";
 
-function Policy({ row }: { row: PolicyStatus }) {
+// One policy, with its own state and its own action. Authorize sends the hash and the three limits
+// exactly as this row shows them; Revoke sends the hash.
+function Policy({ project, row, onChanged }: { project: string; row: PolicyStatus; onChanged: (full: boolean) => void }) {
   const { t } = useLocale();
   const p = row.policy;
   return (
-    <div className="flex flex-col gap-1 border-t border-border pt-2 first:border-t-0 first:pt-0">
+    <div role="group" aria-label={t("sched.policy.rowLabel", { id: row.policy_id.slice(0, 12) })}
+         className="flex flex-col gap-1 border-t border-border pt-2 first:border-t-0 first:pt-0">
       <p><StateWord word={row.state} /></p>
       <p className="break-words">{t("sched.policy.hosts", { hosts: p.allowed_hosts.join(", ") })}</p>
-      <p>{t("sched.policy.classes", { classes: p.source_classes.join(", ") })}</p>
+      <p className="break-words">{t("sched.policy.classes", { classes: p.source_classes.join(", ") })}</p>
       <p>{utcRange(p.not_before, p.expires_at)}</p>
       <p>{requestsLine(p.max_requests_each, p.max_candidates, p.max_total_requests)}</p>
       <p>{t("sched.policy.reserved", { ratio: ratio(row.reserved_candidates, p.max_candidates) })}</p>
@@ -22,13 +30,35 @@ function Policy({ row }: { row: PolicyStatus }) {
           <span className="font-mono">{event.event}</span>{" · "}{identityName(event.identity)}{" · "}{formatUtc(event.at)}
         </p>
       ))}
+      {row.state === "PLANNED" ? (
+        <GrantPanel
+          explanation={<p>{t("sched.policy.plannedNote")}</p>}
+          confirmLabel={t("sched.grant.read")} actionLabel={t("sched.policy.authorize")}
+          onConfirm={() => control.authorizeCopyPolicy(project, row.policy_id, {
+            policy_sha256: row.policy_id, max_candidates: p.max_candidates,
+            max_requests_each: p.max_requests_each, max_total_requests: p.max_total_requests })}
+          onDone={() => onChanged(false)} onDiffers={() => onChanged(false)} />
+      ) : null}
+      {row.state === "AUTHORIZED" ? (
+        <GrantPanel
+          explanation={<p>{t("sched.policy.revokeNote")}</p>}
+          confirmLabel={t("sched.policy.revokeConfirm")} actionLabel={t("sched.policy.revoke")} danger
+          onConfirm={() => control.revokeCopyPolicy(project, row.policy_id, row.policy_id)}
+          onDone={() => onChanged(false)} onDiffers={() => onChanged(false)} />
+      ) : null}
+      {row.state === "REVOKED" ? <p>{t("sched.policy.revokedNote")}</p> : null}
     </div>
   );
 }
 
 /** `rows` is null when the grants could not be read at all; an empty list is "not decided". */
-export default function PolicyStep({ rows, complete }: { rows: PolicyStatus[] | null; complete: boolean }) {
+export default function PolicyStep({ project, schedule, rows, complete, onChanged }: {
+  project: string; schedule: ScheduleStatus; rows: PolicyStatus[] | null; complete: boolean;
+  /** `full` is true after a policy was created: its id is not in the list the page remembers. */
+  onChanged: (full: boolean) => void;
+}) {
   const { t } = useLocale();
+  const [open, setOpen] = useState(false);
   const first = rows?.[0];
   const many = (rows?.length ?? 0) > 1;
   const spend = many ? t("sched.policy.spendMany") : first
@@ -38,8 +68,16 @@ export default function PolicyStep({ rows, complete }: { rows: PolicyStatus[] | 
     <StepCard n={3} title={t("sched.policy.title")} state={many ? null : first?.state ?? null}
               permits={t("sched.policy.permits")} forbids={t("sched.policy.forbids")} spend={spend}>
       {rows === null ? <p>{t("sched.series.grantsFailed")}</p>
-        : rows.length ? rows.map((row) => <Policy key={row.policy_id} row={row} />)
-        : <p>{complete ? t("sched.grant.undecided") : t("sched.grant.notLoaded")}</p>}
+        : rows.length ? rows.map((row) => <Policy key={row.policy_id} project={project} row={row} onChanged={onChanged} />)
+        : <p>{complete ? t("sched.step.undecided") : t("sched.grant.notLoaded")}</p>}
+      {rows !== null && schedule.state !== "REVOKED" ? (
+        open ? (
+          <PolicyForm project={project} schedule={schedule} onClose={() => setOpen(false)}
+                      onSaved={() => { setOpen(false); onChanged(true); }} />
+        ) : (
+          <button type="button" onClick={() => setOpen(true)} className={`${quietClass} self-start`}>{t("sched.policy.plan")}</button>
+        )
+      ) : null}
     </StepCard>
   );
 }
