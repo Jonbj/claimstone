@@ -281,6 +281,54 @@
     },
     "new": {
       "title": "Nuova serie"
+    },
+    "state": {
+      "PLANNED": "Pianificato",
+      "AUTHORIZED": "Autorizzato",
+      "REVOKED": "Revocato",
+      "ENABLED": "Abilitato",
+      "DISABLED": "Disabilitato",
+      "ALIVE": "Attivo",
+      "STALE": "Non aggiornato",
+      "STOPPED": "Fermato",
+      "NOT_STARTED": "Mai avviato",
+      "UNKNOWN": "Sconosciuto",
+      "IDLE": "In attesa",
+      "DRIVING": "Al lavoro"
+    },
+    "signedOut": "Accedi per vedere lo scheduler.",
+    "signIn": "Accedi",
+    "loading": "Carico lo scheduler…",
+    "workers": {
+      "title": "Processi",
+      "supervisor": "Scansione automatica",
+      "operations": "Lavoro approvato",
+      "lastSeen": "visto l'ultima volta {at}",
+      "neverSeen": "mai visto",
+      "phase": "fase",
+      "age": "{seconds} s fa",
+      "alert": "Il processo che esegue il lavoro approvato non è in funzione: il lavoro approvato resta in attesa. Nulla è fallito dal punto di vista scientifico.",
+      "note": "«Attivo» vuol dire che il processo sta controllando, non che qualcosa sia andato avanti."
+    },
+    "index": {
+      "series": "Serie",
+      "new": "Nuova serie",
+      "empty": "Nessuna serie, per ora.",
+      "rowLabel": "Serie {id}",
+      "rounds": "{n} round",
+      "maxRequests": "fino a {n} richieste",
+      "open": "Apri la serie {id}",
+      "loadMore": "Carica altre",
+      "restarted": "L'elenco è cambiato mentre lo leggevi: ricomincio dalla prima pagina.",
+      "singleMandates": "Mandati del modello locale su un solo flusso",
+      "remainingCalls": "{n} chiamate rimaste"
+    },
+    "grant": {
+      "calendar": "Calendario",
+      "copies": "Copie",
+      "model": "Modello locale",
+      "undecided": "non deciso",
+      "notLoaded": "non ancora caricato"
     }
   }
 }

@@ -108,3 +108,32 @@ export function overviewOfSeries(
 export function workerAlert(worker: Worker): boolean {
   return worker.state !== "ALIVE";
 }
+
+/** One acquisition summary of a round (`admission` in the dossier's audit), as the server sends it. */
+export interface Admission {
+  found: number;
+  confirmed: number;
+  obtained: number;
+  rate: number | null;
+  status: string;
+  [key: string]: unknown;
+}
+
+/** One round of the dossier's audit. Only the fields the series page shows are typed. */
+export interface AuditRound {
+  round?: string;
+  flow_id?: string;
+  not_before?: string;
+  expires_at?: string;
+  operations?: Record<string, number>;
+  successful_queries?: number;
+  planned_queries?: number;
+  admission?: Admission;
+  [key: string]: unknown;
+}
+
+/** `audit.rounds` of a dossier; the audit is typed loosely upstream, so anything else is no rounds. */
+export function roundsOf(audit: unknown): AuditRound[] {
+  const rounds = (audit as { rounds?: unknown } | null)?.rounds;
+  return Array.isArray(rounds) ? (rounds as AuditRound[]) : [];
+}

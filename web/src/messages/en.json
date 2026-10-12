@@ -281,6 +281,54 @@
     },
     "new": {
       "title": "New series"
+    },
+    "state": {
+      "PLANNED": "Planned",
+      "AUTHORIZED": "Authorized",
+      "REVOKED": "Revoked",
+      "ENABLED": "Enabled",
+      "DISABLED": "Disabled",
+      "ALIVE": "Alive",
+      "STALE": "Stale",
+      "STOPPED": "Stopped",
+      "NOT_STARTED": "Not started",
+      "UNKNOWN": "Unknown",
+      "IDLE": "Idle",
+      "DRIVING": "Working"
+    },
+    "signedOut": "Sign in to see the scheduler.",
+    "signIn": "Sign in",
+    "loading": "Loading the scheduler…",
+    "workers": {
+      "title": "Processes",
+      "supervisor": "Automatic scanning",
+      "operations": "Approved work",
+      "lastSeen": "last seen {at}",
+      "neverSeen": "never seen",
+      "phase": "phase",
+      "age": "{seconds} s ago",
+      "alert": "The process that runs approved work is not running: approved work waits. Nothing has failed scientifically.",
+      "note": "\"Alive\" means the process is scanning, not that anything advanced."
+    },
+    "index": {
+      "series": "Series",
+      "new": "New series",
+      "empty": "No series yet.",
+      "rowLabel": "Series {id}",
+      "rounds": "{n} rounds",
+      "maxRequests": "up to {n} requests",
+      "open": "Open series {id}",
+      "loadMore": "Load more",
+      "restarted": "The list changed while you were reading it; starting again from the first page.",
+      "singleMandates": "Local-model mandates on a single flow",
+      "remainingCalls": "{n} calls left"
+    },
+    "grant": {
+      "calendar": "Calendar",
+      "copies": "Copies",
+      "model": "Local model",
+      "undecided": "not decided",
+      "notLoaded": "not loaded yet"
     }
   }
 }
