@@ -156,16 +156,35 @@ export interface Routes {
   mandateRead?: (id: string) => Promise<Response>;
   /** `unbound_selectors` slugs of the project `news` in the project list. */
   unbound?: string[];
-  /** Bound flows of the project in the project list (flow_id and selector). */
-  flows?: Array<{ flow_id: string; selector: { round: string | null; manifest_only: boolean } }>;
+  /** Bound flows of the project in the project list (flow_id and selector; the rest is defaulted). */
+  flows?: Array<{ flow_id: string; selector: { round: string | null; manifest_only: boolean };
+                  title?: string | null; selector_label?: string; binding_state?: string }>;
+  /** Unbound round selectors of the project (their rounds already have candidates). */
+  unboundRounds?: string[];
+  /** `GET …/flows/{id}/overview`: the journey's topics are all the new-series page reads. */
+  overview?: (flowId: string) => Promise<Response>;
+  /** Any POST, by URL and parsed body; 404 when absent. */
+  post?: (url: string, body: unknown) => Promise<Response>;
 }
+
+/** Every request the stub has seen, with its method and parsed body. */
+export const sent: Array<{ url: string; method: string; body: unknown }> = [];
+
+export const topic = (id: string, terms: string[]) => ({ id, label: id, terms });
+export const overviewOf = (topics: Array<{ id: string; label: string; terms: string[] }>) =>
+  ({ api_version: 1, journey: { topics } });
 
 /** Stubs fetch by URL and records every request's URL. */
 export function stub(routes: Routes): string[] {
   const urls: string[] = [];
   let served = 0;
-  vi.stubGlobal("fetch", (url: string) => {
+  sent.length = 0;
+  vi.stubGlobal("fetch", (url: string, init: RequestInit = {}) => {
     urls.push(url);
+    sent.push({ url, method: init.method ?? "GET", body: init.body ? JSON.parse(String(init.body)) : null });
+    if (init.method === "POST" && !url.startsWith("/control/v1/session")) {
+      return (routes.post ?? (() => err(404, "NOT_FOUND", "no")))(url, init.body ? JSON.parse(String(init.body)) : null);
+    }
     if (url.startsWith("/control/v1/session")) {
       return routes.signedIn === false
         ? err(401, "UNAUTHORIZED", "not signed in")
@@ -188,11 +207,19 @@ export function stub(routes: Routes): string[] {
     if (url.startsWith("/api/v1/projects/news/periodic-dossiers/")) {
       return (routes.dossier ?? (() => json(200, dossier())))();
     }
+    if (/^\/api\/v1\/projects\/news\/flows\/[^/]+\/overview$/.test(url)) {
+      const flowId = decodeURIComponent(url.split("/")[6]);
+      return (routes.overview ?? (() => json(200, overviewOf([topic("t1", ["a", "b", "c"]), topic("t2", ["d"])]))))(flowId);
+    }
     if (url === "/api/v1/projects") {
       return json(200, { api_version: 1, projects: [{
-        name: "news", config: "OK", config_error: null, flows: routes.flows ?? [],
-        unbound_selectors: (routes.unbound ?? []).map((slug) => ({
-          slug, label: slug, selector: { round: null, manifest_only: false } })),
+        name: "news", config: "OK", config_error: null,
+        flows: (routes.flows ?? []).map((f) => ({ title: null, selector_label: f.selector.round ? `round ${f.selector.round}` : "whole store",
+          binding_state: "CURRENT", bound_after_data: false, ...f })),
+        unbound_selectors: [
+          ...(routes.unbound ?? []).map((slug) => ({ slug, label: slug, selector: { round: null, manifest_only: false } })),
+          ...(routes.unboundRounds ?? []).map((round) => ({ slug: round, label: `round ${round}`, selector: { round, manifest_only: false } })),
+        ],
       }] });
     }
     return err(404, "NOT_FOUND", "no");

@@ -305,7 +305,100 @@
       "title": "Risultato cumulativo"
     },
     "new": {
-      "title": "Nuova serie"
+      "title": "Nuova serie",
+      "lede": "Una serie è un elenco di aggiornamenti datati di un flusso di ricerca. Da questa pagina non parte nulla.",
+      "flow": {
+        "label": "Flusso da ripetere",
+        "none": "Questo progetto non ha nessun flusso che si possa ripetere.",
+        "option": "{title} — {label}",
+        "untitled": "flusso {id}"
+      },
+      "prefix": "Nome degli aggiornamenti",
+      "cadence": {
+        "label": "Cadenza",
+        "monthly": "Ogni mese",
+        "weekly": "Ogni settimana",
+        "days": "Ogni N giorni",
+        "every": "Numero di giorni"
+      },
+      "start": "Primo avvio (UTC)",
+      "count": "Numero di round (da 1 a 32)",
+      "regen": {
+        "ask": "Rigenerare e perdere le tue modifiche?",
+        "yes": "Rigenera",
+        "no": "Tieni le mie modifiche"
+      },
+      "rounds": {
+        "title": "Round",
+        "help": "Ogni finestra è in UTC. Una finestra può finire proprio dove inizia la successiva."
+      },
+      "round": {
+        "legend": "Round {n}",
+        "name": "Nome",
+        "title": "Titolo",
+        "start": "Inizia (UTC)",
+        "end": "Finisce (UTC)",
+        "format": "Scrivi l'ora così: 2026-11-01T00:00:00Z."
+      },
+      "problem": {
+        "COUNT": "Una serie ha da 1 a 32 round.",
+        "NAME": "Il nome può avere solo lettere, cifre, - e _ (fino a 80).",
+        "TITLE": "Il titolo è obbligatorio.",
+        "PAST": "La finestra inizia nel passato: deve iniziare nel futuro.",
+        "ORDER": "Le finestre devono essere in ordine di inizio.",
+        "OVERLAP": "Questa finestra si sovrappone alla precedente.",
+        "DUPLICATE": "Un altro round ha lo stesso nome.",
+        "KNOWN": "Nel progetto esiste già un round con questo nome.",
+        "TOO_FAR": "La finestra finisce oltre 366 giorni da adesso.",
+        "WINDOW": "Una finestra deve finire dopo il suo inizio."
+      },
+      "sources": {
+        "legend": "Fonti da cercare",
+        "openalex": "OpenAlex",
+        "crossref": "Crossref",
+        "arxiv": "arXiv",
+        "help": "Ogni fonte esegue tutte le ricerche del flusso."
+      },
+      "advanced": {
+        "summary": "Opzioni avanzate — host {hosts}; {perQuery} risultati per ricerca; al massimo {requests} richieste per ricerca; fino a {units} ricerche per round",
+        "hosts": "Host che le ricerche possono contattare (uno per riga)",
+        "hostsHelp": "Suggeriti dalle fonti che hai scelto: nomi esatti, in minuscolo.",
+        "perQuery": "Risultati per ricerca",
+        "requestsEach": "Richieste per ricerca, al massimo",
+        "unitsEach": "Ricerche per round, al massimo",
+        "unitsHelp": "Suggerito: {n}, cioè le ricerche di un round. Non può essere più basso."
+      },
+      "figures": {
+        "title": "Cifre (un'anteprima)",
+        "perRound": "Ricerche per round: {n}",
+        "total": "Ricerche in tutto: {n}",
+        "requestsRound": "Richieste per round, al massimo: {n}",
+        "ceiling": "Tetto di richieste in tutto: {n}",
+        "note": "È un'anteprima. Conta il tetto che calcola il server quando salvi."
+      },
+      "after": {
+        "title": "Cosa farà Claimstone dopo il salvataggio",
+        "freeze": "Fissa un flusso e un insieme esatto di ricerche per ogni round.",
+        "plan": "Scrive su disco solo un piano.",
+        "noRequest": "Non fa nessuna richiesta.",
+        "nothing": "Non autorizza niente. Nella pagina successiva approvi il calendario, a parte."
+      },
+      "submit": "Salva il piano",
+      "saving": "Salvo…",
+      "topicsFailed": "Non è stato possibile leggere le ricerche di questo flusso: {message}",
+      "reason": {
+        "prefix": "Non si può ancora salvare: {reason}",
+        "flow": "Scegli un flusso.",
+        "topicsLoading": "Le ricerche di questo flusso si stanno ancora leggendo.",
+        "topicsFailed": "Non è stato possibile leggere le ricerche di questo flusso.",
+        "noSource": "Scegli almeno una fonte.",
+        "count": "Scrivi un numero di round da 1 a 32 e un inizio valido.",
+        "round": "Round {n}: {problem}",
+        "hosts": "Indica almeno un host.",
+        "numbers": "I limiti devono essere numeri interi, da 1 in su.",
+        "units": "Le ricerche per round non possono essere meno di {n}.",
+        "pending": "Rispondi alla domanda sulla rigenerazione dei round."
+      }
     },
     "state": {
       "PLANNED": "Pianificato",

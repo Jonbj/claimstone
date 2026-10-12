@@ -305,7 +305,100 @@
       "title": "Cumulative result"
     },
     "new": {
-      "title": "New series"
+      "title": "New series",
+      "lede": "A series is a list of dated updates of one research flow. Nothing runs from this page.",
+      "flow": {
+        "label": "Flow to repeat",
+        "none": "This project has no flow that can be repeated.",
+        "option": "{title} — {label}",
+        "untitled": "flow {id}"
+      },
+      "prefix": "Name of the updates",
+      "cadence": {
+        "label": "Cadence",
+        "monthly": "Every month",
+        "weekly": "Every week",
+        "days": "Every N days",
+        "every": "Number of days"
+      },
+      "start": "First start (UTC)",
+      "count": "Number of rounds (1 to 32)",
+      "regen": {
+        "ask": "Regenerate and lose your edits?",
+        "yes": "Regenerate",
+        "no": "Keep my edits"
+      },
+      "rounds": {
+        "title": "Rounds",
+        "help": "Each window is in UTC. A window may end exactly where the next one begins."
+      },
+      "round": {
+        "legend": "Round {n}",
+        "name": "Name",
+        "title": "Title",
+        "start": "Starts (UTC)",
+        "end": "Ends (UTC)",
+        "format": "Write the time like 2026-11-01T00:00:00Z."
+      },
+      "problem": {
+        "COUNT": "A series has between 1 and 32 rounds.",
+        "NAME": "The name may use only letters, digits, - and _ (up to 80).",
+        "TITLE": "The title is required.",
+        "PAST": "The window starts in the past; it must start in the future.",
+        "ORDER": "Windows must be in order of start.",
+        "OVERLAP": "This window overlaps the one before it.",
+        "DUPLICATE": "Another round has the same name.",
+        "KNOWN": "A round with this name already exists in the project.",
+        "TOO_FAR": "The window ends more than 366 days from now.",
+        "WINDOW": "A window must end after it starts."
+      },
+      "sources": {
+        "legend": "Sources to search",
+        "openalex": "OpenAlex",
+        "crossref": "Crossref",
+        "arxiv": "arXiv",
+        "help": "Each source runs every search of the flow."
+      },
+      "advanced": {
+        "summary": "Advanced options — hosts {hosts}; {perQuery} results per search; {requests} requests per search at most; up to {units} searches per round",
+        "hosts": "Hosts the searches may contact (one per line)",
+        "hostsHelp": "Suggested from the sources you ticked: exact names, lowercase.",
+        "perQuery": "Results per search",
+        "requestsEach": "Requests per search, at most",
+        "unitsEach": "Searches per round, at most",
+        "unitsHelp": "Suggested: {n}, the number of searches in a round. It cannot be lower."
+      },
+      "figures": {
+        "title": "Figures (a preview)",
+        "perRound": "Searches per round: {n}",
+        "total": "Searches in all: {n}",
+        "requestsRound": "Requests per round, at most: {n}",
+        "ceiling": "Request ceiling in all: {n}",
+        "note": "This is a preview. The ceiling the server computes when you save is the figure that counts."
+      },
+      "after": {
+        "title": "What Claimstone will do after you save",
+        "freeze": "It freezes one flow and one exact set of searches for each round.",
+        "plan": "It writes only a plan to disk.",
+        "noRequest": "It makes no request.",
+        "nothing": "It authorizes nothing. On the next page you approve the calendar, separately."
+      },
+      "submit": "Save the plan",
+      "saving": "Saving…",
+      "topicsFailed": "The searches of this flow could not be read: {message}",
+      "reason": {
+        "prefix": "Cannot save yet: {reason}",
+        "flow": "Choose a flow.",
+        "topicsLoading": "The searches of this flow are still being read.",
+        "topicsFailed": "The searches of this flow could not be read.",
+        "noSource": "Tick at least one source.",
+        "count": "Enter a number of rounds from 1 to 32 and a valid start.",
+        "round": "Round {n}: {problem}",
+        "hosts": "Name at least one host.",
+        "numbers": "The caps must be whole numbers, 1 or more.",
+        "units": "Searches per round cannot be lower than {n}.",
+        "pending": "Answer the question about regenerating the rounds."
+      }
     },
     "state": {
       "PLANNED": "Planned",
