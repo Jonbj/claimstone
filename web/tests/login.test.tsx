@@ -73,7 +73,7 @@ describe("F1: the login page", () => {
   }
 
   it("returns to ?next= after signing in", async () => {
-    server(() => json(200, { operator: { id: "ada", name: "Ada" }, csrf_token: "t" }));
+    server(() => json(200, { operator: { id: "ada", name: "Ada", role: "admin", must_change_password: false }, csrf_token: "t" }));
     const router = mount("/login?next=/p/demo/f/abc");
     await fillAndSubmit();
     await waitFor(() => expect(router.state.location.pathname).toBe("/p/demo/f/abc"));
@@ -82,7 +82,7 @@ describe("F1: the login page", () => {
   it("refuses //evil and https://… as a destination", async () => {
     for (const bad of ["//evil.example", "https://evil.example/x"]) {
       cleanup();
-      server(() => json(200, { operator: { id: "ada", name: "Ada" }, csrf_token: "t" }));
+      server(() => json(200, { operator: { id: "ada", name: "Ada", role: "admin", must_change_password: false }, csrf_token: "t" }));
       const router = mount(`/login?next=${encodeURIComponent(bad)}`);
       await fillAndSubmit();
       await waitFor(() => expect(router.state.location.pathname).toBe("/"));

@@ -37,7 +37,7 @@ function mount(signedIn: boolean, onSeen?: () => Promise<Response>, today: unkno
   vi.stubGlobal("fetch", (url: string, init?: RequestInit) => {
     if (url.startsWith("/control/v1/session") && !url.includes("end")) {
       return signedIn
-        ? json(200, { operator: { id: "o1", name: "Ada" }, csrf_token: "t" })
+        ? json(200, { operator: { id: "o1", name: "Ada", role: "admin", must_change_password: false }, csrf_token: "t" })
         : json(401, { error: { code: "UNAUTHORIZED", message: "no session" } });
     }
     if (url.startsWith("/control/v1/today")) return json(todayStatus, today);

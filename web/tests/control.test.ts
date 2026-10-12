@@ -36,7 +36,7 @@ describe("F1: control client transport", () => {
   });
 
   it("login sends no CSRF token and no Idempotency-Key, and keeps the token in memory", async () => {
-    mockFetch(reply(200, { operator: { id: "o", name: "O" }, csrf_token: "tok" }));
+    mockFetch(reply(200, { operator: { id: "o", name: "O", role: "admin", must_change_password: false }, csrf_token: "tok" }));
     const info = await control.signIn("o", "pw");
     expect(info.csrf_token).toBe("tok");
     const headers = headersOf(calls[0]);

@@ -14,7 +14,7 @@ function json(status: number, body: unknown) {
   });
 }
 
-const signedIn = () => json(200, { operator: { id: "ada", name: "Ada" }, csrf_token: "tok" });
+const signedIn = () => json(200, { operator: { id: "ada", name: "Ada", role: "admin", must_change_password: false }, csrf_token: "tok" });
 const INTAKE = "/control/v1/p/demo/flows/f1/intake";
 const OVERVIEW = "/api/v1/projects/demo/flows/f1/overview";
 

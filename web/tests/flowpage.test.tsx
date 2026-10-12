@@ -33,7 +33,7 @@ function mount(path: string, signedIn: boolean) {
     requested.push(url);
     if (url.startsWith("/control/v1/session")) {
       return signedIn
-        ? json(200, { operator: { id: "o1", name: "Ada" }, csrf_token: "t" })
+        ? json(200, { operator: { id: "o1", name: "Ada", role: "admin", must_change_password: false }, csrf_token: "t" })
         : json(401, { error: { code: "UNAUTHORIZED", message: "no session" } });
     }
     if (url.endsWith("/operations")) return json(200, { flow_id: flowId, operations: [] });

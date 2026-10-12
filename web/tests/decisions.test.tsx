@@ -15,7 +15,7 @@ function json(status: number, body: unknown) {
   });
 }
 
-const signedIn = () => json(200, { operator: { id: "ada", name: "Ada" }, csrf_token: "tok" });
+const signedIn = () => json(200, { operator: { id: "ada", name: "Ada", role: "admin", must_change_password: false }, csrf_token: "tok" });
 const DECISIONS = "/control/v1/p/demo/flows/f1/decisions";
 const RESOLVE = "/control/v1/p/demo/flows/f1/intake/in1/resolve";
 const RETRY = "/control/v1/p/demo/flows/f1/decisions/retry-campaign";

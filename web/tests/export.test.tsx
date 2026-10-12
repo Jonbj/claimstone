@@ -24,7 +24,7 @@ function mount(o: Opts = {}) {
     if (url.startsWith("/control/v1/session") && !url.includes("end")) {
       return o.signedIn === false
         ? json(401, { error: { code: "UNAUTHORIZED", message: "no" } })
-        : json(200, { operator: { id: "o1", name: "Ada" }, csrf_token: "t" });
+        : json(200, { operator: { id: "o1", name: "Ada", role: "admin", must_change_password: false }, csrf_token: "t" });
     }
     if (url.startsWith("/api/v1/projects/p/flows/f1/exports")) {
       if (o.exports === "fail") return json(404, { error: { code: "NOT_FOUND", message: "no such flow" }, api_version: 1 });

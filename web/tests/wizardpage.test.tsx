@@ -36,7 +36,7 @@ function mount(path: string) {
   vi.stubGlobal("fetch", (url: string, init: RequestInit) => {
     requested.push(`${init?.method ?? "GET"} ${url}`);
     if (url.startsWith("/control/v1/session")) {
-      return signedIn ? json(200, { operator: { id: "o1", name: "Ada" }, csrf_token: "t" })
+      return signedIn ? json(200, { operator: { id: "o1", name: "Ada", role: "admin", must_change_password: false }, csrf_token: "t" })
         : json(401, { error: { code: "UNAUTHORIZED", message: "no session" } });
     }
     if (url === "/control/v1/new" && init?.method === "POST") return json(201, { draft_id: "d9", revision: 1 });

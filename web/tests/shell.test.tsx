@@ -18,7 +18,7 @@ function mount(signedIn: boolean, at = "/p/demo") {
   vi.stubGlobal("fetch", (url: string) => {
     if (url.startsWith("/control/v1/session")) {
       return signedIn
-        ? json(200, { operator: { id: "o1", name: "Ada Lovelace" }, csrf_token: "t" })
+        ? json(200, { operator: { id: "o1", name: "Ada Lovelace", role: "admin", must_change_password: false }, csrf_token: "t" })
         : json(401, { error: { code: "UNAUTHORIZED", message: "no session" } });
     }
     return json(200, { api_version: 1, code: { revision: "abcdef0123456789", dirty: false } });

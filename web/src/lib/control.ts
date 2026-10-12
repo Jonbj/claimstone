@@ -45,6 +45,43 @@ export type Row = Record<string, unknown>;
 export interface Operator {
   id: string;
   name: string;
+  role: "operator" | "admin";
+  must_change_password: boolean;
+}
+
+/** `GET /account`. `google_linked` is sent by the server but the portal does not use it
+ *  (Google sign-in is deferred). */
+export interface Account extends Operator {
+  email: string | null;
+  google_linked: boolean;
+}
+
+export interface SessionRow {
+  session_id: string;
+  created_at: string;
+  last_seen: string;
+  method: string;
+  current: boolean;
+}
+
+export interface Person {
+  id: string;
+  name: string;
+  role: "operator" | "admin";
+  email: string | null;
+  enabled: boolean;
+  google_linked: boolean;
+}
+
+export type PersonAction = "password" | "disable" | "enable" | "email" | "role";
+
+export interface NewPersonBody {
+  password: string;
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  temporary_password: string;
 }
 
 export interface SessionInfo {
@@ -417,6 +454,21 @@ export const control = {
       csrfToken = null;
     }
   },
+
+  // account and people. A call that carries a password sends no Idempotency-Key: the server
+  // ignores it for them, and a retry must not replay a password check.
+  account: () => get<{ operator: Account }>("/account"),
+  changePassword: (current: string, next: string) =>
+    post<{ changed: boolean }>("/account/password", { current, new: next }, { idempotent: false }),
+  accountSessions: () => get<{ sessions: SessionRow[] }>("/account/sessions"),
+  endOtherSessions: () =>
+    post<{ ended: number }>("/account/sessions/end-others", {}, { idempotent: false }),
+  people: () => get<{ people: Person[] }>("/people"),
+  createPerson: (body: NewPersonBody) =>
+    post<{ person: Person }>("/people", body, { idempotent: false }),
+  personAct: (id: string, action: PersonAction, body: Record<string, string>) =>
+    post<{ person?: Person; changed?: boolean }>(`/people/${enc(id)}/${action}`, body,
+                                                 { idempotent: false }),
 
   // today
   today: () => get<Today>("/today"),

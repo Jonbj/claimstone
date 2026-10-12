@@ -33,7 +33,7 @@ function mount(o: { signedIn?: boolean; read?: "fail"; post?: (url: string) => P
     if (url.startsWith("/control/v1/session") && !url.includes("end")) {
       return o.signedIn === false
         ? json(401, { error: { code: "UNAUTHORIZED", message: "no" } })
-        : json(200, { operator: { id: "o1", name: "Ada" }, csrf_token: "t" });
+        : json(200, { operator: { id: "o1", name: "Ada", role: "admin", must_change_password: false }, csrf_token: "t" });
     }
     if (url === "/api/v1/admin") {
       return o.read === "fail"

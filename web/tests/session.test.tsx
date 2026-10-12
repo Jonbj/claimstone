@@ -21,7 +21,7 @@ function Probe() {
   );
 }
 
-const SIGNED_IN = { operator: { id: "o1", name: "Ada" }, csrf_token: "tok" };
+const SIGNED_IN = { operator: { id: "o1", name: "Ada", role: "admin", must_change_password: false }, csrf_token: "tok" };
 
 describe("F1: SessionProvider", () => {
   beforeEach(() => setCsrfToken(null));
