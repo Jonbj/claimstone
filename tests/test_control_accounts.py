@@ -552,3 +552,11 @@ def test_sessions_past_their_expiry_are_not_listed_or_counted():
     assert len(sessions.list_for("a", keep)) == 1
     assert sessions.end_others("a", keep) == 0
     assert sessions.end_operator("a") == 1
+
+
+def test_logout_is_recorded_as_an_event(tmp_path, state):
+    with _served(tmp_path, state) as (_h, base):
+        mine, _ = _signed(base)
+        assert _request(f"{base}/control/v1/session/end", "POST", {}, headers=mine)[0] == 200
+    events = [json.loads(line) for line in (state / "auth_events.jsonl").read_text().splitlines()]
+    assert any(e["event"] == "logout" and e["id"] == "adm" for e in events)

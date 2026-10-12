@@ -811,6 +811,8 @@ class _Handler(BaseHandler):
         token = self._session_token()
         if token:
             self.sessions.end(token)
+        auth_events.record(self.state_dir, "logout", id=session.operator_id,
+                           remote=self._remote())
         self._json({"ended": True},
                    cookies=(self._session_cookie("", expire=True),))
 

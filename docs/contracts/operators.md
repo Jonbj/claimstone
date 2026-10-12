@@ -101,8 +101,8 @@ cannot forge a second line. It holds no password, no token and no hash.
 
 Events written today: `login_ok`, `login_failed`, `login_blocked`, `reauth_failed`, `password_changed`,
 `password_set_by_admin`, `person_created`, `person_disabled`, `person_enabled`, `person_email_set`,
-`person_role_set`, `sessions_revoked`.
-Names defined and not written yet: `logout`, `google_ok`, `google_denied`, `google_linked`,
+`person_role_set`, `sessions_revoked`, `logout`.
+Names defined and not written yet: `google_ok`, `google_denied`, `google_linked`,
 `google_unlinked`. A shell command writes `operators.jsonl` only; it leaves no `auth_events` row.
 
 ## Command line
