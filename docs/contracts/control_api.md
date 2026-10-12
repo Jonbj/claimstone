@@ -42,31 +42,57 @@ authority, as `api` does.
 
 ## Sessions (B4)
 
-Operators are declared on the CLI, not the web. `claimstone operator add ID --name
-"Display name"` prompts for a password twice (`getpass`) and appends to `operators.jsonl`
-(in `CLAIMSTONE_STATE_DIR`, default `.claimstone/`, gitignored):
-`{operator_version, id, name, scrypt params, salt, hash, created_at}`, `hashlib.scrypt`
-with n=2^15, r=8, p=1. `operator disable ID` appends a disabling row; the latest row per
-id is the id's state, and an id with any row at all is refused by `add` — re-enabling is
-a deliberate act this ledger does not silently perform. No password ever appears in
-arguments, logs or responses.
+Who may hold a session is the operators ledger (`operators.jsonl`) and its rules: row kinds, roles,
+passwords, ids, revocation, the CLI that edits it and what to know before the portal is opened are in
+`docs/contracts/operators.md`. The portal and the CLI write the same rows through the same functions. No
+password ever appears in arguments, logs or responses.
 
-- `POST /control/v1/session` with `{id, password}`: constant-time comparison; 5 failures
-  per id per 15 minutes → 429 (a success does not clear the window — the count is of
-  failures); an unknown id and a wrong password answer the same 401 sentence. On success
-  a 32-byte random token in the `claimstone_control` cookie — HttpOnly, SameSite=Strict,
-  Path=/, `Secure` on TLS or behind `X-Forwarded-Proto: https` — and the response body
-  `{"operator": {"id", "name"}, "csrf_token"}`.
-- Sessions live in server memory and expire after 12 hours of inactivity; a restart logs
-  everyone out.
+- `POST /control/v1/session` with `{id, password}`: constant-time comparison; an unknown id, a disabled
+  id and a wrong password answer the same 401 sentence. Two failure budgets, both 15-minute windows and
+  both answering 429: **5 failures per id** and **20 per remote address** (a success does not clear the
+  window — the count is of failures). On success a 32-byte random token (new at every sign-in) in the
+  `claimstone_control` cookie — HttpOnly, SameSite=Strict, Path=/, `Secure` on TLS or behind
+  `X-Forwarded-Proto: https` — and the response body
+  `{"operator": {"id", "name", "role", "must_change_password"}, "csrf_token"}`.
+- Sessions live in server memory. They expire after **12 hours of inactivity and, activity or not,
+  7 days after sign-in**; a restart logs everyone out. Every request also re-checks the ledger (the
+  person is enabled and the credential stamp is unchanged), so a disable or a password change made by any
+  process ends the session on its next request.
 - `DELETE` is not used: logout is `POST /control/v1/session/end`, which requires the
   session and the CSRF header, accepts an empty body, and expires the cookie.
-- `GET /control/v1/session` returns `{operator: {id, name}, csrf_token}` or 401.
+- `GET /control/v1/session` returns `{operator: {id, name, role, must_change_password}, csrf_token}` or 401.
+- `GET /control/v1/session/options` (anonymous) returns `{"google": false}`; Google sign-in is not built.
 - Every POST — the login included — requires a present, same-origin `Origin` header.
-- Credential writes (B11) require the password again in the request.
+- Credential writes (B11) and every admin action on people require the password again in the request.
 
-The envelope codes B4 answers: `UNAUTHORIZED` (401), `NO_ORIGIN`/`CROSS_ORIGIN`/`CSRF`
-(403), `NOT_FOUND` (404), `METHOD_NOT_ALLOWED` (405), `BAD_REQUEST` (400), `TOO_LARGE`
+Accounts and people, all under `/control/v1`. Every route is in `ROUTES` and passes the anonymous-access
+sweep. A request body with an unknown key is a 400.
+
+| Method and path | Who | Body → answer |
+|---|---|---|
+| `GET /account` | session | `{operator: {id, name, role, email, google_linked, must_change_password}}` |
+| `POST /account/password` | session | `{current, new}` → `{changed: true}`; ends every other session of the id |
+| `GET /account/sessions` | session | `{sessions: [{session_id, created_at, last_seen, method, current}]}`; never a token |
+| `POST /account/sessions/end-others` | session | `{}` → `{ended: n}` |
+| `GET /people` | admin | `{people: [{id, name, role, email, enabled, google_linked}]}` |
+| `POST /people` | admin | `{password, id, name, email, role, temporary_password}` → 201 `{person}`; the person must change the temporary password at first sign-in |
+| `POST /people/{id}/password` | admin | `{password, new_password}` → `{changed: true}`; marks the password as one to change; ends that person's sessions |
+| `POST /people/{id}/disable`, `/enable` | admin | `{password}` → `{person}`; disabling ends that person's sessions |
+| `POST /people/{id}/email` | admin | `{password, email}` → `{person}` |
+| `POST /people/{id}/role` | admin | `{password, role}` → `{person}` |
+
+In an admin body, `password` is the **acting admin's own** password (re-authentication). A wrong one is
+403 `REAUTH` and counts against the same per-id budget as a failed login, so the fifth gives 429. A
+non-admin gets 403 `FORBIDDEN` before any re-authentication, so cannot burn the admin's budget; the role is
+read from the ledger at each request. The B11 administration routes (`/admin`, `/admin/check`,
+`/admin/credential`, `/admin/paid-test`) are admin-only too. While a session's `must_change_password` is
+true, every route except `GET`/`POST /session…`, `GET /account` and `POST /account/password` answers 403
+`PASSWORD_CHANGE_REQUIRED`. Routes that carry a password (`/account/password`, `/people` and its
+`password`, `disable`, `enable`, `email`, `role` actions, `/admin/credential`) **ignore
+`Idempotency-Key`**: an answer to a password is never kept in memory or replayed.
+
+The envelope codes B4 answers: `UNAUTHORIZED` (401), `NO_ORIGIN`/`CROSS_ORIGIN`/`CSRF`/
+`FORBIDDEN`/`REAUTH`/`PASSWORD_CHANGE_REQUIRED` (403), `NOT_FOUND` (404), `METHOD_NOT_ALLOWED` (405), `BAD_REQUEST` (400), `TOO_LARGE`
 (413), `VALIDATION` (422), `RATE_LIMITED` (429), `MISDIRECTED` (421). Every POST route
 the server will ever answer is registered in `control.py`'s `ROUTES`, and the
 anonymous-access test enumerates that registry, so a route added by a later step is

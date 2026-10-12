@@ -4906,7 +4906,7 @@ request was made while developing it. This is a single-machine lock and
 heartbeat, not a distributed lease.
 
 
-### Operator ledger, `operator_version 2` (2026-10-12, interim; the next decision, recorded with the live Google run, will carry the full record)
+### Operator ledger, `operator_version 2` (2026-10-12, interim; the next decision, recorded after the live check of the password flows, will carry the full record)
 
 `operator_version 2` rows carry `kind`, `at` and `by`. Version 1 rows stay valid and are read as
 before (a row with a hash is `created`, a `disabled` row is `disabled`; a legacy `created` row has
