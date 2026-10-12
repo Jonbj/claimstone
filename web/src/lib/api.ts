@@ -11,6 +11,7 @@ import type {
   Lineage,
   Meta,
   Overview,
+  PeriodicCumulativeDossier,
   Poll,
   ProfileDiff,
   StoredProfiles,
@@ -65,6 +66,9 @@ export const api = {
   meta: () => get<Meta>("/meta"),
   projects: () => get<Projects>("/projects"),
   admin: () => get<Admin>("/admin"),
+  periodicDossier: (project: string, scheduleId: string) =>
+    get<PeriodicCumulativeDossier>(
+      `/projects/${encodeURIComponent(project)}/periodic-dossiers/${encodeURIComponent(scheduleId)}`),
   integrity: (project: string) =>
     get<Integrity>(`/projects/${encodeURIComponent(project)}/integrity`),
   activity: (project: string, limit = 50) =>

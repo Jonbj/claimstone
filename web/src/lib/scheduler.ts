@@ -1,0 +1,110 @@
+// The scheduler's server shapes (docs/contracts/control_api.md D128–D130) and the few pure helpers the
+// pages share. A state word is the server's: it is passed through unchanged; the pages only translate
+// the label they show for it.
+
+export type ScheduleState = "PLANNED" | "AUTHORIZED" | "REVOKED";
+export type PolicyState = "PLANNED" | "AUTHORIZED" | "REVOKED";
+export type MandateState = "ENABLED" | "DISABLED";
+export type WorkerState = "ALIVE" | "STALE" | "STOPPED" | "NOT_STARTED" | "UNKNOWN";
+
+export interface GrantEvent {
+  event: string;
+  at: string;
+  identity?: { signer_auth?: string; operator?: string; name?: string };
+  [key: string]: unknown;
+}
+
+export interface ScheduleEntry {
+  batch_id: string;
+  operation_ids: string[];
+  flow_id: string;
+  stage: string;
+  units: unknown[];
+  max_total_requests: number;
+  not_before: string;
+  expires_at: string;
+}
+
+export interface ScheduleStatus {
+  schedule_id: string;
+  state: ScheduleState;
+  plan: { version: number; project: string; max_total_requests: number; entries: ScheduleEntry[] };
+  events: GrantEvent[];
+}
+
+export interface PolicyStatus {
+  policy_id: string;
+  state: PolicyState;
+  policy: {
+    project: string; schedule_id: string; flow_ids: string[]; allowed_hosts: string[];
+    source_classes: string[]; max_candidates: number; max_requests_each: number;
+    max_total_requests: number; not_before: string; expires_at: string;
+  };
+  reserved_candidates: number;
+  remaining_candidates: number;
+  reserved_requests: number;
+  events: GrantEvent[];
+}
+
+export interface MandateStatus {
+  mandate_id: string;
+  state: MandateState;
+  flow_id: string;
+  flow_ids: string[];
+  disabled_by: GrantEvent["identity"] | null;
+  reserved_local_calls: number;
+  remaining_local_calls: number;
+  pending_batches: Array<{ batch_id: string; stage: string; awaiting_approval: number; max_total_requests: number }>;
+  mandate: { schedule_id?: string; extract_model: string; review_model: string; max_total_local_calls: number };
+}
+
+export interface Worker {
+  worker_key: string;
+  state: WorkerState;
+  last_seen_at: string | null;
+  phase: "IDLE" | "DRIVING" | "STOPPED" | null;
+  age_seconds: number | null;
+}
+
+export interface SchedulerIndex {
+  project: string;
+  schedules: ScheduleStatus[];
+  copy_policies: PolicyStatus[];
+  local_mandates: MandateStatus[];
+  workers: { supervisor: Worker; operations: Worker; mandates: Record<string, Worker> };
+  archive: {
+    limit: number; offset: number; revision: string; next_cursor: string | null;
+    total: { schedules: number; copy_policies: number; local_mandates: number };
+  };
+}
+
+export interface SeriesOverview {
+  schedule: ScheduleStatus;
+  state: string;
+  rounds: number;
+  windowStart: string;
+  windowEnd: string;
+  policies: PolicyStatus[];
+  mandates: MandateStatus[];
+}
+
+/** What belongs to one schedule. A policy or mandate belongs to it only by its own `schedule_id`. */
+export function overviewOfSeries(
+  schedule: ScheduleStatus, policies: PolicyStatus[], mandates: MandateStatus[],
+): SeriesOverview {
+  const entries = schedule.plan.entries;
+  return {
+    schedule,
+    state: schedule.state,
+    rounds: entries.length,
+    windowStart: entries[0]?.not_before ?? "",
+    windowEnd: entries[entries.length - 1]?.expires_at ?? "",
+    policies: policies.filter((p) => p.policy.schedule_id === schedule.schedule_id),
+    mandates: mandates.filter((m) => m.mandate.schedule_id === schedule.schedule_id),
+  };
+}
+
+/** An operational alert: anything but a recently heard-from process. Never a scientific failure. */
+export function workerAlert(worker: Worker): boolean {
+  return worker.state !== "ALIVE";
+}

@@ -14,6 +14,8 @@
 // `Error`, as in api.ts. A 401 on any route but the login itself tells the session provider the
 // operator is signed out.
 
+import type { MandateStatus, PolicyStatus, ScheduleStatus, SchedulerIndex } from "./scheduler";
+
 const PREFIX = "/control/v1";
 
 export interface FieldProblem {
@@ -441,6 +443,12 @@ export const control = {
     csrfToken = info.csrf_token;
     return info;
   },
+  // scheduler (reads; claimstone/control.py `_scheduler_index` and the per-object reads)
+  schedulerIndex: (project: string, cursor?: string | null, limit = 25) =>
+    get<SchedulerIndex>(`/p/${enc(project)}/scheduler?limit=${limit}${cursor ? `&cursor=${enc(cursor)}` : ""}`),
+  schedule: (project: string, id: string) => get<ScheduleStatus>(`/p/${enc(project)}/schedules/${enc(id)}`),
+  copyPolicy: (project: string, id: string) => get<PolicyStatus>(`/p/${enc(project)}/copy-policies/${enc(id)}`),
+  localMandate: (project: string, id: string) => get<MandateStatus>(`/p/${enc(project)}/local-mandates/${enc(id)}`),
   async session(): Promise<SessionInfo> {
     const info = await get<SessionInfo>("/session");
     csrfToken = info.csrf_token;
