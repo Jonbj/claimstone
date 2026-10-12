@@ -458,3 +458,97 @@ def test_a_login_verified_before_a_change_and_created_after_it_dies_on_first_use
         token, session = handler.sessions.create("ann", "Ann", stamp=operators.stamp(row))
         headers = {"Cookie": f"{control.SESSION_COOKIE}={token}"}
         assert _alive(base, headers) == 401                           # ...and the late session is dead
+
+
+# --- the budget is reserved before scrypt; verifies are bounded; input is hardened ----------------------
+
+
+def test_concurrent_wrong_logins_for_one_id_cannot_exceed_the_budget(tmp_path, state, monkeypatch):
+    verifies = []
+    real = operators.verify
+    monkeypatch.setattr(operators, "verify", lambda row, pw: (verifies.append(1), real(row, pw))[1])
+    with _served(tmp_path, state) as (_h, base):
+        statuses = []
+        lock = threading.Lock()
+
+        def attempt():
+            status = _login(base, "adm", "wrong wrong wrong")[0]
+            with lock:
+                statuses.append(status)
+
+        threads = [threading.Thread(target=attempt) for _ in range(50)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join(timeout=60)
+        assert len(statuses) == 50
+        assert statuses.count(401) == control.LOGIN_FAILURE_LIMIT and statuses.count(429) == 45
+        assert len(verifies) == control.LOGIN_FAILURE_LIMIT      # a blocked attempt never pays scrypt
+
+
+def test_the_budget_forgives_only_its_own_reservation():
+    budget = control.LoginBudget(limit=2)
+    assert budget.reserve("a") and budget.reserve("a") and not budget.reserve("a")
+    budget.forgive("a")
+    assert budget.reserve("a")
+    budget.forgive("nobody")                                     # harmless
+
+
+def test_a_success_gives_its_reservation_back(tmp_path, state):
+    with _served(tmp_path, state) as (_h, base):
+        for _ in range(12):
+            assert _login(base, "adm", PW)[0] == 200             # more successes than the failure limit
+
+
+def test_a_too_long_password_is_refused_before_scrypt_with_the_same_sentence(tmp_path, state, monkeypatch):
+    calls = []
+    real = operators.verify
+    monkeypatch.setattr(operators, "verify", lambda row, pw: (calls.append(1), real(row, pw))[1])
+    with _served(tmp_path, state) as (_h, base):
+        wrong = _login(base, "adm", "wrong wrong wrong")
+        long = _login(base, "adm", "x" * (operators.PASSWORD_MAX + 1))
+        assert long[0] == 401 and long[2] == wrong[2]
+        assert len(calls) == 1                                   # only the short one was verified
+        adm, _ = _signed(base)
+        calls.clear()
+        refused = _post(base, "/people/ann/disable", {"password": "x" * 500}, adm)
+        assert refused[0] == 403 and refused[2]["error"]["code"] == "REAUTH" and not calls
+
+
+def test_get_session_reads_the_role_from_the_ledger(tmp_path, state):
+    with _served(tmp_path, state) as (_h, base):
+        operators.add_operator(state, "zed", "Zed", PW, role="admin")
+        zed, _ = _signed(base, "zed")
+        operators.set_role(state, "zed", "operator", by="cli")
+        assert _request(f"{base}{BASE}/session", headers=zed)[2]["operator"]["role"] == "operator"
+
+
+def test_a_new_password_equal_to_the_current_one_is_refused(tmp_path, state):
+    with _served(tmp_path, state) as (_h, base):
+        mine, _ = _signed(base)
+        refused = _post(base, "/account/password", {"current": PW, "new": PW}, mine)
+        assert refused[0] == 422 and "different password" in refused[2]["error"]["message"]
+
+
+def test_people_fields_must_be_strings(tmp_path, state):
+    with _served(tmp_path, state) as (_h, base):
+        adm, _ = _signed(base)
+        good = {"password": PW, "id": "bob", "name": "Bob", "temporary_password": "temporary secret 1"}
+        for patch in ({"email": 5}, {"email": ["a@b.c"]}, {"name": 7}, {"name": ""}, {"name": "n" * 101},
+                      {"role": 1}, {"role": ["admin"]}):
+            assert _post(base, "/people", {**good, **patch}, adm)[0] == 422, patch
+        assert _post(base, "/people/ann/email", {"password": PW, "email": 5}, adm)[0] == 422
+        assert _post(base, "/people/ann/role", {"password": PW, "role": ["admin"]}, adm)[0] == 422
+        assert _post(base, "/people", good, adm)[0] == 201
+
+
+def test_sessions_past_their_expiry_are_not_listed_or_counted():
+    clock = Clock()
+    sessions = control.Sessions(idle_seconds=100, absolute_seconds=1000, clock=clock)
+    old, _ = sessions.create("a", "Alpha")
+    clock.now = 90.0
+    keep, _ = sessions.create("a", "Alpha")
+    clock.now = 150.0                                            # `old` idled out, `keep` has not
+    assert len(sessions.list_for("a", keep)) == 1
+    assert sessions.end_others("a", keep) == 0
+    assert sessions.end_operator("a") == 1

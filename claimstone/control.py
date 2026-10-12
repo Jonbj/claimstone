@@ -160,8 +160,16 @@ class Sessions:
             if token in self._rows:
                 self._rows[token] = replace(self._rows[token], stamp=stamp)
 
+    def _prune_locked(self) -> None:
+        """Forget sessions already past their idle window or absolute lifetime (lock held)."""
+        now = self._clock()
+        for token in [t for t, until in self._expires.items()
+                      if now > until or now > self._dies[t]]:
+            self._drop(token)
+
     def list_for(self, operator_id: str, current_token: str | None) -> list[dict[str, Any]]:
         with self._lock:
+            self._prune_locked()
             return [{"session_id": s.session_id, "created_at": s.created_at,
                      "last_seen": self._seen.get(t, s.created_at), "method": s.method,
                      "current": t == current_token}
@@ -175,6 +183,7 @@ class Sessions:
 
     def _end_where(self, operator_id: str, keep: str | None) -> int:
         with self._lock:
+            self._prune_locked()
             doomed = [t for t, s in self._rows.items() if s.operator_id == operator_id and t != keep]
             for token in doomed:
                 self._drop(token)
@@ -209,6 +218,25 @@ class LoginBudget:
     def record_failure(self, operator_id: str) -> None:
         with self._lock:
             self._failures.setdefault(operator_id, deque()).append(self._clock())
+
+    def reserve(self, operator_id: str) -> bool:
+        """Book a failure BEFORE the password is verified, atomically with the limit check: however
+        many attempts run at once, no more than `limit` ever reach the verification. A success
+        gives its booking back with `forgive`."""
+        with self._lock:
+            failures = self._failures.setdefault(operator_id, deque())
+            self._prune(failures, self._clock())
+            if len(failures) >= self._limit:
+                return False
+            failures.append(self._clock())
+            return True
+
+    def forgive(self, operator_id: str) -> None:
+        """Remove the newest booked failure: the attempt that just succeeded."""
+        with self._lock:
+            failures = self._failures.get(operator_id)
+            if failures:
+                failures.pop()
 
 
 class Idempotency:
@@ -426,6 +454,8 @@ class _Handler(BaseHandler):
     google: Any = None
     # Trust X-Real-IP for the address budget. Only for a server whose single peer is the proxy.
     trust_forwarded: bool = False
+    # At most this many scrypt derivations (32 MiB each) at once on the unauthenticated path.
+    verify_slots: Any = threading.BoundedSemaphore(4)
 
     # While a person must set a new password, only these (and the public routes) answer.
     ALLOWED_WHILE_CHANGING = frozenset({"_session_read", "_session_end", "_account_password",
@@ -633,6 +663,15 @@ class _Handler(BaseHandler):
         if session.must_change_password:
             raise ControlError(403, "PASSWORD_CHANGE_REQUIRED", "set a new password first")
 
+    def _verify(self, row: dict[str, Any], password: str) -> bool:
+        """`operators.verify`, bounded: a flood of logins cannot run unbounded scrypt at once."""
+        if not self.verify_slots.acquire(timeout=5):
+            raise ControlError(429, "RATE_LIMITED", "busy, try again")
+        try:
+            return operators.verify(row, password)
+        finally:
+            self.verify_slots.release()
+
     def _remote(self) -> str:
         """The address the budgets key on: the peer's, or — only behind a proxy that overwrites
         X-Real-IP, and only with `trust_forwarded` — the address that header names."""
@@ -719,23 +758,32 @@ class _Handler(BaseHandler):
         if not isinstance(password, str) or not password:
             raise ControlError(422, "VALIDATION", "password must be a non-empty string")
         remote = self._remote()
-        if self.address_budget.blocked(remote) or self.login_budget.blocked(operator_id):
+        # Book the failure first, atomically with the limit check, and give it back on success:
+        # concurrent attempts cannot all slip under the limit before any has failed.
+        if not self.address_budget.reserve(remote):
             auth_events.record(self.state_dir, "login_blocked", id=operator_id,
                                method="password", remote=remote)
-            raise ControlError(429, "RATE_LIMITED",
-                               "too many failed logins; wait 15 minutes")
+            raise ControlError(429, "RATE_LIMITED", "too many failed logins; wait 15 minutes")
+        if not self.login_budget.reserve(operator_id):
+            self.address_budget.forgive(remote)
+            auth_events.record(self.state_dir, "login_blocked", id=operator_id,
+                               method="password", remote=remote)
+            raise ControlError(429, "RATE_LIMITED", "too many failed logins; wait 15 minutes")
         row = operators.load(self.state_dir).get(operator_id)
-        # An unknown id still pays for one scrypt derivation, so response time does not
-        # reveal which ids exist.
-        verified = operators.verify(row if row is not None else operators.DUMMY_ROW, password)
+        if len(password) > operators.PASSWORD_MAX:
+            verified = False   # no password that long exists: refuse before paying for scrypt
+        else:
+            # An unknown id still pays for one scrypt derivation, so response time does not
+            # reveal which ids exist.
+            verified = self._verify(row if row is not None else operators.DUMMY_ROW, password)
         if row is None or not verified:
             # One sentence for an unknown id and a wrong password alike: which of the
-            # two failed is not the caller's business.
-            self.login_budget.record_failure(operator_id)
-            self.address_budget.record_failure(remote)
+            # two failed is not the caller's business. The failure is already booked.
             auth_events.record(self.state_dir, "login_failed", id=operator_id,
                                method="password", remote=remote)
             raise ControlError(401, "UNAUTHORIZED", BAD_LOGIN_TEXT)
+        self.login_budget.forgive(operator_id)
+        self.address_budget.forgive(remote)
         token, session = self.sessions.create(str(row["id"]), str(row.get("name") or ""),
                                               role=str(row["role"]), method="password",
                                               must_change=bool(row["must_change_password"]),
@@ -748,7 +796,9 @@ class _Handler(BaseHandler):
     def _session_read(self, params: dict[str, str], query: Any,
                       body: dict[str, Any]) -> None:
         session = self._require_session()
-        self._json({"operator": _operator_view(session), "csrf_token": session.csrf_token})
+        person = operators.load(self.state_dir).get(session.operator_id) or {}
+        view = {**_operator_view(session), "role": person.get("role", session.role)}
+        self._json({"operator": view, "csrf_token": session.csrf_token})
 
     def _session_options(self, params: dict[str, str], query: Any,
                          body: dict[str, Any]) -> None:
@@ -1166,15 +1216,18 @@ def _admin_check(self: _Handler, params: dict[str, str], query: Any,
 
 
 def _reauth(self: _Handler, session: Session, password: object) -> None:
-    """The password again, on the login's own budget: no side door for guessing."""
-    if self.login_budget.blocked(session.operator_id):
+    """The password again, on the login's own budget: no side door for guessing. The attempt is
+    booked as a failure before it is verified and given back if it matches."""
+    if not self.login_budget.reserve(session.operator_id):
         raise ControlError(429, "RATE_LIMITED", "too many failed attempts; wait 15 minutes")
     row = operators.load(self.state_dir).get(session.operator_id)
-    if not isinstance(password, str) or row is None or not operators.verify(row, password):
-        self.login_budget.record_failure(session.operator_id)
-        auth_events.record(self.state_dir, "reauth_failed", id=session.operator_id,
-                           remote=self._remote())
-        raise ControlError(403, "REAUTH", "the password is required again, and it did not match")
+    if (isinstance(password, str) and len(password) <= operators.PASSWORD_MAX
+            and row is not None and self._verify(row, password)):
+        self.login_budget.forgive(session.operator_id)
+        return
+    auth_events.record(self.state_dir, "reauth_failed", id=session.operator_id,
+                       remote=self._remote())
+    raise ControlError(403, "REAUTH", "the password is required again, and it did not match")
 
 
 def _admin_credential(self: _Handler, params: dict[str, str], query: Any,
@@ -1842,21 +1895,14 @@ def _account_password(self: _Handler, params: dict[str, str], query: Any,
     self._only_keys(body, frozenset({"current", "new"}))
     session = self._require_session()
     token = self._session_token()
-    if self.login_budget.blocked(session.operator_id):
-        raise ControlError(429, "RATE_LIMITED", "too many failed attempts; wait 15 minutes")
-    try:
-        _account_call(account_service.change_own_password, self.state_dir, session.operator_id,
-                      body.get("current"), body.get("new"))
-    except ControlError as exc:
-        if exc.code == "REAUTH":  # a wrong current password is a failed guess like any other
-            self.login_budget.record_failure(session.operator_id)
-            auth_events.record(self.state_dir, "reauth_failed", id=session.operator_id,
-                               remote=self._remote())
-        raise
+    _reauth(self, session, body.get("current"))
+    if body.get("new") == body.get("current"):
+        raise ControlError(422, "VALIDATION", "choose a different password")
+    _account_call(account_service.change_own_password, self.state_dir, session.operator_id,
+                  body.get("new"))
     self.sessions.end_others(session.operator_id, token)
-    if token:
-        self.sessions.clear_must_change(token)
-        self.sessions.set_stamp(token, operators.stamp(operators.load(self.state_dir)[session.operator_id]))
+    self.sessions.clear_must_change(token)
+    self.sessions.set_stamp(token, operators.stamp(operators.load(self.state_dir)[session.operator_id]))
     return {"changed": True}, 200
 
 
@@ -1931,6 +1977,10 @@ def _is_loopback(host: str) -> bool:
         return False
 
 
+class _Server(ThreadingHTTPServer):
+    request_queue_size = 128   # the default of 5 resets a burst of logins before the budget can answer
+
+
 def make_server(projects_dir: str | pathlib.Path = "projects",
                 store_dir: str | pathlib.Path = "store", *,
                 host: str = "127.0.0.1", port: int = 8790,
@@ -1972,8 +2022,9 @@ def make_server(projects_dir: str | pathlib.Path = "projects",
         if env_file is not None else pathlib.Path(projects_dir).resolve().parent / ".env",
         "started_at": _now_iso(),
         "trust_forwarded": bool(trust_forwarded),
+        "verify_slots": threading.BoundedSemaphore(4),
     })
-    httpd = ThreadingHTTPServer((host, port), handler)
+    httpd = _Server((host, port), handler)
     handler.bind_port = int(httpd.server_address[1])
     return httpd
 

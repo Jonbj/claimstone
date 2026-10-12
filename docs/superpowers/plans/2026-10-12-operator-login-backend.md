@@ -45,7 +45,7 @@ All under `/control/v1`. Errors use the existing envelope `{"error": {"code", "m
 | `POST /people/{id}/email` | admin | `{password, email}` → `{person}` |
 | `POST /people/{id}/role` | admin | `{password, role}` → `{person}` |
 
-`password` in an admin body is the **acting admin's** password (re-authentication, same budget as a failed login, 403 `REAUTH`). A non-admin gets 403 `FORBIDDEN`. While a session `must_change_password`, every route except `GET/POST /session…` and `POST /account/password` answers 403 `PASSWORD_CHANGE_REQUIRED`.
+`password` in an admin body is the **acting admin's** password (re-authentication, same budget as a failed login, 403 `REAUTH`). A non-admin gets 403 `FORBIDDEN`. While a session `must_change_password`, every route except `GET/POST /session…`, `GET /account` and `POST /account/password` answers 403 `PASSWORD_CHANGE_REQUIRED`.
 
 ## File structure
 

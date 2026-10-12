@@ -17,6 +17,7 @@ import hmac
 import json
 import os
 import pathlib
+import re
 import secrets
 from contextlib import contextmanager
 from datetime import datetime, timezone
@@ -88,6 +89,9 @@ def _check_id(operator_id: str) -> None:
         raise OperatorError("operator id must be non-empty printable text without padding or line breaks")
 
 
+# Ids of NEW people only: ASCII, so two ids never look alike. Rows already in the ledger are never
+# re-validated against this.
+NEW_ID = re.compile(r"[a-z0-9][a-z0-9._-]{0,63}")
 ROLES = ("operator", "admin")
 PASSWORD_MIN, PASSWORD_MAX = 12, 256
 
@@ -225,6 +229,9 @@ def add_operator(directory, operator_id: str, name: str, password: str, *,
     """Append a `created` row. An id with any row is refused for ever. With no `role`, while no
     active admin exists the new person is an admin; otherwise an operator."""
     _check_id(operator_id)
+    if not NEW_ID.fullmatch(operator_id):
+        raise OperatorError("operator id must be 1-64 characters: lowercase letters, digits, dot, "
+                            "dash, underscore; starting with a letter or digit")
     if not name.strip():
         raise OperatorError("operator name must be non-empty")
     check_password(password, operator_id)

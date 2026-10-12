@@ -188,3 +188,11 @@ def test_two_processes_cannot_both_claim_one_email(d):
     with multiprocessing.get_context("fork").Pool(2) as pool:
         results = pool.starmap(_race, [(d, "p1"), (d, "p2")])
     assert sorted(results) == [False, True]
+
+
+def test_new_ids_are_ascii_lowercase_names(d):
+    for bad in ("Ann", "аnn", "café", "-ann", "a b", "a/b", "x" * 65, "ann@example.org"):
+        with pytest.raises(OperatorError, match="1-64 characters"):
+            operators.add_operator(d, bad, "Bad", PW)
+    for good in ("a", "ann.b-c_d", "0day", "x" * 64):
+        operators.add_operator(d, good, "Good", PW)
