@@ -262,6 +262,16 @@ def test_every_post_route_refuses_an_anonymous_request(tmp_path, state):
                 assert body["error"]["code"] == "UNAUTHORIZED"
 
 
+def test_every_non_public_get_route_refuses_an_anonymous_request(tmp_path, state):
+    assert any(r.method == "GET" and not r.public for r in control.ROUTES)
+    with _served(tmp_path, state) as (_httpd, base):
+        for route in control.ROUTES:
+            if route.method != "GET" or route.public:
+                continue
+            status, headers, body = _request(base + _path(route))
+            assert status == 401, (route, status, body)
+
+
 # --- the body rules of §1.3 ------------------------------------------------------------------------
 
 
