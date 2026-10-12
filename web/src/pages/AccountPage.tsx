@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import ErrorState from "@/components/ErrorState";
 import Pending from "@/components/Pending";
@@ -16,7 +16,7 @@ function asError(cause: unknown): Error {
   return cause instanceof Error ? cause : new Error(String(cause));
 }
 
-function PasswordSection() {
+function PasswordSection({ onChanged }: { onChanged: () => void }) {
   const { t } = useLocale();
   const session = useSession();
   const [current, setCurrent] = useState("");
@@ -46,6 +46,7 @@ function PasswordSection() {
       setAgain("");
       setDone(true);
       await session.recheck(); // a forced change clears here
+      onChanged();
     } catch (cause) {
       setCurrent("");
       if (cause instanceof ControlError && cause.status === 403 && cause.code === "REAUTH") {
@@ -107,16 +108,24 @@ function PasswordSection() {
           {busy ? t("auth.account.changing") : t("auth.account.change")}
         </button>
       </form>
-      {done ? <p role="status" className="text-sm">{t("auth.account.changed")}</p> : null}
+      <p role="status" className="text-sm">{done ? t("auth.account.changed") : ""}</p>
       {error ? <ErrorState error={error} context="password" /> : null}
     </section>
   );
 }
 
-function SessionsSection() {
+function SessionsSection({ changes }: { changes: number }) {
   const { t } = useLocale();
-  const [version, setVersion] = useState(0);
-  const list = useApi(() => control.accountSessions(), [version]);
+  const list = useApi(() => control.accountSessions(), []);
+  // A password change ends the other sessions: fetch the list again (same view, data stays).
+  const seen = useRef(changes);
+  useEffect(() => {
+    if (changes !== seen.current) {
+      seen.current = changes;
+      list.reload();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [changes]);
   const [busy, setBusy] = useState(false);
   const [ended, setEnded] = useState<number | null>(null);
   const [error, setError] = useState<Error | null>(null);
@@ -127,7 +136,7 @@ function SessionsSection() {
     try {
       const result = await control.endOtherSessions();
       setEnded(result.ended);
-      setVersion((v) => v + 1);
+      list.reload();
     } catch (cause) {
       setError(asError(cause));
     } finally {
@@ -162,24 +171,29 @@ function SessionsSection() {
           {t("auth.account.endOthers")}
         </button>
       </div>
-      {ended !== null ? <p role="status" className="text-sm">{t("auth.account.endedOthers", { n: ended })}</p> : null}
+      <p role="status" className="text-sm">{ended !== null ? t("auth.account.endedOthers", { n: ended }) : ""}</p>
       {error ? <ErrorState error={error} context="sessions" /> : null}
     </section>
   );
 }
 
 export default function AccountPage() {
-  const { t } = useLocale();
   const session = useSession();
-  const account = useApi(() => control.account(), [session.operator?.id ?? ""]);
-  const me = account.data?.operator ?? null;
+  // Nothing is fetched before the session is known, nor while signed out (the shell offers Sign in).
+  if (!session.ready || !session.operator) return null;
+  return <Account id={session.operator.id} forced={session.operator.must_change_password} />;
+}
 
-  if (session.ready && !session.operator) return null; // the shell offers Sign in
+function Account({ id, forced }: { id: string; forced: boolean }) {
+  const { t } = useLocale();
+  const account = useApi(() => control.account(), [id]);
+  const [changes, setChanges] = useState(0);
+  const me = account.data?.operator ?? null;
 
   return (
     <div className="flex min-w-0 max-w-2xl flex-col gap-6">
       <h1 className="text-[40px] leading-tight">{t("auth.account.title")}</h1>
-      {session.operator?.must_change_password ? (
+      {forced ? (
         <p role="alert" className="rounded-lg border border-amber-400 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:bg-amber-950/40 dark:text-amber-100">
           {t("auth.account.mustChange")}
         </p>
@@ -201,8 +215,12 @@ export default function AccountPage() {
           </dl>
         ) : null}
       </section>
-      <PasswordSection />
-      <SessionsSection />
+      <PasswordSection onChanged={() => setChanges((n) => n + 1)} />
+      {forced ? (
+        <p className="text-sm text-muted-foreground">{t("auth.account.sessionsAfterChange")}</p>
+      ) : (
+        <SessionsSection changes={changes} />
+      )}
     </div>
   );
 }

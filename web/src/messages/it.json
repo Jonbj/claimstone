@@ -2,6 +2,7 @@
   "shell": {
     "newProject": "+ Nuovo progetto",
     "language": "Lingua",
+    "checking": "controllo la sessione…",
     "signIn": "Accedi",
     "signOut": "Esci",
     "account": "Il mio account",
@@ -206,19 +207,20 @@
       "passwordTitle": "Cambia password",
       "current": "Password attuale",
       "new": "Nuova password",
-      "again": "Nuova password, di nuovo",
+      "again": "Ripeti la nuova password",
       "mismatch": "Le due nuove password non coincidono.",
       "change": "Cambia password",
       "changing": "Cambio in corso…",
       "changed": "Password cambiata. Le tue altre sessioni sono state chiuse.",
-      "reauth": "La password attuale non coincide.",
+      "reauth": "La password attuale non è corretta.",
       "sessionsTitle": "Le mie sessioni",
       "sessionsNone": "Nessuna sessione da mostrare.",
+      "sessionsAfterChange": "Le tue sessioni compaiono qui dopo che avrai scelto una password tua.",
       "sessionStarted": "Iniziata {when}",
       "sessionSeen": "ultimo uso {when}",
       "sessionThis": "questa sessione",
-      "endOthers": "Esci da tutti gli altri dispositivi",
-      "endedOthers": "Chiuse {n} altre sessioni.",
+      "endOthers": "Chiudi le altre sessioni",
+      "endedOthers": "Sessioni chiuse: {n}.",
       "loading": "Caricamento…"
     },
     "people": {
@@ -231,6 +233,8 @@
       "role": "Ruolo",
       "email": "Email",
       "state": "Stato",
+      "actions": "Azioni",
+      "ownPassword": "Per cambiare la tua password usa Il mio account.",
       "roleOperator": "operatore",
       "roleAdmin": "amministratore",
       "emailNone": "nessuna",
@@ -247,7 +251,7 @@
       "yourPassword": "La tua password",
       "newTemp": "Password temporanea",
       "newEmail": "Nuova email (lascia vuoto per toglierla)",
-      "reauth": "La tua password non coincide.",
+      "reauth": "La tua password non è corretta.",
       "confirm": "Conferma",
       "working": "Un momento…",
       "cancel": "Annulla",
@@ -259,7 +263,7 @@
       "newEmailField": "Email (facoltativa)",
       "newRole": "Ruolo",
       "newTemporary": "Password temporanea",
-      "created": "Consegna a mano la password temporanea: al primo accesso dovrà sceglierne una sua."
+      "created": "Consegna di persona la password temporanea: al primo accesso dovrà sceglierne una sua."
     }
   }
 }

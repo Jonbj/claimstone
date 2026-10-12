@@ -30,15 +30,23 @@ function server(options: {
 } = {}) {
   calls = [];
   const me = { ...ME, ...options.me };
+  let changed = false;
   vi.stubGlobal("fetch", (url: string, init: RequestInit = {}) => {
     const method = init.method ?? "GET";
     calls.push({ method, url, body: init.body ? JSON.parse(String(init.body)) : undefined });
-    if (url.startsWith("/control/v1/session")) return json(200, { operator: me, csrf_token: "t" });
+    if (url.startsWith("/control/v1/session")) {
+      return json(200, { operator: { ...me, must_change_password: me.must_change_password && !changed }, csrf_token: "t" });
+    }
     if (url === "/control/v1/account") {
       return json(200, { operator: { ...me, email: options.email ?? null, google_linked: false } });
     }
     if (url === "/control/v1/account/password") {
-      return (options.password ?? (() => json(200, { changed: true })))();
+      const answer = (options.password ?? (() => json(200, { changed: true })))();
+      changed = true;
+      return answer;
+    }
+    if (url.startsWith("/control/v1/account/sessions") && me.must_change_password && !changed) {
+      return json(403, { error: { code: "PASSWORD_CHANGE_REQUIRED", message: "choose your own password first" } });
     }
     if (url === "/control/v1/account/sessions") return json(200, { sessions: SESSIONS });
     if (url === "/control/v1/account/sessions/end-others") return json(200, { ended: 1 });
@@ -64,7 +72,7 @@ async function fillPasswords(again = "new-secret") {
   await screen.findByText("Ada Lovelace");
   type("Current password", "old");
   type("New password", "new-secret");
-  type("New password again", again);
+  type("Repeat the new password", again);
 }
 const submitPassword = () => fireEvent.click(screen.getByRole("button", { name: "Change password" }));
 const sessionCalls = () => calls.filter((c) => c.url.startsWith("/control/v1/session"));
@@ -111,7 +119,7 @@ describe("My account", () => {
     expect(posts[0].body).toEqual({ current: "old", new: "new-secret" });
     expect(value("Current password")).toBe("");
     expect(value("New password")).toBe("");
-    expect(value("New password again")).toBe("");
+    expect(value("Repeat the new password")).toBe("");
     await waitFor(() => expect(sessionCalls().length).toBeGreaterThan(before));
   });
 
@@ -122,7 +130,7 @@ describe("My account", () => {
     submitPassword();
     expect(await screen.findByText("The current password did not match.")).toBeTruthy();
     expect(value("New password")).toBe("new-secret");
-    expect(value("New password again")).toBe("new-secret");
+    expect(value("Repeat the new password")).toBe("new-secret");
     expect(value("Current password")).toBe("");
     expect(screen.queryByText("Password changed. Your other sessions were signed out.")).toBeNull();
   });
@@ -142,7 +150,7 @@ describe("My account", () => {
     }
   });
 
-  it("lists sessions, marks this one, and 'Sign out everywhere else' posts then reloads", async () => {
+  it("lists sessions, marks this one, and 'Close my other sessions' posts then reloads", async () => {
     server();
     mount();
     expect(await screen.findByText("this session")).toBeTruthy();
@@ -150,16 +158,54 @@ describe("My account", () => {
     expect(screen.getByText("Started 6 Oct 2026, 20:41 UTC")).toBeTruthy();
     const listed = () => calls.filter((c) => c.url === "/control/v1/account/sessions").length;
     const before = listed();
-    fireEvent.click(screen.getByRole("button", { name: "Sign out everywhere else" }));
+    fireEvent.click(screen.getByRole("button", { name: "Close my other sessions" }));
     await waitFor(() => expect(calls.some((c) => c.method === "POST" && c.url.endsWith("/end-others"))).toBe(true));
     await waitFor(() => expect(listed()).toBeGreaterThan(before));
-    expect(await screen.findByText("Signed out 1 other session(s).")).toBeTruthy();
+    expect(await screen.findByText("Other sessions signed out: 1.")).toBeTruthy();
   });
 
   it("shows the temporary-password banner when a change is required", async () => {
     server({ me: { must_change_password: true } });
     mount();
     expect(await screen.findByText("You are using a temporary password. Choose your own to continue.")).toBeTruthy();
+  });
+
+  it("makes no sessions request and shows no alert while a change is required, then fetches after the change", async () => {
+    server({ me: { must_change_password: true } });
+    mount();
+    await screen.findByText("Your sessions appear here once you have chosen your own password.");
+    await screen.findByText("Ada Lovelace");
+    expect(calls.some((c) => c.url.startsWith("/control/v1/account/sessions"))).toBe(false);
+    expect(screen.queryByText("PASSWORD_CHANGE_REQUIRED")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Close my other sessions" })).toBeNull();
+    await fillPasswords();
+    submitPassword();
+    expect(await screen.findByText("this session")).toBeTruthy();
+    expect(calls.some((c) => c.url === "/control/v1/account/sessions")).toBe(true);
+    expect(screen.queryByText("PASSWORD_CHANGE_REQUIRED")).toBeNull();
+  });
+
+  it("fetches the sessions list again after a successful change", async () => {
+    server();
+    mount();
+    await screen.findByText("this session");
+    const listed = () => calls.filter((c) => c.url === "/control/v1/account/sessions").length;
+    const before = listed();
+    await fillPasswords();
+    submitPassword();
+    await screen.findByText("Password changed. Your other sessions were signed out.");
+    await waitFor(() => expect(listed()).toBeGreaterThan(before));
+  });
+
+  it("makes no request before the session is known", async () => {
+    calls = [];
+    vi.stubGlobal("fetch", (url: string, init: RequestInit = {}) => {
+      calls.push({ method: init.method ?? "GET", url, body: undefined });
+      return json(401, { error: { code: "UNAUTHORIZED", message: "no session" } });
+    });
+    mount();
+    await waitFor(() => expect(calls.length).toBeGreaterThan(0));
+    expect(calls.every((c) => c.url.startsWith("/control/v1/session"))).toBe(true);
   });
 
   it("has no banner otherwise", async () => {
@@ -176,7 +222,11 @@ describe("My account", () => {
     expect(await screen.findByRole("heading", { name: "Il mio account" })).toBeTruthy();
     expect(screen.getByText("Stai usando una password temporanea. Scegline una tua per continuare.")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Cambia password" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Esci da tutti gli altri dispositivi" })).toBeTruthy();
+    expect(screen.getByText("Le tue sessioni compaiono qui dopo che avrai scelto una password tua.")).toBeTruthy();
+    cleanup();
+    server();
+    mount();
+    expect(await screen.findByRole("button", { name: "Chiudi le altre sessioni" })).toBeTruthy();
     expect(await screen.findByText("questa sessione")).toBeTruthy();
   });
 });
