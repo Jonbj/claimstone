@@ -1,10 +1,11 @@
 // F1: the shell. Signed out it offers Sign in (with the page to come back to); signed in it
 // shows the operator and Sign out. The rail has no Inbox link, and New project links to the wizard.
-import { cleanup, render, screen } from "@testing-library/react";
-import { MemoryRouter, Route, Routes } from "react-router";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import Shell from "@/components/Shell";
 import { setCsrfToken } from "@/lib/control";
+import { LocaleProvider, STORAGE_KEY } from "@/lib/i18n";
 import { SessionProvider } from "@/lib/session";
 
 function json(status: number, body: unknown) {
@@ -13,34 +14,49 @@ function json(status: number, body: unknown) {
   }));
 }
 
-function mount(signedIn: boolean, at = "/p/demo") {
+let where = "";
+function Where() {
+  where = useLocation().pathname;
+  return null;
+}
+
+type Who = "admin" | "operator" | null;
+
+function mount(who: boolean | Who, at = "/p/demo", mustChange = false) {
+  const role: Who = who === true ? "admin" : who === false ? null : who;
   vi.stubGlobal("matchMedia", () => ({ matches: false })); // ThemeToggle reads the OS preference
   vi.stubGlobal("fetch", (url: string) => {
     if (url.startsWith("/control/v1/session")) {
-      return signedIn
-        ? json(200, { operator: { id: "o1", name: "Ada Lovelace", role: "admin", must_change_password: false }, csrf_token: "t" })
+      return role
+        ? json(200, { operator: { id: "o1", name: "Ada Lovelace", role, must_change_password: mustChange }, csrf_token: "t" })
         : json(401, { error: { code: "UNAUTHORIZED", message: "no session" } });
     }
     return json(200, { api_version: 1, code: { revision: "abcdef0123456789", dirty: false } });
   });
   render(
     <MemoryRouter initialEntries={[at]}>
-      <SessionProvider>
-        <Routes>
-          <Route element={<Shell />}>
-            <Route path="*" element={<div>page</div>} />
-          </Route>
-        </Routes>
-      </SessionProvider>
+      <LocaleProvider>
+        <SessionProvider>
+          <Where />
+          <Routes>
+            <Route element={<Shell />}>
+              <Route path="*" element={<div>page</div>} />
+            </Route>
+          </Routes>
+        </SessionProvider>
+      </LocaleProvider>
     </MemoryRouter>,
   );
 }
+
+const linkNames = () => screen.getAllByRole("link").map((a) => a.textContent);
 
 describe("F1: Shell v2", () => {
   beforeEach(() => setCsrfToken(null));
   afterEach(() => {
     cleanup();
     vi.unstubAllGlobals();
+    localStorage.clear();
   });
 
   it("shows Sign in when signed out, returning to the current page", async () => {
@@ -57,11 +73,11 @@ describe("F1: Shell v2", () => {
     expect(screen.queryByRole("link", { name: "Sign in" })).toBeNull();
   });
 
-  it("lists Today, Projects and Administration, and no Inbox", async () => {
+  it("lists Today and Projects, and no Inbox", async () => {
     mount(false, "/");
     await screen.findByRole("link", { name: "Sign in" });
-    const names = screen.getAllByRole("link").map((a) => a.textContent);
-    expect(names).toEqual(expect.arrayContaining(["Today", "Projects", "Administration"]));
+    const names = linkNames();
+    expect(names).toEqual(expect.arrayContaining(["Today", "Projects"]));
     expect(names).not.toContain("Inbox");
     expect(screen.getByRole("link", { name: "Today" }).getAttribute("aria-current")).toBe("page");
   });
@@ -74,5 +90,55 @@ describe("F1: Shell v2", () => {
     mount(false);
     const signedOut = await screen.findByRole("link", { name: "+ New project" });
     expect(signedOut.getAttribute("href")).toBe("/login?next=%2Fnew");
+  });
+  it("shows an operator My account but neither People nor Administration", async () => {
+    mount("operator", "/");
+    const account = await screen.findByRole("link", { name: "My account" });
+    expect(account.getAttribute("href")).toBe("/account");
+    const names = linkNames();
+    expect(names).not.toContain("People");
+    expect(names).not.toContain("Administration");
+    expect(names).toEqual(expect.arrayContaining(["Today", "Projects"]));
+  });
+
+  it("shows an admin My account, People and Administration", async () => {
+    mount("admin", "/");
+    const people = await screen.findByRole("link", { name: "People" });
+    expect(people.getAttribute("href")).toBe("/people");
+    expect(screen.getByRole("link", { name: "My account" }).getAttribute("href")).toBe("/account");
+    expect(screen.getByRole("link", { name: "Administration" }).getAttribute("href")).toBe("/admin");
+  });
+
+  it("shows none of them when signed out", async () => {
+    mount(null, "/");
+    await screen.findByRole("link", { name: "Sign in" });
+    const names = linkNames();
+    for (const hidden of ["My account", "People", "Administration"]) expect(names).not.toContain(hidden);
+  });
+
+  it("sends a person with a temporary password to /account, and leaves /account alone", async () => {
+    mount("operator", "/projects", true);
+    await waitFor(() => expect(where).toBe("/account"));
+    cleanup();
+    mount("operator", "/account", true);
+    await screen.findByTestId("operator-name");
+    expect(where).toBe("/account");
+  });
+
+  it("does not redirect when no change is required", async () => {
+    mount("operator", "/projects", false);
+    await screen.findByTestId("operator-name");
+    expect(where).toBe("/projects");
+  });
+
+  it("takes Sign in, Sign out, My account and People from the Italian catalog", async () => {
+    localStorage.setItem(STORAGE_KEY, "it");
+    mount("admin", "/");
+    expect(await screen.findByRole("link", { name: "Il mio account" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Persone" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Esci" })).toBeTruthy();
+    cleanup();
+    mount(null, "/");
+    expect(await screen.findByRole("link", { name: "Accedi" })).toBeTruthy();
   });
 });

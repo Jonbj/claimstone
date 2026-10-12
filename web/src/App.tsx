@@ -1,5 +1,6 @@
 import { createBrowserRouter, RouterProvider } from "react-router";
 import Shell from "@/components/Shell";
+import AccountPage from "@/pages/AccountPage";
 import AdminPage from "@/pages/AdminPage";
 import { LocaleProvider } from "@/lib/i18n";
 import { SessionProvider } from "@/lib/session";
@@ -13,6 +14,7 @@ import LoginPage from "@/pages/LoginPage";
 import MaterialPage from "@/pages/MaterialPage";
 import NewProjectsPage from "@/pages/NewProjectsPage";
 import NotFoundPage from "@/pages/NotFoundPage";
+import PeoplePage from "@/pages/PeoplePage";
 import ProjectPage from "@/pages/ProjectPage";
 import QuestionPage from "@/pages/QuestionPage";
 import SourcePage from "@/pages/SourcePage";
@@ -43,6 +45,8 @@ const router = createBrowserRouter([
       { path: "new/:draft/:step", element: <WizardPage /> },
       { path: "inbox", element: <InboxPage /> },
       { path: "admin", element: <AdminPage /> },
+      { path: "account", element: <AccountPage /> },
+      { path: "people", element: <PeoplePage /> },
       { path: "p/:project", element: <ProjectPage /> },
       { path: "p/:project/f/:sel", element: <FlowOverviewPage kind="f" /> },
       { path: "p/:project/f/:sel/export", element: <ExportPage /> },

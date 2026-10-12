@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, Outlet, useLocation } from "react-router";
+import { Link, Outlet, useLocation, useNavigate } from "react-router";
 import LocaleSwitch from "@/components/LocaleSwitch";
 import ThemeToggle from "@/components/ThemeToggle";
 import { api } from "@/lib/api";
@@ -11,7 +11,9 @@ import { cn } from "@/lib/utils";
 // signed-in operator and Sign out, or Sign in. Under 900 px the rail becomes a top bar. The
 // rail is dark in both themes (`bg-rail`); the content area follows the theme tokens. The old
 // Inbox tab is gone from the rail, but `/inbox` is still routable.
-const NAV: Array<{ id: string; label: string; to: string; active: (pathname: string) => boolean }> = [
+const NAV: Array<{
+  id: string; label: string; to: string; adminOnly?: boolean; active: (pathname: string) => boolean;
+}> = [
   { id: "today", label: "Today", to: "/", active: (p) => p === "/" },
   // A project or flow on screen lights Projects: Today is the only other top-level page.
   {
@@ -20,7 +22,8 @@ const NAV: Array<{ id: string; label: string; to: string; active: (pathname: str
     to: "/projects",
     active: (p) => p.startsWith("/projects") || p.startsWith("/p/") || p.startsWith("/inbox"),
   },
-  { id: "admin", label: "Administration", to: "/admin", active: (p) => p.startsWith("/admin") },
+  // The server answers 403 to operators on the credential and outbound-check routes, so only admins see this.
+  { id: "admin", label: "Administration", to: "/admin", adminOnly: true, active: (p) => p.startsWith("/admin") },
 ];
 
 function useRevision(): { text: string; title: string } {
@@ -57,6 +60,7 @@ function useRevision(): { text: string; title: string } {
 function Operator() {
   const session = useSession();
   const { pathname, search } = useLocation();
+  const { t } = useLocale();
   if (!session.ready) {
     return <span className="text-xs text-rail-muted">checking session…</span>;
   }
@@ -71,7 +75,7 @@ function Operator() {
           onClick={() => void session.signOut()}
           className="min-h-11 rounded-lg border border-rail-border px-3 text-sm text-rail-muted hover:text-rail-foreground"
         >
-          Sign out
+          {t("shell.signOut")}
         </button>
       </div>
     );
@@ -83,7 +87,7 @@ function Operator() {
       to={`/login${next}`}
       className="flex min-h-11 items-center rounded-lg border border-rail-border px-3 text-sm text-rail-foreground"
     >
-      Sign in
+      {t("shell.signIn")}
     </Link>
   );
 }
@@ -93,6 +97,23 @@ export default function Shell() {
   const rev = useRevision();
   const session = useSession();
   const { t } = useLocale();
+  const navigate = useNavigate();
+  const isAdmin = session.operator?.role === "admin";
+  // A temporary password must be replaced before anything else: every other page leads here.
+  useEffect(() => {
+    if (session.operator?.must_change_password && pathname !== "/account") {
+      navigate("/account", { replace: true });
+    }
+  }, [session.operator?.must_change_password, pathname, navigate]);
+  const items = [
+    ...NAV.filter((item) => !item.adminOnly || isAdmin),
+    ...(session.operator
+      ? [{ id: "account", label: t("shell.account"), to: "/account", active: (p: string) => p.startsWith("/account") }]
+      : []),
+    ...(isAdmin
+      ? [{ id: "people", label: t("shell.people"), to: "/people", active: (p: string) => p.startsWith("/people") }]
+      : []),
+  ];
   return (
     <div className="min-h-screen bg-muted/40 text-foreground min-[900px]:flex">
       <nav
@@ -111,7 +132,7 @@ export default function Shell() {
           </Link>
         </div>
         <div className="flex flex-wrap gap-1 min-[900px]:flex-col">
-          {NAV.map((item) => {
+          {items.map((item) => {
             const active = item.active(pathname);
             return (
               <Link
