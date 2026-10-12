@@ -35,8 +35,8 @@ from typing import Any, Callable
 import urllib.parse
 from urllib.parse import unquote, urlparse
 
-from claimstone import (admin, autopilot, copy_policy, decisions, drafts, export, flows,
-                        intake, network_schedule, new_project_service, operations,
+from claimstone import (account_service, admin, auth_events, autopilot, copy_policy, decisions,
+                        drafts, export, flows, intake, network_schedule, new_project_service, operations,
                         operations_view, operators, periodic, periodic_export, portal_state, scope,
                         synthesize, today, worker_runtime)
 from claimstone.config import ConfigError, RegistryDrift
@@ -265,12 +265,20 @@ class Route:
     handler: str               # the _Handler method name
     public: bool = False       # True only for the session-create route
     raw: bool = False          # the handler reads the body stream itself (B7b's file upload)
+    no_replay: bool = False    # carries a password: Idempotency-Key is ignored, never replayed
 
 
 ROUTES: tuple[Route, ...] = (
     Route("POST", ("session",), "_session_create", public=True),
     Route("GET", ("session",), "_session_read"),
     Route("POST", ("session", "end"), "_session_end"),
+    Route("GET", ("session", "options"), "_session_options", public=True),
+    # Accounts: a person's own password and sessions; then the admin's people routes. Every route
+    # that takes a password is `no_replay`: an answer to a password is never kept in memory.
+    Route("GET", ("account",), "_account_read"),
+    Route("POST", ("account", "password"), "_account_password", no_replay=True),
+    Route("GET", ("account", "sessions"), "_account_sessions"),
+    Route("POST", ("account", "sessions", "end-others"), "_account_end_others"),
     # B5: signing and drafts. `{question_id}` is looked up in the registry, `{flow_id}` in
     # flows.jsonl, `{project}` among the discovered projects — never used as a path.
     Route("POST", ("p", "{project}", "flows", "{flow_id}", "q", "{question_id}", "adjudicate"),
@@ -308,7 +316,7 @@ ROUTES: tuple[Route, ...] = (
     # B11: administration. Opening the admin view sends no request anywhere; each check is a POST.
     Route("GET", ("admin",), "_admin_read"),
     Route("POST", ("admin", "check"), "_admin_check"),
-    Route("POST", ("admin", "credential"), "_admin_credential"),
+    Route("POST", ("admin", "credential"), "_admin_credential", no_replay=True),
     Route("POST", ("admin", "paid-test"), "_admin_paid_test"),
     # B12: the scheduler's operations. Planning stays with the scheduler and the CLI.
     Route("GET", ("p", "{project}", "flows", "{flow_id}", "operations"), "_operations_list"),
@@ -399,6 +407,12 @@ class _Handler(BaseHandler):
     # The reachability check's transport, and the `.env` it may write: test hooks only.
     http_get: Any = None
     env_file: Any = None
+    # Google sign-in, once configured (Task 7 sets it); None answers `{"google": false}`.
+    google: Any = None
+
+    # While a person must set a new password, only these (and the public routes) answer.
+    ALLOWED_WHILE_CHANGING = frozenset({"_session_read", "_session_end", "_account_password",
+                                        "_session_options", "_account_read"})
 
     # --- responses, with the read API's envelope ------------------------------------------------
 
@@ -469,7 +483,8 @@ class _Handler(BaseHandler):
             self._common(True)
             route, params = self._match("GET", self._segments())
             if not route.public:
-                self._require_session()  # authenticated reads: 401 before the route
+                session = self._require_session()  # authenticated reads: 401 before the route
+                self._guard_change_required(route, session)
             result = getattr(self, route.handler)(params, None, {})
             if result is not None:
                 payload, status = result
@@ -488,9 +503,10 @@ class _Handler(BaseHandler):
                 # must be present and allowed (§1.3 rule 2).
                 self._require_origin()
             else:
-                self._require_session()  # §1.3 order: session first, then CSRF
+                session = self._require_session()  # §1.3 order: session first, then CSRF
                 self._require_origin()
                 self._require_csrf()
+                self._guard_change_required(route, session)
             body = {} if route.raw else self._read_body()
             if route.public:
                 getattr(self, route.handler)(params, None, body)  # writes its own answer
@@ -507,6 +523,10 @@ class _Handler(BaseHandler):
         that answer for themselves (the session routes) return None and are not replayed."""
         session = self._require_session()
         key = self.headers.get("Idempotency-Key")
+        if route.no_replay:
+            # A body that carries a password is neither fingerprinted nor kept: a replay would
+            # answer a password change or a re-authentication without checking anything.
+            key = None
         if route.raw:
             # A raw body is not part of the fingerprint, so a key could not tell two files apart.
             # A file is idempotent by its hash instead: the same bytes twice are a DUPLICATE.
@@ -582,6 +602,16 @@ class _Handler(BaseHandler):
             raise ControlError(401, "UNAUTHORIZED", "no session")
         return session
 
+    def _guard_change_required(self, route: Route, session: Session) -> None:
+        """A session that must change its password reaches only the routes that let it."""
+        if route.public or route.handler in self.ALLOWED_WHILE_CHANGING:
+            return
+        if session.must_change_password:
+            raise ControlError(403, "PASSWORD_CHANGE_REQUIRED", "set a new password first")
+
+    def _remote(self) -> str:
+        return str(self.client_address[0])
+
     def _require_csrf(self, session: Session | None = None) -> Session:
         session = session or self._require_session()
         header = self.headers.get("X-CSRF-Token", "")
@@ -656,9 +686,12 @@ class _Handler(BaseHandler):
             raise ControlError(422, "VALIDATION", "id must be a non-empty string")
         if not isinstance(password, str) or not password:
             raise ControlError(422, "VALIDATION", "password must be a non-empty string")
-        if self.login_budget.blocked(operator_id):
+        remote = self._remote()
+        if self.address_budget.blocked(remote) or self.login_budget.blocked(operator_id):
+            auth_events.record(self.state_dir, "login_blocked", id=operator_id,
+                               method="password", remote=remote)
             raise ControlError(429, "RATE_LIMITED",
-                               "too many failed logins for this id; wait 15 minutes")
+                               "too many failed logins; wait 15 minutes")
         row = operators.load(self.state_dir).get(operator_id)
         # An unknown id still pays for one scrypt derivation, so response time does not
         # reveal which ids exist.
@@ -667,19 +700,26 @@ class _Handler(BaseHandler):
             # One sentence for an unknown id and a wrong password alike: which of the
             # two failed is not the caller's business.
             self.login_budget.record_failure(operator_id)
+            self.address_budget.record_failure(remote)
+            auth_events.record(self.state_dir, "login_failed", id=operator_id,
+                               method="password", remote=remote)
             raise ControlError(401, "UNAUTHORIZED", BAD_LOGIN_TEXT)
-        token, session = self.sessions.create(str(row["id"]), str(row.get("name") or ""))
-        self._json({"operator": {"id": session.operator_id,
-                                 "name": session.operator_name},
-                    "csrf_token": session.csrf_token},
+        token, session = self.sessions.create(str(row["id"]), str(row.get("name") or ""),
+                                              role=str(row["role"]), method="password",
+                                              must_change=bool(row["must_change_password"]))
+        auth_events.record(self.state_dir, "login_ok", id=session.operator_id,
+                           method="password", remote=remote)
+        self._json({"operator": _operator_view(session), "csrf_token": session.csrf_token},
                    cookies=(self._session_cookie(token),))
 
     def _session_read(self, params: dict[str, str], query: Any,
                       body: dict[str, Any]) -> None:
         session = self._require_session()
-        self._json({"operator": {"id": session.operator_id,
-                                 "name": session.operator_name},
-                    "csrf_token": session.csrf_token})
+        self._json({"operator": _operator_view(session), "csrf_token": session.csrf_token})
+
+    def _session_options(self, params: dict[str, str], query: Any,
+                         body: dict[str, Any]) -> None:
+        self._json({"google": bool(self.google)})
 
     def _session_end(self, params: dict[str, str], query: Any,
                      body: dict[str, Any]) -> None:
@@ -690,6 +730,11 @@ class _Handler(BaseHandler):
             self.sessions.end(token)
         self._json({"ended": True},
                    cookies=(self._session_cookie("", expire=True),))
+
+
+def _operator_view(session: Session) -> dict[str, Any]:
+    return {"id": session.operator_id, "name": session.operator_name, "role": session.role,
+            "must_change_password": session.must_change_password}
 
 
 # --- B5: signing and drafts ---------------------------------------------------------------------
@@ -1084,19 +1129,25 @@ def _admin_check(self: _Handler, params: dict[str, str], query: Any,
     return {"check": row}, 201
 
 
+def _reauth(self: _Handler, session: Session, password: object) -> None:
+    """The password again, on the login's own budget: no side door for guessing."""
+    if self.login_budget.blocked(session.operator_id):
+        raise ControlError(429, "RATE_LIMITED", "too many failed attempts; wait 15 minutes")
+    row = operators.load(self.state_dir).get(session.operator_id)
+    if not isinstance(password, str) or row is None or not operators.verify(row, password):
+        self.login_budget.record_failure(session.operator_id)
+        auth_events.record(self.state_dir, "reauth_failed", id=session.operator_id,
+                           remote=self._remote())
+        raise ControlError(403, "REAUTH", "the password is required again, and it did not match")
+
+
 def _admin_credential(self: _Handler, params: dict[str, str], query: Any,
                       body: dict[str, Any]) -> tuple[Any, int]:
     """Replace one credential, with the password asked again (spec B11). A wrong password counts
     against the same budget as a failed login, so this route is no side door for guessing."""
     self._only_keys(body, frozenset({"name", "value", "password"}))
     session = self._require_session()
-    password = body.get("password")
-    if self.login_budget.blocked(session.operator_id):
-        raise ControlError(429, "RATE_LIMITED", "too many failed attempts; wait 15 minutes")
-    row = operators.load(self.state_dir).get(session.operator_id)
-    if not isinstance(password, str) or row is None or not operators.verify(row, password):
-        self.login_budget.record_failure(session.operator_id)
-        raise ControlError(403, "REAUTH", "the password is required again, and it did not match")
+    _reauth(self, session, body.get("password"))
     if self.env_file is None:
         raise ControlError(409, "CREDENTIALS_READ_ONLY",
                            "this deployment cannot write credentials: edit .env on the host and "
@@ -1716,6 +1767,81 @@ for _name, _function in (("_new_start", _new_start), ("_new_list", _new_list),
                          ("_new_read", _new_read), ("_new_step", _new_step),
                          ("_new_advanced", _new_advanced), ("_new_preview", _new_preview),
                          ("_new_discard", _new_discard), ("_new_create", _new_create)):
+    setattr(_Handler, _name, _function)
+
+
+# --- accounts and people (operator login) -------------------------------------------------------
+
+
+def _require_admin(self: _Handler) -> Session:
+    """An admin by the LEDGER at this request, not by the role the session was minted with: a
+    demoted or disabled admin loses the power at once."""
+    session = self._require_session()
+    row = operators.load(self.state_dir).get(session.operator_id)
+    if row is None or row["role"] != "admin":
+        raise ControlError(403, "FORBIDDEN", "this needs an admin")
+    return session
+
+
+def _account_call(function: Callable[..., Any], *args: Any) -> Any:
+    try:
+        return function(*args)
+    except account_service.AccountError as exc:
+        raise ControlError(exc.status, exc.code, exc.message) from None
+
+
+def _account_read(self: _Handler, params: dict[str, str], query: Any,
+                  body: dict[str, Any]) -> tuple[Any, int]:
+    session = self._require_session()
+    person = operators.load(self.state_dir).get(session.operator_id)
+    if person is None:
+        raise ControlError(401, "UNAUTHORIZED", "no session")
+    return {"operator": {**_operator_view(session), "role": person["role"],
+                         "email": person["email"],
+                         "google_linked": bool(person["google_sub"])}}, 200
+
+
+def _account_password(self: _Handler, params: dict[str, str], query: Any,
+                      body: dict[str, Any]) -> tuple[Any, int]:
+    self._only_keys(body, frozenset({"current", "new"}))
+    session = self._require_session()
+    token = self._session_token()
+    if self.login_budget.blocked(session.operator_id):
+        raise ControlError(429, "RATE_LIMITED", "too many failed attempts; wait 15 minutes")
+    try:
+        _account_call(account_service.change_own_password, self.state_dir, session.operator_id,
+                      body.get("current"), body.get("new"))
+    except ControlError as exc:
+        if exc.code == "REAUTH":  # a wrong current password is a failed guess like any other
+            self.login_budget.record_failure(session.operator_id)
+            auth_events.record(self.state_dir, "reauth_failed", id=session.operator_id,
+                               remote=self._remote())
+        raise
+    self.sessions.end_others(session.operator_id, token)
+    if token:
+        self.sessions.clear_must_change(token)
+    return {"changed": True}, 200
+
+
+def _account_sessions(self: _Handler, params: dict[str, str], query: Any,
+                      body: dict[str, Any]) -> tuple[Any, int]:
+    session = self._require_session()
+    return {"sessions": self.sessions.list_for(session.operator_id, self._session_token())}, 200
+
+
+def _account_end_others(self: _Handler, params: dict[str, str], query: Any,
+                        body: dict[str, Any]) -> tuple[Any, int]:
+    self._only_keys(body, frozenset())
+    session = self._require_session()
+    n = self.sessions.end_others(session.operator_id, self._session_token())
+    auth_events.record(self.state_dir, "sessions_revoked", id=session.operator_id, detail=f"{n}")
+    return {"ended": n}, 200
+
+
+for _name, _function in (("_account_read", _account_read),
+                         ("_account_password", _account_password),
+                         ("_account_sessions", _account_sessions),
+                         ("_account_end_others", _account_end_others)):
     setattr(_Handler, _name, _function)
 
 

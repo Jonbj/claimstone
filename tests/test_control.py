@@ -108,7 +108,8 @@ def test_login_and_logout_round_trip(tmp_path, state):
     with _served(tmp_path, state) as (_httpd, base):
         status, headers, body = _login(base)
         assert status == 200
-        assert body["operator"] == {"id": "op1", "name": "Op One"}
+        assert body["operator"] == {"id": "op1", "name": "Op One", "role": "admin",
+                                    "must_change_password": False}
         assert len(body["csrf_token"]) == 64
         cookie = _cookie(headers)
 

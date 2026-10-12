@@ -1,6 +1,11 @@
 """Accounts and sign-in on the control server (design 2026-10-12): session unit tests."""
 
-from claimstone import control
+import json
+
+import pytest
+
+from claimstone import auth_events, control, operators
+from tests.test_control import _cookie, _login, _request, _served
 
 
 class Clock:
@@ -89,3 +94,121 @@ def test_must_change_password_can_be_cleared():
     assert s.must_change_password is True
     sessions.clear_must_change(token)
     assert sessions.get(token).must_change_password is False
+
+
+# --- the routes, against one real server ------------------------------------------------------------
+
+PW = "correct horse battery"
+BASE = "/control/v1"
+
+
+@pytest.fixture()
+def state(tmp_path):
+    d = tmp_path / "state"
+    operators.add_operator(d, "adm", "Admin", PW, email="adm@example.org")
+    operators.add_operator(d, "ann", "Ann", PW, email="ann@example.org")
+    return d
+
+
+def _signed(base, who="adm", password=PW):
+    status, headers, body = _login(base, who, password)
+    assert status == 200, body
+    return {"Cookie": _cookie(headers), "Origin": base, "X-CSRF-Token": body["csrf_token"]}, body
+
+
+def _post(base, path, payload, headers):
+    return _request(f"{base}{BASE}{path}", "POST", payload, headers=headers)
+
+
+def test_login_answers_role_and_must_change(tmp_path, state):
+    with _served(tmp_path, state) as (_h, base):
+        _headers, body = _signed(base)
+        assert body["operator"] == {"id": "adm", "name": "Admin", "role": "admin",
+                                    "must_change_password": False}
+
+
+def test_a_new_token_at_every_login(tmp_path, state):
+    with _served(tmp_path, state) as (_h, base):
+        assert _cookie(_login(base, "adm", PW)[1]) != _cookie(_login(base, "adm", PW)[1])
+
+
+def test_unknown_id_and_wrong_password_answer_the_same_401(tmp_path, state):
+    with _served(tmp_path, state) as (_h, base):
+        wrong = _login(base, "adm", "wrong wrong wrong")
+        unknown = _login(base, "nobody", "wrong wrong wrong")
+        assert wrong[0] == unknown[0] == 401 and wrong[2] == unknown[2]
+
+
+def test_the_address_budget_blocks_many_ids_even_a_correct_password(tmp_path, state):
+    with _served(tmp_path, state) as (_h, base):
+        for n in range(20):
+            assert _login(base, f"nobody{n}", "wrong wrong wrong")[0] == 401
+        assert _login(base, "adm", PW)[0] == 429
+    assert "login_blocked" in (state / "auth_events.jsonl").read_text()
+
+
+def test_login_events_are_recorded_without_the_password_or_a_token(tmp_path, state):
+    with _served(tmp_path, state) as (_h, base):
+        _login(base, "adm", "wrong wrong wrong")
+        _, headers, body = _login(base, "adm", PW)
+    text = (state / "auth_events.jsonl").read_text()
+    assert "login_failed" in text and "login_ok" in text
+    for secret in ("wrong wrong", PW, _cookie(headers).split("=", 1)[1], body["csrf_token"]):
+        assert secret not in text
+
+
+def test_session_options_is_public_and_says_google_is_off_by_default(tmp_path, state):
+    with _served(tmp_path, state) as (_h, base):
+        assert _request(f"{base}{BASE}/session/options")[2] == {"google": False}
+
+
+def test_change_password_ends_other_sessions_and_keeps_this_one(tmp_path, state):
+    with _served(tmp_path, state) as (_h, base):
+        mine, _ = _signed(base)
+        other, _ = _signed(base)
+        status, _, body = _post(base, "/account/password",
+                                {"current": PW, "new": "a brand new password"}, mine)
+        assert status == 200 and body == {"changed": True}
+        assert _request(f"{base}{BASE}/session", headers=mine)[0] == 200
+        assert _request(f"{base}{BASE}/session", headers=other)[0] == 401
+        assert _login(base, "adm", PW)[0] == 401
+        assert _login(base, "adm", "a brand new password")[0] == 200
+    assert "a brand new password" not in (state / "auth_events.jsonl").read_text()
+
+
+def test_change_password_refuses_wrong_current_and_weak_new(tmp_path, state):
+    with _served(tmp_path, state) as (_h, base):
+        mine, _ = _signed(base)
+        wrong = _post(base, "/account/password", {"current": "nope nope nope!", "new": "a brand new password"}, mine)
+        assert wrong[0] == 403 and wrong[2]["error"]["code"] == "REAUTH"
+        assert _post(base, "/account/password", {"current": PW, "new": "short"}, mine)[0] == 422
+        assert _post(base, "/account/password", {"current": PW, "new": "x" * 20, "extra": 1}, mine)[0] == 400
+
+
+def test_a_wrong_current_password_spends_the_login_budget(tmp_path, state):
+    with _served(tmp_path, state) as (_h, base):
+        mine, _ = _signed(base)
+        for _ in range(5):
+            assert _post(base, "/account/password", {"current": "nope nope nope!", "new": "a brand new password"}, mine)[0] == 403
+        assert _post(base, "/account/password", {"current": PW, "new": "a brand new password"}, mine)[0] == 429
+
+
+def test_sessions_listing_and_end_others(tmp_path, state):
+    with _served(tmp_path, state) as (_h, base):
+        mine, _ = _signed(base)
+        other, _ = _signed(base)
+        listed = _request(f"{base}{BASE}/account/sessions", headers=mine)[2]["sessions"]
+        assert len(listed) == 2 and [s["current"] for s in listed].count(True) == 1
+        assert "token" not in json.dumps(listed)
+        assert _post(base, "/account/sessions/end-others", {}, mine)[2] == {"ended": 1}
+        assert _request(f"{base}{BASE}/session", headers=other)[0] == 401
+        assert _post(base, "/account/sessions/end-others", {"x": 1}, mine)[0] == 400
+
+
+def test_account_read_shows_email_and_link_state_and_no_secret(tmp_path, state):
+    with _served(tmp_path, state) as (_h, base):
+        mine, _ = _signed(base)
+        body = _request(f"{base}{BASE}/account", headers=mine)[2]
+        assert body["operator"]["email"] == "adm@example.org"
+        assert body["operator"]["google_linked"] is False and body["operator"]["role"] == "admin"
+        assert "hash" not in json.dumps(body) and "salt" not in json.dumps(body)
