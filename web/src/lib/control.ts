@@ -238,6 +238,47 @@ export interface OfferBody {
 }
 export type OfferStage = "approved" | "bought_externally" | "declined";
 
+// scheduler writes (claimstone/control.py: `_periodic_plan`, `_schedule_*`, `_copy_policy_*`,
+// `_local_mandate_*`, `_periodic_export_*`). The bodies carry exactly the keys the server accepts.
+export interface PeriodicPlanBody {
+  source_flow_id: string;
+  rounds: Array<{ round: string; title: string; not_before: string; expires_at: string }>;
+  apis: string[];
+  allowed_hosts: string[];
+  max_units_each: number;
+  max_requests_each: number;
+  per_query: number;
+}
+export interface PeriodicPlanResult {
+  rounds: Array<{ round: string; flow_id: string; not_before: string; expires_at: string; batch_id: string }>;
+  schedule_id: string;
+  schedule_state: string;
+  max_total_requests: number;
+}
+export interface PolicyPlanBody {
+  schedule_id: string;
+  allowed_hosts: string[];
+  source_classes: string[];
+  max_candidates: number;
+  max_requests_each: number;
+  not_before: string;
+  expires_at: string;
+}
+export interface SeriesMandateBody {
+  schedule_id: string;
+  flow_ids: string[];
+  extract_model: string;
+  review_model: string;
+  max_total_local_calls: number;
+}
+export interface PeriodicExportCreated {
+  export_id: string;
+  schedule_id: string;
+  dossier_id: string;
+  created_now: boolean;
+  download: string;
+}
+
 // exports (B10)
 export interface ExportCreated {
   export_id: string;
@@ -547,6 +588,27 @@ export const control = {
                         { include_copies: includeCopies }),
   verifyExport: (project: string, flowId: string, exportId: string) =>
     post<ExportVerified>(`${flowBase(project, flowId)}/exports/${enc(exportId)}/verify`, {}),
+
+  // scheduler writes
+  planPeriodic: (p: string, body: PeriodicPlanBody) => post<PeriodicPlanResult>(`/p/${enc(p)}/periodic-plans`, body),
+  authorizeSchedule: (p: string, id: string, body: { plan_sha256: string; max_total_requests: number }) =>
+    post<ScheduleStatus>(`/p/${enc(p)}/schedules/${enc(id)}/authorize`, body),
+  revokeSchedule: (p: string, id: string, planSha: string) =>
+    post<ScheduleStatus>(`/p/${enc(p)}/schedules/${enc(id)}/revoke`, { plan_sha256: planSha }),
+  planCopyPolicy: (p: string, body: PolicyPlanBody) => post<PolicyStatus>(`/p/${enc(p)}/copy-policies`, body),
+  authorizeCopyPolicy: (p: string, id: string, body: { policy_sha256: string; max_candidates: number; max_requests_each: number; max_total_requests: number }) =>
+    post<PolicyStatus>(`/p/${enc(p)}/copy-policies/${enc(id)}/authorize`, body),
+  revokeCopyPolicy: (p: string, id: string, sha: string) =>
+    post<PolicyStatus>(`/p/${enc(p)}/copy-policies/${enc(id)}/revoke`, { policy_sha256: sha }),
+  enableSeriesMandate: (p: string, body: SeriesMandateBody) => post<MandateStatus>(`/p/${enc(p)}/local-mandates/series`, body),
+  disableMandate: (p: string, id: string) =>
+    post<MandateStatus>(`/p/${enc(p)}/local-mandates/${enc(id)}/disable`, { mandate_id: id }),
+  createPeriodicExport: (p: string, scheduleId: string, dossierId: string) =>
+    post<PeriodicExportCreated>(`/p/${enc(p)}/schedules/${enc(scheduleId)}/export`, { dossier_id: dossierId }),
+  verifyPeriodicExport: (p: string, exportId: string) =>
+    post<{ export_id: string; holds: boolean; problems: string[] }>(`/p/${enc(p)}/periodic-exports/${enc(exportId)}/verify`, {}),
+  /** A path for a browser navigation with the session cookie; a download is never a `fetch`. */
+  periodicExportDownloadPath: (p: string, exportId: string) => `${PREFIX}/p/${enc(p)}/periodic-exports/${enc(exportId)}/download`,
 
   // administration
   admin: () => get<ControlAdmin>("/admin"),
