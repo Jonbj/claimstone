@@ -124,7 +124,7 @@ describe("Grants", () => {
       mount();
       const calendar = await step(/Calendar/);
       expect(within(calendar).getByText(/stefano/)).toBeTruthy();
-      expect(within(calendar).getByText("Stops later starts. A search already running finishes.")).toBeTruthy();
+      expect(within(calendar).getByText("Stops later starts. A search already running finishes. The copy policy and the local model keep their own state; revoke or disable them separately.")).toBeTruthy();
       fireEvent.click(within(calendar).getByRole("checkbox"));
       fireEvent.click(within(calendar).getByRole("button", { name: "Revoke the calendar" }));
       await waitFor(() => expect(posts()).toHaveLength(1));

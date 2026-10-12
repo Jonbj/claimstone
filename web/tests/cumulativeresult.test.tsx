@@ -439,6 +439,7 @@ describe("Cumulative result page, the verified package", () => {
     await panel();
     expect(screen.getByRole("button", { name: "Download current saved dossier (JSON)" })).toBeTruthy();
     expect(screen.getByText(/A live report is not a verified package/)).toBeTruthy();
+    expect(screen.getByText(/The package records the saved dossier and the exact state of its evidence, and can be checked again later while you keep its id \(this page forgets the id when you leave\)\./)).toBeTruthy();
   });
 
   it("posts the dossier id shown now, then verifies, then offers the download only because it holds", async () => {

@@ -319,7 +319,7 @@ describe("New series", () => {
   it("explains what saving does, and offers no purchase", async () => {
     await ready();
     const block = screen.getByRole("region", { name: "What Claimstone will do after you save" });
-    for (const line of ["It freezes one flow and one exact set of searches for each round.", "It writes only a plan to disk.", "It makes no request."]) {
+    for (const line of ["It freezes one flow and one exact set of searches for each round.", "It creates one flow per round and writes a plan to disk; nothing else.", "It makes no request."]) {
       expect(within(block).getByText(line)).toBeTruthy();
     }
     expect(within(block).getByText(/approve the calendar, separately/)).toBeTruthy();

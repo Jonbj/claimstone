@@ -1,6 +1,7 @@
 // The scheduler's write routes (claimstone/control.py): exact URL, method and body, the CSRF header,
 // and a 409 that is an error and not a sign-out. Only control.ts sends these.
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, expectTypeOf, it, vi } from "vitest";
+import type { MandateStatus } from "@/lib/scheduler";
 import { control, ControlError, setCsrfToken, setUnauthorizedHandler } from "@/lib/control";
 
 interface Call { url: string; method: string; body: unknown; headers: Record<string, string> }
@@ -78,5 +79,13 @@ describe("scheduler write methods", () => {
   it("the download is a path for a browser navigation, never a request", () => {
     expect(control.periodicExportDownloadPath("news", "abc")).toBe("/control/v1/p/news/periodic-exports/abc/download");
     expect(calls).toHaveLength(0);
+  });
+
+  it("types the answers of the mandate routes as the server sends them", () => {
+    // autopilot.enable_series returns {mandate_id, mandate}; autopilot.disable returns {mandate_id, state}
+    type Enabled = Awaited<ReturnType<typeof control.enableSeriesMandate>>;
+    type Disabled = Awaited<ReturnType<typeof control.disableMandate>>;
+    expectTypeOf<Enabled>().toEqualTypeOf<{ mandate_id: string; mandate: MandateStatus["mandate"] }>();
+    expectTypeOf<Disabled>().toEqualTypeOf<{ mandate_id: string; state: string }>();
   });
 });

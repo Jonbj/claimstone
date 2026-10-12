@@ -381,7 +381,7 @@
       "after": {
         "title": "Cosa farà Claimstone dopo il salvataggio",
         "freeze": "Fissa un flusso e un insieme esatto di ricerche per ogni round.",
-        "plan": "Scrive su disco solo un piano.",
+        "plan": "Crea un flusso per ogni round e scrive un piano su disco; nient'altro.",
         "noRequest": "Non fa nessuna richiesta.",
         "nothing": "Non autorizza niente. Nella pagina successiva approvi il calendario, a parte."
       },
@@ -494,7 +494,7 @@
       "none": "Per ora non è permessa nessuna richiesta.",
       "authorize": "Autorizza il calendario",
       "revoke": "Revoca il calendario",
-      "revokeNote": "Impedisce gli avvii successivi. Una ricerca già in corso finisce.",
+      "revokeNote": "Impedisce gli avvii successivi. Una ricerca già in corso finisce. La regola per le copie e il modello locale restano nel loro stato: revocali o disabilitali a parte.",
       "revokeConfirm": "Voglio fermare questo calendario.",
       "revokedNote": "Un calendario revocato non si può autorizzare di nuovo: pianifica una nuova serie.",
       "summary": "{rounds} round, {searches} ricerche in tutto, {window}; fino a {n} richieste."
@@ -636,7 +636,7 @@
     "asOf": "Dati del {time}",
     "export": {
       "title": "Pacchetto verificato",
-      "intro": "Un rapporto in tempo reale non è un pacchetto verificato. Il pacchetto congela il dossier salvato e le sue prove, e si può ricontrollare in seguito.",
+      "intro": "Un rapporto in tempo reale non è un pacchetto verificato. Il pacchetto registra il dossier salvato e lo stato esatto delle sue prove, e si può ricontrollare in seguito finché conservi il suo id (questa pagina lo dimentica quando la lasci).",
       "create": "Crea e verifica il pacchetto",
       "notReady": "Il dossier non è ancora pronto per essere letto.",
       "notSaved": "Il dossier non è ancora stato salvato.",

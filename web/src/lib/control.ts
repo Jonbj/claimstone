@@ -271,6 +271,10 @@ export interface SeriesMandateBody {
   review_model: string;
   max_total_local_calls: number;
 }
+/** What `autopilot.enable_series` answers: the new mandate's id and its frozen terms, not a status. */
+export interface SeriesMandateEnabled { mandate_id: string; mandate: MandateStatus["mandate"] }
+/** What `autopilot.disable` answers. */
+export interface MandateDisabled { mandate_id: string; state: string }
 export interface PeriodicExportCreated {
   export_id: string;
   schedule_id: string;
@@ -600,9 +604,9 @@ export const control = {
     post<PolicyStatus>(`/p/${enc(p)}/copy-policies/${enc(id)}/authorize`, body),
   revokeCopyPolicy: (p: string, id: string, sha: string) =>
     post<PolicyStatus>(`/p/${enc(p)}/copy-policies/${enc(id)}/revoke`, { policy_sha256: sha }),
-  enableSeriesMandate: (p: string, body: SeriesMandateBody) => post<MandateStatus>(`/p/${enc(p)}/local-mandates/series`, body),
+  enableSeriesMandate: (p: string, body: SeriesMandateBody) => post<SeriesMandateEnabled>(`/p/${enc(p)}/local-mandates/series`, body),
   disableMandate: (p: string, id: string) =>
-    post<MandateStatus>(`/p/${enc(p)}/local-mandates/${enc(id)}/disable`, { mandate_id: id }),
+    post<MandateDisabled>(`/p/${enc(p)}/local-mandates/${enc(id)}/disable`, { mandate_id: id }),
   createPeriodicExport: (p: string, scheduleId: string, dossierId: string) =>
     post<PeriodicExportCreated>(`/p/${enc(p)}/schedules/${enc(scheduleId)}/export`, { dossier_id: dossierId }),
   verifyPeriodicExport: (p: string, exportId: string) =>
