@@ -1,5 +1,12 @@
 # Frontend handoff: Claimstone scheduler and periodic research
 
+> **Frontend status (2026-10-12): done.** The portal covers the Scheduler tab,
+> series creation, calendar, copy-policy and local-mandate authorization,
+> the cumulative result and the verified package. Not covered: pause/resume
+> (501 on the server), the event stream, a summary endpoint, and signing
+> whole-corpus profiles (the sign route is per flow). Design:
+> `docs/superpowers/specs/2026-10-12-scheduler-portal-design.md`.
+
 Read this before adapting `web/` to the scheduler. This is an implementation
 handoff, not a visual redesign. The current portal design under
 `docs/design/portal/` remains the visual source; `CLAUDE.md`, the contracts and
