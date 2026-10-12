@@ -182,14 +182,68 @@ describe("New series", () => {
     });
   });
 
-  it("hosts typed by hand are split on lines, trimmed and lowercased", async () => {
+  it("a host nobody ticked is permitted but noted; hosts typed by hand are split, trimmed and lowercased", async () => {
     await ready();
     tick("OpenAlex");
     fireEvent.click(screen.getByText(/^Advanced options/));
     fireEvent.change(screen.getByLabelText(/^Hosts the searches/), { target: { value: " API.OpenAlex.org \n\nexport.arxiv.org " } });
+    expect(screen.getByText("These hosts are permitted but no ticked source uses them: export.arxiv.org. Remove them unless you mean it.")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Save the plan" }).hasAttribute("disabled")).toBe(false);
     fireEvent.click(screen.getByRole("button", { name: "Save the plan" }));
     await waitFor(() => expect(posted()).toHaveLength(1));
     expect((posted()[0].body as { allowed_hosts: string[] }).allowed_hosts).toEqual(["api.openalex.org", "export.arxiv.org"]);
+  });
+
+  it("once the hosts were touched, ticking another source does not widen them: the save is blocked and says which host is missing", async () => {
+    await ready();
+    tick("OpenAlex");
+    fireEvent.click(screen.getByText(/^Advanced options/));
+    fireEvent.change(screen.getByLabelText(/^Hosts the searches/), { target: { value: "api.openalex.org\n" } });
+    tick("Crossref");
+    expect((screen.getByLabelText(/^Hosts the searches/) as HTMLTextAreaElement).value).toBe("api.openalex.org\n");
+    expect(screen.getByText(/Add the host of Crossref: api\.crossref\.org\./)).toBeTruthy();
+    const save = screen.getByRole("button", { name: "Save the plan" });
+    expect(save.hasAttribute("disabled")).toBe(true);
+    fireEvent.click(save);
+    expect(posted()).toHaveLength(0);
+    fireEvent.change(screen.getByLabelText(/^Hosts the searches/), { target: { value: "api.openalex.org\napi.crossref.org" } });
+    expect(save.hasAttribute("disabled")).toBe(false);
+  });
+
+  it("untouched hosts follow the sources as before", async () => {
+    await ready();
+    tick("OpenAlex"); tick("arXiv");
+    fireEvent.click(screen.getByText(/^Advanced options/));
+    expect((screen.getByLabelText(/^Hosts the searches/) as HTMLTextAreaElement).value).toBe("api.openalex.org\nexport.arxiv.org");
+  });
+
+  it("a round name equal to a bound flow's gets a note and the server decides; an unbound round blocks", async () => {
+    stub({ flows: [...FLOWS, { flow_id: "child", selector: { round: "update-2026-11", manifest_only: false }, title: "Child" }], post: () => json(201, PLAN_OK) });
+    mount();
+    await screen.findByRole("combobox", { name: "Flow to repeat" });
+    await screen.findByText(/Tick at least one source/);
+    tick("OpenAlex");
+    expect(await screen.findByText("A flow named update-2026-11 already exists. Saving again works only as an exact retry of the same plan; otherwise the server will refuse.")).toBeTruthy();
+    expect(screen.queryByText("A round with this name already exists in the project.")).toBeNull();
+    expect(screen.getByRole("button", { name: "Save the plan" }).hasAttribute("disabled")).toBe(false);
+  });
+
+  it("times that are not UTC ISO are flagged: date only, no zone, another offset", async () => {
+    await ready();
+    tick("OpenAlex");
+    const first = () => screen.getByRole("group", { name: "Round 1" });
+    for (const bad of ["2026-11-01", "2026-11-01T00:00:00", "2026-11-01T00:00:00+01:00"]) {
+      fireEvent.change(within(first()).getByLabelText("Starts (UTC)"), { target: { value: bad } });
+      expect(within(first()).getByText("Write each time in UTC, like 2026-11-01T00:00:00Z.")).toBeTruthy();
+      expect(screen.getByRole("button", { name: "Save the plan" }).hasAttribute("disabled")).toBe(true);
+    }
+    fireEvent.change(within(first()).getByLabelText("Starts (UTC)"), { target: { value: "2026-11-01T00:00:00+00:00" } });
+    expect(within(first()).queryByText("Write each time in UTC, like 2026-11-01T00:00:00Z.")).toBeNull();
+  });
+
+  it("explains which flow to pick", async () => {
+    await ready();
+    expect(screen.getByText("Pick the flow the new rounds continue from.")).toBeTruthy();
   });
 
   it("after editing a row, changing the count asks inline before regenerating; declining keeps the edit", async () => {

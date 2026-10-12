@@ -311,7 +311,8 @@
         "label": "Flusso da ripetere",
         "none": "Questo progetto non ha nessun flusso che si possa ripetere.",
         "option": "{title} — {label}",
-        "untitled": "flusso {id}"
+        "untitled": "flusso {id}",
+        "help": "Scegli il flusso da cui continuano i nuovi round."
       },
       "prefix": "Nome degli aggiornamenti",
       "cadence": {
@@ -350,7 +351,8 @@
         "DUPLICATE": "Un altro round ha lo stesso nome.",
         "KNOWN": "Nel progetto esiste già un round con questo nome.",
         "TOO_FAR": "La finestra finisce oltre 366 giorni da adesso.",
-        "WINDOW": "Una finestra deve finire dopo il suo inizio."
+        "WINDOW": "Una finestra deve finire dopo il suo inizio.",
+        "FORMAT": "Scrivi ogni ora in UTC, così: 2026-11-01T00:00:00Z."
       },
       "sources": {
         "legend": "Fonti da cercare",
@@ -397,7 +399,12 @@
         "hosts": "Indica almeno un host.",
         "numbers": "I limiti devono essere numeri interi, da 1 in su.",
         "units": "Le ricerche per round non possono essere meno di {n}.",
-        "pending": "Rispondi alla domanda sulla rigenerazione dei round."
+        "pending": "Rispondi alla domanda sulla rigenerazione dei round.",
+        "missingHost": "Aggiungi l'host di {source}: {host}."
+      },
+      "note": {
+        "extraHosts": "Questi host sono permessi ma nessuna fonte scelta li usa: {hosts}. Toglili, a meno che tu non li voglia davvero.",
+        "flowExists": "Esiste già un flusso di nome {name}. Salvare di nuovo funziona solo come ripetizione identica dello stesso piano; altrimenti il server rifiuterà."
       }
     },
     "state": {

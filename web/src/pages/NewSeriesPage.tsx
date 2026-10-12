@@ -66,10 +66,12 @@ function Body({ project }: { project: string }) {
   const flowId = chosen ?? fallback?.flow_id ?? "";
   const overview = useApi(() => (flowId ? api.overview(project, "f", flowId) : Promise.resolve(null)), [project, flowId]);
   const topics = overview.data?.journey.topics ?? null;
-  const known = useMemo(() => new Set<string>([
-    ...(card?.flows ?? []).map((f) => f.selector.round),
-    ...(card?.unbound_selectors ?? []).map((u) => u.selector.round),
-  ].filter((r): r is string => typeof r === "string")), [card]);
+  // Rounds with candidates (unbound selectors) are refused early. A round that is only the name of a
+  // bound flow may be an exact retry of an earlier save, so it gets a note and the server decides.
+  const known = useMemo(() => new Set<string>(
+    (card?.unbound_selectors ?? []).map((u) => u.selector.round).filter((r): r is string => typeof r === "string")), [card]);
+  const flowRounds = useMemo(() => new Set<string>(
+    (card?.flows ?? []).map((f) => f.selector.round).filter((r): r is string => typeof r === "string")), [card]);
 
   const initial: Inputs = { kind: "monthly", start: nextMonthStart(new Date(now)), every: "7", count: "3", prefix: "Update" };
   const [inputs, setInputs] = useState<Inputs>(initial);
@@ -98,6 +100,12 @@ function Body({ project }: { project: string }) {
   const preview = topics && searches
     ? figures({ topics, apis, maxRequestsEach: requestsNumber ?? 0, rounds: rounds.length }) : null;
   const problems = checkRounds(rounds, known, new Date(now));
+  const flowNotes = [...new Set(rounds.map((r) => r.round))].filter((name) => flowRounds.has(name) && !known.has(name));
+  // The hosts must cover every ticked source (the server does not check this): a search to a host that
+  // is not permitted would fail. Hosts nobody ticked are allowed but noted.
+  const wanted = hostsFor(apis);
+  const missingSource = apis.map((a) => ({ source: a, host: hostsFor([a])[0] })).find((x) => x.host && !hosts.includes(x.host));
+  const extraHosts = hosts.filter((h) => !wanted.includes(h));
 
   // What stops the save, in the order a person would fix it. The first unmet condition is named.
   let reason: string | null = null;
@@ -111,6 +119,7 @@ function Body({ project }: { project: string }) {
     const sentence = t(`sched.new.problem.${first.code}`);
     reason = first.index >= 0 ? t("sched.new.reason.round", { n: first.index + 1, problem: sentence }) : sentence;
   } else if (hosts.length === 0) reason = t("sched.new.reason.hosts");
+  else if (missingSource) reason = t("sched.new.reason.missingHost", { source: t(`sched.new.sources.${missingSource.source}`), host: missingSource.host });
   else if (requestsNumber === null || perQueryNumber === null || unitsNumber === null) reason = t("sched.new.reason.numbers");
   else if (unitsNumber < searches) reason = t("sched.new.reason.units", { n: searches });
   else if (pending) reason = t("sched.new.reason.pending");
@@ -170,7 +179,7 @@ function Body({ project }: { project: string }) {
     <form onSubmit={(e) => { e.preventDefault(); void submit(); }} className="flex flex-col gap-5">
       <p className="text-sm text-muted-foreground">{t("sched.new.lede")}</p>
       <div className={`${cardClass} grid gap-4 sm:grid-cols-2`}>
-        <Labeled label={t("sched.new.flow.label")}>
+        <Labeled label={t("sched.new.flow.label")} help={t("sched.new.flow.help")}>
           {(id) => (
             <select id={id} value={flowId} disabled={busy} onChange={(e) => setChosen(e.target.value)} className={inputClass}>
               {flows.map((f) => (
@@ -215,6 +224,7 @@ function Body({ project }: { project: string }) {
       ) : null}
 
       <RoundsEditor rounds={rounds} problems={problems} disabled={busy} onChange={editRound} />
+      {flowNotes.map((name) => <p key={name} className="text-sm">{t("sched.new.note.flowExists", { name })}</p>)}
 
       <fieldset className="flex flex-col gap-2 rounded-xl border border-border bg-card px-4 py-3">
         <legend className="px-1 text-sm font-semibold">{t("sched.new.sources.legend")}</legend>
@@ -248,6 +258,8 @@ function Body({ project }: { project: string }) {
           </Labeled>
         </div>
       </details>
+
+      {extraHosts.length ? <p className="text-sm">{t("sched.new.note.extraHosts", { hosts: extraHosts.join(", ") })}</p> : null}
 
       <FiguresPanel values={preview} />
 

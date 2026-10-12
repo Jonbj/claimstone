@@ -311,7 +311,8 @@
         "label": "Flow to repeat",
         "none": "This project has no flow that can be repeated.",
         "option": "{title} — {label}",
-        "untitled": "flow {id}"
+        "untitled": "flow {id}",
+        "help": "Pick the flow the new rounds continue from."
       },
       "prefix": "Name of the updates",
       "cadence": {
@@ -350,7 +351,8 @@
         "DUPLICATE": "Another round has the same name.",
         "KNOWN": "A round with this name already exists in the project.",
         "TOO_FAR": "The window ends more than 366 days from now.",
-        "WINDOW": "A window must end after it starts."
+        "WINDOW": "A window must end after it starts.",
+        "FORMAT": "Write each time in UTC, like 2026-11-01T00:00:00Z."
       },
       "sources": {
         "legend": "Sources to search",
@@ -397,7 +399,12 @@
         "hosts": "Name at least one host.",
         "numbers": "The caps must be whole numbers, 1 or more.",
         "units": "Searches per round cannot be lower than {n}.",
-        "pending": "Answer the question about regenerating the rounds."
+        "pending": "Answer the question about regenerating the rounds.",
+        "missingHost": "Add the host of {source}: {host}."
+      },
+      "note": {
+        "extraHosts": "These hosts are permitted but no ticked source uses them: {hosts}. Remove them unless you mean it.",
+        "flowExists": "A flow named {name} already exists. Saving again works only as an exact retry of the same plan; otherwise the server will refuse."
       }
     },
     "state": {

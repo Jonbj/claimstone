@@ -7,10 +7,12 @@ export type Cadence =
 
 export interface RoundDraft { round: string; title: string; not_before: string; expires_at: string }
 export type ProblemCode =
-  "COUNT" | "NAME" | "TITLE" | "PAST" | "ORDER" | "OVERLAP" | "DUPLICATE" | "KNOWN" | "TOO_FAR" | "WINDOW";
+  "COUNT" | "FORMAT" | "NAME" | "TITLE" | "PAST" | "ORDER" | "OVERLAP" | "DUPLICATE" | "KNOWN" | "TOO_FAR" | "WINDOW";
 export interface RoundProblem { index: number; code: ProblemCode }
 
 const DAY = 86_400_000;
+// What the server accepts as an instant: UTC, with a time and a Z (or +00:00).
+const UTC_ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|\+00:00)$/;
 const iso = (d: Date) => `${d.toISOString().slice(0, 19)}Z`;
 const parseDay = (s: string) => new Date(`${s}T00:00:00Z`);
 
@@ -44,7 +46,7 @@ export function generateRounds(c: Cadence, titlePrefix: string): RoundDraft[] {
   });
 }
 
-/** Early messages only. The server's refusal is shown verbatim when it differs. */
+/** Early messages only. `knownRounds` are the rounds that already have candidates. The server's refusal is shown verbatim when it differs. */
 export function checkRounds(rounds: RoundDraft[], knownRounds: Set<string>, now: Date): RoundProblem[] {
   const problems: RoundProblem[] = [];
   if (rounds.length < 1 || rounds.length > 32) problems.push({ index: -1, code: "COUNT" });
@@ -56,6 +58,11 @@ export function checkRounds(rounds: RoundDraft[], knownRounds: Set<string>, now:
     if (knownRounds.has(r.round)) problems.push({ index, code: "KNOWN" });
     seen.add(r.round);
     if (!r.title.trim()) problems.push({ index, code: "TITLE" });
+    if (!UTC_ISO.test(r.not_before) || !UTC_ISO.test(r.expires_at) ||
+        Number.isNaN(Date.parse(r.not_before)) || Number.isNaN(Date.parse(r.expires_at))) {
+      problems.push({ index, code: "FORMAT" });
+      return;
+    }
     const start = Date.parse(r.not_before), end = Date.parse(r.expires_at);
     if (!(start < end)) problems.push({ index, code: "WINDOW" });
     if (start <= now.getTime()) problems.push({ index, code: "PAST" });

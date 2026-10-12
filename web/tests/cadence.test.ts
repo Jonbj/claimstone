@@ -72,3 +72,16 @@ describe("generateRounds, further cases", () => {
     expect(checkRounds([a, b], new Set(), NOW)).toEqual([{ index: 1, code: "NAME" }, { index: 1, code: "ORDER" }]);
   });
 });
+
+describe("checkRounds, the time format", () => {
+  const base = { round: "r", title: "t" };
+  const codes = (nb: string, ex: string) => checkRounds([{ ...base, not_before: nb, expires_at: ex }], new Set(), NOW).map((p) => p.code);
+  it.each(["2026-11-01", "2026-11-01T00:00:00", "2026-11-01T00:00:00+01:00", "2026-11-01 00:00:00Z", "tomorrow"])(
+    "flags %s", (bad) => {
+      expect(codes(bad, "2026-12-01T00:00:00Z")).toEqual(["FORMAT"]);
+      expect(codes("2026-11-01T00:00:00Z", bad)).toEqual(["FORMAT"]);
+    });
+  it.each(["2026-11-01T00:00:00Z", "2026-11-01T00:00:00+00:00", "2026-11-01T00:00:00.5Z"])("accepts %s", (ok) => {
+    expect(codes(ok, "2026-12-01T00:00:00Z")).not.toContain("FORMAT");
+  });
+});
