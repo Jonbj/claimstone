@@ -9,6 +9,16 @@ what order.
 
 ## Where the work stands
 
+2026-10-12 local deployment check: D130 is committed and pushed as `770a4f8`.
+Compose runs `supervisor` and healthy GROBID; its installation heartbeat is
+`ALIVE`/`IDLE`. A pass over the real store found six projects, zero active
+mandates and zero attempted research passes. API and control were recreated
+from the same image/revision; the unchanged web container was restarted so
+its Nginx proxy resolved their new addresses. The local portal returned 200,
+`/api/v1/meta` reported revision `770a4f8`, and unauthenticated control
+session returned 401. No real research campaign was started. The separate
+frontend session still owns `web/` and `docs/assets/`.
+
 2026-10-11 installation supervisor (D130): `portal.sh up` now starts one
 single-machine scheduler supervisor. It scans all projects for enabled local
 mandates every 30 seconds and drives them with the existing bounded tick;
