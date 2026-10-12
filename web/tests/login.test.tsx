@@ -4,6 +4,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { MemoryRouter, Route, Routes, useLocation } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { setCsrfToken } from "@/lib/control";
+import { LocaleProvider, STORAGE_KEY } from "@/lib/i18n";
 import { SessionProvider, safeNext } from "@/lib/session";
 import LoginPage from "@/pages/LoginPage";
 
@@ -106,5 +107,28 @@ describe("F1: the login page", () => {
     expect(await screen.findByText("id or password is wrong")).toBeTruthy();
     expect(router.state.location.pathname).toBe("/login");
     expect((screen.getByLabelText("Password") as HTMLInputElement).value).toBe("");
+  });
+
+  it("renders in Italian from the catalog, the server's sentence still as given", async () => {
+    localStorage.setItem(STORAGE_KEY, "it");
+    try {
+      const message = "too many failed logins; wait 15 minutes";
+      server(() => json(429, { error: { code: "RATE_LIMITED", message } }));
+      render(
+        <MemoryRouter initialEntries={["/login"]}>
+          <LocaleProvider>
+            <SessionProvider><LoginPage /></SessionProvider>
+          </LocaleProvider>
+        </MemoryRouter>,
+      );
+      expect(await screen.findByRole("heading", { name: "Accedi" })).toBeTruthy();
+      expect(screen.getByText("Per leggere non serve accedere. Per firmare, decidere ed esportare sì.")).toBeTruthy();
+      fireEvent.change(screen.getByLabelText("Identificativo"), { target: { value: "ada" } });
+      fireEvent.change(screen.getByLabelText("Password"), { target: { value: "pw" } });
+      fireEvent.click(screen.getByRole("button", { name: "Accedi" }));
+      expect(await screen.findByText(message)).toBeTruthy();
+    } finally {
+      localStorage.clear();
+    }
   });
 });

@@ -177,5 +177,16 @@
       "INCOMPLETE": "La bozza non è ancora completa: prima vanno salvati i passi da 1 a 3.",
       "UNAUTHORIZED": "La sessione è terminata. Accedi di nuovo, poi ripeti l'azione."
     }
+  },
+  "auth": {
+    "login": {
+      "title": "Accedi",
+      "lede": "Per leggere non serve accedere. Per firmare, decidere ed esportare sì.",
+      "id": "Identificativo",
+      "password": "Password",
+      "submit": "Accedi",
+      "busy": "Accesso in corso…",
+      "checking": "controllo la sessione…"
+    }
   }
 }

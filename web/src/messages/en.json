@@ -177,5 +177,16 @@
       "INCOMPLETE": "The draft is not complete yet: steps 1 to 3 must all be saved first.",
       "UNAUTHORIZED": "Your session has ended. Sign in again, then repeat the action."
     }
+  },
+  "auth": {
+    "login": {
+      "title": "Sign in",
+      "lede": "Reading needs no session. Signing, deciding and exporting do.",
+      "id": "Operator id",
+      "password": "Password",
+      "submit": "Sign in",
+      "busy": "Signing in…",
+      "checking": "checking the session…"
+    }
   }
 }

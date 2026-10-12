@@ -3,6 +3,7 @@ import type { FormEvent } from "react";
 import { Navigate, useSearchParams } from "react-router";
 import ErrorState from "@/components/ErrorState";
 import Pending from "@/components/Pending";
+import { useLocale } from "@/lib/i18n";
 import { useSession, safeNext } from "@/lib/session";
 
 // F1: operators are declared on the CLI (`claimstone operator add`), so this page only signs
@@ -11,6 +12,7 @@ import { useSession, safeNext } from "@/lib/session";
 // After signing in the operator returns to `?next=`, accepted only as a path that starts
 // with a single `/` (`safeNext`).
 export default function LoginPage() {
+  const { t } = useLocale();
   const session = useSession();
   const [params] = useSearchParams();
   const next = safeNext(params.get("next"));
@@ -37,14 +39,14 @@ export default function LoginPage() {
 
   return (
     <section className="mx-auto flex w-full max-w-sm flex-col gap-4 pt-8">
-      <h1 className="text-[40px] leading-tight">Sign in</h1>
+      <h1 className="text-[40px] leading-tight">{t("auth.login.title")}</h1>
       <p className="text-sm text-muted-foreground">
-        Reading needs no session. Signing, deciding and exporting do.
+        {t("auth.login.lede")}
       </p>
-      {!session.ready ? <Pending label="checking the session…" /> : null}
+      {!session.ready ? <Pending label={t("auth.login.checking")} /> : null}
       <form onSubmit={submit} className="flex flex-col gap-4">
         <label className="flex flex-col gap-1 text-sm font-medium">
-          Operator id
+          {t("auth.login.id")}
           <input
             name="id"
             value={id}
@@ -55,7 +57,7 @@ export default function LoginPage() {
           />
         </label>
         <label className="flex flex-col gap-1 text-sm font-medium">
-          Password
+          {t("auth.login.password")}
           <input
             name="password"
             type="password"
@@ -71,7 +73,7 @@ export default function LoginPage() {
           disabled={busy || !id.trim() || !password}
           className="min-h-11 rounded-lg bg-rail px-4 text-sm font-semibold text-rail-foreground disabled:opacity-50"
         >
-          {busy ? "Signing in…" : "Sign in"}
+          {busy ? t("auth.login.busy") : t("auth.login.submit")}
         </button>
       </form>
       {error ? <ErrorState error={error} context="sign-in" /> : null}
