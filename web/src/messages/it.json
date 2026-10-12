@@ -623,6 +623,23 @@
         "history": "Dossier salvati finora: {n}"
       }
     },
-    "asOf": "Dati del {time}"
+    "asOf": "Dati del {time}",
+    "export": {
+      "title": "Pacchetto verificato",
+      "intro": "Un rapporto in tempo reale non è un pacchetto verificato. Il pacchetto congela il dossier salvato e le sue prove, e si può ricontrollare in seguito.",
+      "create": "Crea e verifica il pacchetto",
+      "notReady": "Il dossier non è ancora pronto per essere letto.",
+      "notSaved": "Il dossier non è ancora stato salvato.",
+      "rowLabel": "Pacchetto {id}",
+      "createdNow": "creato adesso",
+      "existed": "esisteva già",
+      "historical": "Storico: creato da un dossier salvato precedente, quindi non è aggiornato per la lettura attuale; il suo contenuto resta verificabile.",
+      "verifying": "Verifico…",
+      "holds": "✓ Il pacchetto regge",
+      "fails": "✗ Il pacchetto non regge",
+      "problems": "Problemi:",
+      "download": "Scarica il pacchetto (ZIP)",
+      "contents": "Il pacchetto contiene quattro file e nessuna copia degli articoli."
+    }
   }
 }

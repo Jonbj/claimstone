@@ -623,6 +623,23 @@
         "history": "Dossiers saved so far: {n}"
       }
     },
-    "asOf": "As of {time}"
+    "asOf": "As of {time}",
+    "export": {
+      "title": "Verified package",
+      "intro": "A live report is not a verified package. The package freezes the saved dossier and its evidence, and can be checked again later.",
+      "create": "Create and verify the package",
+      "notReady": "The dossier is not ready for reading yet.",
+      "notSaved": "The dossier has not been saved yet.",
+      "rowLabel": "Package {id}",
+      "createdNow": "created now",
+      "existed": "already existed",
+      "historical": "Historical: made from an earlier saved dossier, so it is outdated for current reading; its contents stay verifiable.",
+      "verifying": "Verifying…",
+      "holds": "✓ The package holds",
+      "fails": "✗ The package does not hold",
+      "problems": "Problems:",
+      "download": "Download the package (ZIP)",
+      "contents": "The package holds four files and no copies of papers."
+    }
   }
 }

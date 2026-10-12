@@ -11,7 +11,7 @@ import { expectNoPurchaseWording } from "./support/purchase";
 import { SessionProvider } from "@/lib/session";
 import CumulativeResultPage from "@/pages/CumulativeResultPage";
 import {
-  admission, decision, err, json, profile, resultDossier, SHA, SID, stub,
+  admission, decision, err, json, profile, resultDossier, sent, SHA, SID, stub,
 } from "./support/schedulerFixtures";
 
 let firePoll: () => void = () => undefined;
@@ -270,12 +270,6 @@ describe("Cumulative result page", () => {
       expect(await screen.findByRole("button", { name: "Download live report (JSON)" })).toBeTruthy();
     });
 
-    it("offers no verified-package button", async () => {
-      stub(served(resultDossier()));
-      mount();
-      await screen.findByRole("button", { name: /Download/ });
-      expect(screen.queryByRole("button", { name: /package/i })).toBeNull();
-    });
   });
 
   it("reads the dossier once on load and again only when the poll fires", async () => {
@@ -402,5 +396,157 @@ describe("Cumulative result page, the acceptance walkthrough", () => {
     expect(document.querySelectorAll("[aria-checked=true], [aria-selected=true], [checked]")).toHaveLength(0);
     expect(document.body.textContent).not.toMatch(/SUPPORTED|CONTRADICTED|CONTESTED_IN_LITERATURE|UNANSWERED_IN_LITERATURE|NEVER_ASKED/);
     expect(screen.getAllByText("not signed")).toHaveLength(2);
+  });
+});
+
+describe("Cumulative result page, the verified package", () => {
+  beforeEach(() => setCsrfToken(null));
+  afterEach(() => { cleanup(); vi.unstubAllGlobals(); localStorage.clear(); });
+
+  const ready = (over: Record<string, unknown> = {}) =>
+    resultDossier({ state: "READY_FOR_HUMAN_READING", blockers: [], finalized_dossier_id: SHA("f"), finalized_at: "2026-10-10T08:00:00+00:00", snapshot_stale: false, ...over });
+  const EXPORT = "e".repeat(64);
+  const posts = () => sent.filter((c) => c.method === "POST");
+  const panel = async () => screen.findByRole("region", { name: "Verified package" });
+  const packageButton = () => screen.getByRole("button", { name: "Create and verify the package" });
+  const route = (verify: unknown = { export_id: EXPORT, holds: true, problems: [] },
+                 create: () => Promise<Response> = () => json(201, { export_id: EXPORT, schedule_id: SID, dossier_id: SHA("f"), created_now: true, download: "x" })) =>
+    (url: string) => url.endsWith("/export") ? create() : url.endsWith("/verify") ? json(200, verify) : err(404, "NOT_FOUND", "no");
+
+  it.each([
+    ["not ready", { state: "WAITING_FOR_EVIDENCE" }, "The dossier is not ready for reading yet."],
+    ["not saved", { finalized_dossier_id: null }, "The dossier has not been saved yet."],
+    ["superseded", { snapshot_stale: true }, "The saved dossier no longer matches the current evidence."],
+  ])("is disabled when the dossier is %s, with that reason", async (_name, over, reason) => {
+    stub({ dossier: () => json(200, ready(over)) });
+    mount();
+    const box = await panel();
+    expect(packageButton().hasAttribute("disabled")).toBe(true);
+    expect(within(box).getByText(reason)).toBeTruthy();
+  });
+
+  it("is enabled only when ready, saved and current, and then names no reason", async () => {
+    stub({ dossier: () => json(200, ready()) });
+    mount();
+    const box = await panel();
+    expect(packageButton().hasAttribute("disabled")).toBe(false);
+    expect(within(box).queryByText(/not ready|has not been saved|no longer matches/)).toBeNull();
+  });
+
+  it("the live report and the verified package are labelled apart", async () => {
+    stub({ dossier: () => json(200, ready()) });
+    mount();
+    await panel();
+    expect(screen.getByRole("button", { name: "Download current saved dossier (JSON)" })).toBeTruthy();
+    expect(screen.getByText(/A live report is not a verified package/)).toBeTruthy();
+  });
+
+  it("posts the dossier id shown now, then verifies, then offers the download only because it holds", async () => {
+    stub({ dossier: () => json(200, ready()), post: route({ export_id: EXPORT, holds: true, problems: [] }) });
+    mount();
+    await panel();
+    fireEvent.click(packageButton());
+    await waitFor(() => expect(posts()).toHaveLength(2));
+    expect(posts()[0]).toMatchObject({ url: `/control/v1/p/news/schedules/${SID}/export`, body: { dossier_id: SHA("f") } });
+    expect(posts()[1]).toMatchObject({ url: `/control/v1/p/news/periodic-exports/${EXPORT}/verify`, body: {} });
+    const result = await screen.findByRole("group", { name: `Package ${EXPORT.slice(0, 12)}` });
+    expect(within(result).getByText("created now")).toBeTruthy();
+    expect(within(result).getByText("✓ The package holds")).toBeTruthy();
+    const link = within(result).getByRole("link", { name: "Download the package (ZIP)" });
+    expect(link.getAttribute("href")).toBe(`/control/v1/p/news/periodic-exports/${EXPORT}/download`);
+    expect(link.hasAttribute("download")).toBe(true);
+    expect(within(result).getByText("The package holds four files and no copies of papers.")).toBeTruthy();
+    expect(sent.filter((c) => c.url.includes("/download"))).toHaveLength(0);
+  });
+
+  it("an export that already existed says so", async () => {
+    stub({ dossier: () => json(200, ready()), post: route(undefined, () => json(200, { export_id: EXPORT, schedule_id: SID, dossier_id: SHA("f"), created_now: false, download: "x" })) });
+    mount();
+    await panel();
+    fireEvent.click(packageButton());
+    expect(await screen.findByText("already existed")).toBeTruthy();
+  });
+
+  it("percent-encodes the export id in the link", async () => {
+    stub({ dossier: () => json(200, ready()), post: (url) => url.endsWith("/export")
+      ? json(201, { export_id: "ex id", schedule_id: SID, dossier_id: SHA("f"), created_now: true, download: "x" })
+      : json(200, { export_id: "ex id", holds: true, problems: [] }) });
+    mount();
+    await panel();
+    fireEvent.click(packageButton());
+    expect((await screen.findByRole("link", { name: "Download the package (ZIP)" })).getAttribute("href"))
+      .toBe("/control/v1/p/news/periodic-exports/ex%20id/download");
+  });
+
+  it("when it does not hold, names every problem verbatim and offers no download", async () => {
+    stub({ dossier: () => json(200, ready()), post: route({ export_id: EXPORT, holds: false, problems: ["claims.jsonl: prefix hash differs", "report.md: altered"] }) });
+    mount();
+    await panel();
+    fireEvent.click(packageButton());
+    const result = await screen.findByRole("group", { name: `Package ${EXPORT.slice(0, 12)}` });
+    expect(await within(result).findByText("✗ The package does not hold")).toBeTruthy();
+    expect(within(result).getByText("claims.jsonl: prefix hash differs")).toBeTruthy();
+    expect(within(result).getByText("report.md: altered")).toBeTruthy();
+    expect(within(result).queryByRole("link")).toBeNull();
+  });
+
+  it("a 409 shows the server's sentence, reads the dossier again, and sends one request", async () => {
+    stub({ dossier: () => json(200, ready()), post: () => err(409, "REFUSED", "dossier is stale or unfinished") });
+    mount();
+    await panel();
+    const reads = () => sent.filter((c) => c.method === "GET" && c.url.includes("periodic-dossiers")).length;
+    const before = reads();
+    fireEvent.click(packageButton());
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("dossier is stale or unfinished");
+    await waitFor(() => expect(reads()).toBeGreaterThan(before));
+    expect(posts()).toHaveLength(1);
+  });
+
+  it("a double click sends one request", async () => {
+    let release: (r: Response) => void = () => undefined;
+    stub({ dossier: () => json(200, ready()), post: (url) => url.endsWith("/export") ? new Promise<Response>((resolve) => { release = resolve; }) : json(200, { export_id: EXPORT, holds: true, problems: [] }) });
+    mount();
+    await panel();
+    const button = packageButton();
+    fireEvent.click(button);
+    fireEvent.click(button);
+    expect(posts()).toHaveLength(1);
+    await act(async () => { release(await json(201, { export_id: EXPORT, schedule_id: SID, dossier_id: SHA("f"), created_now: true, download: "x" })); });
+  });
+
+  it("a package made from an earlier dossier is marked historical once the dossier moves on", async () => {
+    let current = SHA("f");
+    stub({ dossier: () => json(200, ready({ finalized_dossier_id: current })), post: route() });
+    mount();
+    await panel();
+    fireEvent.click(packageButton());
+    const result = await screen.findByRole("group", { name: `Package ${EXPORT.slice(0, 12)}` });
+    expect(within(result).queryByText(/Historical/)).toBeNull();
+    current = SHA("9");
+    // the dossier is read at most once every 45 s: a poll a minute later reads it again
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(Date.now() + 60_000);
+    await act(async () => { firePoll(); });
+    expect(await within(result).findByText(/Historical/)).toBeTruthy();
+  });
+
+  it("offers no purchase, in either language, and renders in Italian", async () => {
+    stub({ dossier: () => json(200, ready()), post: route() });
+    mount();
+    await panel();
+    fireEvent.click(packageButton());
+    await screen.findByRole("link", { name: "Download the package (ZIP)" });
+    expectNoPurchaseWording(document.body.textContent!, "en");
+    cleanup();
+    localStorage.setItem(STORAGE_KEY, "it");
+    stub({ dossier: () => json(200, ready()), post: route() });
+    mount();
+    await screen.findByRole("region", { name: "Pacchetto verificato" });
+    fireEvent.click(screen.getByRole("button", { name: "Crea e verifica il pacchetto" }));
+    expect(await screen.findByRole("link", { name: "Scarica il pacchetto (ZIP)" })).toBeTruthy();
+    expect(screen.getByText("✓ Il pacchetto regge")).toBeTruthy();
+    expect(screen.getByText("Il pacchetto contiene quattro file e nessuna copia degli articoli.")).toBeTruthy();
+    expectNoPurchaseWording(document.body.textContent!, "it");
   });
 });

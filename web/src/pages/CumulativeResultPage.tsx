@@ -3,6 +3,7 @@ import ErrorState from "@/components/ErrorState";
 import Pending from "@/components/Pending";
 import ProjectTabs from "@/components/ProjectTabs";
 import AcquisitionPanel from "@/components/scheduler/AcquisitionPanel";
+import ExportPanel from "@/components/scheduler/ExportPanel";
 import QuestionRows from "@/components/scheduler/QuestionRows";
 import ResultBanner from "@/components/scheduler/ResultBanner";
 import SaveStatus from "@/components/scheduler/SaveStatus";
@@ -72,6 +73,7 @@ function Body({ project, id }: { project: string; id: string }) {
           {saved ? t("sched.res.download.saved") : t("sched.res.download.live")}
         </button>
         <p className="text-xs text-muted-foreground">{t("sched.res.download.note")}</p>
+        <ExportPanel project={project} scheduleId={id} dossier={d} onStale={dossier.reload} />
       </section>
     </>
   );
