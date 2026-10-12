@@ -89,6 +89,7 @@ class Session:
     method: str = "password"
     must_change_password: bool = False
     created_at: str = ""
+    stamp: str = ""            # operators.stamp() of the credential this session was minted under
 
 
 class Sessions:
@@ -112,12 +113,13 @@ class Sessions:
             table.pop(token, None)
 
     def create(self, operator_id: str, operator_name: str, *, role: str = "operator",
-               method: str = "password", must_change: bool = False) -> tuple[str, Session]:
+               method: str = "password", must_change: bool = False,
+               stamp: str = "") -> tuple[str, Session]:
         """(cookie token, session). A new token every time: no session fixation."""
         token = secrets.token_hex(32)
         session = Session(operator_id, operator_name, secrets.token_hex(32),
                           session_id=secrets.token_hex(8), role=role, method=method,
-                          must_change_password=must_change, created_at=_now_iso())
+                          must_change_password=must_change, created_at=_now_iso(), stamp=stamp)
         with self._lock:
             now = self._clock()
             for held in [t for t, until in self._expires.items()
@@ -151,6 +153,12 @@ class Sessions:
         with self._lock:
             if token in self._rows:
                 self._rows[token] = replace(self._rows[token], must_change_password=False)
+
+    def set_stamp(self, token: str, stamp: str) -> None:
+        """The current session of a person who just changed their own password stays valid."""
+        with self._lock:
+            if token in self._rows:
+                self._rows[token] = replace(self._rows[token], stamp=stamp)
 
     def list_for(self, operator_id: str, current_token: str | None) -> list[dict[str, Any]]:
         with self._lock:
@@ -607,6 +615,13 @@ class _Handler(BaseHandler):
         session = self.sessions.get(token) if token else None
         if session is None:
             raise ControlError(401, "UNAUTHORIZED", "no session")
+        # Revocation is durable: the ledger is read at every request, so a disable, a password
+        # change or a reset made by ANY process (the CLI included) ends the session here, and so
+        # does a login that verified an old credential and created its session after the change.
+        person = operators.load(self.state_dir).get(session.operator_id)
+        if person is None or operators.stamp(person) != session.stamp:
+            self.sessions.end(token)
+            raise ControlError(401, "UNAUTHORIZED", "no session")
         return session
 
     def _guard_change_required(self, route: Route, session: Session) -> None:
@@ -713,7 +728,8 @@ class _Handler(BaseHandler):
             raise ControlError(401, "UNAUTHORIZED", BAD_LOGIN_TEXT)
         token, session = self.sessions.create(str(row["id"]), str(row.get("name") or ""),
                                               role=str(row["role"]), method="password",
-                                              must_change=bool(row["must_change_password"]))
+                                              must_change=bool(row["must_change_password"]),
+                                              stamp=operators.stamp(row))
         auth_events.record(self.state_dir, "login_ok", id=session.operator_id,
                            method="password", remote=remote)
         self._json({"operator": _operator_view(session), "csrf_token": session.csrf_token},
@@ -1827,6 +1843,7 @@ def _account_password(self: _Handler, params: dict[str, str], query: Any,
     self.sessions.end_others(session.operator_id, token)
     if token:
         self.sessions.clear_must_change(token)
+        self.sessions.set_stamp(token, operators.stamp(operators.load(self.state_dir)[session.operator_id]))
     return {"changed": True}, 200
 
 

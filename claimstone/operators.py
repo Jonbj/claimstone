@@ -357,6 +357,14 @@ DUMMY_ROW: dict[str, Any] = {"salt": "00" * SALT_LENGTH, "hash": "00" * KEY_LENG
                              "scrypt": dict(SCRYPT)}
 
 
+def stamp(person: dict[str, Any]) -> str:
+    """A short fingerprint of the person's CURRENT credential (salt and hash). A session carries the
+    stamp it was minted under; any password change or reset changes it, so every older session
+    stops matching — whichever process made the change."""
+    material = f"{person.get('salt', '')}{person.get('hash', '')}".encode("utf-8")
+    return hashlib.sha256(material).hexdigest()[:16]
+
+
 def verify(row: dict[str, Any], password: str) -> bool:
     """Constant-time password check against one enabling row."""
     try:

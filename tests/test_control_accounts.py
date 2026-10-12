@@ -328,3 +328,64 @@ def test_password_routes_ignore_the_idempotency_key(tmp_path, state):
         assert bad[0] == 403
         again = _post(base, "/people/ann/password", {"password": PW, "new_password": "temporary secret 2"}, key)
         assert again[0] == 200
+
+
+# --- revocation holds: the credential stamp is checked on every request --------------------------------
+
+
+def test_the_stamp_follows_the_credential_only():
+    d = None
+    import tempfile, pathlib
+    d = pathlib.Path(tempfile.mkdtemp()) / "st"
+    operators.add_operator(d, "a", "Alpha", PW)
+    first = operators.stamp(operators.load(d)["a"])
+    assert len(first) == 16 and first == operators.stamp(operators.load(d)["a"])
+    operators.set_email(d, "a", "a@example.org", by="cli")
+    assert operators.stamp(operators.load(d)["a"]) == first
+    operators.set_password(d, "a", "another long password", by="cli")
+    assert operators.stamp(operators.load(d)["a"]) != first
+
+
+def _alive(base, headers):
+    return _request(f"{base}{BASE}/session", headers=headers)[0]
+
+
+def test_a_cli_style_disable_ends_a_live_session_on_its_next_request(tmp_path, state):
+    with _served(tmp_path, state) as (_h, base):
+        ann, _ = _signed(base, "ann")
+        assert _alive(base, ann) == 200
+        operators.disable_operator(state, "ann", by="cli")          # another process, no server involved
+        assert _alive(base, ann) == 401
+        operators.enable_operator(state, "ann", by="cli")
+        assert _alive(base, ann) == 401                              # and it stays dead
+
+
+def test_a_cli_style_password_change_ends_other_sessions(tmp_path, state):
+    with _served(tmp_path, state) as (_h, base):
+        ann, _ = _signed(base, "ann")
+        operators.set_password(state, "ann", "set from the command line", by="cli")
+        assert _alive(base, ann) == 401
+
+
+def test_own_password_change_keeps_the_current_session_alive_by_refreshing_its_stamp(tmp_path, state):
+    with _served(tmp_path, state) as (_h, base):
+        mine, _ = _signed(base)
+        other, _ = _signed(base)
+        assert _post(base, "/account/password", {"current": PW, "new": "a brand new password"}, mine)[0] == 200
+        assert _alive(base, mine) == 200 and _alive(base, other) == 401
+        assert _post(base, "/account/password", {"current": "a brand new password", "new": "and a third password"}, mine)[0] == 200
+
+
+def test_a_login_verified_before_a_change_and_created_after_it_dies_on_first_use(tmp_path, state):
+    """The reviewer's interleaving: verify, then the change lands, then the session is created."""
+    with _served(tmp_path, state) as (httpd, base):
+        handler = httpd.RequestHandlerClass
+        row = operators.load(state)["ann"]
+        assert operators.verify(row, PW)                              # the login thread verified...
+        operators.disable_operator(state, "ann", by="adm")            # ...a disable lands...
+        handler.sessions.end_operator("ann")
+        operators.enable_operator(state, "ann", by="adm")
+        operators.set_password(state, "ann", "reset by the admin", by="adm", must_change=True)
+        token, session = handler.sessions.create("ann", "Ann", stamp=operators.stamp(row))
+        headers = {"Cookie": f"{control.SESSION_COOKIE}={token}"}
+        assert _alive(base, headers) == 401                           # ...and the late session is dead
