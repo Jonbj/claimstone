@@ -4906,10 +4906,43 @@ request was made while developing it. This is a single-machine lock and
 heartbeat, not a distributed lease.
 
 
-### Operator ledger, `operator_version 2` (2026-10-12, interim; the next decision, recorded after the live check of the password flows, will carry the full record)
+## D131 — Operators manage their own passwords; the ledger stays append-only (2026-10-12)
 
-`operator_version 2` rows carry `kind`, `at` and `by`. Version 1 rows stay valid and are read as
-before (a row with a hash is `created`, a `disabled` row is `disabled`; a legacy `created` row has
-no role and reads as admin). Passwords are now 12 to 256 characters, and the last active admin
-cannot be disabled or demoted. No figure measured from this ledger changes: it records who may
-sign in, not a measurement.
+`operator_version 2` rows extend `operators.jsonl` with `kind` (`created`, `password_set`, `email_set`,
+`role_set`, `google_linked`, `google_unlinked`, `disabled`, `enabled`), `at` and `by`. Version 1 rows
+stay valid: a row with a hash reads as `created`, a `disabled` row as `disabled`, and a legacy
+`created` row has no role and reads as admin, because until now only someone with a shell could
+create one. A password change, a disable and an admin reset are rows, not edits, so who changed
+what and when stays auditable with `grep`. SQLite for users was rejected for the reason D7 and the
+storage model give for every other ledger (a second source of truth, and the audit trail would need a
+ledger beside it anyway); an external identity provider was rejected as a container and a concept too
+heavy for about ten people.
+
+The rules live in `claimstone/operators.py` only: an id is never reused; new ids are
+`[a-z0-9][a-z0-9._-]{0,63}`; passwords are 12 to 256 characters; an email belongs to at most one
+active person; the last active admin cannot be disabled or demoted; every write holds one lock so the
+CLI and the control server never interleave a read and an append. Revocation is durable: a session
+carries a stamp of the credential it was opened with, and every authenticated request re-reads the
+ledger and ends the session when the person is gone, disabled or the stamp changed — so a
+disable, an admin reset or a shell command in another process takes effect on the next request,
+and a login that verified just before a change dies on first use. The B11 credential and outbound-check
+routes are admin powers; operators read and sign. Password-carrying routes ignore `Idempotency-Key`
+(a replay would answer without checking). The failed-login budget is reserved before the scrypt
+derivation and the derivations are bounded to four at once; behind the nginx proxy the client
+address is taken from `X-Real-IP` only with `--trust-forwarded`, which must stay off for any
+published port.
+
+Measured on 2026-10-12 against the control server of this commit on a throwaway state dir, by
+script and by the test suite (about 1,700 tests, the login sweep among them): a wrong password and an
+unknown id answer the same 401 sentence; an admin created a person with a temporary password, who
+could do nothing but change it (`PASSWORD_CHANGE_REQUIRED`) and then could; ending other sessions
+closed the first session on its next request; an operator got 403 on `/people` and `/admin`; disabling
+a person ended their live session and refused their next login; disabling the last admin was refused
+(422); `auth_events.jsonl` recorded each step with no password and no token. Google sign-in was
+designed (docs/superpowers/specs/2026-10-12-operator-login-design.md) and its spike
+(docs/superpowers/notes/2026-10-12-google-login-spike.md) confirmed the Authlib calls and Google's
+`localhost` redirect rule, but it is **not built**: the ledger kinds and the email allowlist are in
+place so adding it is a module and two routes, not a data migration. Not covered: opening the portal
+beyond this computer (a proxy with HTTPS, and revisiting that anyone who can reach the login can lock
+a named id for 15 minutes), password reset by email and two-factor authentication.
+
