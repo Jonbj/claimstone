@@ -1,5 +1,15 @@
 # Operator login — backend Implementation Plan (plan 1 of 2)
 
+> **SCOPE CHANGE (2026-10-12): Google sign-in is deferred — do not build it.** Void: Task 7 in full;
+> in Task 8 the `google` column of `operator list` and every Google part of the security sweep; in Task 9 the
+> three `CLAIMSTONE_GOOGLE_*`/`CLAIMSTONE_PUBLIC_URL` variables, the `.[login]` Dockerfile change and the
+> Google-client instructions; Task 10's Google run is replaced by a live check of the password flows on the
+> redeployed containers (login, wrong password, change password, sessions, admin creates a person with a
+> temporary password who must change it, disable ends the session) and the decision record D### describes
+> password management only. Task 0's spike stays as the note for whoever builds Google later. The API-contract
+> rows for `/login/google*` and `/account/google/unlink` are not built; `GET /session/options` stays and
+> answers `{google: false}`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Operators can change their password, sign in with Google, and be managed from the portal; the ledger of operators stays append-only and every rule of `docs/superpowers/specs/2026-10-12-operator-login-design.md` is enforced in code.

@@ -1,5 +1,12 @@
 # Operator login — portal Implementation Plan (plan 2 of 2)
 
+> **SCOPE CHANGE (2026-10-12): Google sign-in is deferred — do not build it.** Void: in Task 1 the
+> `GOOGLE_*_PATH` constants, `sessionOptions` use in pages and `unlinkGoogle`; in Task 2 the Google button,
+> the `?error=google_*` messages and their tests/catalog keys (the login page only moves onto the catalogs);
+> in Task 3 the whole 'Google' section, `?google=` messages and `google_linked` display. Added instead:
+> the rail shows **Administration** only to admins (the server now answers 403 to operators on the
+> credential and outbound-check routes), with a test in Task 5.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** The portal's login page offers the password and, when the server has it, "Sign in with Google"; every signed-in person has a "My account" page; admins have a "People" page — all in English and Italian.

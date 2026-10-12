@@ -1,6 +1,16 @@
 # Operator login: password management, Google sign-in, people — design
 
-Status: proposed, 2026-10-12. Decision: D### (to be recorded with the live Google run that decides it). D### = the next free decision number at the time of recording (D128–D130 were taken while this was designed).
+Status: proposed, 2026-10-12.
+
+> **Scope change, 2026-10-12 (same day, after the plan was written): Google sign-in is NOT built now.**
+> The owner asked only to *foresee* it. Built: the identity model, password management, sessions, people
+> management, security checks. **Not built, kept here as the design for later:** the whole 'Google sign-in'
+> section, its routes (`/login/google*`, `/account/google/unlink`), the `login` extra, `google_login.py`
+> and the OAuth cookie. What makes adding it later cheap, and is therefore kept: the `google_linked` /
+> `google_unlinked` row kinds and `operators.link_google` / `unlink_google` / `find_by_sub` (already in
+> the ledger and tested), `Sessions` with a `method` field, `GET /session/options` answering
+> `{"google": false}`, and the email allowlist. The perimeter decision and the rules about opening the
+> portal are unchanged. Decision: D### (to be recorded with the live Google run that decides it). D### = the next free decision number at the time of recording (D128–D130 were taken while this was designed).
 
 ## Why
 
