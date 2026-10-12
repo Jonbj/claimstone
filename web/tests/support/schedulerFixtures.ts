@@ -90,17 +90,21 @@ export function indexPage(over: Partial<SchedulerIndex> = {}, nextCursor: string
   };
 }
 
+// The values admissibility.py really produces: `basis` is "confirmed" once normalisation has started
+// and "obtained" before; `blocking` holds codes such as awaiting_discovery, awaiting_classification,
+// awaiting_acquire, normalize_not_started, awaiting_normalize, orphan_acquisitions, ledger_repairs;
+// `final` is `not blocking`.
 export function admission(over: Record<string, unknown> = {}) {
   return { round: "r1", found: 8, classified: 8, attempted: 8, obtained: 4, confirmed: 3,
-    awaiting_normalize: 0, blocking: [], final: false, basis: "found", rate: 0.375,
-    rate_upper: 0.6, by_class: {}, classes_below_floor: [], class_floors: {},
+    awaiting_normalize: 1, blocking: ["awaiting_normalize"], final: false, basis: "confirmed", rate: 0.375,
+    rate_upper: 0.5, by_class: {}, classes_below_floor: [], class_floors: {},
     status: "INSUFFICIENT_ACQUISITION", floor: 0.8, floor_version: 1, ...over };
 }
 
 export function dossier(over: Record<string, unknown> = {}, rounds?: unknown[]) {
   return {
     api_version: 1, schedule_id: SID, state: "WAITING_FOR_SCHEDULE",
-    blockers: ["the schedule is not authorized"], profiles: [], human_decisions: [],
+    blockers: ["SCHEDULE_OR_ROUND_INCOMPLETE"], profiles: [], human_decisions: [],
     snapshot_sha256: "s".repeat(64), finalized_dossier_id: null, finalized_at: null,
     snapshot_stale: false, needs_finalization: false, history_count: 0, verdict: null,
     audit: { schedule_id: SID, schedule_state: "PLANNED", ancestor_rounds: [],
@@ -120,9 +124,11 @@ export function dossier(over: Record<string, unknown> = {}, rounds?: unknown[]) 
 export const SHA = (c: string) => c.repeat(64);
 
 /** A cumulative profile row as `synthesize.preview` sends it (only the fields the page shows). */
+// `state` is null for a profile with results and NO_VERIFIED_CLAIM for one without (evidence.py);
+// `coverage.sources` counts the sources that speak to the question, out of `examined`.
 export function profile(questionId: string, over: Record<string, unknown> = {}) {
-  return { question_id: questionId, profile_sha256: SHA("c"), state: "PROFILE", provisional: false,
-    direction_count: { yes: 4, no: 1 }, coverage: { sources: 12, examined: 10 }, ...over };
+  return { question_id: questionId, profile_sha256: SHA("c"), state: null, provisional: false, blocking: [],
+    direction_count: { yes: 4, no: 1 }, coverage: { sources: 10, examined: 12 }, ...over };
 }
 
 /** A human-decision row: `verdict` is null until a person has signed. */

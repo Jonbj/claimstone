@@ -1,7 +1,7 @@
 // Small formatters shared by the scheduler pages. Times are UTC and explicit, never the browser's
 // zone; a value that is not an ISO timestamp with an offset is returned as received.
 import { formatUtc } from "@/lib/datetime";
-import type { GrantEvent } from "@/lib/scheduler";
+import type { Identity } from "@/lib/scheduler";
 
 export function utcRange(from: string, to: string): string {
   return `${formatUtc(from)} → ${formatUtc(to)}`;
@@ -18,9 +18,10 @@ export function ratio(part: number | null | undefined, whole: number | null | un
   return `${show(part)} / ${show(whole)}`;
 }
 
-/** Who an identity is: the name, else the operator id, else nothing. */
-export function identityName(identity: GrantEvent["identity"] | null | undefined): string {
-  return identity?.name || identity?.operator || "";
+/** Who an identity is: the name, the operator id, the CLI login, "uid N", else a dash. Never nothing. */
+export function identityName(identity: Identity | null | undefined): string {
+  return identity?.name || identity?.operator || identity?.login
+    || (typeof identity?.uid === "number" ? `uid ${identity.uid}` : "—");
 }
 
 /** A rate as a percentage with one decimal; anything that is not a number is a dash, never NaN. */

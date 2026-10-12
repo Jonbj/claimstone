@@ -292,7 +292,13 @@
       "rate": "tasso {rate}",
       "operations": "operazioni",
       "noOperations": "nessuna",
-      "noData": "ancora nessun dato per questo round"
+      "noData": "ancora nessun dato per questo round",
+      "basis": "base: {basis}",
+      "rateUpper": "limite superiore {rate}",
+      "final": "definitivo",
+      "notFinal": "non definitivo",
+      "blocking": "Bloccanti: {items}",
+      "earlier": "Round precedenti"
     },
     "result": {
       "title": "Risultato cumulativo"
@@ -389,7 +395,8 @@
       "hosts": "Host consentiti: {hosts}",
       "classes": "Classi di fonte: {classes}",
       "reserved": "Candidati riservati: {ratio}",
-      "requests": "Richieste riservate: {n}"
+      "requests": "Richieste riservate: {n}",
+      "spendMany": "Ogni regola qui sotto indica il proprio tetto."
     },
     "mandate": {
       "title": "Modello locale",
@@ -402,7 +409,9 @@
       "remaining": "{n} chiamate rimaste",
       "pending": "{stage}: {n} in attesa di approvazione, fino a {max} richieste",
       "disabledBy": "Disabilitato da {name}",
-      "process": "Processo"
+      "process": "Processo",
+      "spendMany": "Ogni mandato qui sotto indica il proprio tetto.",
+      "enabledBy": "Abilitato da {name}, {at}"
     },
     "resultStep": {
       "title": "Risultato",
@@ -446,12 +455,13 @@
         "notApplicable": "nessun verdetto dalla letteratura è applicabile",
         "provisional": "provvisorio",
         "counts": "conteggio per direzione (è un conteggio, non un risultato): {counts}",
-        "coverage": "esaminate / fonti: {ratio}",
+        "coverage": "che ne parlano / esaminate: {ratio}",
         "copyHash": "Copia l'impronta del profilo di {id}",
         "notSigned": "non firmata",
         "signed": "firmata",
         "stale": "obsoleta",
-        "note": "La firma nel portale si dà per flusso, sul profilo di quel flusso; questa pagina mostra solo i profili e le firme sull'intero corpus che esistono."
+        "note": "La firma nel portale si dà per flusso, sul profilo di quel flusso; questa pagina mostra solo i profili e le firme sull'intero corpus che esistono.",
+        "noProfiles": "Non c'è nessun profilo da mostrare. Sotto la soglia di acquisizione il rapporto non ne contiene, quindi questa pagina non può dire quali domande siano operative."
       },
       "download": {
         "live": "Scarica il rapporto in tempo reale (JSON)",

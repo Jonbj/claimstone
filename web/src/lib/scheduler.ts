@@ -7,10 +7,19 @@ export type PolicyState = "PLANNED" | "AUTHORIZED" | "REVOKED";
 export type MandateState = "ENABLED" | "DISABLED";
 export type WorkerState = "ALIVE" | "STALE" | "STOPPED" | "NOT_STARTED" | "UNKNOWN";
 
+/** Who did something: a portal operator (`name`, `operator`) or a CLI user (`uid`, `login`). */
+export interface Identity {
+  signer_auth?: string;
+  operator?: string;
+  name?: string;
+  uid?: number;
+  login?: string;
+}
+
 export interface GrantEvent {
   event: string;
   at: string;
-  identity?: { signer_auth?: string; operator?: string; name?: string };
+  identity?: Identity;
   [key: string]: unknown;
 }
 
@@ -51,11 +60,15 @@ export interface MandateStatus {
   state: MandateState;
   flow_id: string;
   flow_ids: string[];
-  disabled_by: GrantEvent["identity"] | null;
+  disabled_by: Identity | null;
   reserved_local_calls: number;
   remaining_local_calls: number;
   pending_batches: Array<{ batch_id: string; stage: string; awaiting_approval: number; max_total_requests: number }>;
-  mandate: { schedule_id?: string; extract_model: string; review_model: string; max_total_local_calls: number };
+  mandate: {
+    schedule_id?: string; extract_model: string; review_model: string; max_total_local_calls: number;
+    /** Who enabled it, and when (nanoseconds since the epoch), as the mandate itself records. */
+    authorized_by?: Identity; created_ns?: number;
+  };
 }
 
 export interface Worker {
@@ -117,6 +130,12 @@ export interface Admission {
   confirmed: number;
   obtained: number;
   rate: number | null;
+  /** What the rate counts: "confirmed" once normalisation has started, "obtained" before. */
+  basis?: string;
+  rate_upper?: number | null;
+  final?: boolean;
+  /** Why the figures can still move (awaiting_discovery, awaiting_normalize, …), verbatim. */
+  blocking?: string[];
   status: string;
   [key: string]: unknown;
 }
@@ -125,6 +144,7 @@ export interface Admission {
 export interface AuditRound {
   round?: string;
   flow_id?: string;
+  binding_state?: string;
   not_before?: string;
   expires_at?: string;
   operations?: Record<string, number>;
@@ -154,6 +174,7 @@ export interface ProfileRow {
   profile_sha256?: string;
   state?: string;
   provisional?: boolean;
+  blocking?: string[];
   direction_count?: Record<string, number>;
   coverage?: { sources?: number; examined?: number };
   [key: string]: unknown;
@@ -190,4 +211,10 @@ export function questionRowsOf(profiles: unknown, decisions: unknown): QuestionR
     if (hasId(row)) slot(row.question_id).decision = row as DecisionRow;
   }
   return [...byId.values()].sort((a, b) => (a.questionId < b.questionId ? -1 : a.questionId > b.questionId ? 1 : 0));
+}
+
+/** `audit.ancestor_rounds`: the earlier rounds of the lineage this series continues. */
+export function ancestorsOf(audit: unknown): AuditRound[] {
+  const rows = (audit as { ancestor_rounds?: unknown } | null | undefined)?.ancestor_rounds;
+  return Array.isArray(rows) ? (rows as AuditRound[]).filter((r) => r && typeof r === "object") : [];
 }

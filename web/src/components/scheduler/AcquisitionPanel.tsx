@@ -1,6 +1,7 @@
 import { useLocale } from "@/lib/i18n";
 import { cumulativeOf, roundsOf } from "@/lib/scheduler";
 import type { Admission } from "@/lib/scheduler";
+import AdmissionLine from "./AdmissionLine";
 import { percent, ratio } from "./format";
 
 function Figures({ a }: { a: Admission }) {
@@ -9,7 +10,7 @@ function Figures({ a }: { a: Admission }) {
     <>
       <span>{t("sched.series.confirmed")} <span>{ratio(a.confirmed, a.found)}</span></span>
       <span>{t("sched.res.acq.obtained", { n: a.obtained })}</span>
-      <span>{t("sched.series.rate", { rate: percent(a.rate) })}</span>
+      <AdmissionLine a={a} />
       {typeof a.floor === "number" ? <span>{t("sched.res.acq.floor", { floor: percent(a.floor) })}</span> : null}
     </>
   );

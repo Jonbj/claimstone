@@ -30,12 +30,15 @@ describe("ratio", () => {
 });
 
 describe("identityName", () => {
-  it("prefers the name, falls back to the operator, never invents", () => {
+  it("prefers the name, then the operator, then the CLI login, then the uid, and never nothing", () => {
     expect(identityName({ name: "Bea", operator: "bea" })).toBe("Bea");
     expect(identityName({ operator: "bea" })).toBe("bea");
-    expect(identityName({})).toBe("");
-    expect(identityName(null)).toBe("");
-    expect(identityName(undefined)).toBe("");
+    expect(identityName({ uid: 1000, login: "stefano" })).toBe("stefano");
+    expect(identityName({ uid: 1000 })).toBe("uid 1000");
+    expect(identityName({ uid: 0 })).toBe("uid 0");
+    expect(identityName({})).toBe("—");
+    expect(identityName(null)).toBe("—");
+    expect(identityName(undefined)).toBe("—");
   });
 });
 

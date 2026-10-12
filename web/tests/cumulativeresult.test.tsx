@@ -95,7 +95,7 @@ describe("Cumulative result page", () => {
     const q1 = await screen.findByRole("row", { name: /q1/ });
     expect(within(q1).getByText("SUPPORTED")).toBeTruthy();
     expect(within(q1).getByText(/yes: 4/)).toBeTruthy();
-    expect(within(q1).getByText(/10 \/ 12/)).toBeTruthy();
+    expect(within(q1).getByText("speaking / examined: 10 / 12")).toBeTruthy();
     const q2 = screen.getByRole("row", { name: /q2/ });
     expect(within(q2).getByText("not signed")).toBeTruthy();
     expect(within(q2).getByText("provisional")).toBeTruthy();
@@ -118,6 +118,34 @@ describe("Cumulative result page", () => {
     await waitFor(() => expect(writeText).toHaveBeenCalledWith(SHA("d")));
     expect(within(row).getByText("stale")).toBeTruthy();
     expect(within(row).getByText("REGISTRY_DRIFT: ask again")).toBeTruthy();
+  });
+
+  it("shows a profile's blocking list verbatim, and NO_VERIFIED_CLAIM as sent", async () => {
+    stub(served(resultDossier({ profiles: [
+      profile("q1", { provisional: true, blocking: ["awaiting_review", "torn_ledger_tail"] }),
+      profile("q2", { state: "NO_VERIFIED_CLAIM", direction_count: {} })] })));
+    mount();
+    const q1 = await screen.findByRole("row", { name: /q1/ });
+    expect(within(q1).getByText("Blocking: awaiting_review, torn_ledger_tail")).toBeTruthy();
+    expect(within(screen.getByRole("row", { name: /q2/ })).getByText("NO_VERIFIED_CLAIM")).toBeTruthy();
+  });
+
+  it("with no profiles it says the page cannot tell which questions are operational", async () => {
+    stub(served(resultDossier({ state: "INSUFFICIENT_ACQUISITION", profiles: [], human_decisions: [decision("q1")] })));
+    mount();
+    expect(await screen.findByText(/cannot tell which questions are operational/)).toBeTruthy();
+    expect(screen.getByRole("row", { name: /q1/ })).toBeTruthy();
+  });
+
+  it("the cumulative and per-round admission show the basis, final and every blocking entry", async () => {
+    stub(served(resultDossier({}, {
+      cumulative_admission: admission({ found: 40, confirmed: 12, basis: "obtained", rate: 0.3, rate_upper: 0.3, final: false, blocking: ["awaiting_classification", "normalize_not_started"] }),
+    })));
+    mount();
+    const panel = await screen.findByRole("region", { name: "Acquisition" });
+    expect(within(panel).getByText("Blocking: awaiting_classification, normalize_not_started")).toBeTruthy();
+    expect(within(panel).getAllByText("not final").length).toBeGreaterThan(0);
+    expect(within(panel).getByText(/rate 30\.0% \(basis: obtained\)/)).toBeTruthy();
   });
 
   it("an operational question reads 'no literature verdict applies'", async () => {

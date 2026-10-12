@@ -9,7 +9,7 @@ import { LocaleProvider, STORAGE_KEY } from "@/lib/i18n";
 import { SessionProvider } from "@/lib/session";
 import SeriesPage from "@/pages/SeriesPage";
 import {
-  authorized, dossier, err, indexPage, json, mandate, policy, SID, schedule, stub, worker,
+  admission, authorized, dossier, err, indexPage, json, mandate, policy, SID, schedule, stub, worker,
 } from "./support/schedulerFixtures";
 
 // The poll is the page's only trigger for reading again: capture its callback and fire it by hand.
@@ -66,7 +66,7 @@ describe("Series page", () => {
     expect(within(timeline).getByText("COMPLETED: 3")).toBeTruthy();
     const result = screen.getByRole("region", { name: /Result/ });
     expect(within(result).getByText("WAITING_FOR_SCHEDULE")).toBeTruthy();
-    expect(within(result).getByText("the schedule is not authorized")).toBeTruthy();
+    expect(within(result).getByText("SCHEDULE_OR_ROUND_INCOMPLETE")).toBeTruthy();
     expect(screen.queryByText(/READY/)).toBeNull();
     expect(within(result).getByRole("link", { name: "Open the cumulative result" }).getAttribute("href"))
       .toBe(`/p/news/scheduler/s/${SID}/result`);
@@ -195,6 +195,115 @@ describe("Series page", () => {
     expect(screen.getByRole("region", { name: /Copie future/ })).toBeTruthy();
     expect(screen.getByRole("region", { name: "Round" })).toBeTruthy();
     expect(screen.getAllByText("Cosa permette").length).toBeGreaterThan(0);
+  });
+});
+
+describe("Series page fidelity", () => {
+  beforeEach(() => setCsrfToken(null));
+  afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.useRealTimers(); localStorage.clear(); });
+
+  const round = (over: Record<string, unknown> = {}, adm: Record<string, unknown> = {}, i = 1) => ({
+    round: `Round ${i}`, flow_id: `flow${i}`, binding_state: "CURRENT", not_before: "2025-01-01T00:00:00+00:00",
+    expires_at: "2025-01-31T00:00:00+00:00", operations: { COMPLETED: 3 }, successful_queries: 3, planned_queries: 3,
+    admission: admission(adm), ...over,
+  });
+
+  it("an event actor from the CLI (uid and login) is shown by login; an empty identity is a dash, not nothing", async () => {
+    stub({ schedule: () => json(200, schedule("AUTHORIZED", { events: [
+      { event: "authorized", at: "2026-10-01T09:30:00+00:00", identity: { uid: 1000, login: "stefano" } },
+      { event: "revoked", at: "2026-10-02T09:30:00+00:00", identity: { uid: 1001 } },
+      { event: "authorized", at: "2026-10-03T09:30:00+00:00", identity: {} },
+    ] })) });
+    mount();
+    const calendar = await screen.findByRole("region", { name: /Calendar/ });
+    expect(within(calendar).getByText(/stefano/)).toBeTruthy();
+    expect(within(calendar).getByText(/uid 1001/)).toBeTruthy();
+    expect(within(calendar).getByText(/3 Oct 2026, 09:30 UTC/).textContent).toContain("—");
+  });
+
+  it("a mandate disabled from the CLI shows who; the enabling actor and time come from the mandate itself", async () => {
+    stub({ schedule: () => json(200, schedule("AUTHORIZED")), index: [() => json(200, indexPage({
+      schedules: [schedule("AUTHORIZED")],
+      local_mandates: [mandate("DISABLED", SID, {
+        disabled_by: { uid: 1000, login: "stefano" },
+        mandate: { schedule_id: SID, extract_model: "a", review_model: "b", max_total_local_calls: 100,
+                   authorized_by: { uid: 1001, login: "ada" }, created_ns: Date.parse("2026-10-01T09:30:00Z") * 1e6 } as never,
+      })] }))] });
+    mount();
+    const step = await screen.findByRole("region", { name: /Local model/ });
+    expect(await within(step).findByText("Disabled by stefano")).toBeTruthy();
+    expect(within(step).getByText("Enabled by ada, 1 Oct 2026, 09:30 UTC")).toBeTruthy();
+  });
+
+  it("shows the rate with its basis, the upper bound, final and every blocking entry beside the status", async () => {
+    stub({ schedule: () => json(200, schedule("AUTHORIZED")), dossier: () => json(200, dossier({}, [
+      round({}, { basis: "obtained", rate: 0.5, rate_upper: 0.5, status: "OK", final: false, blocking: ["awaiting_discovery", "awaiting_acquire"] }),
+      round({}, { status: "OK", final: true, blocking: [] }, 2),
+    ])) });
+    mount();
+    const timeline = await screen.findByRole("region", { name: "Rounds" });
+    const cells = within(timeline).getAllByRole("listitem");
+    expect(within(cells[0]).getByText(/rate 50\.0% \(basis: obtained\)/)).toBeTruthy();
+    expect(within(cells[0]).getByText("not final")).toBeTruthy();
+    expect(within(cells[0]).getByText("Blocking: awaiting_discovery, awaiting_acquire")).toBeTruthy();
+    expect(within(cells[0]).getByText("OK")).toBeTruthy();
+    expect(within(cells[1]).getByText(/rate 37\.5% \(basis: confirmed\)/)).toBeTruthy();
+    expect(within(cells[1]).getByText("final")).toBeTruthy();
+    expect(within(cells[1]).queryByText(/Blocking:/)).toBeNull();
+    expect(within(cells[1]).getByText(/upper bound 50\.0%/)).toBeTruthy();
+  });
+
+  it("shows each round's binding state word and the earlier rounds of the lineage", async () => {
+    stub({ schedule: () => json(200, schedule("AUTHORIZED")), dossier: () => json(200, {
+      ...dossier({}, [round({ binding_state: "PROTOCOL_DRIFTED" })]),
+      audit: { ...dossier().audit, rounds: [round({ binding_state: "PROTOCOL_DRIFTED" })],
+        ancestor_rounds: [{ flow_id: "flowancestor1", round: "Round zero", binding_state: "CURRENT",
+          admission: admission({ status: "OK", rate: 0.9, final: true, blocking: [] }) }] } }) });
+    mount();
+    const timeline = await screen.findByRole("region", { name: "Rounds" });
+    expect(within(timeline).getByTitle("PROTOCOL_DRIFTED")).toBeTruthy();
+    const earlier = within(timeline).getByRole("region", { name: "Earlier rounds" });
+    expect(within(earlier).getByText("Round zero")).toBeTruthy();
+    expect(within(earlier).getByText("flowancestor")).toBeTruthy();
+    expect(within(earlier).getByTitle("CURRENT")).toBeTruthy();
+    expect(within(earlier).getByText(/90\.0%/)).toBeTruthy();
+    expect(within(earlier).getByText("OK")).toBeTruthy();
+  });
+
+  it("'planned' is for PLANNED, or AUTHORIZED with a window not yet open; a REVOKED schedule shows its state word", async () => {
+    const future: [string, string][] = [["2099-01-01T00:00:00+00:00", "2099-01-31T00:00:00+00:00"]];
+    stub({ schedule: () => json(200, schedule("AUTHORIZED", {}, future)), dossier: () => json(200, dossier({}, [round({ not_before: future[0][0] })])) });
+    mount();
+    expect(within(await screen.findByRole("region", { name: "Rounds" })).getByText("planned")).toBeTruthy();
+    cleanup();
+    stub({ schedule: () => json(200, schedule("REVOKED", {}, future)), dossier: () => json(200, dossier({}, [round({ not_before: future[0][0] })])) });
+    mount();
+    const timeline = await screen.findByRole("region", { name: "Rounds" });
+    expect(within(timeline).queryByText("planned")).toBeNull();
+    expect(within(timeline).getByTitle("REVOKED").textContent).toBe("Revoked");
+  });
+
+  it("two copy policies each carry their own state word; the heading chip and the first row's spend line are dropped", async () => {
+    stub({ schedule: () => json(200, schedule("AUTHORIZED")), index: [() => json(200, indexPage({
+      schedules: [schedule("AUTHORIZED")],
+      copy_policies: [policy("AUTHORIZED", SID), policy("REVOKED", SID, { policy_id: "q".repeat(64) })] }))] });
+    mount();
+    const step = await screen.findByRole("region", { name: /Future copies/ });
+    await within(step).findAllByText(/europepmc\.org/);
+    expect(within(step).getByTitle("AUTHORIZED")).toBeTruthy();
+    expect(within(step).getByTitle("REVOKED")).toBeTruthy();
+    expect(within(step).getAllByRole("heading")[0].querySelector("[title]")).toBeNull();
+    expect(within(step).queryByText("Up to 10 × 3 = 30 requests.")).toBeNull();
+    expect(within(step).getAllByText("10 × 3 = 30")).toHaveLength(2);
+  });
+
+  it("one copy policy keeps the heading chip and its spend line, and still has a state word in its row", async () => {
+    stub({ schedule: () => json(200, schedule("AUTHORIZED")), index: [withGrants()] });
+    mount();
+    const step = await screen.findByRole("region", { name: /Future copies/ });
+    await within(step).findByText(/europepmc\.org/);
+    expect(within(step).getAllByTitle("AUTHORIZED")).toHaveLength(2);
+    expect(within(step).getByText("Up to 10 × 3 = 30 requests.")).toBeTruthy();
   });
 });
 

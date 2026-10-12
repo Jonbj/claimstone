@@ -17,8 +17,9 @@ function Profile({ row }: { row: QuestionRow }) {
     <span className="flex flex-col gap-1">
       {p.state ? <span className="font-mono text-xs">{p.state}</span> : null}
       {p.provisional ? <span>{t("sched.res.q.provisional")}</span> : null}
+      {p.blocking?.length ? <span className="font-mono text-xs break-words">{t("sched.series.blocking", { items: p.blocking.join(", ") })}</span> : null}
       {counts ? <span>{t("sched.res.q.counts", { counts })}</span> : null}
-      {p.coverage ? <span>{t("sched.res.q.coverage", { ratio: ratio(p.coverage.examined, p.coverage.sources) })}</span> : null}
+      {p.coverage ? <span>{t("sched.res.q.coverage", { ratio: ratio(p.coverage.sources, p.coverage.examined) })}</span> : null}
       {p.profile_sha256 ? (
         <span className="flex items-center gap-2">
           <code className="font-mono text-xs">{p.profile_sha256.slice(0, 12)}</code>
@@ -76,6 +77,7 @@ export default function QuestionRows({ project, profiles, decisions, wholeStore 
           </tbody>
         </table>
       )}
+      {Array.isArray(profiles) && profiles.length === 0 ? <p className="text-xs">{t("sched.res.q.noProfiles")}</p> : null}
       <p className="text-xs text-muted-foreground">{t("sched.res.q.note")}</p>
     </section>
   );

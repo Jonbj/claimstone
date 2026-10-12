@@ -292,7 +292,13 @@
       "rate": "rate {rate}",
       "operations": "operations",
       "noOperations": "none",
-      "noData": "no data for this round yet"
+      "noData": "no data for this round yet",
+      "basis": "basis: {basis}",
+      "rateUpper": "upper bound {rate}",
+      "final": "final",
+      "notFinal": "not final",
+      "blocking": "Blocking: {items}",
+      "earlier": "Earlier rounds"
     },
     "result": {
       "title": "Cumulative result"
@@ -389,7 +395,8 @@
       "hosts": "Allowed hosts: {hosts}",
       "classes": "Source classes: {classes}",
       "reserved": "Candidates reserved: {ratio}",
-      "requests": "Requests reserved: {n}"
+      "requests": "Requests reserved: {n}",
+      "spendMany": "Each policy below states its own ceiling."
     },
     "mandate": {
       "title": "Local model",
@@ -402,7 +409,9 @@
       "remaining": "{n} calls left",
       "pending": "{stage}: {n} awaiting approval, up to {max} requests",
       "disabledBy": "Disabled by {name}",
-      "process": "Process"
+      "process": "Process",
+      "spendMany": "Each mandate below states its own ceiling.",
+      "enabledBy": "Enabled by {name}, {at}"
     },
     "resultStep": {
       "title": "Result",
@@ -446,12 +455,13 @@
         "notApplicable": "no literature verdict applies",
         "provisional": "provisional",
         "counts": "direction count (a count, not a result): {counts}",
-        "coverage": "examined / sources: {ratio}",
+        "coverage": "speaking / examined: {ratio}",
         "copyHash": "Copy the profile hash of {id}",
         "notSigned": "not signed",
         "signed": "signed",
         "stale": "stale",
-        "note": "Signing in the portal is per flow, on that flow's own profile; this page only shows the whole-corpus profiles and signatures that exist."
+        "note": "Signing in the portal is per flow, on that flow's own profile; this page only shows the whole-corpus profiles and signatures that exist.",
+        "noProfiles": "No profiles are listed. Below the acquisition floor the report carries none, so this page cannot tell which questions are operational."
       },
       "download": {
         "live": "Download live report (JSON)",
