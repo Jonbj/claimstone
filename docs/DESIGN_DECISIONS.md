@@ -4905,3 +4905,11 @@ the supervisor on the local Compose deployment; no live mandate or external
 request was made while developing it. This is a single-machine lock and
 heartbeat, not a distributed lease.
 
+
+### Operator ledger, `operator_version 2` (2026-10-12, interim; D128 will carry the full record)
+
+`operator_version 2` rows carry `kind`, `at` and `by`. Version 1 rows stay valid and are read as
+before (a row with a hash is `created`, a `disabled` row is `disabled`; a legacy `created` row has
+no role and reads as admin). Passwords are now 12 to 256 characters, and the last active admin
+cannot be disabled or demoted. No figure measured from this ledger changes: it records who may
+sign in, not a measurement.

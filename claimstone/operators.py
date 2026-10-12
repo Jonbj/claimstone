@@ -11,16 +11,18 @@ in through `getpass`, and the control server only ever answers yes or no.
 
 from __future__ import annotations
 
+import fcntl
 import hashlib
 import hmac
 import json
 import os
 import pathlib
 import secrets
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import Any
 
-OPERATOR_VERSION = 1
+OPERATOR_VERSION = 2
 
 LEDGER = "operators.jsonl"
 
@@ -85,64 +87,251 @@ def _check_id(operator_id: str) -> None:
         raise OperatorError("operator id must be non-empty text without line breaks")
 
 
-def add_operator(directory: str | pathlib.Path, operator_id: str, name: str,
-                 password: str, *, now: str | None = None) -> dict[str, Any]:
-    """Append an enabling row. An id with any row already — enabled or disabled — is
-    refused: re-enabling after a disable is a deliberate act this ledger does not
-    silently perform."""
-    _check_id(operator_id)
-    if not name.strip():
-        raise OperatorError("operator name must be non-empty")
-    if not password:
-        raise OperatorError("password must not be empty")
-    directory = pathlib.Path(directory)
-    if any(str(row.get("id")) == operator_id for row in _rows(directory)):
-        raise OperatorError(f"operator already recorded: {operator_id}")
-    salt = secrets.token_bytes(SALT_LENGTH)
-    row = {
-        "operator_version": OPERATOR_VERSION,
-        "id": operator_id,
-        "name": name,
-        "scrypt": dict(SCRYPT),
-        "salt": salt.hex(),
-        "hash": _hash(password, salt, SCRYPT),
-        "created_at": now or _now(),
-    }
-    _append(directory, row)
-    return row
+ROLES = ("operator", "admin")
+PASSWORD_MIN, PASSWORD_MAX = 12, 256
 
 
-def disable_operator(directory: str | pathlib.Path, operator_id: str,
-                     *, now: str | None = None) -> dict[str, Any]:
-    """Append a disabling row. The latest row per id is the id's state."""
-    _check_id(operator_id)
+def check_password(password: object, operator_id: str | None = None) -> str:
+    """The one password rule. Length only: no composition rules, and an upper bound because
+    scrypt's cost grows with the input."""
+    if not isinstance(password, str) or len(password) < PASSWORD_MIN:
+        raise OperatorError(f"password must have at least {PASSWORD_MIN} characters")
+    if len(password) > PASSWORD_MAX:
+        raise OperatorError(f"password must have at most {PASSWORD_MAX} characters")
+    if operator_id is not None and password == operator_id:
+        raise OperatorError("password must not be the id")
+    return password
+
+
+def _email(value: object) -> str | None:
+    if value is None or value == "":
+        return None
+    text = str(value).strip().lower()
+    if "@" not in text or " " in text or "\n" in text or len(text) > 254:
+        raise OperatorError("email must look like an address")
+    return text
+
+
+@contextmanager
+def _locked(directory: pathlib.Path):
+    """One writer at a time across processes (the CLI and the control server share the file):
+    every rule below reads then appends, and must not interleave with another writer."""
     directory = pathlib.Path(directory)
-    rows = [row for row in _rows(directory) if str(row.get("id")) == operator_id]
-    if not rows:
-        raise OperatorError(f"unknown operator: {operator_id}")
-    if rows[-1].get("disabled"):
-        raise OperatorError(f"operator already disabled: {operator_id}")
-    row = {
-        "operator_version": OPERATOR_VERSION,
-        "id": operator_id,
-        "disabled": True,
-        "disabled_at": now or _now(),
-    }
-    _append(directory, row)
-    return row
+    directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+    with open(directory / ".operators.lock", "a") as handle:
+        fcntl.flock(handle, fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(handle, fcntl.LOCK_UN)
+
+
+def _fold(rows: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    """Every person ever recorded, in their current state. Legacy rows (version 1) have no
+    `kind`: a row with a hash is `created`, a row with `disabled` is `disabled`; a legacy
+    `created` row has no role and reads as admin (only a shell could create one)."""
+    people: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        oid = str(row.get("id"))
+        kind = row.get("kind") or ("disabled" if row.get("disabled") else "created")
+        if kind == "created":
+            people[oid] = {
+                "id": oid, "name": row.get("name") or "", "role": row.get("role") or "admin",
+                "email": _email(row.get("email")), "scrypt": dict(row.get("scrypt") or SCRYPT),
+                "salt": row["salt"], "hash": row["hash"], "enabled": True, "google_sub": None,
+                "must_change_password": bool(row.get("must_change_password")),
+                "created_at": row.get("created_at") or row.get("at")}
+            continue
+        person = people.get(oid)
+        if person is None:
+            continue
+        if kind == "password_set":
+            person.update(scrypt=dict(row.get("scrypt") or SCRYPT), salt=row["salt"], hash=row["hash"],
+                          must_change_password=bool(row.get("must_change_password")))
+        elif kind == "email_set":
+            person["email"] = _email(row.get("email"))
+        elif kind == "role_set":
+            person["role"] = row["role"]
+        elif kind == "google_linked":
+            person["google_sub"] = row["sub"]
+        elif kind == "google_unlinked":
+            if person["google_sub"] == row.get("sub"):
+                person["google_sub"] = None
+        elif kind == "disabled":
+            person["enabled"] = False
+        elif kind == "enabled":
+            person["enabled"] = True
+    return people
+
+
+def people(directory: str | pathlib.Path) -> dict[str, dict[str, Any]]:
+    """Everyone ever recorded, enabled or not, in their current state."""
+    return _fold(_rows(pathlib.Path(directory)))
 
 
 def load(directory: str | pathlib.Path) -> dict[str, dict[str, Any]]:
-    """The active enabling row per operator id: the ledger's last word on who may
-    log in. A disable row removes the id; nothing re-adds it but `add_operator`."""
-    active: dict[str, dict[str, Any]] = {}
-    for row in _rows(pathlib.Path(directory)):
-        operator_id = str(row.get("id"))
-        if row.get("disabled"):
-            active.pop(operator_id, None)
-        elif "hash" in row:
-            active[operator_id] = row
-    return active
+    """Who may sign in: the enabled people. The returned rows carry `salt`/`hash`/`scrypt`, so
+    `verify(row, password)` works on them exactly as before."""
+    return {oid: p for oid, p in people(directory).items() if p["enabled"]}
+
+
+def _write(directory: pathlib.Path, kind: str, oid: str, by: str, now: str | None,
+           **fields: Any) -> dict[str, Any]:
+    row = {"operator_version": OPERATOR_VERSION, "kind": kind, "id": oid,
+           "at": now or _now(), "by": by, **fields}
+    _append(directory, row)
+    return row
+
+
+def _active_admins(everyone: dict[str, dict[str, Any]], excluding: str | None = None) -> int:
+    return sum(1 for oid, p in everyone.items()
+               if p["enabled"] and p["role"] == "admin" and oid != excluding)
+
+
+def _taken_email(everyone: dict[str, dict[str, Any]], email: str | None, owner: str | None) -> bool:
+    return email is not None and any(
+        p["enabled"] and p["email"] == email and oid != owner for oid, p in everyone.items())
+
+
+def _hashed(password: str) -> dict[str, Any]:
+    salt = secrets.token_bytes(SALT_LENGTH)
+    return {"scrypt": dict(SCRYPT), "salt": salt.hex(), "hash": _hash(password, salt, SCRYPT)}
+
+
+def _person(everyone: dict[str, dict[str, Any]], oid: str) -> dict[str, Any]:
+    if oid not in everyone:
+        raise OperatorError(f"unknown operator: {oid}")
+    return everyone[oid]
+
+
+def add_operator(directory, operator_id: str, name: str, password: str, *,
+                 role: str | None = None, email: str | None = None, must_change: bool = False,
+                 by: str = "cli", now: str | None = None) -> dict[str, Any]:
+    """Append a `created` row. An id with any row is refused for ever. With no `role`, the first
+    person recorded is an admin and later ones are operators."""
+    _check_id(operator_id)
+    if not name.strip():
+        raise OperatorError("operator name must be non-empty")
+    check_password(password, operator_id)
+    directory = pathlib.Path(directory)
+    with _locked(directory):
+        everyone = people(directory)
+        if operator_id in everyone:
+            raise OperatorError(f"operator already recorded: {operator_id}")
+        email = _email(email)
+        if _taken_email(everyone, email, None):
+            raise OperatorError("that email already belongs to another active operator")
+        role = role or ("admin" if _active_admins(everyone) == 0 else "operator")
+        if role not in ROLES:
+            raise OperatorError(f"role must be one of {', '.join(ROLES)}")
+        return _write(directory, "created", operator_id, by, now, name=name, role=role,
+                      email=email, must_change_password=must_change, created_at=now or _now(),
+                      **_hashed(password))
+
+
+def disable_operator(directory, operator_id: str, *, by: str = "cli",
+                     now: str | None = None) -> dict[str, Any]:
+    _check_id(operator_id)
+    directory = pathlib.Path(directory)
+    with _locked(directory):
+        everyone = people(directory)
+        person = _person(everyone, operator_id)
+        if not person["enabled"]:
+            raise OperatorError(f"operator already disabled: {operator_id}")
+        if person["role"] == "admin" and _active_admins(everyone, operator_id) == 0:
+            raise OperatorError("refused: this is the last admin")
+        return _write(directory, "disabled", operator_id, by, now)
+
+
+def enable_operator(directory, operator_id: str, *, by: str = "cli",
+                    now: str | None = None) -> dict[str, Any]:
+    directory = pathlib.Path(directory)
+    with _locked(directory):
+        everyone = people(directory)
+        person = _person(everyone, operator_id)
+        if person["enabled"]:
+            raise OperatorError(f"operator already enabled: {operator_id}")
+        if _taken_email(everyone, person["email"], operator_id):
+            raise OperatorError("that email now belongs to another active operator")
+        return _write(directory, "enabled", operator_id, by, now)
+
+
+def set_password(directory, operator_id: str, new_password: str, *, by: str,
+                 must_change: bool = False, now: str | None = None) -> dict[str, Any]:
+    check_password(new_password, operator_id)
+    directory = pathlib.Path(directory)
+    with _locked(directory):
+        _person(people(directory), operator_id)
+        return _write(directory, "password_set", operator_id, by, now,
+                      must_change_password=must_change, **_hashed(new_password))
+
+
+def set_email(directory, operator_id: str, email: str | None, *, by: str,
+              now: str | None = None) -> dict[str, Any]:
+    directory = pathlib.Path(directory)
+    with _locked(directory):
+        everyone = people(directory)
+        _person(everyone, operator_id)
+        clean = _email(email)
+        if _taken_email(everyone, clean, operator_id):
+            raise OperatorError("that email already belongs to another active operator")
+        return _write(directory, "email_set", operator_id, by, now, email=clean)
+
+
+def set_role(directory, operator_id: str, role: str, *, by: str,
+             now: str | None = None) -> dict[str, Any]:
+    if role not in ROLES:
+        raise OperatorError(f"role must be one of {', '.join(ROLES)}")
+    directory = pathlib.Path(directory)
+    with _locked(directory):
+        everyone = people(directory)
+        person = _person(everyone, operator_id)
+        if (person["enabled"] and person["role"] == "admin" and role != "admin"
+                and _active_admins(everyone, operator_id) == 0):
+            raise OperatorError("refused: this is the last admin")
+        return _write(directory, "role_set", operator_id, by, now, role=role)
+
+
+def link_google(directory, operator_id: str, *, sub: str, email: str, by: str,
+                now: str | None = None) -> dict[str, Any]:
+    """Bind a Google account to an id. The address must be the id's allowlisted email; the `sub`
+    must be free and the id must not already have a link."""
+    if not sub or not isinstance(sub, str):
+        raise OperatorError("a Google account needs a subject")
+    directory = pathlib.Path(directory)
+    with _locked(directory):
+        everyone = people(directory)
+        person = _person(everyone, operator_id)
+        if not person["enabled"]:
+            raise OperatorError("operator is disabled")
+        if person["google_sub"]:
+            raise OperatorError("operator already has a Google account linked")
+        if any(p["google_sub"] == sub for p in everyone.values()):
+            raise OperatorError("that Google account is already linked")
+        if person["email"] is None or _email(email) != person["email"]:
+            raise OperatorError("the Google email is not this operator's email")
+        return _write(directory, "google_linked", operator_id, by, now, sub=sub, email=_email(email))
+
+
+def unlink_google(directory, operator_id: str, *, by: str, now: str | None = None) -> dict[str, Any]:
+    directory = pathlib.Path(directory)
+    with _locked(directory):
+        person = _person(people(directory), operator_id)
+        if not person["google_sub"]:
+            raise OperatorError("no Google account is linked")
+        return _write(directory, "google_unlinked", operator_id, by, now, sub=person["google_sub"])
+
+
+def find_by_sub(directory, sub: str) -> dict[str, Any] | None:
+    return next((p for p in load(directory).values() if p["google_sub"] == sub), None)
+
+
+def find_by_email(directory, email: str) -> dict[str, Any] | None:
+    try:
+        clean = _email(email)
+    except OperatorError:
+        return None
+    return next((p for p in load(directory).values() if clean and p["email"] == clean), None)
 
 
 # Verified against when the id is unknown, so a login costs one scrypt either way. No

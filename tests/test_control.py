@@ -79,15 +79,16 @@ def _cookie(headers):
 
 def test_operator_rows_add_disable_verify(tmp_path):
     directory = tmp_path / "st"
-    row = operators.add_operator(directory, "a", "Alpha", "pw")
-    assert row["operator_version"] == 1
+    operators.add_operator(directory, "keeper", "Keeper", "long-enough-pass-1")  # the admin who stays
+    row = operators.add_operator(directory, "a", "Alpha", "long-enough-pass-1")
+    assert row["operator_version"] == 2
     assert row["scrypt"] == {"n": 32768, "r": 8, "p": 1}
-    assert operators.verify(operators.load(directory)["a"], "pw")
+    assert operators.verify(operators.load(directory)["a"], "long-enough-pass-1")
     assert not operators.verify(operators.load(directory)["a"], "other")
     operators.disable_operator(directory, "a")
-    assert operators.load(directory) == {}
+    assert set(operators.load(directory)) == {"keeper"}
     with pytest.raises(operators.OperatorError):
-        operators.add_operator(directory, "a", "Again", "pw2")  # any row refuses a re-add
+        operators.add_operator(directory, "a", "Again", "long-enough-pass-2")  # any row refuses a re-add
     with pytest.raises(operators.OperatorError):
         operators.disable_operator(directory, "nobody")
 
@@ -335,7 +336,7 @@ def test_operator_ledger_is_owner_only(tmp_path):
     import stat
 
     directory = tmp_path / "fresh"
-    operators.add_operator(directory, "a", "Alpha", "pw")
+    operators.add_operator(directory, "a", "Alpha", "long-enough-pass-1")
     assert stat.S_IMODE(os.stat(directory / operators.LEDGER).st_mode) == 0o600
     assert stat.S_IMODE(os.stat(directory).st_mode) == 0o700
 
@@ -388,11 +389,12 @@ def test_cli_operator_add_and_disable(tmp_path, monkeypatch, capsys):
 
     monkeypatch.setenv("CLAIMSTONE_STATE_DIR", str(tmp_path / "st"))
     monkeypatch.setattr(getpass, "getpass", lambda prompt="": "a-new-password")
+    operators.add_operator(tmp_path / "st", "op1", "First", "long-enough-pass-1")  # the admin who stays
     assert cli.main(["operator", "add", "op2", "--name", "Second"]) == 0
     assert "op2" in operators.load(tmp_path / "st")
 
     assert cli.main(["operator", "disable", "op2"]) == 0
-    assert operators.load(tmp_path / "st") == {}
+    assert set(operators.load(tmp_path / "st")) == {"op1"}
 
     assert cli.main(["operator", "disable", "op2"]) == 2  # already disabled
     assert cli.main(["operator", "disable", "nobody"]) == 2  # unknown
