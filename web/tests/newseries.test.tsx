@@ -338,4 +338,31 @@ describe("New series", () => {
     expect(await screen.findByText(/Scegli almeno una fonte/)).toBeTruthy();
     expectNoPurchaseWording(document.body.textContent!, "it");
   });
+
+  it("maps a server problem that names a known field to that field, and leaves the rest in the alert", async () => {
+    const reply = () => Promise.resolve(new Response(JSON.stringify({ error: { code: "VALIDATION", message: "plan refused", details: [
+      { path: "allowed_hosts", message: "hosts must be exact lowercase names" },
+      { path: "rounds[0].round", message: "round names must be new" }] } }), { status: 422, headers: { "Content-Type": "application/json" } }));
+    await ready({ post: reply });
+    tick("OpenAlex");
+    fireEvent.click(screen.getByRole("button", { name: "Save the plan" }));
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("rounds[0].round: round names must be new");
+    expect(alert.textContent).not.toContain("hosts must be exact lowercase names");
+    const hosts = screen.getByLabelText(/^Hosts the searches/);
+    expect(hosts.getAttribute("aria-invalid")).toBe("true");
+    const line = screen.getByText("hosts must be exact lowercase names");
+    expect(hosts.getAttribute("aria-describedby")).toContain(line.id);
+    expect((screen.getByText(/^Advanced options/).closest("details") as HTMLDetailsElement).open).toBe(true);
+  });
+
+  it("a field's help text is linked to the field, and a round's inputs are invalid when the row has a problem", async () => {
+    await ready();
+    expect(screen.getByLabelText("Flow to repeat").getAttribute("aria-describedby")).toBeTruthy();
+    tick("OpenAlex");
+    fireEvent.change(screen.getByLabelText("First start (UTC)"), { target: { value: "2026-10-01" } });
+    const first = screen.getByRole("group", { name: "Round 1" });
+    expect(within(first).getByLabelText("Starts (UTC)").getAttribute("aria-invalid")).toBe("true");
+    expect(within(first).getByLabelText("Name").getAttribute("aria-invalid")).toBeNull();
+  });
 });

@@ -549,4 +549,50 @@ describe("Cumulative result page, the verified package", () => {
     expect(screen.getByText("Il pacchetto contiene quattro file e nessuna copia degli articoli.")).toBeTruthy();
     expectNoPurchaseWording(document.body.textContent!, "it");
   });
+
+  describe("the download link verifies first", () => {
+    let clicked: Array<{ href: string; download: string }>;
+    beforeEach(() => {
+      clicked = [];
+      vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (this: HTMLAnchorElement) {
+        clicked.push({ href: this.getAttribute("href") ?? "", download: this.download });
+      });
+    });
+    afterEach(() => vi.restoreAllMocks());
+
+    const made = async (verify: () => Promise<Response>) => {
+      let verifies = 0;
+      stub({ dossier: () => json(200, ready()), post: (url) => url.endsWith("/export")
+        ? json(201, { export_id: EXPORT, schedule_id: SID, dossier_id: SHA("f"), created_now: true, download: "x" })
+        : (verifies += 1) === 1 ? json(200, { export_id: EXPORT, holds: true, problems: [] }) : verify() });
+      mount();
+      await panel();
+      fireEvent.click(packageButton());
+      return screen.findByRole("link", { name: "Download the package (ZIP)" });
+    };
+
+    it("verifies again on click and lets the download go only if it still holds", async () => {
+      const link = await made(() => json(200, { export_id: EXPORT, holds: true, problems: [] }));
+      fireEvent.click(link);
+      await waitFor(() => expect(posts()).toHaveLength(3));
+      expect(posts()[2].url).toBe(`/control/v1/p/news/periodic-exports/${EXPORT}/verify`);
+      await waitFor(() => expect(clicked).toHaveLength(1));
+      expect(clicked[0]).toMatchObject({ href: `/control/v1/p/news/periodic-exports/${EXPORT}/download` });
+    });
+
+    it("if it no longer holds, shows the problems and starts no download", async () => {
+      const link = await made(() => json(200, { export_id: EXPORT, holds: false, problems: ["dossier.json: altered"] }));
+      fireEvent.click(link);
+      expect(await screen.findByText("dossier.json: altered")).toBeTruthy();
+      expect(clicked).toHaveLength(0);
+      expect(screen.queryByRole("link", { name: "Download the package (ZIP)" })).toBeNull();
+    });
+
+    it("if the check itself fails, shows the sentence and starts no download", async () => {
+      const link = await made(() => err(500, "INTERNAL", "could not verify now"));
+      fireEvent.click(link);
+      expect(await screen.findByText(/could not verify now/)).toBeTruthy();
+      expect(clicked).toHaveLength(0);
+    });
+  });
 });

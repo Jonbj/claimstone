@@ -5,6 +5,9 @@ export type Cadence =
   | { kind: "weekly"; start: string; count: number }
   | { kind: "days"; start: string; every: number; count: number };
 
+/** An instant the server accepts: UTC, with a time and a Z (or +00:00). */
+export const isUtcInstant = (text: string): boolean => UTC_ISO.test(text) && !Number.isNaN(Date.parse(text));
+
 export interface RoundDraft { round: string; title: string; not_before: string; expires_at: string }
 export type ProblemCode =
   "COUNT" | "FORMAT" | "NAME" | "TITLE" | "PAST" | "ORDER" | "OVERLAP" | "DUPLICATE" | "KNOWN" | "TOO_FAR" | "WINDOW";
@@ -58,8 +61,7 @@ export function checkRounds(rounds: RoundDraft[], knownRounds: Set<string>, now:
     if (knownRounds.has(r.round)) problems.push({ index, code: "KNOWN" });
     seen.add(r.round);
     if (!r.title.trim()) problems.push({ index, code: "TITLE" });
-    if (!UTC_ISO.test(r.not_before) || !UTC_ISO.test(r.expires_at) ||
-        Number.isNaN(Date.parse(r.not_before)) || Number.isNaN(Date.parse(r.expires_at))) {
+    if (!isUtcInstant(r.not_before) || !isUtcInstant(r.expires_at)) {
       problems.push({ index, code: "FORMAT" });
       return;
     }

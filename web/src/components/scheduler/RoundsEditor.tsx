@@ -5,6 +5,11 @@ import type { ProblemCode, RoundDraft, RoundProblem } from "@/lib/cadence";
 import { inputClass } from "@/components/wizard/stepTypes";
 
 type Field = keyof RoundDraft;
+// Which problems belong to which input of a round.
+const BAD_FOR: Record<Field, ProblemCode[]> = {
+  round: ["NAME", "DUPLICATE", "KNOWN"], title: ["TITLE"],
+  not_before: ["FORMAT", "PAST", "ORDER", "OVERLAP", "WINDOW"], expires_at: ["FORMAT", "WINDOW", "TOO_FAR"],
+};
 
 function RoundRow({ n, round, problems, disabled, onChange }: {
   n: number; round: RoundDraft; problems: ProblemCode[]; disabled: boolean;
@@ -13,10 +18,12 @@ function RoundRow({ n, round, problems, disabled, onChange }: {
   const { t } = useLocale();
   const base = useId();
   const problemId = `${base}-p`;
+  const invalid = (field: Field) => problems.some((c) => BAD_FOR[field].includes(c));
   const input = (field: Field, label: string, help?: string) => (
     <div className="flex min-w-0 flex-col gap-1">
       <label htmlFor={`${base}-${field}`} className="text-sm font-medium">{label}</label>
       <input id={`${base}-${field}`} value={round[field]} disabled={disabled} spellCheck={false}
+             aria-invalid={invalid(field) ? true : undefined} aria-describedby={invalid(field) ? problemId : undefined}
              onChange={(e) => onChange(field, e.target.value)} className={`${inputClass} w-full break-all`} />
       {help ? <span className="text-xs text-muted-foreground">{help}</span> : null}
     </div>

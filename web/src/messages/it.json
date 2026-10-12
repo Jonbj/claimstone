@@ -534,7 +534,9 @@
         "classes": "Scegli almeno una classe di fonte.",
         "numbers": "Candidati: da 1 a 1000. Richieste per candidato: da 1 a 20.",
         "window": "Indica i due estremi della finestra in UTC."
-      }
+      },
+      "calendarRevoked": "Il calendario è revocato. Una copia parte solo mentre la regola e il suo calendario sono entrambi autorizzati, quindi autorizzare questa regola non farebbe partire nessuna copia.",
+      "planAnother": "Pianifica un'altra regola (aggiunge un suo tetto)"
     },
     "mandate": {
       "title": "Modello locale",
@@ -561,7 +563,8 @@
         "extract": "Modello per l'estrazione",
         "review": "Modello per la revisione",
         "cap": "Chiamate locali, al massimo",
-        "flows": "Vale per i {n} flussi di questa serie, come elencati sopra."
+        "flows": "Vale per i {n} flussi di questa serie, come elencati sopra.",
+        "explain": "{n} flussi, modello per l'estrazione {extract}, modello per la revisione {review}, fino a {calls} chiamate locali — nessuna richiesta di rete."
       },
       "sameModels": "I due modelli devono essere diversi.",
       "reason": {

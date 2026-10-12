@@ -534,7 +534,9 @@
         "classes": "Choose at least one source class.",
         "numbers": "Candidates: 1 to 1000. Requests per candidate: 1 to 20.",
         "window": "Give both ends of the UTC window."
-      }
+      },
+      "calendarRevoked": "The calendar is revoked. A copy starts only while the policy and its calendar are both authorized, so authorizing this policy would not start any copy.",
+      "planAnother": "Plan another policy (it adds its own ceiling)"
     },
     "mandate": {
       "title": "Local model",
@@ -561,7 +563,8 @@
         "extract": "Model for extraction",
         "review": "Model for review",
         "cap": "Local calls, at most",
-        "flows": "It applies to the {n} flows of this series, as listed above."
+        "flows": "It applies to the {n} flows of this series, as listed above.",
+        "explain": "{n} flows, extraction model {extract}, review model {review}, up to {calls} local calls — no network request."
       },
       "sameModels": "The two models must be different.",
       "reason": {

@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import ErrorState from "@/components/ErrorState";
@@ -42,15 +42,40 @@ const wholeNumber = (text: string): number | null => {
   return text.trim() !== "" && Number.isInteger(n) && n >= 1 ? n : null;
 };
 
-function Labeled({ label, help, children }: { label: string; help?: string; children: (id: string) => ReactNode }) {
+interface ControlProps { id: string; "aria-describedby"?: string; "aria-invalid"?: true }
+
+/** A label, its control, its help and the server's error for it, the last two linked to the control. */
+function Labeled({ label, help, error, children }: {
+  label: string; help?: string; error?: string; children: (props: ControlProps) => ReactNode;
+}) {
   const id = `ns-${label.replace(/\W+/g, "-")}`;
+  const describedBy = [help ? `${id}-help` : "", error ? `${id}-err` : ""].filter(Boolean).join(" ");
   return (
     <div className="flex min-w-0 flex-col gap-1">
       <label htmlFor={id} className="text-sm font-medium">{label}</label>
-      {children(id)}
-      {help ? <p className="text-xs text-muted-foreground">{help}</p> : null}
+      {children({ id, ...(describedBy ? { "aria-describedby": describedBy } : {}), ...(error ? { "aria-invalid": true as const } : {}) })}
+      {help ? <p id={`${id}-help`} className="text-xs text-muted-foreground">{help}</p> : null}
+      {error ? <p id={`${id}-err`} className="text-xs text-red-700 dark:text-red-400">{error}</p> : null}
     </div>
   );
+}
+
+// The server's problems that name a field of this form go under that field; the rest stay in the alert.
+const FIELD_OF: Record<string, string> = {
+  source_flow_id: "flow", allowed_hosts: "hosts", apis: "sources",
+  max_units_each: "units", max_requests_each: "requests", per_query: "perQuery",
+};
+function splitProblems(error: Error | null): { fields: Record<string, string>; rest: string[] } {
+  const fields: Record<string, string> = {};
+  const rest: string[] = [];
+  if (error instanceof ControlError) {
+    for (const d of error.details) {
+      const field = FIELD_OF[d.path.split(/[.[]/)[0]];
+      if (field && !fields[field]) fields[field] = d.message;
+      else rest.push(`${d.path}: ${d.message}`);
+    }
+  }
+  return { fields, rest };
 }
 
 function Body({ project }: { project: string }) {
@@ -89,6 +114,11 @@ function Body({ project }: { project: string }) {
   const [busy, setBusy] = useState(false);
   const sending = useRef(false);
   const [refusal, setRefusal] = useState<Error | null>(null);
+
+  const problemsOf = splitProblems(refusal);
+  const advanced = useRef<HTMLDetailsElement>(null);
+  const advancedBad = Boolean(problemsOf.fields.hosts || problemsOf.fields.perQuery || problemsOf.fields.requests || problemsOf.fields.units);
+  useEffect(() => { if (advancedBad && advanced.current) advanced.current.open = true; }, [advancedBad]);
 
   const hostsShown = hostsText ?? hostsFor(apis).join("\n");
   const hosts = [...new Set(hostsShown.split(/[\n,]/).map((h) => h.trim().toLowerCase()).filter(Boolean))];
@@ -179,9 +209,9 @@ function Body({ project }: { project: string }) {
     <form onSubmit={(e) => { e.preventDefault(); void submit(); }} className="flex flex-col gap-5">
       <p className="text-sm text-muted-foreground">{t("sched.new.lede")}</p>
       <div className={`${cardClass} grid gap-4 sm:grid-cols-2`}>
-        <Labeled label={t("sched.new.flow.label")} help={t("sched.new.flow.help")}>
-          {(id) => (
-            <select id={id} value={flowId} disabled={busy} onChange={(e) => setChosen(e.target.value)} className={inputClass}>
+        <Labeled label={t("sched.new.flow.label")} help={t("sched.new.flow.help")} error={problemsOf.fields.flow}>
+          {(p) => (
+            <select {...p} value={flowId} disabled={busy} onChange={(e) => setChosen(e.target.value)} className={inputClass}>
               {flows.map((f) => (
                 <option key={f.flow_id} value={f.flow_id}>
                   {t("sched.new.flow.option", { title: f.title ?? t("sched.new.flow.untitled", { id: f.flow_id.slice(0, 12) }), label: f.selector_label })}
@@ -191,11 +221,11 @@ function Body({ project }: { project: string }) {
           )}
         </Labeled>
         <Labeled label={t("sched.new.prefix")}>
-          {(id) => <input id={id} value={shown.prefix} disabled={busy} onChange={(e) => change({ prefix: e.target.value })} className={inputClass} />}
+          {(p) => <input {...p} value={shown.prefix} disabled={busy} onChange={(e) => change({ prefix: e.target.value })} className={inputClass} />}
         </Labeled>
         <Labeled label={t("sched.new.cadence.label")}>
-          {(id) => (
-            <select id={id} value={shown.kind} disabled={busy} onChange={(e) => change({ kind: e.target.value as Inputs["kind"] })} className={inputClass}>
+          {(p) => (
+            <select {...p} value={shown.kind} disabled={busy} onChange={(e) => change({ kind: e.target.value as Inputs["kind"] })} className={inputClass}>
               <option value="monthly">{t("sched.new.cadence.monthly")}</option>
               <option value="weekly">{t("sched.new.cadence.weekly")}</option>
               <option value="days">{t("sched.new.cadence.days")}</option>
@@ -204,14 +234,14 @@ function Body({ project }: { project: string }) {
         </Labeled>
         {shown.kind === "days" ? (
           <Labeled label={t("sched.new.cadence.every")}>
-            {(id) => <input id={id} type="number" min={1} value={shown.every} disabled={busy} onChange={(e) => change({ every: e.target.value })} className={inputClass} />}
+            {(p) => <input {...p} type="number" min={1} value={shown.every} disabled={busy} onChange={(e) => change({ every: e.target.value })} className={inputClass} />}
           </Labeled>
         ) : null}
         <Labeled label={t("sched.new.start")}>
-          {(id) => <input id={id} type="date" value={shown.start} disabled={busy} onChange={(e) => change({ start: e.target.value })} className={inputClass} />}
+          {(p) => <input {...p} type="date" value={shown.start} disabled={busy} onChange={(e) => change({ start: e.target.value })} className={inputClass} />}
         </Labeled>
         <Labeled label={t("sched.new.count")}>
-          {(id) => <input id={id} type="number" min={1} max={32} value={shown.count} disabled={busy} onChange={(e) => change({ count: e.target.value })} className={inputClass} />}
+          {(p) => <input {...p} type="number" min={1} max={32} value={shown.count} disabled={busy} onChange={(e) => change({ count: e.target.value })} className={inputClass} />}
         </Labeled>
       </div>
 
@@ -226,7 +256,7 @@ function Body({ project }: { project: string }) {
       <RoundsEditor rounds={rounds} problems={problems} disabled={busy} onChange={editRound} />
       {flowNotes.map((name) => <p key={name} className="text-sm">{t("sched.new.note.flowExists", { name })}</p>)}
 
-      <fieldset className="flex flex-col gap-2 rounded-xl border border-border bg-card px-4 py-3">
+      <fieldset aria-describedby={problemsOf.fields.sources ? "ns-sources-err" : undefined} aria-invalid={problemsOf.fields.sources ? true : undefined} className="flex flex-col gap-2 rounded-xl border border-border bg-card px-4 py-3">
         <legend className="px-1 text-sm font-semibold">{t("sched.new.sources.legend")}</legend>
         {SOURCES.map((source) => (
           <label key={source} className="flex min-h-11 items-center gap-2 text-sm">
@@ -235,26 +265,27 @@ function Body({ project }: { project: string }) {
           </label>
         ))}
         <p className="text-xs text-muted-foreground">{t("sched.new.sources.help")}</p>
+        {problemsOf.fields.sources ? <p id="ns-sources-err" className="text-xs text-red-700 dark:text-red-400">{problemsOf.fields.sources}</p> : null}
       </fieldset>
 
-      <details className="rounded-xl border border-border bg-card px-4 py-3">
+      <details ref={advanced} className="rounded-xl border border-border bg-card px-4 py-3">
         <summary className="cursor-pointer text-sm font-semibold break-words">
           {t("sched.new.advanced.summary", { hosts: summaryHosts, perQuery: perQuery || "—", requests: requestsEach || "—", units: unitsShown || "—" })}
         </summary>
         <div className="mt-3 grid gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2">
-            <Labeled label={t("sched.new.advanced.hosts")} help={t("sched.new.advanced.hostsHelp")}>
-              {(id) => <textarea id={id} value={hostsShown} disabled={busy} spellCheck={false} onChange={(e) => setHostsText(e.target.value)} className={`${areaClass} w-full font-mono`} />}
+            <Labeled label={t("sched.new.advanced.hosts")} help={t("sched.new.advanced.hostsHelp")} error={problemsOf.fields.hosts}>
+              {(p) => <textarea {...p} value={hostsShown} disabled={busy} spellCheck={false} onChange={(e) => setHostsText(e.target.value)} className={`${areaClass} w-full font-mono`} />}
             </Labeled>
           </div>
-          <Labeled label={t("sched.new.advanced.perQuery")}>
-            {(id) => <input id={id} type="number" min={1} value={perQuery} disabled={busy} onChange={(e) => setPerQuery(e.target.value)} className={inputClass} />}
+          <Labeled label={t("sched.new.advanced.perQuery")} error={problemsOf.fields.perQuery}>
+            {(p) => <input {...p} type="number" min={1} value={perQuery} disabled={busy} onChange={(e) => setPerQuery(e.target.value)} className={inputClass} />}
           </Labeled>
-          <Labeled label={t("sched.new.advanced.requestsEach")}>
-            {(id) => <input id={id} type="number" min={1} value={requestsEach} disabled={busy} onChange={(e) => setRequestsEach(e.target.value)} className={inputClass} />}
+          <Labeled label={t("sched.new.advanced.requestsEach")} error={problemsOf.fields.requests}>
+            {(p) => <input {...p} type="number" min={1} value={requestsEach} disabled={busy} onChange={(e) => setRequestsEach(e.target.value)} className={inputClass} />}
           </Labeled>
-          <Labeled label={t("sched.new.advanced.unitsEach")} help={searches ? t("sched.new.advanced.unitsHelp", { n: searches }) : undefined}>
-            {(id) => <input id={id} type="number" min={1} value={unitsShown} disabled={busy} onChange={(e) => setUnitsText(e.target.value)} className={inputClass} />}
+          <Labeled label={t("sched.new.advanced.unitsEach")} help={searches ? t("sched.new.advanced.unitsHelp", { n: searches }) : undefined} error={problemsOf.fields.units}>
+            {(p) => <input {...p} type="number" min={1} value={unitsShown} disabled={busy} onChange={(e) => setUnitsText(e.target.value)} className={inputClass} />}
           </Labeled>
         </div>
       </details>
@@ -277,9 +308,7 @@ function Body({ project }: { project: string }) {
       {refusal ? (
         <div role="alert" className="text-sm text-red-700 dark:text-red-400">
           <p>{refusal.message}</p>
-          {refusal instanceof ControlError && refusal.details.length ? (
-            <ul className="list-disc pl-5">{refusal.details.map((d, i) => <li key={i}>{d.path}: {d.message}</li>)}</ul>
-          ) : null}
+          {problemsOf.rest.length ? <ul className="list-disc pl-5">{problemsOf.rest.map((d, i) => <li key={i}>{d}</li>)}</ul> : null}
         </div>
       ) : null}
       {reason ? <p id="ns-reason" className="text-sm text-muted-foreground">{t("sched.new.reason.prefix", { reason })}</p> : null}

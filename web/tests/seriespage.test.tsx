@@ -362,7 +362,7 @@ describe("Series page texts", () => {
     vi.stubGlobal("navigator", { ...navigator, clipboard: { writeText } });
     mounted(); mount();
     const plan = await screen.findByRole("region", { name: /Plan/ });
-    const live = within(plan).getByRole("status");
+    const live = within(plan).getAllByRole("status")[0];   // the copy button's; the step has its own below
     expect(live.textContent).toBe("");
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     fireEvent.click(within(plan).getByRole("button", { name: /Copy/ }));

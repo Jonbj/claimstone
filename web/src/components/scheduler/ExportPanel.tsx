@@ -50,6 +50,25 @@ export default function ExportPanel({ project, scheduleId, dossier, onStale }: {
     }
   }
 
+  // The download: check the package once more first, and let the navigation go only if it still holds.
+  async function download(event: React.MouseEvent, exportId: string) {
+    event.preventDefault();
+    const update = (patch: Partial<Made>) => setMade((list) => list.map((m) => (m.exportId === exportId ? { ...m, ...patch } : m)));
+    try {
+      const verified = await control.verifyPeriodicExport(project, exportId);
+      update({ verified: { holds: verified.holds, problems: verified.problems }, error: null });
+      if (!verified.holds) return;
+      const link = document.createElement("a");
+      link.href = control.periodicExportDownloadPath(project, exportId);
+      link.download = "";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (cause) {
+      update({ verified: null, error: cause instanceof Error ? cause.message : String(cause) });
+    }
+  }
+
   return (
     <section aria-label={t("sched.export.title")} className="flex flex-col items-start gap-2 text-sm">
       <h3 className="font-semibold">{t("sched.export.title")}</h3>
@@ -79,7 +98,7 @@ export default function ExportPanel({ project, scheduleId, dossier, onStale }: {
               {m.verified.holds ? (
                 <>
                   <a href={control.periodicExportDownloadPath(project, m.exportId)} download
-                     className="inline-flex min-h-11 items-center underline">{t("sched.export.download")}</a>
+                     onClick={(e) => { void download(e, m.exportId); }} className="inline-flex min-h-11 items-center underline">{t("sched.export.download")}</a>
                   <p className="text-xs text-muted-foreground">{t("sched.export.contents")}</p>
                 </>
               ) : null}

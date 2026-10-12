@@ -57,7 +57,7 @@ export default function MandateStep({ project, schedule, rows, workers, complete
   const many = (rows?.length ?? 0) > 1;
   const active = (rows ?? []).some((r) => r.state === "ENABLED");
   return (
-    <StepCard n={4} title={t("sched.mandate.title")} state={many ? null : first?.state ?? null}
+    <StepCard n={4} title={t("sched.mandate.title")} version={JSON.stringify(rows)} state={many ? null : first?.state ?? null}
               permits={t("sched.mandate.permits")} forbids={t("sched.mandate.forbids")}
               spend={many ? t("sched.mandate.spendMany") : first ? t("sched.mandate.spend", { n: first.mandate.max_total_local_calls }) : t("sched.mandate.spendNone")}>
       {rows === null ? <p>{t("sched.series.grantsFailed")}</p>

@@ -17,7 +17,7 @@ export default function CalendarStep({ project, schedule, onChanged }: {
   const searches = entries.reduce((n, e) => n + e.units.length, 0);
   const ceiling = schedule.plan.max_total_requests;
   return (
-    <StepCard n={2} title={t("sched.calendar.title")} state={schedule.state}
+    <StepCard n={2} title={t("sched.calendar.title")} version={JSON.stringify(schedule)} state={schedule.state}
               permits={t("sched.calendar.permits")} forbids={t("sched.calendar.forbids")}
               spend={t("sched.calendar.spend", { n: ceiling })}>
       {schedule.state === "PLANNED" ? <p>{t("sched.calendar.none")}</p> : null}

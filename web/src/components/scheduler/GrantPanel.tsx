@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { ControlError } from "@/lib/control";
 import { useLocale } from "@/lib/i18n";
 import { primaryClass, quietClass } from "@/components/wizard/stepTypes";
+import { useStep } from "./StepCard";
 
 // The one confirmation pattern of the scheduler's writes. A box has to be ticked before the button
 // works; the button sends exactly what the parent shows (`onConfirm` closes over those values); while
@@ -11,7 +12,7 @@ import { primaryClass, quietClass } from "@/components/wizard/stepTypes";
 // (`409 PLAN_DIFFERS`) clears the box, says so, calls `onDiffers` and is never retried. Any other
 // refusal is shown as the server wrote it.
 export default function GrantPanel({ explanation, confirmLabel, actionLabel, danger = false, requireRead = true,
-                                     disabledReason = null, onConfirm, onDone, onDiffers }: {
+                                     disabledReason = null, onConfirm, onDone, onDiffers, onBusy }: {
   explanation?: ReactNode;
   /** The text of the box ("I have read what this permits…"). */
   confirmLabel: string;
@@ -23,14 +24,17 @@ export default function GrantPanel({ explanation, confirmLabel, actionLabel, dan
   disabledReason?: string | null;
   onConfirm: () => Promise<unknown>;
   onDone: () => void;
+  /** Called after any 409: the parent reads again. */
   onDiffers: () => void;
+  /** Called with `true` while the write runs and `false` after: the parent disables its own fields. */
+  onBusy?: (busy: boolean) => void;
 }) {
   const { t } = useLocale();
   const base = useId();
   const [checked, setChecked] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<{ message: string; details: string[] } | null>(null);
-  const [done, setDone] = useState(false);
+  const step = useStep();
   const running = useRef(false);
   const alertRef = useRef<HTMLDivElement>(null);
   const alive = useRef(true);
@@ -44,25 +48,29 @@ export default function GrantPanel({ explanation, confirmLabel, actionLabel, dan
     if (running.current || !ready) return;
     running.current = true;
     setBusy(true);
+    onBusy?.(true);
     setError(null);
-    setDone(false);
     try {
       await onConfirm();
-      if (alive.current) { setChecked(false); setDone(true); }
+      if (alive.current) setChecked(false);
+      step.done(t("sched.grant.done"));
       onDone();
     } catch (cause) {
       if (!alive.current) return;
       setChecked(false);
+      // Any 409 means the page may be out of date: read again (never retry). A changed plan gets its
+      // own sentence; any other refusal is shown as the server wrote it.
       if (cause instanceof ControlError && cause.code === "PLAN_DIFFERS") {
         setError({ message: t("sched.grant.differs"), details: [] });
-        onDiffers();
       } else {
         const details = cause instanceof ControlError ? cause.details.map((d) => `${d.path}: ${d.message}`) : [];
         setError({ message: cause instanceof Error ? cause.message : String(cause), details });
       }
+      if (cause instanceof ControlError && cause.status === 409) onDiffers();
     } finally {
       running.current = false;
       if (alive.current) setBusy(false);
+      onBusy?.(false);
     }
   }
 
@@ -87,7 +95,6 @@ export default function GrantPanel({ explanation, confirmLabel, actionLabel, dan
               className={`${danger ? quietClass : primaryClass} self-start`}>
         {busy ? t("sched.grant.working") : actionLabel}
       </button>
-      <span role="status" className="sr-only">{done ? t("sched.grant.done") : ""}</span>
     </div>
   );
 }

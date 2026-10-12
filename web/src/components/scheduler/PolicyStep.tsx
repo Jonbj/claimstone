@@ -12,7 +12,9 @@ import { identityName, ratio, requestsLine, utcRange } from "./format";
 
 // One policy, with its own state and its own action. Authorize sends the hash and the three limits
 // exactly as this row shows them; Revoke sends the hash.
-function Policy({ project, row, onChanged }: { project: string; row: PolicyStatus; onChanged: (full: boolean) => void }) {
+function Policy({ project, row, calendarState, onChanged }: {
+  project: string; row: PolicyStatus; calendarState: string; onChanged: (full: boolean) => void;
+}) {
   const { t } = useLocale();
   const p = row.policy;
   return (
@@ -30,6 +32,7 @@ function Policy({ project, row, onChanged }: { project: string; row: PolicyStatu
           <span className="font-mono">{event.event}</span>{" · "}{identityName(event.identity)}{" · "}{formatUtc(event.at)}
         </p>
       ))}
+      {calendarState === "REVOKED" && row.state !== "REVOKED" ? <p>{t("sched.policy.calendarRevoked")}</p> : null}
       {row.state === "PLANNED" ? (
         <GrantPanel
           explanation={<p>{t("sched.policy.plannedNote")}</p>}
@@ -65,17 +68,17 @@ export default function PolicyStep({ project, schedule, rows, complete, onChange
     ? t("sched.policy.spend", { line: requestsLine(first.policy.max_requests_each, first.policy.max_candidates, first.policy.max_total_requests) })
     : t("sched.policy.spendNone");
   return (
-    <StepCard n={3} title={t("sched.policy.title")} state={many ? null : first?.state ?? null}
+    <StepCard n={3} title={t("sched.policy.title")} version={JSON.stringify(rows)} state={many ? null : first?.state ?? null}
               permits={t("sched.policy.permits")} forbids={t("sched.policy.forbids")} spend={spend}>
       {rows === null ? <p>{t("sched.series.grantsFailed")}</p>
-        : rows.length ? rows.map((row) => <Policy key={row.policy_id} project={project} row={row} onChanged={onChanged} />)
+        : rows.length ? rows.map((row) => <Policy key={row.policy_id} project={project} row={row} calendarState={schedule.state} onChanged={onChanged} />)
         : <p>{complete ? t("sched.step.undecided") : t("sched.grant.notLoaded")}</p>}
       {rows !== null && schedule.state !== "REVOKED" ? (
         open ? (
           <PolicyForm project={project} schedule={schedule} onClose={() => setOpen(false)}
-                      onSaved={() => { setOpen(false); onChanged(true); }} />
+                      onSaved={() => { setOpen(false); onChanged(true); }} onReread={() => onChanged(false)} />
         ) : (
-          <button type="button" onClick={() => setOpen(true)} className={`${quietClass} self-start`}>{t("sched.policy.plan")}</button>
+          <button type="button" onClick={() => setOpen(true)} className={`${quietClass} self-start`}>{rows && rows.length ? t("sched.policy.planAnother") : t("sched.policy.plan")}</button>
         )
       ) : null}
     </StepCard>

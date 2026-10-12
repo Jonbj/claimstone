@@ -139,6 +139,57 @@ describe("Grants", () => {
       expect(within(calendar).queryByRole("button")).toBeNull();
       expect(within(calendar).getByText("A revoked schedule cannot be authorized again; plan a new series.")).toBeTruthy();
     });
+
+    it("any 409 reads again, not only PLAN_DIFFERS, and still does not retry", async () => {
+      const w = world();
+      serve(w, () => err(409, "REFUSED", "schedule has been revoked"));
+      mount();
+      const calendar = await step(/Calendar/);
+      fireEvent.click(within(calendar).getByRole("checkbox"));
+      const before = gets("/schedules/").length;
+      fireEvent.click(within(calendar).getByRole("button", { name: "Authorize the calendar" }));
+      expect((await within(calendar).findByRole("alert")).textContent).toContain("schedule has been revoked");
+      await waitFor(() => expect(gets("/schedules/").length).toBeGreaterThan(before));
+      expect(posts()).toHaveLength(1);
+    });
+
+    it.each([[403, "FORBIDDEN", "operator may not do this"], [429, "RATE_LIMITED", "too many requests, wait a minute"]])(
+      "a %s is shown as the server wrote it and leaves the box unticked", async (status, code, message) => {
+        serve(world(), () => err(status, code, message));
+        mount();
+        const calendar = await step(/Calendar/);
+        fireEvent.click(within(calendar).getByRole("checkbox"));
+        fireEvent.click(within(calendar).getByRole("button", { name: "Authorize the calendar" }));
+        expect((await within(calendar).findByRole("alert")).textContent).toContain(message);
+        expect((within(calendar).getByRole("checkbox") as HTMLInputElement).checked).toBe(false);
+        expect(within(calendar).getByRole("button", { name: "Authorize the calendar" }).hasAttribute("disabled")).toBe(true);
+      });
+
+    it("PLANNED offers no Revoke", async () => {
+      serve(world());
+      mount();
+      const calendar = await step(/Calendar/);
+      expect(within(calendar).queryByRole("button", { name: "Revoke the calendar" })).toBeNull();
+    });
+
+    it("announces success only after the page has read the result again, and moves the focus to the step heading", async () => {
+      const w = world();
+      let release: (r: Response) => void = () => undefined;
+      let held = false;
+      serve(w, (url) => { if (url.endsWith("/authorize")) { w.schedule = schedule("AUTHORIZED", { events: [authorized()] }); held = true; return json(201, w.schedule); } return null; },
+        { schedule: () => (held ? new Promise<Response>((resolve) => { release = resolve; }) : json(200, w.schedule)) });
+      mount();
+      const calendar = await step(/Calendar/);
+      const live = () => within(calendar).getAllByRole("status").map((e) => e.textContent).join("");
+      fireEvent.click(within(calendar).getByRole("checkbox"));
+      fireEvent.click(within(calendar).getByRole("button", { name: "Authorize the calendar" }));
+      await waitFor(() => expect(posts()).toHaveLength(1));
+      await act(async () => { await new Promise((r) => setTimeout(r, 30)); });
+      expect(live()).toBe("");
+      await act(async () => { release(await json(200, w.schedule)); });
+      await waitFor(() => expect(live()).toBe("Done. The page has read the result again."));
+      expect(document.activeElement).toBe(within(await step(/Calendar/)).getByRole("heading", { name: /Step 2/ }));
+    });
   });
 
   describe("the future copies", () => {
@@ -277,6 +328,68 @@ describe("Grants", () => {
       expect(within(rows[2]).getByTitle("REVOKED")).toBeTruthy();
       expect(within(rows[2]).queryByRole("button")).toBeNull();
     });
+
+    it("disables every field and Close while the policy is being saved, and a double click sends one request", async () => {
+      let release: (r: Response) => void = () => undefined;
+      const step3 = await opened(undefined, () => new Promise<Response>((resolve) => { release = resolve; }));
+      fireEvent.change(within(step3).getByLabelText(/^Hosts copies may come from/), { target: { value: "arxiv.org" } });
+      fireEvent.change(within(step3).getByLabelText("Other class ids (comma separated)"), { target: { value: "ACADEMIC" } });
+      fireEvent.change(within(step3).getByLabelText("Candidates, at most"), { target: { value: "5" } });
+      fireEvent.change(within(step3).getByLabelText("Requests per candidate, at most"), { target: { value: "2" } });
+      const save = within(step3).getByRole("button", { name: "Save the policy" });
+      fireEvent.click(save);
+      fireEvent.click(save);
+      expect(posts()).toHaveLength(1);
+      for (const label of [/^Hosts copies may come from/, "Other class ids (comma separated)", "Candidates, at most", "Requests per candidate, at most", "Starts (UTC)", "Ends (UTC)"]) {
+        expect(within(step3).getByLabelText(label).hasAttribute("disabled")).toBe(true);
+      }
+      expect(within(step3).getByRole("button", { name: "Close the form" }).hasAttribute("disabled")).toBe(true);
+      await act(async () => { release(await json(201, policy("PLANNED", SID))); });
+    });
+
+    it("a refusal that is a 409 keeps the form open with its values and reads again", async () => {
+      const step3 = await opened(undefined, () => err(409, "REFUSED", "copy policy needs declared source classes"));
+      fireEvent.change(within(step3).getByLabelText(/^Hosts copies may come from/), { target: { value: "arxiv.org" } });
+      fireEvent.change(within(step3).getByLabelText("Other class ids (comma separated)"), { target: { value: "X" } });
+      fireEvent.change(within(step3).getByLabelText("Candidates, at most"), { target: { value: "5" } });
+      fireEvent.change(within(step3).getByLabelText("Requests per candidate, at most"), { target: { value: "2" } });
+      fireEvent.click(within(step3).getByRole("button", { name: "Save the policy" }));
+      await within(step3).findByRole("alert");
+      expect((within(step3).getByLabelText(/^Hosts copies may come from/) as HTMLTextAreaElement).value).toBe("arxiv.org");
+    });
+
+    it("flags a window without a zone", async () => {
+      const step3 = await opened();
+      fireEvent.change(within(step3).getByLabelText(/^Hosts copies may come from/), { target: { value: "arxiv.org" } });
+      fireEvent.change(within(step3).getByLabelText("Other class ids (comma separated)"), { target: { value: "ACADEMIC" } });
+      fireEvent.change(within(step3).getByLabelText("Candidates, at most"), { target: { value: "5" } });
+      fireEvent.change(within(step3).getByLabelText("Requests per candidate, at most"), { target: { value: "2" } });
+      fireEvent.change(within(step3).getByLabelText("Starts (UTC)"), { target: { value: "2025-01-01T00:00:00" } });
+      expect(within(step3).getByText("Write each time in UTC, like 2026-11-01T00:00:00Z.")).toBeTruthy();
+      expect(within(step3).getByRole("button", { name: "Save the policy" }).hasAttribute("disabled")).toBe(true);
+    });
+
+    it("PLANNED offers no Revoke; under a revoked calendar it says no copy would start", async () => {
+      serve(world({ schedule: schedule("REVOKED"), policies: [policy("PLANNED", SID)] }));
+      mount();
+      const step3 = await step(/Future copies/);
+      await within(step3).findByText(/europepmc\.org/);
+      expect(within(step3).queryByRole("button", { name: "Revoke the copy policy" })).toBeNull();
+      expect(within(step3).getByText("The calendar is revoked. A copy starts only while the policy and its calendar are both authorized, so authorizing this policy would not start any copy.")).toBeTruthy();
+    });
+
+    it("with a policy already there, the button says another one adds its own ceiling", async () => {
+      serve(world({ schedule: schedule("AUTHORIZED"), policies: [policy("AUTHORIZED", SID)] }));
+      mount();
+      const step3 = await step(/Future copies/);
+      expect(await within(step3).findByRole("button", { name: "Plan another policy (it adds its own ceiling)" })).toBeTruthy();
+    });
+
+    it("focus goes to the step heading when the form is closed", async () => {
+      const step3 = await opened();
+      fireEvent.click(within(step3).getByRole("button", { name: "Close the form" }));
+      expect(document.activeElement).toBe(within(step3).getByRole("heading", { name: /Step 3/ }));
+    });
   });
 
   describe("the local model", () => {
@@ -349,6 +462,55 @@ describe("Grants", () => {
       // an enabled mandate means no second one is offered
       expect(within(step4).queryByRole("button", { name: "Enable a local model" })).toBeNull();
     });
+
+    it("a changed flow list is read again (the schedule is fetched once more)", async () => {
+      const step4 = await opened(undefined, () => err(409, "PLAN_DIFFERS", "schedule child flows changed"));
+      fireEvent.change(within(step4).getByLabelText("Model for extraction"), { target: { value: "a" } });
+      fireEvent.change(within(step4).getByLabelText("Model for review"), { target: { value: "b" } });
+      fireEvent.change(within(step4).getByLabelText("Local calls, at most"), { target: { value: "5" } });
+      fireEvent.click(within(step4).getByRole("checkbox"));
+      const before = gets("/schedules/").length;
+      fireEvent.click(within(step4).getByRole("button", { name: "Enable the local model" }));
+      await within(step4).findByText(/The plan changed after you opened this page/);
+      await waitFor(() => expect(gets("/schedules/").length).toBeGreaterThan(before));
+    });
+
+    it("if another mandate was enabled meanwhile, the server's sentence is shown and the form keeps its values", async () => {
+      const step4 = await opened(undefined, () => err(409, "REFUSED", "series flow already has an active local mandate"));
+      fireEvent.change(within(step4).getByLabelText("Model for extraction"), { target: { value: "a" } });
+      fireEvent.change(within(step4).getByLabelText("Model for review"), { target: { value: "b" } });
+      fireEvent.change(within(step4).getByLabelText("Local calls, at most"), { target: { value: "5" } });
+      fireEvent.click(within(step4).getByRole("checkbox"));
+      fireEvent.click(within(step4).getByRole("button", { name: "Enable the local model" }));
+      expect((await within(step4).findByRole("alert")).textContent).toContain("series flow already has an active local mandate");
+      expect((within(step4).getByLabelText("Model for extraction") as HTMLInputElement).value).toBe("a");
+    });
+
+    it("the explanation restates what will be enabled, from the form, and says it needs no network request", async () => {
+      const step4 = await opened();
+      fireEvent.change(within(step4).getByLabelText("Model for extraction"), { target: { value: "qwen-a" } });
+      fireEvent.change(within(step4).getByLabelText("Model for review"), { target: { value: "qwen-b" } });
+      fireEvent.change(within(step4).getByLabelText("Local calls, at most"), { target: { value: "150" } });
+      expect(within(step4).getByText("2 flows, extraction model qwen-a, review model qwen-b, up to 150 local calls — no network request.")).toBeTruthy();
+    });
+
+    it("disables the fields and Close while the mandate is being enabled, and a double click sends one request", async () => {
+      let release: (r: Response) => void = () => undefined;
+      const step4 = await opened(undefined, () => new Promise<Response>((resolve) => { release = resolve; }));
+      fireEvent.change(within(step4).getByLabelText("Model for extraction"), { target: { value: "a" } });
+      fireEvent.change(within(step4).getByLabelText("Model for review"), { target: { value: "b" } });
+      fireEvent.change(within(step4).getByLabelText("Local calls, at most"), { target: { value: "5" } });
+      fireEvent.click(within(step4).getByRole("checkbox"));
+      const enable = within(step4).getByRole("button", { name: "Enable the local model" });
+      fireEvent.click(enable);
+      fireEvent.click(enable);
+      expect(posts()).toHaveLength(1);
+      for (const label of ["Model for extraction", "Model for review", "Local calls, at most"]) {
+        expect(within(step4).getByLabelText(label).hasAttribute("disabled")).toBe(true);
+      }
+      expect(within(step4).getByRole("button", { name: "Close the form" }).hasAttribute("disabled")).toBe(true);
+      await act(async () => { release(await json(201, mandate("ENABLED", SID))); });
+    });
   });
 
   describe("texts", () => {
@@ -373,7 +535,7 @@ describe("Grants", () => {
       expect(within(calendar).getByRole("checkbox", { name: "Ho letto cosa permette e i suoi limiti." })).toBeTruthy();
       const step3 = await step(/Copie future/);
       expect(await within(step3).findByRole("button", { name: "Autorizza la regola per le copie" })).toBeTruthy();
-      fireEvent.click(within(step3).getByRole("button", { name: "Pianifica una regola per le copie" }));
+      fireEvent.click(within(step3).getByRole("button", { name: "Pianifica un'altra regola (aggiunge un suo tetto)" }));
       expect(within(step3).getByLabelText(/^Host da cui possono arrivare le copie/)).toBeTruthy();
       expectNoPurchaseWording(document.body.textContent!, "it", ["sched.policy.forbids", "sched.mandate.forbids"]);
     });
