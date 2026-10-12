@@ -85,7 +85,8 @@ In an admin body, `password` is the **acting admin's own** password (re-authenti
 403 `REAUTH` and counts against the same per-id budget as a failed login, so the fifth gives 429. A
 non-admin gets 403 `FORBIDDEN` before any re-authentication, so cannot burn the admin's budget; the role is
 read from the ledger at each request. The B11 administration routes (`/admin`, `/admin/check`,
-`/admin/credential`, `/admin/paid-test`) are admin-only too. While a session's `must_change_password` is
+`/admin/credential`, `/admin/paid-test`) are open to every operator: an admin differs from an operator
+only in managing people. While a session's `must_change_password` is
 true, every route except `GET`/`POST /session…`, `GET /account` and `POST /account/password` answers 403
 `PASSWORD_CHANGE_REQUIRED`. Routes that carry a password (`/account/password`, `/people` and its
 `password`, `disable`, `enable`, `email`, `role` actions, `/admin/credential`) **ignore

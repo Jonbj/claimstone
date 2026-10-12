@@ -367,18 +367,17 @@ def test_every_route_that_reads_a_password_is_no_replay():
             "_people_enable", "_people_email", "_people_role", "_admin_credential"} <= found
 
 
-def test_credentials_and_outbound_checks_are_admin_powers(tmp_path, state):
+def test_an_admin_differs_from_an_operator_only_in_managing_people(tmp_path, state):
+    """Decision of 2026-10-12: credentials and outbound checks are open to every operator; only the
+    people routes need the admin role."""
     with _served(tmp_path, state) as (_h, base):
-        ann, _ = _signed(base, "ann")
-        adm, _ = _signed(base)
-        for method, path, payload in (("GET", "/admin", None),
-                                      ("POST", "/admin/check", {"target": "openalex"}),
-                                      ("POST", "/admin/credential", {"name": "X", "value": "y", "password": PW}),
-                                      ("POST", "/admin/paid-test", {})):
+        ann, _ = _signed(base, "ann")                       # a plain operator
+        assert _request(f"{base}{BASE}/admin", headers=ann)[0] == 200
+        assert _post(base, "/admin/paid-test", {}, ann)[0] == 501      # reachable, then its own refusal
+        for method, path, payload in (("GET", "/people", None),
+                                      ("POST", "/people/adm/disable", {"password": PW})):
             denied = _request(f"{base}{BASE}{path}", method, payload, headers=ann)
             assert denied[0] == 403 and denied[2]["error"]["code"] == "FORBIDDEN", (path, denied)
-        assert _request(f"{base}{BASE}/admin", headers=adm)[0] == 200
-        assert _post(base, "/admin/paid-test", {}, adm)[0] == 501
 
 
 def test_a_spoofed_x_real_ip_is_ignored_without_the_flag(tmp_path, state):

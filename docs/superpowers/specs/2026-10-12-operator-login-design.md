@@ -175,9 +175,9 @@ email, two-factor authentication, providers other than Google, translating the r
 - `claimstone control --trust-forwarded` exists: the login address budget then keys on `X-Real-IP`,
   which the portal's nginx overwrites from the socket. It is correct only when the reverse proxy is the
   single peer that can reach the control server; it must stay off for any published port.
-- The B11 admin routes (`/admin`, `/admin/check`, `/admin/credential`, `/admin/paid-test`) are
-  admin-only. Decision of 2026-10-12: credentials and outbound checks are admin powers; operators read
-  and sign.
+- The B11 admin routes (`/admin`, `/admin/check`, `/admin/credential`, `/admin/paid-test`) are open to
+  every operator. Decision of 2026-10-12, after an earlier admin-only choice: an admin differs from an
+  operator only in managing people (create, disable, enable, email, role, temporary password).
 - A failed-login event records whatever was typed as the id. A person who types a password into the id
   field leaves it in `auth_events.jsonl`. Accepted; the Task 9 contract doc says so.
 - `login_blocked` rows are unbounded while a block lasts. Revisit when the portal is opened.

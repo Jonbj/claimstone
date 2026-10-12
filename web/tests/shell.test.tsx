@@ -92,14 +92,13 @@ describe("F1: Shell v2", () => {
     const signedOut = await screen.findByRole("link", { name: "+ New project" });
     expect(signedOut.getAttribute("href")).toBe("/login?next=%2Fnew");
   });
-  it("shows an operator My account but neither People nor Administration", async () => {
+  it("shows an operator My account and Administration but not People", async () => {
     mount("operator", "/");
     const account = await screen.findByRole("link", { name: "My account" });
     expect(account.getAttribute("href")).toBe("/account");
     const names = linkNames();
     expect(names).not.toContain("People");
-    expect(names).not.toContain("Administration");
-    expect(names).toEqual(expect.arrayContaining(["Today", "Projects"]));
+    expect(names).toEqual(expect.arrayContaining(["Today", "Projects", "Administration"]));
   });
 
   it("shows an admin My account, People and Administration", async () => {
@@ -114,7 +113,7 @@ describe("F1: Shell v2", () => {
     mount(null, "/");
     await screen.findByRole("link", { name: "Sign in" });
     const names = linkNames();
-    for (const hidden of ["My account", "People", "Administration"]) expect(names).not.toContain(hidden);
+    for (const hidden of ["My account", "People"]) expect(names).not.toContain(hidden);
   });
 
   it("sends a person with a temporary password to /account, and leaves /account alone", async () => {

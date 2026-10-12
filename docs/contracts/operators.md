@@ -150,6 +150,7 @@ below are what is already known, so that the work, when it is done, starts from 
   minutes). Accepted for a loopback perimeter; it must be revisited, and the `Secure` cookie requirement
   made a hard check, before any wider opening.
 - The B11 administration routes (`/admin`, `/admin/check`, `/admin/credential`, `/admin/paid-test`) are
-  admin-only (decision of 2026-10-12): credentials and outbound checks are admin powers; operators read
-  and sign. Every `/people` route is admin-only as well, and the server checks the role in the ledger on
-  each request; the portal hiding a menu entry is a convenience, not a control.
+  open to every operator (decision of 2026-10-12, revising an earlier admin-only choice the same day): an
+  admin differs from an operator in one thing, managing people. Every `/people` route is admin-only, and
+  the server checks the role in the ledger on each request; the portal hiding a menu entry is a
+  convenience, not a control.

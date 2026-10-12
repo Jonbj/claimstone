@@ -184,7 +184,7 @@ describe("People", () => {
     fireEvent.click(form.getByRole("button", { name: "Confirm" }));
     expect(await screen.findByText("This page is for admins.")).toBeTruthy();
     expect(screen.queryByRole("link", { name: "People" })).toBeNull();
-    expect(screen.queryByRole("link", { name: "Administration" })).toBeNull();
+    expect(screen.getByRole("link", { name: "Administration" })).toBeTruthy(); // open to every operator
     expect(screen.getByRole("link", { name: "My account" })).toBeTruthy();
   });
 

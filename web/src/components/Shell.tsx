@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 // rail is dark in both themes (`bg-rail`); the content area follows the theme tokens. The old
 // Inbox tab is gone from the rail, but `/inbox` is still routable.
 const NAV: Array<{
-  id: string; label: string; to: string; adminOnly?: boolean; active: (pathname: string) => boolean;
+  id: string; label: string; to: string; active: (pathname: string) => boolean;
 }> = [
   { id: "today", label: "Today", to: "/", active: (p) => p === "/" },
   // A project or flow on screen lights Projects: Today is the only other top-level page.
@@ -22,8 +22,7 @@ const NAV: Array<{
     to: "/projects",
     active: (p) => p.startsWith("/projects") || p.startsWith("/p/") || p.startsWith("/inbox"),
   },
-  // The server answers 403 to operators on the credential and outbound-check routes, so only admins see this.
-  { id: "admin", label: "Administration", to: "/admin", adminOnly: true, active: (p) => p.startsWith("/admin") },
+  { id: "admin", label: "Administration", to: "/admin", active: (p) => p.startsWith("/admin") },
 ];
 
 function useRevision(): { text: string; title: string } {
@@ -106,7 +105,7 @@ export default function Shell() {
     }
   }, [session.operator?.must_change_password, pathname, navigate]);
   const items = [
-    ...NAV.filter((item) => !item.adminOnly || isAdmin),
+    ...NAV,
     ...(session.operator
       ? [{ id: "account", label: t("shell.account"), to: "/account", active: (p: string) => p.startsWith("/account") }]
       : []),

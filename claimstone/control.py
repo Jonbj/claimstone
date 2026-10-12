@@ -1197,9 +1197,9 @@ def _admin_read(self: _Handler, params: dict[str, str], query: Any,
     """Presence of credentials, configured backends, instruments, and the last recorded check per
     service. Nothing is contacted to answer this.
 
-    2026-10-12: the B11 routes are admin powers — credentials and outbound checks are changed by an
-    admin; operators read and sign."""
-    _require_admin(self)
+    2026-10-12: the B11 routes are open to every operator. An admin differs from an operator in one
+    thing only: creating, disabling and otherwise managing people (`/people`)."""
+    self._require_session()
     state = portal_state.admin_state(pathlib.Path(self.projects_dir).resolve().parent)
     return {**state, "checks": admin.latest_checks(self.state_dir),
             "check_targets": admin.targets()}, 200
@@ -1208,7 +1208,7 @@ def _admin_read(self: _Handler, params: dict[str, str], query: Any,
 def _admin_check(self: _Handler, params: dict[str, str], query: Any,
                  body: dict[str, Any]) -> tuple[Any, int]:
     self._only_keys(body, frozenset({"target"}))
-    session = _require_admin(self)
+    session = self._require_session()
     try:
         row = admin.check(self.state_dir, target=body.get("target"), actor=session.operator_id,
                           http_get=self.http_get)
@@ -1237,7 +1237,7 @@ def _admin_credential(self: _Handler, params: dict[str, str], query: Any,
     """Replace one credential, with the password asked again (spec B11). A wrong password counts
     against the same budget as a failed login, so this route is no side door for guessing."""
     self._only_keys(body, frozenset({"name", "value", "password"}))
-    session = _require_admin(self)
+    session = self._require_session()
     _reauth(self, session, body.get("password"))
     if self.env_file is None:
         raise ControlError(409, "CREDENTIALS_READ_ONLY",
@@ -1253,7 +1253,7 @@ def _admin_credential(self: _Handler, params: dict[str, str], query: Any,
 
 def _admin_paid_test(self: _Handler, params: dict[str, str], query: Any,
                      body: dict[str, Any]) -> tuple[Any, int]:
-    _require_admin(self)
+    self._require_session()
     raise ControlError(
         501, "NOT_IMPLEMENTED",
         "a paid test call needs the model-call boundary and a cost reservation; it belongs to the "

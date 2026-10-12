@@ -4925,8 +4925,9 @@ CLI and the control server never interleave a read and an append. Revocation is 
 carries a stamp of the credential it was opened with, and every authenticated request re-reads the
 ledger and ends the session when the person is gone, disabled or the stamp changed — so a
 disable, an admin reset or a shell command in another process takes effect on the next request,
-and a login that verified just before a change dies on first use. The B11 credential and outbound-check
-routes are admin powers; operators read and sign. Password-carrying routes ignore `Idempotency-Key`
+and a login that verified just before a change dies on first use. An admin differs from an
+operator in one thing, managing people: the B11 credential and outbound-check routes, like everything
+else, are open to every operator. Password-carrying routes ignore `Idempotency-Key`
 (a replay would answer without checking). The failed-login budget is reserved before the scrypt
 derivation and the derivations are bounded to four at once; behind the nginx proxy the client
 address is taken from `X-Real-IP` only with `--trust-forwarded`, which must stay off for any
