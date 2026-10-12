@@ -41,7 +41,8 @@ describe("identityName", () => {
 
 describe("stateLabelKey", () => {
   it.each(["PLANNED", "AUTHORIZED", "REVOKED", "ENABLED", "DISABLED", "ALIVE", "STALE",
-           "STOPPED", "NOT_STARTED", "UNKNOWN", "IDLE", "DRIVING"])(
+           "STOPPED", "NOT_STARTED", "UNKNOWN", "IDLE", "DRIVING", "INSUFFICIENT_ACQUISITION",
+           "WAITING_FOR_SCHEDULE", "WAITING_FOR_EVIDENCE", "READY_FOR_HUMAN_READING"])(
     "%s has a key present in both catalogs", (word) => {
       const key = stateLabelKey(word);
       expect(key).toBe(`sched.state.${word}`);

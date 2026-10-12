@@ -312,7 +312,11 @@
       "NOT_STARTED": "Not started",
       "UNKNOWN": "Unknown",
       "IDLE": "Idle",
-      "DRIVING": "Working"
+      "DRIVING": "Working",
+      "INSUFFICIENT_ACQUISITION": "Acquisition below the floor",
+      "WAITING_FOR_SCHEDULE": "Waiting for the schedule",
+      "WAITING_FOR_EVIDENCE": "Waiting for evidence",
+      "READY_FOR_HUMAN_READING": "Ready for a person to read"
     },
     "signedOut": "Sign in to see the scheduler.",
     "signIn": "Sign in",
@@ -375,7 +379,7 @@
     "policy": {
       "title": "Future copies",
       "permits": "Fetching a copy of a candidate only when it matches a successful hit, from the allowed hosts and source classes, within the caps.",
-      "forbids": "The rules of robots.txt, redirects, the refusal of non-global addresses and the per-domain failure budgets still apply. A candidate without a matching successful hit stays for operator review.",
+      "forbids": "The rules of robots.txt, redirects, the refusal of non-global addresses and the per-domain failure budgets still apply. A candidate without a matching successful hit stays for operator review. The policy admits no source scientifically, buys nothing and signs nothing.",
       "spend": "Up to {line} requests.",
       "spendNone": "Nothing until it is decided.",
       "hosts": "Allowed hosts: {hosts}",
@@ -406,6 +410,50 @@
       "noBlockers": "no blockers",
       "unavailable": "The dossier could not be read, so its state is not shown.",
       "open": "Open the cumulative result"
+    },
+    "res": {
+      "back": "Back to the series",
+      "dossier": "Dossier",
+      "blockers": "Blockers",
+      "noBlockers": "No blockers.",
+      "saved": "Saved dossier {id}, saved {at}.",
+      "notSaved": "No dossier has been saved yet.",
+      "snapshotStale": "The saved dossier no longer matches the current evidence.",
+      "needsSaving": "The current evidence has not been saved as a dossier yet.",
+      "noVerdict": "This page gives no verdict: a verdict takes a person's signature.",
+      "notAvailable": "Not available.",
+      "acq": {
+        "title": "Acquisition",
+        "obtained": "obtained: {n}",
+        "floor": "floor {floor}",
+        "below": "Classes below the floor: {classes}",
+        "class": "{name}: rate {rate}, floor {floor}",
+        "meets": "meets the floor",
+        "under": "below the floor",
+        "byRound": "By round"
+      },
+      "q": {
+        "title": "Questions",
+        "empty": "No questions to show.",
+        "question": "Question",
+        "profile": "Profile",
+        "signature": "Signature",
+        "noProfile": "no profile",
+        "notApplicable": "no literature verdict applies",
+        "provisional": "provisional",
+        "counts": "direction count (a count, not a result): {counts}",
+        "coverage": "examined / sources: {ratio}",
+        "copyHash": "Copy the profile hash of {id}",
+        "notSigned": "not signed",
+        "signed": "signed",
+        "stale": "stale",
+        "note": "Signing in the portal is per flow, on that flow's own profile; this page only shows the whole-corpus profiles and signatures that exist."
+      },
+      "download": {
+        "live": "Download live report (JSON)",
+        "saved": "Download current saved dossier (JSON)",
+        "note": "The file is exactly what this page has just read."
+      }
     }
   }
 }

@@ -312,7 +312,11 @@
       "NOT_STARTED": "Mai avviato",
       "UNKNOWN": "Sconosciuto",
       "IDLE": "In attesa",
-      "DRIVING": "Al lavoro"
+      "DRIVING": "Al lavoro",
+      "INSUFFICIENT_ACQUISITION": "Acquisizione sotto la soglia",
+      "WAITING_FOR_SCHEDULE": "In attesa del calendario",
+      "WAITING_FOR_EVIDENCE": "In attesa di evidenze",
+      "READY_FOR_HUMAN_READING": "Pronto per essere letto da una persona"
     },
     "signedOut": "Accedi per vedere lo scheduler.",
     "signIn": "Accedi",
@@ -375,7 +379,7 @@
     "policy": {
       "title": "Copie future",
       "permits": "Prendere la copia di un candidato solo se corrisponde a un riscontro riuscito, dagli host consentiti e dalle classi di fonte indicate, entro i limiti.",
-      "forbids": "Restano in vigore le regole di robots.txt, i reindirizzamenti, il rifiuto degli indirizzi non globali e i limiti di errori per dominio. Un candidato senza un riscontro riuscito corrispondente resta all'operatore per la revisione.",
+      "forbids": "Restano in vigore le regole di robots.txt, i reindirizzamenti, il rifiuto degli indirizzi non globali e i limiti di errori per dominio. Un candidato senza un riscontro riuscito corrispondente resta all'operatore per la revisione. La regola non ammette nessuna fonte dal punto di vista scientifico, non compra nulla e non firma nulla.",
       "spend": "Fino a {line} richieste.",
       "spendNone": "Niente finché non lo decidi.",
       "hosts": "Host consentiti: {hosts}",
@@ -406,6 +410,50 @@
       "noBlockers": "nessun blocco",
       "unavailable": "Il dossier non si è potuto leggere, quindi non ne mostro lo stato.",
       "open": "Apri il risultato cumulativo"
+    },
+    "res": {
+      "back": "Torna alla serie",
+      "dossier": "Dossier",
+      "blockers": "Blocchi",
+      "noBlockers": "Nessun blocco.",
+      "saved": "Dossier salvato {id}, il {at}.",
+      "notSaved": "Non è ancora stato salvato nessun dossier.",
+      "snapshotStale": "Il dossier salvato non corrisponde più alle evidenze attuali.",
+      "needsSaving": "Le evidenze attuali non sono ancora state salvate come dossier.",
+      "noVerdict": "Questa pagina non dà un verdetto: per un verdetto serve la firma di una persona.",
+      "notAvailable": "Non disponibile.",
+      "acq": {
+        "title": "Acquisizione",
+        "obtained": "ottenute: {n}",
+        "floor": "soglia {floor}",
+        "below": "Classi sotto la soglia: {classes}",
+        "class": "{name}: tasso {rate}, soglia {floor}",
+        "meets": "rispetta la soglia",
+        "under": "sotto la soglia",
+        "byRound": "Per round"
+      },
+      "q": {
+        "title": "Domande",
+        "empty": "Nessuna domanda da mostrare.",
+        "question": "Domanda",
+        "profile": "Profilo",
+        "signature": "Firma",
+        "noProfile": "nessun profilo",
+        "notApplicable": "nessun verdetto dalla letteratura è applicabile",
+        "provisional": "provvisorio",
+        "counts": "conteggio per direzione (è un conteggio, non un risultato): {counts}",
+        "coverage": "esaminate / fonti: {ratio}",
+        "copyHash": "Copia l'impronta del profilo di {id}",
+        "notSigned": "non firmata",
+        "signed": "firmata",
+        "stale": "obsoleta",
+        "note": "La firma nel portale si dà per flusso, sul profilo di quel flusso; questa pagina mostra solo i profili e le firme sull'intero corpus che esistono."
+      },
+      "download": {
+        "live": "Scarica il rapporto in tempo reale (JSON)",
+        "saved": "Scarica il dossier salvato attuale (JSON)",
+        "note": "Il file è esattamente quello che questa pagina ha appena letto."
+      }
     }
   }
 }

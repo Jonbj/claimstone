@@ -3,6 +3,8 @@
 const KNOWN = new Set([
   "PLANNED", "AUTHORIZED", "REVOKED", "ENABLED", "DISABLED",
   "ALIVE", "STALE", "STOPPED", "NOT_STARTED", "UNKNOWN", "IDLE", "DRIVING",
+  // The dossier's own states (periodic_dossier.preview).
+  "INSUFFICIENT_ACQUISITION", "WAITING_FOR_SCHEDULE", "WAITING_FOR_EVIDENCE", "READY_FOR_HUMAN_READING",
 ]);
 
 export function stateLabelKey(word: string): string | null {

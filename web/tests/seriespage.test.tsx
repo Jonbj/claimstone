@@ -92,7 +92,9 @@ describe("Series page", () => {
     expect(within(step).getByText(/2 \/ 10/)).toBeTruthy();
     expect(within(step).getByText(/robots/i)).toBeTruthy();
     await screen.findByText(/qwen-extract/);
-    expect(document.body.textContent).not.toMatch(/buy|purchase|pay|acquista|compra|paga/i);
+    // The policy says in so many words that it buys nothing; that denial is the one allowed mention.
+    expect(step.textContent).toContain("admits no source scientifically, buys nothing and signs nothing");
+    expect(document.body.textContent!.replace("buys nothing", "")).not.toMatch(/buy|purchase|pay|acquista|compra|paga/i);
   });
 
   it("no purchase wording in Italian either", async () => {
@@ -100,7 +102,9 @@ describe("Series page", () => {
     stub({ schedule: () => json(200, schedule("AUTHORIZED")), index: [withGrants()] });
     mount();
     await screen.findByText(/qwen-extract/);
-    expect(document.body.textContent).not.toMatch(/buy|purchase|pay|acquista|compra|paga/i);
+    const step = screen.getByRole("region", { name: /Copie future/ });
+    expect(step.textContent).toContain("non ammette nessuna fonte dal punto di vista scientifico, non compra nulla e non firma nulla");
+    expect(document.body.textContent!.replace("non compra nulla", "")).not.toMatch(/buy|purchase|pay|acquista|compra|paga/i);
   });
 
   it("a STALE mandate worker shows an operational process line; the mandate state stays visible", async () => {

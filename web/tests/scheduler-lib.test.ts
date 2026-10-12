@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { overviewOfSeries, workerAlert } from "@/lib/scheduler";
+import { cumulativeOf, overviewOfSeries, questionRowsOf, workerAlert } from "@/lib/scheduler";
 import type { MandateStatus, PolicyStatus, ScheduleStatus, Worker } from "@/lib/scheduler";
 
 const schedule = (state: string, over: Partial<ScheduleStatus> = {}): ScheduleStatus => ({
@@ -37,4 +37,27 @@ describe("workerAlert", () => {
   const w = (state: string): Worker => ({ worker_key: "supervisor", state: state as Worker["state"], last_seen_at: null, phase: null, age_seconds: null });
   it.each([["STALE", true], ["UNKNOWN", true], ["STOPPED", true], ["NOT_STARTED", true], ["ALIVE", false]])(
     "%s -> alert %s", (state, alert) => expect(workerAlert(w(state))).toBe(alert));
+});
+
+describe("cumulativeOf", () => {
+  it("reads audit.cumulative_admission and tolerates anything else", () => {
+    expect(cumulativeOf({ cumulative_admission: { found: 4, confirmed: 1, obtained: 2, rate: null, status: "OK" } })?.found).toBe(4);
+    expect(cumulativeOf({ cumulative_admission: "x" })).toBeNull();
+    expect(cumulativeOf({ cumulative_admission: { found: "4" } })).toBeNull();
+    expect(cumulativeOf({})).toBeNull();
+    expect(cumulativeOf(undefined)).toBeNull();
+  });
+});
+
+describe("questionRowsOf", () => {
+  it("joins by question id, keeps a decision without a profile and a profile without a decision", () => {
+    const rows = questionRowsOf(
+      [{ question_id: "q2" }, { question_id: "q1" }],
+      [{ question_id: "q9", verdict: null }, { question_id: "q1", verdict: null }]);
+    expect(rows.map((r) => [r.questionId, !!r.profile, !!r.decision])).toEqual([
+      ["q1", true, true], ["q2", true, false], ["q9", false, true]]);
+  });
+  it("ignores rows that are not objects with a question id", () => {
+    expect(questionRowsOf([null, 3, {}], "no")).toEqual([]);
+  });
 });

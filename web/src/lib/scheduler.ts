@@ -137,3 +137,55 @@ export function roundsOf(audit: unknown): AuditRound[] {
   const rounds = (audit as { rounds?: unknown } | null)?.rounds;
   return Array.isArray(rounds) ? (rounds as AuditRound[]) : [];
 }
+
+/** `audit.cumulative_admission`, or null when the audit does not carry one in the expected shape. */
+export function cumulativeOf(audit: unknown): Admission | null {
+  const row = (audit as { cumulative_admission?: unknown } | null | undefined)?.cumulative_admission;
+  if (!row || typeof row !== "object") return null;
+  const a = row as Record<string, unknown>;
+  return typeof a.found === "number" && typeof a.confirmed === "number" ? (row as Admission) : null;
+}
+
+/** A cumulative profile row; operational questions carry `state` only. */
+export interface ProfileRow {
+  question_id: string;
+  profile_sha256?: string;
+  state?: string;
+  provisional?: boolean;
+  direction_count?: Record<string, number>;
+  coverage?: { sources?: number; examined?: number };
+  [key: string]: unknown;
+}
+
+export interface DecisionRow {
+  question_id: string;
+  verdict: { verdict?: unknown; [key: string]: unknown } | null;
+  stale?: boolean;
+  stored_profile_stale?: boolean;
+  unavailable?: string;
+}
+
+export interface QuestionRow {
+  questionId: string;
+  profile: ProfileRow | null;
+  decision: DecisionRow | null;
+}
+
+const hasId = (row: unknown): row is { question_id: string } =>
+  !!row && typeof row === "object" && typeof (row as { question_id?: unknown }).question_id === "string";
+
+/** Profiles and human decisions joined by `question_id`. A row on one side only still shows. */
+export function questionRowsOf(profiles: unknown, decisions: unknown): QuestionRow[] {
+  const byId = new Map<string, QuestionRow>();
+  const slot = (id: string) => {
+    if (!byId.has(id)) byId.set(id, { questionId: id, profile: null, decision: null });
+    return byId.get(id)!;
+  };
+  for (const row of Array.isArray(profiles) ? profiles : []) {
+    if (hasId(row)) slot(row.question_id).profile = row as ProfileRow;
+  }
+  for (const row of Array.isArray(decisions) ? decisions : []) {
+    if (hasId(row)) slot(row.question_id).decision = row as DecisionRow;
+  }
+  return [...byId.values()].sort((a, b) => (a.questionId < b.questionId ? -1 : a.questionId > b.questionId ? 1 : 0));
+}

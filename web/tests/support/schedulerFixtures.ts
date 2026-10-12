@@ -117,12 +117,34 @@ export function dossier(over: Record<string, unknown> = {}, rounds?: unknown[]) 
   };
 }
 
+export const SHA = (c: string) => c.repeat(64);
+
+/** A cumulative profile row as `synthesize.preview` sends it (only the fields the page shows). */
+export function profile(questionId: string, over: Record<string, unknown> = {}) {
+  return { question_id: questionId, profile_sha256: SHA("c"), state: "PROFILE", provisional: false,
+    direction_count: { yes: 4, no: 1 }, coverage: { sources: 12, examined: 10 }, ...over };
+}
+
+/** A human-decision row: `verdict` is null until a person has signed. */
+export function decision(questionId: string, over: Record<string, unknown> = {}) {
+  return { question_id: questionId, verdict: null, stale: false, stored_profile_stale: false,
+    unavailable: "", ...over };
+}
+
+/** A dossier whose audit and question rows are given by the caller. */
+export function resultDossier(over: Record<string, unknown> = {}, audit: Record<string, unknown> = {}) {
+  const base = dossier();
+  return { ...base, ...over, audit: { ...base.audit, ...audit } };
+}
+
 export interface Routes {
   signedIn?: boolean;
   /** Index answers, in order; the last repeats. */
   index?: Array<() => Promise<Response>>;
   schedule?: () => Promise<Response>;
   dossier?: () => Promise<Response>;
+  /** `unbound_selectors` slugs of the project `news` in the project list. */
+  unbound?: string[];
 }
 
 /** Stubs fetch by URL and records every request's URL. */
@@ -145,6 +167,13 @@ export function stub(routes: Routes): string[] {
     }
     if (url.startsWith("/api/v1/projects/news/periodic-dossiers/")) {
       return (routes.dossier ?? (() => json(200, dossier())))();
+    }
+    if (url === "/api/v1/projects") {
+      return json(200, { api_version: 1, projects: [{
+        name: "news", config: "OK", config_error: null, flows: [],
+        unbound_selectors: (routes.unbound ?? []).map((slug) => ({
+          slug, label: slug, selector: { round: null, manifest_only: false } })),
+      }] });
     }
     return err(404, "NOT_FOUND", "no");
   });
