@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { Link, useParams } from "react-router";
 import ErrorState from "@/components/ErrorState";
 import Pending from "@/components/Pending";
@@ -62,10 +63,19 @@ function SeriesRow({ view, project, more }: { view: SeriesOverview; project: str
 function Body({ project }: { project: string }) {
   const { t } = useLocale();
   const index = useSchedulerIndex(project);
+  const list = useRef<HTMLUListElement>(null);
+  const hadMore = useRef(false);
   // The ledger poll and a visible-tab timer both ask for a refresh; the hook ignores the ask while a
   // read is still running.
   usePoll(project || null, index.refresh);
   useVisibleInterval(index.refresh, REFRESH_MS);
+
+  const more = index.pages ? index.pages[index.pages.length - 1].archive.next_cursor !== null : false;
+  // When "Load more" goes away with the focus on it, the focus would fall to the page: put it on the list.
+  useEffect(() => {
+    if (hadMore.current && !more && (document.activeElement === document.body || document.activeElement === null)) list.current?.focus();
+    hadMore.current = more;
+  }, [more]);
 
   if (index.error && !index.pages) return <ErrorState error={index.error} context="scheduler" />;
   if (!index.pages) return <Pending label={t("sched.loading")} />;
@@ -95,7 +105,7 @@ function Body({ project }: { project: string }) {
         {views.length === 0 ? (
           <p className="text-sm text-muted-foreground">{t("sched.index.empty")}</p>
         ) : (
-          <ul className="flex flex-col gap-3">
+          <ul ref={list} tabIndex={-1} aria-label={t("sched.index.series")} className="flex flex-col gap-3 outline-none">
             {views.map((view) => (
               <SeriesRow key={view.schedule.schedule_id} view={view} project={project} more={next !== null} />
             ))}

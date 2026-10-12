@@ -298,7 +298,8 @@
       "final": "final",
       "notFinal": "not final",
       "blocking": "Blocking: {items}",
-      "earlier": "Earlier rounds"
+      "earlier": "Earlier rounds",
+      "copyPlanHash": "Copy the plan hash"
     },
     "result": {
       "title": "Cumulative result"
@@ -381,15 +382,15 @@
     },
     "calendar": {
       "title": "Calendar",
-      "permits": "Once authorized, the planned searches may run inside their windows, up to their request ceilings.",
-      "forbids": "Nothing outside the windows and nothing beyond the ceiling of the plan.",
+      "permits": "Only these frozen discovery searches, in these windows, up to this ceiling.",
+      "forbids": "It does not fetch copies, run the local model or give a verdict.",
       "spend": "Up to {n} network requests in total.",
       "none": "No request is permitted yet."
     },
     "policy": {
       "title": "Future copies",
       "permits": "Fetching a copy of a candidate only when it matches a successful hit, from the allowed hosts and source classes, within the caps.",
-      "forbids": "The rules of robots.txt, redirects, the refusal of non-global addresses and the per-domain failure budgets still apply. A candidate without a matching successful hit stays for operator review. The policy admits no source scientifically, buys nothing and signs nothing.",
+      "forbids": "robots.txt, the redirect checks, the refusal of non-global addresses and the per-domain failure budgets still apply. A candidate without a matching successful hit stays for operator review. The policy admits no source scientifically, buys nothing and signs nothing.",
       "spend": "Up to {line} requests.",
       "spendNone": "Nothing until it is decided.",
       "hosts": "Allowed hosts: {hosts}",
@@ -400,8 +401,8 @@
     },
     "mandate": {
       "title": "Local model",
-      "permits": "A local model may read and review documents for the flows of this series, within the call ceiling.",
-      "forbids": "It does not sign anything: a verdict still takes a person.",
+      "permits": "A local model may read and review the documents of this series' flows within the call cap, run the network work that the Calendar and Future copies already authorize, plan the copies the copy policy allows, and save the cumulative dossier when its gates pass.",
+      "forbids": "It approves no new network request, no paid model call and no purchase, admits no source scientifically and gives no verdict.",
       "spend": "Up to {n} local model calls.",
       "spendNone": "Nothing until it is decided.",
       "models": "Models: extract {extract}, review {review}",
@@ -466,7 +467,12 @@
       "download": {
         "live": "Download live report (JSON)",
         "saved": "Download current saved dossier (JSON)",
-        "note": "The file is exactly what this page has just read."
+        "note": "The file holds the same data this page shows.",
+        "title": "Downloads"
+      },
+      "save": {
+        "title": "Saved dossier",
+        "history": "Dossiers saved so far: {n}"
       }
     },
     "asOf": "As of {time}"

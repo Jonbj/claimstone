@@ -44,9 +44,9 @@ function Signature({ row }: { row: QuestionRow }) {
 }
 
 // Profiles and human decisions of the whole corpus, joined by question id. The link to a question
-// goes to the whole-store reader and exists only when the project lists that reader.
-export default function QuestionRows({ project, profiles, decisions, wholeStore }: {
-  project: string; profiles: unknown; decisions: unknown; wholeStore: boolean;
+// goes to a reader of the whole store and exists only when the project lists one.
+export default function QuestionRows({ profiles, decisions, readerBase }: {
+  profiles: unknown; decisions: unknown; readerBase: string | null;
 }) {
   const { t } = useLocale();
   const rows = questionRowsOf(profiles, decisions);
@@ -54,6 +54,7 @@ export default function QuestionRows({ project, profiles, decisions, wholeStore 
     <section aria-label={t("sched.res.q.title")} className="flex flex-col gap-2 rounded-xl border border-border bg-card px-4 py-4 text-sm">
       <h2 className="text-base font-semibold">{t("sched.res.q.title")}</h2>
       {rows.length === 0 ? <p>{t("sched.res.q.empty")}</p> : (
+        <div className="overflow-x-auto">
         <table className="w-full text-left">
           <thead>
             <tr>
@@ -66,9 +67,9 @@ export default function QuestionRows({ project, profiles, decisions, wholeStore 
             {rows.map((row) => (
               <tr key={row.questionId} className="align-top">
                 <th scope="row" className="font-mono text-xs font-normal">
-                  {wholeStore
-                    ? <Link className="underline" to={`/p/${encodeURIComponent(project)}/u/-/q/${encodeURIComponent(row.questionId)}`}>{row.questionId}</Link>
-                    : row.questionId}
+                  {readerBase
+                    ? <Link className="inline-flex min-h-11 items-center break-all underline" to={`${readerBase}/q/${encodeURIComponent(row.questionId)}`}>{row.questionId}</Link>
+                    : <span className="break-all">{row.questionId}</span>}
                 </th>
                 <td><Profile row={row} /></td>
                 <td><Signature row={row} /></td>
@@ -76,6 +77,7 @@ export default function QuestionRows({ project, profiles, decisions, wholeStore 
             ))}
           </tbody>
         </table>
+        </div>
       )}
       {Array.isArray(profiles) && profiles.length === 0 ? <p className="text-xs">{t("sched.res.q.noProfiles")}</p> : null}
       <p className="text-xs text-muted-foreground">{t("sched.res.q.note")}</p>

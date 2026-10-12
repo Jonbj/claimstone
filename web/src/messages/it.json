@@ -298,7 +298,8 @@
       "final": "definitivo",
       "notFinal": "non definitivo",
       "blocking": "Bloccanti: {items}",
-      "earlier": "Round precedenti"
+      "earlier": "Round precedenti",
+      "copyPlanHash": "Copia l'impronta del piano"
     },
     "result": {
       "title": "Risultato cumulativo"
@@ -381,15 +382,15 @@
     },
     "calendar": {
       "title": "Calendario",
-      "permits": "Una volta autorizzato, le ricerche pianificate possono partire dentro le loro finestre, fino al tetto di richieste.",
-      "forbids": "Niente fuori dalle finestre e niente oltre il tetto del piano.",
+      "permits": "Solo queste ricerche di scoperta già fissate, in queste finestre, fino a questo tetto.",
+      "forbids": "Non prende copie, non usa il modello locale e non dà un verdetto.",
       "spend": "Fino a {n} richieste di rete in totale.",
       "none": "Per ora non è permessa nessuna richiesta."
     },
     "policy": {
       "title": "Copie future",
       "permits": "Prendere la copia di un candidato solo se corrisponde a un riscontro riuscito, dagli host consentiti e dalle classi di fonte indicate, entro i limiti.",
-      "forbids": "Restano in vigore le regole di robots.txt, i reindirizzamenti, il rifiuto degli indirizzi non globali e i limiti di errori per dominio. Un candidato senza un riscontro riuscito corrispondente resta all'operatore per la revisione. La regola non ammette nessuna fonte dal punto di vista scientifico, non compra nulla e non firma nulla.",
+      "forbids": "Restano in vigore robots.txt, i controlli sui reindirizzamenti, il rifiuto degli indirizzi non globali e i limiti di errori per dominio. Un candidato senza un riscontro riuscito corrispondente resta all'operatore per la revisione. La regola non ammette nessuna fonte dal punto di vista scientifico, non compra nulla e non firma nulla.",
       "spend": "Fino a {line} richieste.",
       "spendNone": "Niente finché non lo decidi.",
       "hosts": "Host consentiti: {hosts}",
@@ -400,8 +401,8 @@
     },
     "mandate": {
       "title": "Modello locale",
-      "permits": "Un modello locale può leggere e rivedere i documenti dei flussi di questa serie, entro il tetto di chiamate.",
-      "forbids": "Non firma nulla: per un verdetto serve sempre una persona.",
+      "permits": "Un modello locale può leggere e rivedere i documenti dei flussi di questa serie entro il tetto di chiamate, eseguire il lavoro di rete che il Calendario e le Copie future già autorizzano, pianificare le copie che la regola consente e salvare il dossier cumulativo quando ne sono superati i controlli.",
+      "forbids": "Non approva nessuna nuova richiesta di rete, nessuna chiamata a un modello a pagamento e nessun acquisto, non ammette nessuna fonte dal punto di vista scientifico e non dà nessun verdetto.",
       "spend": "Fino a {n} chiamate al modello locale.",
       "spendNone": "Niente finché non lo decidi.",
       "models": "Modelli: estrazione {extract}, revisione {review}",
@@ -466,7 +467,12 @@
       "download": {
         "live": "Scarica il rapporto in tempo reale (JSON)",
         "saved": "Scarica il dossier salvato attuale (JSON)",
-        "note": "Il file è esattamente quello che questa pagina ha appena letto."
+        "note": "Il file contiene gli stessi dati che mostra questa pagina.",
+        "title": "Scarichi"
+      },
+      "save": {
+        "title": "Dossier salvato",
+        "history": "Dossier salvati finora: {n}"
       }
     },
     "asOf": "Dati del {time}"

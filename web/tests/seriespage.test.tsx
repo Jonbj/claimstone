@@ -1,11 +1,12 @@
 // The series page (read-only): the plan, the calendar, the copy policy, the local mandate and the
 // result, with the rounds on top. The dossier is read once on load and again only when the poll
 // fires; if it fails, the other steps still render.
-import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { setCsrfToken } from "@/lib/control";
 import { LocaleProvider, STORAGE_KEY } from "@/lib/i18n";
+import { expectNoPurchaseWording } from "./support/purchase";
 import { SessionProvider } from "@/lib/session";
 import SeriesPage from "@/pages/SeriesPage";
 import {
@@ -92,9 +93,10 @@ describe("Series page", () => {
     expect(within(step).getByText(/2 \/ 10/)).toBeTruthy();
     expect(within(step).getByText(/robots/i)).toBeTruthy();
     await screen.findByText(/qwen-extract/);
-    // The policy says in so many words that it buys nothing; that denial is the one allowed mention.
+    // The policy and the mandate say in so many words that they buy nothing; those two sentences are
+    // asserted present and taken out, and nothing else on the page may speak of buying.
     expect(step.textContent).toContain("admits no source scientifically, buys nothing and signs nothing");
-    expect(document.body.textContent!.replace("buys nothing", "")).not.toMatch(/buy|purchase|pay|acquista|compra|paga/i);
+    expectNoPurchaseWording(document.body.textContent!, "en", ["sched.policy.forbids", "sched.mandate.forbids"]);
   });
 
   it("no purchase wording in Italian either", async () => {
@@ -104,7 +106,7 @@ describe("Series page", () => {
     await screen.findByText(/qwen-extract/);
     const step = screen.getByRole("region", { name: /Copie future/ });
     expect(step.textContent).toContain("non ammette nessuna fonte dal punto di vista scientifico, non compra nulla e non firma nulla");
-    expect(document.body.textContent!.replace("non compra nulla", "")).not.toMatch(/buy|purchase|pay|acquista|compra|paga/i);
+    expectNoPurchaseWording(document.body.textContent!, "it", ["sched.policy.forbids", "sched.mandate.forbids"]);
   });
 
   it.each(["STALE", "STOPPED", "NOT_STARTED"])("a %s mandate worker is a neutral process line, never an alert; the mandate state stays visible", async (state) => {
@@ -304,6 +306,69 @@ describe("Series page fidelity", () => {
     await within(step).findByText(/europepmc\.org/);
     expect(within(step).getAllByTitle("AUTHORIZED")).toHaveLength(2);
     expect(within(step).getByText("Up to 10 × 3 = 30 requests.")).toBeTruthy();
+  });
+});
+
+describe("Series page texts", () => {
+  beforeEach(() => setCsrfToken(null));
+  afterEach(() => { cleanup(); vi.unstubAllGlobals(); localStorage.clear(); });
+  const mounted = () => stub({ schedule: () => json(200, schedule("AUTHORIZED")), index: [withGrants()] });
+
+  it("the Calendar permits only the frozen discovery searches and says what it does not do", async () => {
+    mounted(); mount();
+    const calendar = await screen.findByRole("region", { name: /Calendar/ });
+    expect(calendar.textContent).toContain("Only these frozen discovery searches, in these windows, up to this ceiling.");
+    expect(calendar.textContent).toContain("It does not fetch copies, run the local model or give a verdict.");
+  });
+
+  it("the Local model step lists what it may do and what it cannot approve", async () => {
+    mounted(); mount();
+    const step = await screen.findByRole("region", { name: /Local model/ });
+    const text = step.textContent!;
+    expect(text).toContain("read and review the documents of this series' flows within the call cap");
+    expect(text).toContain("run the network work that the Calendar and Future copies already authorize");
+    expect(text).toContain("plan the copies the copy policy allows");
+    expect(text).toContain("save the cumulative dossier when its gates pass");
+    expect(text).toContain("approves no new network request, no paid model call and no purchase");
+    expect(text).toContain("gives no verdict");
+  });
+
+  it("the policy names the fetch rules it leaves in force", async () => {
+    mounted(); mount();
+    const step = await screen.findByRole("region", { name: /Future copies/ });
+    expect(step.textContent).toContain("robots.txt, the redirect checks, the refusal of non-global addresses and the per-domain failure budgets still apply");
+  });
+
+  it("the same in Italian", async () => {
+    localStorage.setItem(STORAGE_KEY, "it");
+    mounted(); mount();
+    const step = await screen.findByRole("region", { name: /Copie future/ });
+    expect(step.textContent).toContain("Restano in vigore robots.txt, i controlli sui reindirizzamenti");
+    expect((await screen.findByRole("region", { name: /Calendario/ })).textContent).toContain("Non prende copie, non usa il modello locale e non dà un verdetto.");
+    expect((await screen.findByRole("region", { name: /Modello locale/ })).textContent).toContain("Non approva nessuna nuova richiesta di rete");
+  });
+
+  it("the breadcrumb link is a touch target and the tables scroll sideways rather than the page", async () => {
+    mounted(); mount();
+    const plan = await screen.findByRole("region", { name: /Plan/ });
+    expect(plan.querySelector("table")!.parentElement!.className).toContain("overflow-x-auto");
+    expect(screen.getByRole("link", { name: "All series" }).className).toContain("min-h-11");
+  });
+
+  it("the copy button announces 'Copied' in an always-present live region and resets after 2 s", async () => {
+    const writeText = vi.fn(() => Promise.resolve());
+    vi.stubGlobal("navigator", { ...navigator, clipboard: { writeText } });
+    mounted(); mount();
+    const plan = await screen.findByRole("region", { name: /Plan/ });
+    const live = within(plan).getByRole("status");
+    expect(live.textContent).toBe("");
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    fireEvent.click(within(plan).getByRole("button", { name: /Copy/ }));
+    await act(async () => { await Promise.resolve(); });
+    expect(live.textContent).toBe("Copied");
+    await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
+    expect(live.textContent).toBe("");
+    vi.useRealTimers();
   });
 });
 

@@ -5,6 +5,7 @@ import ProjectTabs from "@/components/ProjectTabs";
 import AcquisitionPanel from "@/components/scheduler/AcquisitionPanel";
 import QuestionRows from "@/components/scheduler/QuestionRows";
 import ResultBanner from "@/components/scheduler/ResultBanner";
+import SaveStatus from "@/components/scheduler/SaveStatus";
 import { useApi } from "@/hooks/useApi";
 import { usePoll } from "@/hooks/usePoll";
 import { DOSSIER_MIN_MS, REFRESH_MS, useAsOf, useIdleReload, useVisibleInterval } from "@/hooks/useSchedulerRefresh";
@@ -49,7 +50,12 @@ function Body({ project, id }: { project: string; id: string }) {
   if (dossier.pending || !dossier.data) return <Pending label={t("sched.loading")} />;
   const d = dossier.data;
   const card = projects.data?.projects.find((p) => p.name === project);
-  const wholeStore = (card?.unbound_selectors ?? []).some((u) => u.slug === "-");
+  // A reader of the whole store: the "-" selector of unbound rounds, else a bound flow whose selector
+  // is the whole store. Without one, a question id is shown as text.
+  const base = `/p/${encodeURIComponent(project)}`;
+  const boundWhole = (card?.flows ?? []).find((f) => f.selector.round === null && !f.selector.manifest_only);
+  const readerBase = (card?.unbound_selectors ?? []).some((u) => u.slug === "-") ? `${base}/u/-`
+    : boundWhole ? `${base}/f/${encodeURIComponent(boundWhole.flow_id)}` : null;
   const saved = typeof d.finalized_dossier_id === "string" && d.snapshot_stale === false;
 
   return (
@@ -57,14 +63,16 @@ function Body({ project, id }: { project: string; id: string }) {
       <ResultBanner dossier={d} />
       {asOf ? <p className="text-xs text-muted-foreground">{t("sched.asOf", { time: formatUtc(asOf) })}</p> : null}
       <AcquisitionPanel audit={d.audit} />
-      <QuestionRows project={project} profiles={d.profiles} decisions={d.human_decisions} wholeStore={wholeStore} />
-      <div className="flex flex-col items-start gap-1">
+      <SaveStatus dossier={d} />
+      <QuestionRows profiles={d.profiles} decisions={d.human_decisions} readerBase={readerBase} />
+      <section aria-label={t("sched.res.download.title")} className="flex flex-col items-start gap-1">
+        <h2 className="text-base font-semibold">{t("sched.res.download.title")}</h2>
         <button type="button" onClick={() => download(d, `periodic-dossier-${id.slice(0, 12)}.json`)}
                 className="inline-flex min-h-11 items-center rounded-lg px-4 text-sm font-medium ring-1 ring-gray-300 hover:bg-gray-50 dark:ring-gray-700 dark:hover:bg-gray-900">
           {saved ? t("sched.res.download.saved") : t("sched.res.download.live")}
         </button>
         <p className="text-xs text-muted-foreground">{t("sched.res.download.note")}</p>
-      </div>
+      </section>
     </>
   );
 }
@@ -82,7 +90,7 @@ export default function CumulativeResultPage() {
     <section className="flex flex-col gap-5">
       <ProjectTabs project={project} />
       <nav aria-label="Breadcrumb" className="text-sm text-muted-foreground">
-        <Link to={series} className="hover:underline">{t("sched.res.back")}</Link>
+        <Link to={series} className="inline-flex min-h-11 items-center hover:underline">{t("sched.res.back")}</Link>
       </nav>
       <h1 className="font-serif text-4xl leading-tight font-normal">{t("sched.result.title")}</h1>
       {!session.ready ? (

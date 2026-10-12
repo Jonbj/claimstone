@@ -156,6 +156,8 @@ export interface Routes {
   mandateRead?: (id: string) => Promise<Response>;
   /** `unbound_selectors` slugs of the project `news` in the project list. */
   unbound?: string[];
+  /** Bound flows of the project in the project list (flow_id and selector). */
+  flows?: Array<{ flow_id: string; selector: { round: string | null; manifest_only: boolean } }>;
 }
 
 /** Stubs fetch by URL and records every request's URL. */
@@ -188,7 +190,7 @@ export function stub(routes: Routes): string[] {
     }
     if (url === "/api/v1/projects") {
       return json(200, { api_version: 1, projects: [{
-        name: "news", config: "OK", config_error: null, flows: [],
+        name: "news", config: "OK", config_error: null, flows: routes.flows ?? [],
         unbound_selectors: (routes.unbound ?? []).map((slug) => ({
           slug, label: slug, selector: { round: null, manifest_only: false } })),
       }] });

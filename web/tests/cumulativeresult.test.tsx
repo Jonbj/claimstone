@@ -7,6 +7,7 @@ import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { setCsrfToken } from "@/lib/control";
 import { LocaleProvider, STORAGE_KEY } from "@/lib/i18n";
+import { expectNoPurchaseWording } from "./support/purchase";
 import { SessionProvider } from "@/lib/session";
 import CumulativeResultPage from "@/pages/CumulativeResultPage";
 import {
@@ -158,18 +159,55 @@ describe("Cumulative result page", () => {
     expect(within(row).getByText("no literature verdict applies")).toBeTruthy();
   });
 
-  it("links a question to the whole-store reader only when the project lists the '-' selector", async () => {
+  it("links a question to the whole-store reader only when the project lists one", async () => {
     const body = resultDossier({ profiles: [profile("q1")], human_decisions: [decision("q1")] });
     stub({ ...served(body), unbound: ["-"] });
     mount();
     const link = await screen.findByRole("link", { name: "q1" });
     expect(link.getAttribute("href")).toBe("/p/news/u/-/q/q1");
+    expect(link.className).toContain("min-h-11");
     cleanup();
     stub({ ...served(body), unbound: ["r0"] });
     mount();
     const row = await screen.findByRole("row", { name: /q1/ });
     expect(within(row).queryByRole("link", { name: "q1" })).toBeNull();
     expect(within(row).getByText("q1")).toBeTruthy();
+  });
+
+  it("also links through a bound flow whose selector is the whole store", async () => {
+    const body = resultDossier({ profiles: [profile("q1")], human_decisions: [decision("q1")] });
+    stub({ ...served(body), flows: [{ flow_id: "flow-whole", selector: { round: null, manifest_only: false } }] });
+    mount();
+    expect((await screen.findByRole("link", { name: "q1" })).getAttribute("href")).toBe("/p/news/f/flow-whole/q/q1");
+    cleanup();
+    stub({ ...served(body), flows: [{ flow_id: "flow-r1", selector: { round: "r1", manifest_only: false } },
+                                    { flow_id: "flow-m", selector: { round: null, manifest_only: true } }] });
+    mount();
+    const row = await screen.findByRole("row", { name: /q1/ });
+    expect(within(row).queryByRole("link", { name: "q1" })).toBeNull();
+  });
+
+  it("is in the approved order: banner, acquisition, save status, questions, downloads", async () => {
+    stub(served(resultDossier({ profiles: [profile("q1")], human_decisions: [decision("q1")] })));
+    mount();
+    const names = ["Dossier", "Acquisition", "Saved dossier", "Questions", "Downloads"];
+    const regions = await Promise.all(names.map((name) => screen.findByRole("region", { name })));
+    for (let i = 1; i < regions.length; i++) {
+      expect(regions[i - 1].compareDocumentPosition(regions[i]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    }
+  });
+
+  it("the save status is its own section: saved id and time, superseded line, needs-saving fact, history count", async () => {
+    stub(served(resultDossier({ finalized_dossier_id: SHA("f"), finalized_at: "2026-10-10T08:00:00+00:00",
+      snapshot_stale: true, needs_finalization: true, history_count: 3 })));
+    mount();
+    const save = await screen.findByRole("region", { name: "Saved dossier" });
+    expect(save.textContent).toContain("ffffffffffff");
+    expect(save.textContent).toContain("10 Oct 2026, 08:00 UTC");
+    expect(within(save).getByText("The saved dossier no longer matches the current evidence.")).toBeTruthy();
+    expect(within(save).getByText("The current evidence has not been saved as a dossier yet.")).toBeTruthy();
+    expect(within(save).getByText("Dossiers saved so far: 3")).toBeTruthy();
+    expect(within(screen.getByRole("region", { name: "Dossier" })).queryByText(/no longer matches/)).toBeNull();
   });
 
   it("says under the questions that signing is per flow", async () => {
@@ -279,6 +317,18 @@ describe("Cumulative result page", () => {
     expect(urls.some((u) => u.includes("periodic-dossiers"))).toBe(false);
   });
 
+  it("offers no purchase, in either language", async () => {
+    stub(served(resultDossier({ profiles: [profile("q1")], human_decisions: [decision("q1")] })));
+    mount();
+    await screen.findByRole("region", { name: "Questions" });
+    expectNoPurchaseWording(document.body.textContent!, "en");
+    cleanup();
+    localStorage.setItem(STORAGE_KEY, "it");
+    mount();
+    await screen.findByRole("region", { name: "Domande" });
+    expectNoPurchaseWording(document.body.textContent!, "it");
+  });
+
   it("renders in Italian", async () => {
     localStorage.setItem(STORAGE_KEY, "it");
     stub(served(resultDossier({ state: "WAITING_FOR_EVIDENCE", profiles: [profile("q1")], human_decisions: [decision("q1")] })));
@@ -288,5 +338,17 @@ describe("Cumulative result page", () => {
     expect(screen.getByRole("region", { name: "Acquisizione" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Scarica il rapporto in tempo reale (JSON)" })).toBeTruthy();
     expect(screen.getByText("non firmata")).toBeTruthy();
+  });
+});
+
+describe("Cumulative result page download note", () => {
+  beforeEach(() => setCsrfToken(null));
+  afterEach(() => { cleanup(); vi.unstubAllGlobals(); localStorage.clear(); });
+  it("says the file holds the same data the page shows, not that it is what was just read", async () => {
+    stub(served(resultDossier()));
+    mount();
+    const downloads = await screen.findByRole("region", { name: "Downloads" });
+    expect(downloads.textContent).toContain("The file holds the same data this page shows.");
+    expect(downloads.textContent).not.toMatch(/exactly/);
   });
 });

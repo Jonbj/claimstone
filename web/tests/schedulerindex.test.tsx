@@ -5,6 +5,7 @@ import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { setCsrfToken } from "@/lib/control";
 import { LocaleProvider, STORAGE_KEY } from "@/lib/i18n";
+import { expectNoPurchaseWording } from "./support/purchase";
 import { SessionProvider } from "@/lib/session";
 import SchedulerPage from "@/pages/SchedulerPage";
 import {
@@ -159,6 +160,18 @@ describe("Scheduler index", () => {
     expect(urls).toContain("/control/v1/p/news/scheduler?limit=25&cursor=c1");
   });
 
+  it("offers no purchase, in either language", async () => {
+    stub({ index: [() => json(200, TWO())] });
+    mount();
+    await screen.findAllByRole("listitem", { name: /^Series / });
+    expectNoPurchaseWording(document.body.textContent!, "en");
+    cleanup();
+    localStorage.setItem(STORAGE_KEY, "it");
+    mount();
+    await screen.findAllByRole("listitem", { name: /^Serie / });
+    expectNoPurchaseWording(document.body.textContent!, "it");
+  });
+
   it("empty: says so and offers the New series button", async () => {
     stub({});
     mount();
@@ -183,6 +196,23 @@ describe("Scheduler index", () => {
     expect(word.textContent).toBe("Autorizzato");
     expect(screen.getByRole("link", { name: "Nuova serie" })).toBeTruthy();
     expect(screen.getAllByText("non deciso").length).toBeGreaterThan(0);
+  });
+});
+
+describe("Scheduler index focus", () => {
+  beforeEach(() => setCsrfToken(null));
+  afterEach(() => { cleanup(); vi.unstubAllGlobals(); localStorage.clear(); });
+  it("moves focus to the series list when Load more disappears", async () => {
+    stub({ indexFor: (url) => json(200, url.includes("cursor=c1")
+      ? indexPage({ schedules: [schedule("PLANNED", {}, FUTURE, OTHER)] })
+      : indexPage({ schedules: [schedule("PLANNED", {}, PAST, SID)] }, "c1")) });
+    mount();
+    await screen.findAllByRole("listitem", { name: /^Series / });
+    const button = screen.getByRole("button", { name: "Load more" });
+    button.focus();
+    fireEvent.click(button);
+    await waitFor(() => expect(screen.queryByRole("button", { name: "Load more" })).toBeNull());
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("list", { name: "Series" })));
   });
 });
 

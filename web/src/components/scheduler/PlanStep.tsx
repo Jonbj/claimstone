@@ -1,26 +1,17 @@
-import { useState } from "react";
 import { useLocale } from "@/lib/i18n";
 import type { ScheduleStatus } from "@/lib/scheduler";
+import CopyButton from "./CopyButton";
 import StepCard from "./StepCard";
 import { utcRange } from "./format";
 
 export default function PlanStep({ schedule }: { schedule: ScheduleStatus }) {
   const { t } = useLocale();
-  const [copied, setCopied] = useState(false);
   const total = schedule.plan.max_total_requests;
-
-  async function copy() {
-    try {
-      await navigator.clipboard.writeText(schedule.schedule_id);
-      setCopied(true);
-    } catch {
-      setCopied(false);
-    }
-  }
 
   return (
     <StepCard n={1} title={t("sched.plan.title")} permits={t("sched.plan.permits")}
               forbids={t("sched.plan.forbids")} spend={t("sched.plan.spend", { n: total })}>
+      <div className="overflow-x-auto">
       <table className="w-full text-left text-xs">
         <thead>
           <tr>
@@ -41,14 +32,12 @@ export default function PlanStep({ schedule }: { schedule: ScheduleStatus }) {
           ))}
         </tbody>
       </table>
+      </div>
       <p>{t("sched.plan.total", { n: total })}</p>
       <p className="flex flex-wrap items-center gap-2">
         <span className="text-muted-foreground">{t("sched.series.id")}</span>
         <code className="font-mono text-xs break-all">{schedule.schedule_id}</code>
-        <button type="button" onClick={copy}
-                className="inline-flex min-h-11 items-center rounded-lg px-3 text-xs ring-1 ring-gray-300 dark:ring-gray-700">
-          {copied ? t("sched.series.copied") : t("sched.series.copy")}
-        </button>
+        <CopyButton value={schedule.schedule_id} label={t("sched.series.copyPlanHash")} />
       </p>
     </StepCard>
   );
