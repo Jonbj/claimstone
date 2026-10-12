@@ -1149,7 +1149,7 @@ def test_every_non_public_get_route_refuses_an_anonymous_request(tmp_path, state
 
 Use the exact Authlib calls recorded in the Task 0 note wherever they differ from the code below.
 
-- [ ] **Step 1: `pyproject.toml`** — add under `[project]`: `optional-dependencies = { login = ["authlib>=1.3", "cryptography>=42"] }` and `.[dev]`-style test environments must install it (`.venv/bin/pip install -e ".[login]"`).
+- [ ] **Step 1: `pyproject.toml`** — add under `[project]`: `optional-dependencies = { login = ["authlib>=1.3,<2", "cryptography>=42"] }` (the spike found `authlib.jose` deprecated in favour of `joserfc`, promised only before 2.0; `google_login.py` filters `AuthlibDeprecationWarning` at import so the suite stays quiet) and `.[dev]`-style test environments must install it (`.venv/bin/pip install -e ".[login]"`).
 
 - [ ] **Step 2: Failing tests** — `tests/test_google_login.py`. The fake provider signs ID tokens with a generated RSA key and is injected through the same seam production uses:
 
@@ -1246,6 +1246,8 @@ def test_a_wrong_state_is_refused_before_anything_is_exchanged(flow):
     assert raised.value.code == "bad_state"
 ```
 Run → FAIL (module missing).
+
+**Spike findings (commit 4f9fdc0, `docs/superpowers/notes/2026-10-12-google-login-spike.md`) that bind this task:** keys are looked up by the token header `kid`, so the fake provider's key set and the tokens it signs must carry the same `kid` (the test code below does); `claims.validate()` is what checks `exp`/`iss`/`aud`/`nonce`, `decode` checks the signature; an HS256 alg-confusion token raises a builtin `KeyError` and an unknown `kid` a `ValueError` — neither is a `JoseError`, which is why `finish()` wraps `decode` and `validate` in a fail-closed `except Exception`; Google's issuer is either `https://accounts.google.com` or `accounts.google.com`. Add two tests to `tests/test_google_login.py`: an `alg: none` token and an unknown-`kid` token are each refused with `GoogleError("bad_token")`. Register the redirect URI as `http://localhost:<port>/control/v1/login/google/callback`; `127.0.0.1` is only implied by Google's wording and is confirmed (or not) in Task 10.
 
 - [ ] **Step 3: `claimstone/google_login.py`**
 
