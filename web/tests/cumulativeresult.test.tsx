@@ -352,3 +352,55 @@ describe("Cumulative result page download note", () => {
     expect(downloads.textContent).not.toMatch(/exactly/);
   });
 });
+
+describe("Cumulative result page, the acceptance walkthrough", () => {
+  beforeEach(() => setCsrfToken(null));
+  afterEach(() => { cleanup(); vi.unstubAllGlobals(); localStorage.clear(); });
+
+  it("INSUFFICIENT_ACQUISITION with no profiles shows the blocker in the first section, with the state word", async () => {
+    stub(served(resultDossier({ state: "INSUFFICIENT_ACQUISITION", profiles: [], human_decisions: [],
+      blockers: ["SCHEDULE_OR_ROUND_INCOMPLETE", "INSUFFICIENT_CUMULATIVE_ACQUISITION", "NO_ADMISSIBLE_PROFILE"] })));
+    mount();
+    const banner = await screen.findByRole("region", { name: "Dossier" });
+    expect(within(banner).getByTitle("INSUFFICIENT_ACQUISITION").textContent).toBe("Acquisition below the floor");
+    for (const code of ["SCHEDULE_OR_ROUND_INCOMPLETE", "INSUFFICIENT_CUMULATIVE_ACQUISITION", "NO_ADMISSIBLE_PROFILE"]) {
+      expect(within(banner).getByText(code)).toBeTruthy();
+    }
+    const first = screen.getAllByRole("region")[0];
+    expect(first).toBe(banner);
+    expect(screen.getByText("No questions to show.")).toBeTruthy();
+  });
+
+  it("a superseded dossier says it no longer matches, and the previous signature stays with its stale marker", async () => {
+    stub(served(resultDossier({
+      finalized_dossier_id: SHA("e"), snapshot_stale: true, profiles: [profile("q1", { profile_sha256: SHA("b") })],
+      human_decisions: [decision("q1", { verdict: { verdict: "CONTESTED_IN_LITERATURE" }, stale: true })],
+    })));
+    mount();
+    expect(await screen.findByText("The saved dossier no longer matches the current evidence.")).toBeTruthy();
+    const row = screen.getByRole("row", { name: /q1/ });
+    expect(within(row).getByText("CONTESTED_IN_LITERATURE")).toBeTruthy();
+    expect(within(row).getByText("stale")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Download live report (JSON)" })).toBeTruthy();
+  });
+
+  it("a null rate is a dash in the panel, never NaN", async () => {
+    stub(served(resultDossier({}, { cumulative_admission: admission({ found: 0, confirmed: 0, obtained: 0, rate: null, rate_upper: null, basis: "obtained", blocking: [], final: true }) })));
+    mount();
+    const panel = await screen.findByRole("region", { name: "Acquisition" });
+    expect(within(panel).getAllByText(/rate —/).length).toBeGreaterThan(0);
+    expect(panel.textContent).not.toMatch(/NaN/);
+  });
+
+  it("READY_FOR_HUMAN_READING preselects nothing: no input, no verdict word, signatures only where they exist", async () => {
+    stub(served(resultDossier({ state: "READY_FOR_HUMAN_READING", blockers: [], needs_finalization: true,
+      profiles: [profile("q1"), profile("q2")], human_decisions: [decision("q1"), decision("q2")] })));
+    mount();
+    const banner = await screen.findByRole("region", { name: "Dossier" });
+    expect(within(banner).getByTitle("READY_FOR_HUMAN_READING").textContent).toBe("Ready for a person to read");
+    expect(document.querySelectorAll("input, select, textarea")).toHaveLength(0);
+    expect(document.querySelectorAll("[aria-checked=true], [aria-selected=true], [checked]")).toHaveLength(0);
+    expect(document.body.textContent).not.toMatch(/SUPPORTED|CONTRADICTED|CONTESTED_IN_LITERATURE|UNANSWERED_IN_LITERATURE|NEVER_ASKED/);
+    expect(screen.getAllByText("not signed")).toHaveLength(2);
+  });
+});
