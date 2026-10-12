@@ -27,7 +27,7 @@ import ssl
 import threading
 import time
 from collections import deque
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from http.cookies import SimpleCookie
 from http.server import ThreadingHTTPServer
@@ -56,6 +56,8 @@ MAX_BODY = 64 * 1024  # §1.3 rule 3; B7b's upload is the one later exception
 SESSION_IDLE_SECONDS = 12 * 60 * 60   # 12 hours of inactivity
 LOGIN_WINDOW_SECONDS = 15 * 60        # per operator id
 LOGIN_FAILURE_LIMIT = 5
+SESSION_ABSOLUTE_SECONDS = 7 * 24 * 60 * 60   # a session never outlives a week, activity or not
+ADDRESS_FAILURE_LIMIT = 20                    # failed logins per remote address per window
 
 IDEMPOTENCY_SECONDS = 24 * 60 * 60   # a replayed key is answered from memory for a day
 IDEMPOTENCY_MAX = 10_000             # oldest entries are dropped beyond this
@@ -82,48 +84,93 @@ class Session:
     operator_id: str
     operator_name: str
     csrf_token: str
+    session_id: str = ""
+    role: str = "operator"
+    method: str = "password"
+    must_change_password: bool = False
+    created_at: str = ""
 
 
 class Sessions:
-    """In-memory sessions with an inactivity timeout. No token ever touches a disk."""
+    """In-memory sessions: an inactivity timeout and an absolute lifetime. No token ever touches
+    a disk. `session_id` is public (listed to its owner); the token is the secret."""
 
     def __init__(self, idle_seconds: int = SESSION_IDLE_SECONDS,
+                 absolute_seconds: int = SESSION_ABSOLUTE_SECONDS,
                  clock: Callable[[], float] = time.monotonic) -> None:
         self._idle = float(idle_seconds)
+        self._absolute = float(absolute_seconds)
         self._clock = clock
         self._lock = threading.Lock()
         self._expires: dict[str, float] = {}
+        self._dies: dict[str, float] = {}
         self._rows: dict[str, Session] = {}
+        self._seen: dict[str, str] = {}
 
-    def create(self, operator_id: str, operator_name: str) -> tuple[str, Session]:
-        """(cookie token, session). The cookie token is 32 random bytes, hex-encoded."""
+    def _drop(self, token: str) -> None:
+        for table in (self._expires, self._dies, self._rows, self._seen):
+            table.pop(token, None)
+
+    def create(self, operator_id: str, operator_name: str, *, role: str = "operator",
+               method: str = "password", must_change: bool = False) -> tuple[str, Session]:
+        """(cookie token, session). A new token every time: no session fixation."""
         token = secrets.token_hex(32)
-        session = Session(operator_id, operator_name, secrets.token_hex(32))
+        session = Session(operator_id, operator_name, secrets.token_hex(32),
+                          session_id=secrets.token_hex(8), role=role, method=method,
+                          must_change_password=must_change, created_at=_now_iso())
         with self._lock:
             now = self._clock()
-            for held in [t for t, until in self._expires.items() if until <= now]:
-                self._expires.pop(held, None)
-                self._rows.pop(held, None)
+            for held in [t for t, until in self._expires.items()
+                         if until <= now or self._dies[t] <= now]:
+                self._drop(held)
             self._expires[token] = now + self._idle
+            self._dies[token] = now + self._absolute
             self._rows[token] = session
+            self._seen[token] = session.created_at
         return token, session
 
     def get(self, token: str) -> Session | None:
+        """The session if both the idle window and the absolute lifetime still hold."""
         with self._lock:
             until = self._expires.get(token)
             if until is None:
                 return None
-            if self._clock() > until:
-                self._expires.pop(token, None)
-                self._rows.pop(token, None)
+            now = self._clock()
+            if now > until or now > self._dies[token]:
+                self._drop(token)
                 return None
-            self._expires[token] = self._clock() + self._idle  # activity refreshes
+            self._expires[token] = now + self._idle   # activity refreshes the idle window only
+            self._seen[token] = _now_iso()
             return self._rows[token]
 
     def end(self, token: str) -> None:
         with self._lock:
-            self._expires.pop(token, None)
-            self._rows.pop(token, None)
+            self._drop(token)
+
+    def clear_must_change(self, token: str) -> None:
+        with self._lock:
+            if token in self._rows:
+                self._rows[token] = replace(self._rows[token], must_change_password=False)
+
+    def list_for(self, operator_id: str, current_token: str | None) -> list[dict[str, Any]]:
+        with self._lock:
+            return [{"session_id": s.session_id, "created_at": s.created_at,
+                     "last_seen": self._seen.get(t, s.created_at), "method": s.method,
+                     "current": t == current_token}
+                    for t, s in self._rows.items() if s.operator_id == operator_id]
+
+    def end_others(self, operator_id: str, keep_token: str | None) -> int:
+        return self._end_where(operator_id, keep_token)
+
+    def end_operator(self, operator_id: str) -> int:
+        return self._end_where(operator_id, None)
+
+    def _end_where(self, operator_id: str, keep: str | None) -> int:
+        with self._lock:
+            doomed = [t for t, s in self._rows.items() if s.operator_id == operator_id and t != keep]
+            for token in doomed:
+                self._drop(token)
+            return len(doomed)
 
 
 class LoginBudget:
@@ -341,6 +388,7 @@ class _Handler(BaseHandler):
 
     sessions: Sessions
     login_budget: LoginBudget
+    address_budget: LoginBudget
     idempotency: Idempotency
     state_dir: pathlib.Path
     # Name resolution for the intake URL check. None is the system resolver; tests pass a
@@ -1712,6 +1760,7 @@ def make_server(projects_dir: str | pathlib.Path = "projects",
         "state_dir": operators.state_dir(state_dir),
         "sessions": Sessions(),
         "login_budget": LoginBudget(),
+        "address_budget": LoginBudget(limit=ADDRESS_FAILURE_LIMIT),
         "idempotency": Idempotency(),
         "resolver": staticmethod(resolver) if resolver is not None else None,
         "extract_text": staticmethod(extract_text) if extract_text is not None else None,
