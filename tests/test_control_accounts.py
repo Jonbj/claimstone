@@ -1,11 +1,13 @@
 """Accounts and sign-in on the control server (design 2026-10-12): session unit tests."""
 
+import contextlib
 import json
+import threading
 
 import pytest
 
 from claimstone import auth_events, control, operators
-from tests.test_control import _cookie, _login, _request, _served
+from tests.test_control import _cookie, _login, _request, _served as _served_default
 
 
 class Clock:
@@ -100,6 +102,23 @@ def test_must_change_password_can_be_cleared():
 
 PW = "correct horse battery"
 BASE = "/control/v1"
+
+
+@contextlib.contextmanager
+def _served(tmp_path, state, **options):
+    if not options:
+        with _served_default(tmp_path, state) as pair:
+            yield pair
+        return
+    httpd = control.make_server(tmp_path / "projects", tmp_path / "store", host="127.0.0.1",
+                                port=0, state_dir=state, **options)
+    thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+    thread.start()
+    try:
+        yield httpd, f"http://127.0.0.1:{httpd.server_address[1]}"
+    finally:
+        httpd.shutdown()
+        thread.join(timeout=5)
 
 
 @pytest.fixture()
@@ -321,13 +340,63 @@ def test_password_routes_ignore_the_idempotency_key(tmp_path, state):
     with _served(tmp_path, state) as (_h, base):
         adm, _ = _signed(base)
         key = {**adm, "Idempotency-Key": "k-1"}
-        first = _post(base, "/people/ann/password", {"password": PW, "new_password": "temporary secret 2"}, key)
-        assert first[0] == 200
-        # same key, same body: executed again, not replayed from memory (re-authentication is checked)
-        bad = _post(base, "/people/ann/password", {"password": "nope nope nope!", "new_password": "temporary secret 2"}, key)
+        body = {"password": PW, "new_password": "temporary secret 2"}
+        assert _post(base, "/people/ann/password", body, key)[0] == 200
+        # the IDENTICAL request again: a replay would answer from memory; this executes
+        assert _post(base, "/people/ann/password", body, key)[0] == 200
+        # and a different body under the same key is executed (a replay would answer 409)
+        bad = _post(base, "/people/ann/password", {**body, "password": "nope nope nope!"}, key)
         assert bad[0] == 403
-        again = _post(base, "/people/ann/password", {"password": PW, "new_password": "temporary secret 2"}, key)
-        assert again[0] == 200
+    events = [json.loads(line) for line in (state / "auth_events.jsonl").read_text().splitlines()]
+    assert [e["event"] for e in events].count("password_set_by_admin") == 2
+
+
+def test_every_route_that_reads_a_password_is_no_replay():
+    import inspect
+    import re
+    reads = re.compile(r"""_only_keys\([^)]*["'](password|current|new_password|temporary_password)["']""")
+    found = set()
+    for route in control.ROUTES:
+        if route.public or route.method != "POST":
+            continue
+        source = inspect.getsource(getattr(control._Handler, route.handler))
+        if reads.search(source):
+            found.add(route.handler)
+            assert route.no_replay, route
+    assert {"_account_password", "_people_create", "_people_password", "_people_disable",
+            "_people_enable", "_people_email", "_people_role", "_admin_credential"} <= found
+
+
+def test_credentials_and_outbound_checks_are_admin_powers(tmp_path, state):
+    with _served(tmp_path, state) as (_h, base):
+        ann, _ = _signed(base, "ann")
+        adm, _ = _signed(base)
+        for method, path, payload in (("GET", "/admin", None),
+                                      ("POST", "/admin/check", {"target": "openalex"}),
+                                      ("POST", "/admin/credential", {"name": "X", "value": "y", "password": PW}),
+                                      ("POST", "/admin/paid-test", {})):
+            denied = _request(f"{base}{BASE}{path}", method, payload, headers=ann)
+            assert denied[0] == 403 and denied[2]["error"]["code"] == "FORBIDDEN", (path, denied)
+        assert _request(f"{base}{BASE}/admin", headers=adm)[0] == 200
+        assert _post(base, "/admin/paid-test", {}, adm)[0] == 501
+
+
+def test_a_spoofed_x_real_ip_is_ignored_without_the_flag(tmp_path, state):
+    with _served(tmp_path, state) as (_h, base):
+        for n in range(20):
+            assert _login(base, f"nobody{n}", "wrong wrong wrong", headers={"X-Real-IP": f"10.0.0.{n}"})[0] == 401
+        assert _login(base, "adm", PW, headers={"X-Real-IP": "10.9.9.9"})[0] == 429
+
+
+def test_with_trust_forwarded_each_real_ip_has_its_own_address_budget(tmp_path, state):
+    with _served(tmp_path, state, trust_forwarded=True) as (_h, base):
+        for n in range(20):
+            assert _login(base, f"nobody{n}", "wrong wrong wrong", headers={"X-Real-IP": "10.0.0.1"})[0] == 401
+        assert _login(base, "adm", PW, headers={"X-Real-IP": "10.0.0.1"})[0] == 429
+        assert _login(base, "adm", PW, headers={"X-Real-IP": "10.0.0.2"})[0] == 200
+        # a header that is not an address is ignored: the peer's own address is the key
+        assert _login(base, "ann", PW, headers={"X-Real-IP": "not an address"})[0] == 200
+    assert "10.0.0.1" in (state / "auth_events.jsonl").read_text()
 
 
 # --- revocation holds: the credential stamp is checked on every request --------------------------------

@@ -424,6 +424,8 @@ class _Handler(BaseHandler):
     env_file: Any = None
     # Google sign-in, once configured (Task 7 sets it); None answers `{"google": false}`.
     google: Any = None
+    # Trust X-Real-IP for the address budget. Only for a server whose single peer is the proxy.
+    trust_forwarded: bool = False
 
     # While a person must set a new password, only these (and the public routes) answer.
     ALLOWED_WHILE_CHANGING = frozenset({"_session_read", "_session_end", "_account_password",
@@ -632,6 +634,14 @@ class _Handler(BaseHandler):
             raise ControlError(403, "PASSWORD_CHANGE_REQUIRED", "set a new password first")
 
     def _remote(self) -> str:
+        """The address the budgets key on: the peer's, or — only behind a proxy that overwrites
+        X-Real-IP, and only with `trust_forwarded` — the address that header names."""
+        if self.trust_forwarded:
+            claimed = (self.headers.get("X-Real-IP") or "").strip()
+            try:
+                return str(ipaddress.ip_address(claimed))
+            except ValueError:
+                pass
         return str(self.client_address[0])
 
     def _require_csrf(self, session: Session | None = None) -> Session:
@@ -1133,8 +1143,11 @@ def _export_verify(self: _Handler, params: dict[str, str], query: Any,
 def _admin_read(self: _Handler, params: dict[str, str], query: Any,
                 body: dict[str, Any]) -> tuple[Any, int]:
     """Presence of credentials, configured backends, instruments, and the last recorded check per
-    service. Nothing is contacted to answer this."""
-    self._require_session()
+    service. Nothing is contacted to answer this.
+
+    2026-10-12: the B11 routes are admin powers — credentials and outbound checks are changed by an
+    admin; operators read and sign."""
+    _require_admin(self)
     state = portal_state.admin_state(pathlib.Path(self.projects_dir).resolve().parent)
     return {**state, "checks": admin.latest_checks(self.state_dir),
             "check_targets": admin.targets()}, 200
@@ -1143,7 +1156,7 @@ def _admin_read(self: _Handler, params: dict[str, str], query: Any,
 def _admin_check(self: _Handler, params: dict[str, str], query: Any,
                  body: dict[str, Any]) -> tuple[Any, int]:
     self._only_keys(body, frozenset({"target"}))
-    session = self._require_session()
+    session = _require_admin(self)
     try:
         row = admin.check(self.state_dir, target=body.get("target"), actor=session.operator_id,
                           http_get=self.http_get)
@@ -1169,7 +1182,7 @@ def _admin_credential(self: _Handler, params: dict[str, str], query: Any,
     """Replace one credential, with the password asked again (spec B11). A wrong password counts
     against the same budget as a failed login, so this route is no side door for guessing."""
     self._only_keys(body, frozenset({"name", "value", "password"}))
-    session = self._require_session()
+    session = _require_admin(self)
     _reauth(self, session, body.get("password"))
     if self.env_file is None:
         raise ControlError(409, "CREDENTIALS_READ_ONLY",
@@ -1185,7 +1198,7 @@ def _admin_credential(self: _Handler, params: dict[str, str], query: Any,
 
 def _admin_paid_test(self: _Handler, params: dict[str, str], query: Any,
                      body: dict[str, Any]) -> tuple[Any, int]:
-    self._require_session()
+    _require_admin(self)
     raise ControlError(
         501, "NOT_IMPLEMENTED",
         "a paid test call needs the model-call boundary and a cost reservation; it belongs to the "
@@ -1924,7 +1937,8 @@ def make_server(projects_dir: str | pathlib.Path = "projects",
                 allow_hosts: tuple[str, ...] = (),
                 state_dir: str | pathlib.Path | None = None,
                 resolver: Any = None, extract_text: Any = None, http_get: Any = None,
-                env_file: str | pathlib.Path | None = None) -> ThreadingHTTPServer:
+                env_file: str | pathlib.Path | None = None,
+                trust_forwarded: bool = False) -> ThreadingHTTPServer:
     """The control server. A non-loopback bind is refused outright — this process
     writes, so it does not proceed on a warning the way the read-only servers do —
     unless `--allow-host` names the authority of the proxy that fronts it."""
@@ -1957,6 +1971,7 @@ def make_server(projects_dir: str | pathlib.Path = "projects",
         "env_file": (None if str(env_file) == "none" else pathlib.Path(env_file))
         if env_file is not None else pathlib.Path(projects_dir).resolve().parent / ".env",
         "started_at": _now_iso(),
+        "trust_forwarded": bool(trust_forwarded),
     })
     httpd = ThreadingHTTPServer((host, port), handler)
     handler.bind_port = int(httpd.server_address[1])
@@ -1967,10 +1982,11 @@ def serve(projects_dir: str | pathlib.Path = "projects",
           store_dir: str | pathlib.Path = "store", *, host: str = "127.0.0.1",
           port: int = 8790, allow_hosts: tuple[str, ...] = (),
           state_dir: str | pathlib.Path | None = None,
-          env_file: str | pathlib.Path | None = None) -> None:
+          env_file: str | pathlib.Path | None = None, trust_forwarded: bool = False) -> None:
     """Block and serve the control API."""
     httpd = make_server(projects_dir, store_dir, host=host, port=port,
-                        allow_hosts=allow_hosts, state_dir=state_dir, env_file=env_file)
+                        allow_hosts=allow_hosts, state_dir=state_dir, env_file=env_file,
+                        trust_forwarded=trust_forwarded)
     print(f"claimstone control — http://{host}:{port}/control/v1/session  "
           "(authenticated writes; Ctrl-C to stop)")
     try:

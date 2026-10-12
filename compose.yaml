@@ -271,7 +271,8 @@ services:
               "--allow-host", "127.0.0.1:${CLAIMSTONE_PORTAL_PORT:-8788}",
               "--allow-host", "localhost:${CLAIMSTONE_PORTAL_PORT:-8788}",
               "--state-dir", "/app/.claimstone",
-              "--credentials-file", "none"]
+              "--credentials-file", "none",
+              "--trust-forwarded"]
     environment:
       CLAIMSTONE_ROOT: /app
       PYTHONDONTWRITEBYTECODE: "1"

@@ -1357,7 +1357,8 @@ def _control(args: argparse.Namespace) -> int:
     try:
         control.serve(args.projects, args.store, host=args.bind, port=args.port,
                       allow_hosts=tuple(args.allow_host), state_dir=args.state_dir,
-                      env_file=args.credentials_file)
+                      env_file=args.credentials_file,
+                      trust_forwarded=args.trust_forwarded)
     except ValueError as exc:
         # The refused non-loopback bind: this process writes, so unlike the read-only
         # servers it does not proceed on a warning (spec B4).
@@ -1892,6 +1893,10 @@ def build_parser() -> argparse.ArgumentParser:
     control_cmd.add_argument("--credentials-file", default=None, metavar="PATH|none",
                              help="the .env credential writes go to (default: beside the "
                                   "projects directory); `none` turns credential writes off")
+    control_cmd.add_argument("--trust-forwarded", action="store_true",
+                             help="key the login address budget on X-Real-IP: the only peer that "
+                                  "can reach this server is the reverse proxy that sets "
+                                  "X-Real-IP; never use it with a published port")
     control_cmd.set_defaults(func=_control)
 
     operator_cmd = sub.add_parser("operator", help="who may hold a control-API session")
