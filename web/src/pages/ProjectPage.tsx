@@ -3,6 +3,7 @@ import Chip from "@/components/Chip";
 import ErrorState from "@/components/ErrorState";
 import RowFields from "@/components/RowFields";
 import IntegrityPanel from "@/components/IntegrityPanel";
+import ProjectTabs from "@/components/ProjectTabs";
 import Pending from "@/components/Pending";
 import { useApi } from "@/hooks/useApi";
 import { usePoll } from "@/hooks/usePoll";
@@ -66,6 +67,7 @@ export default function ProjectPage() {
           </p>
         ) : null}
       </header>
+      <ProjectTabs project={project} />
 
       <section aria-label="Research" className="flex flex-col gap-3">
         <h2 className="text-sm font-semibold">Research</h2>

@@ -100,4 +100,12 @@ describe("F2: project page", () => {
     expect(screen.queryByText("the journey of flow")).toBeNull();
     expect(screen.getByText(/^Technical details/).closest("details")!.open).toBe(true);
   });
+
+  it("shows the Flows | Scheduler tabs, the Flows tab pointing at the details view", async () => {
+    flows = [flow("flowaaaaaaaaaaaa", "CURRENT", "Initial research")];
+    mount("/p/demo?details=1");
+    await screen.findByRole("link", { name: /Initial research/ });
+    expect(screen.getByRole("link", { name: "Flows" }).getAttribute("href")).toBe("/p/demo?details=1");
+    expect(screen.getByRole("link", { name: "Scheduler" }).getAttribute("href")).toBe("/p/demo/scheduler");
+  });
 });

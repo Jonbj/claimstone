@@ -4,6 +4,7 @@ import AccountPage from "@/pages/AccountPage";
 import AdminPage from "@/pages/AdminPage";
 import { LocaleProvider } from "@/lib/i18n";
 import { SessionProvider } from "@/lib/session";
+import CumulativeResultPage from "@/pages/CumulativeResultPage";
 import ClaimPage from "@/pages/ClaimPage";
 import DecisionsPage from "@/pages/DecisionsPage";
 import ExportPage from "@/pages/ExportPage";
@@ -13,10 +14,13 @@ import InboxPage from "@/pages/InboxPage";
 import LoginPage from "@/pages/LoginPage";
 import MaterialPage from "@/pages/MaterialPage";
 import NewProjectsPage from "@/pages/NewProjectsPage";
+import NewSeriesPage from "@/pages/NewSeriesPage";
 import NotFoundPage from "@/pages/NotFoundPage";
 import PeoplePage from "@/pages/PeoplePage";
 import ProjectPage from "@/pages/ProjectPage";
 import QuestionPage from "@/pages/QuestionPage";
+import SchedulerPage from "@/pages/SchedulerPage";
+import SeriesPage from "@/pages/SeriesPage";
 import SourcePage from "@/pages/SourcePage";
 import TodayPage from "@/pages/TodayPage";
 import WizardPage from "@/pages/WizardPage";
@@ -59,6 +63,10 @@ const router = createBrowserRouter([
       { path: "p/:project/u/:sel/claim/:cid", element: <ClaimPage kind="u" /> },
       { path: "p/:project/f/:sel/source/:key", element: <SourcePage kind="f" /> },
       { path: "p/:project/u/:sel/source/:key", element: <SourcePage kind="u" /> },
+      { path: "p/:project/scheduler", element: <SchedulerPage /> },
+      { path: "p/:project/scheduler/new", element: <NewSeriesPage /> },
+      { path: "p/:project/scheduler/s/:schedule", element: <SeriesPage /> },
+      { path: "p/:project/scheduler/s/:schedule/result", element: <CumulativeResultPage /> },
       { path: "*", element: <NotFoundPage /> },
     ],
   },

@@ -265,5 +265,22 @@
       "newTemporary": "Temporary password",
       "created": "Give them the temporary password in person; they must choose their own at first sign-in."
     }
+  },
+  "sched": {
+    "title": "Scheduler",
+    "tabs": {
+      "label": "Project sections",
+      "flows": "Flows",
+      "scheduler": "Scheduler"
+    },
+    "series": {
+      "title": "Series"
+    },
+    "result": {
+      "title": "Cumulative result"
+    },
+    "new": {
+      "title": "New series"
+    }
   }
 }

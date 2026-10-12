@@ -265,5 +265,22 @@
       "newTemporary": "Password temporanea",
       "created": "Consegna di persona la password temporanea: al primo accesso dovrà sceglierne una sua."
     }
+  },
+  "sched": {
+    "title": "Scheduler",
+    "tabs": {
+      "label": "Sezioni del progetto",
+      "flows": "Flussi",
+      "scheduler": "Scheduler"
+    },
+    "series": {
+      "title": "Serie"
+    },
+    "result": {
+      "title": "Risultato cumulativo"
+    },
+    "new": {
+      "title": "Nuova serie"
+    }
   }
 }

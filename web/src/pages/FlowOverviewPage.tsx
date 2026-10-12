@@ -9,6 +9,7 @@ import JourneySteps from "@/components/JourneySteps";
 import { NeedsYou, RunningNote, TheQuestions, TheTopic } from "@/components/JourneySide";
 import OperationsPanel from "@/components/OperationsPanel";
 import OverviewKpis from "@/components/OverviewKpis";
+import ProjectTabs from "@/components/ProjectTabs";
 import Pending from "@/components/Pending";
 import QuestionMatrix from "@/components/QuestionMatrix";
 import SelectionPanel from "@/components/SelectionPanel";
@@ -62,6 +63,7 @@ export default function FlowOverviewPage({ kind }: { kind: "f" | "u" }) {
           <Link to="/projects" className="hover:underline">Projects</Link> /{" "}
           <Link to={`/p/${encodeURIComponent(project)}`} className="hover:underline">{data.project}</Link>
         </nav>
+        <ProjectTabs project={project} />
         <h1 className="font-serif text-4xl leading-tight font-normal">
           {flowTitle || data.selector_label}
           {data.legacy ? " — legacy" : ""}
