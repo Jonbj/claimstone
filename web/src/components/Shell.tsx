@@ -62,7 +62,7 @@ function Operator() {
   const { pathname, search } = useLocation();
   const { t } = useLocale();
   if (!session.ready) {
-    return <span className="text-xs text-rail-muted">checking session…</span>;
+    return <span className="text-xs text-rail-muted">{t("shell.checking")}</span>;
   }
   if (session.operator) {
     return (

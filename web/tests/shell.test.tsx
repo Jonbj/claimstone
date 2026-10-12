@@ -1,6 +1,6 @@
 // F1: the shell. Signed out it offers Sign in (with the page to come back to); signed in it
 // shows the operator and Sign out. The rail has no Inbox link, and New project links to the wizard.
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import Shell from "@/components/Shell";
@@ -26,6 +26,7 @@ function mount(who: boolean | Who, at = "/p/demo", mustChange = false) {
   const role: Who = who === true ? "admin" : who === false ? null : who;
   vi.stubGlobal("matchMedia", () => ({ matches: false })); // ThemeToggle reads the OS preference
   vi.stubGlobal("fetch", (url: string) => {
+    if (url === "/control/v1/session/end") return json(200, { ended: true });
     if (url.startsWith("/control/v1/session")) {
       return role
         ? json(200, { operator: { id: "o1", name: "Ada Lovelace", role, must_change_password: mustChange }, csrf_token: "t" })
@@ -128,7 +129,24 @@ describe("F1: Shell v2", () => {
   it("does not redirect when no change is required", async () => {
     mount("operator", "/projects", false);
     await screen.findByTestId("operator-name");
+    // A negative check that gives a late redirect time to happen: waiting for it must time out.
+    await expect(waitFor(() => expect(where).not.toBe("/projects"), { timeout: 200 })).rejects.toThrow();
     expect(where).toBe("/projects");
+  });
+
+  it("lets a person with a temporary password sign out on /account without a redirect or a trap", async () => {
+    mount("operator", "/account", true);
+    fireEvent.click(await screen.findByRole("button", { name: "Sign out" }));
+    expect(await screen.findByRole("link", { name: "Sign in" })).toBeTruthy();
+    await expect(waitFor(() => expect(where).not.toBe("/account"), { timeout: 200 })).rejects.toThrow();
+    expect(screen.queryByRole("button", { name: "Sign out" })).toBeNull();
+  });
+
+  it("shows the session check from the catalog, in Italian too", async () => {
+    localStorage.setItem(STORAGE_KEY, "it");
+    mount(null, "/");
+    expect(screen.getByText("controllo la sessione…")).toBeTruthy();
+    await screen.findByRole("link", { name: "Accedi" });
   });
 
   it("takes Sign in, Sign out, My account and People from the Italian catalog", async () => {
