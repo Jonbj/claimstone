@@ -279,6 +279,13 @@ ROUTES: tuple[Route, ...] = (
     Route("POST", ("account", "password"), "_account_password", no_replay=True),
     Route("GET", ("account", "sessions"), "_account_sessions"),
     Route("POST", ("account", "sessions", "end-others"), "_account_end_others"),
+    Route("GET", ("people",), "_people_list"),
+    Route("POST", ("people",), "_people_create", no_replay=True),
+    Route("POST", ("people", "{person_id}", "password"), "_people_password", no_replay=True),
+    Route("POST", ("people", "{person_id}", "disable"), "_people_disable", no_replay=True),
+    Route("POST", ("people", "{person_id}", "enable"), "_people_enable", no_replay=True),
+    Route("POST", ("people", "{person_id}", "email"), "_people_email", no_replay=True),
+    Route("POST", ("people", "{person_id}", "role"), "_people_role", no_replay=True),
     # B5: signing and drafts. `{question_id}` is looked up in the registry, `{flow_id}` in
     # flows.jsonl, `{project}` among the discovered projects — never used as a path.
     Route("POST", ("p", "{project}", "flows", "{flow_id}", "q", "{question_id}", "adjudicate"),
@@ -1838,10 +1845,47 @@ def _account_end_others(self: _Handler, params: dict[str, str], query: Any,
     return {"ended": n}, 200
 
 
+def _people_list(self: _Handler, params: dict[str, str], query: Any,
+                 body: dict[str, Any]) -> tuple[Any, int]:
+    _require_admin(self)
+    return {"people": [account_service.public(p)
+                       for p in operators.people(self.state_dir).values()]}, 200
+
+
+def _people_create(self: _Handler, params: dict[str, str], query: Any,
+                   body: dict[str, Any]) -> tuple[Any, int]:
+    self._only_keys(body, frozenset({"password", "id", "name", "email", "role",
+                                     "temporary_password"}))
+    session = _require_admin(self)  # before the re-authentication: a non-admin cannot burn the budget
+    _reauth(self, session, body.get("password"))
+    person = _account_call(account_service.create_person, self.state_dir, session.operator_id, body)
+    return {"person": person}, 201
+
+
+def _people_act(action: str, keys: frozenset[str]) -> Callable[..., tuple[Any, int]]:
+    def handler(self: _Handler, params: dict[str, str], query: Any,
+                body: dict[str, Any]) -> tuple[Any, int]:
+        self._only_keys(body, frozenset({"password"}) | keys)
+        session = _require_admin(self)
+        _reauth(self, session, body.get("password"))
+        person, ends = _account_call(account_service.apply_to_person, self.state_dir,
+                                     session.operator_id, params["person_id"], action, body)
+        if ends:
+            self.sessions.end_operator(params["person_id"])
+        return ({"changed": True} if action == "password" else {"person": person}), 200
+    return handler
+
+
 for _name, _function in (("_account_read", _account_read),
                          ("_account_password", _account_password),
                          ("_account_sessions", _account_sessions),
-                         ("_account_end_others", _account_end_others)):
+                         ("_account_end_others", _account_end_others),
+                         ("_people_list", _people_list), ("_people_create", _people_create),
+                         ("_people_password", _people_act("password", frozenset({"new_password"}))),
+                         ("_people_disable", _people_act("disable", frozenset())),
+                         ("_people_enable", _people_act("enable", frozenset())),
+                         ("_people_email", _people_act("email", frozenset({"email"}))),
+                         ("_people_role", _people_act("role", frozenset({"role"})))):
     setattr(_Handler, _name, _function)
 
 

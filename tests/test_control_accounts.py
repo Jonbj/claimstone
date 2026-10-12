@@ -212,3 +212,119 @@ def test_account_read_shows_email_and_link_state_and_no_secret(tmp_path, state):
         assert body["operator"]["email"] == "adm@example.org"
         assert body["operator"]["google_linked"] is False and body["operator"]["role"] == "admin"
         assert "hash" not in json.dumps(body) and "salt" not in json.dumps(body)
+
+
+def test_people_listing_is_admin_only_and_exposes_no_secrets(tmp_path, state):
+    with _served(tmp_path, state) as (_h, base):
+        adm, _ = _signed(base)
+        ann, _ = _signed(base, "ann")
+        denied = _request(f"{base}{BASE}/people", headers=ann)
+        assert denied[0] == 403 and denied[2]["error"]["code"] == "FORBIDDEN"
+        people = _request(f"{base}{BASE}/people", headers=adm)[2]["people"]
+        assert {p["id"] for p in people} == {"adm", "ann"}
+        text = json.dumps(people)
+        assert "hash" not in text and "salt" not in text and "sub" not in text.replace("google", "")
+
+
+def test_a_non_admin_cannot_burn_the_budget_through_people_routes(tmp_path, state):
+    with _served(tmp_path, state) as (_h, base):
+        ann, _ = _signed(base, "ann")
+        for _ in range(7):
+            status, _, body = _post(base, "/people/adm/disable", {"password": "nope nope nope!"}, ann)
+            assert status == 403 and body["error"]["code"] == "FORBIDDEN"
+        assert _login(base, "ann", PW)[0] == 200  # still not locked out
+
+
+def test_admin_creates_a_person_who_must_change_the_temporary_password(tmp_path, state):
+    with _served(tmp_path, state) as (_h, base):
+        adm, _ = _signed(base)
+        status, _, body = _post(base, "/people", {
+            "password": PW, "id": "bob", "name": "Bob", "email": "bob@example.org",
+            "role": "operator", "temporary_password": "temporary secret 1"}, adm)
+        assert status == 201 and body["person"]["id"] == "bob"
+        assert "hash" not in json.dumps(body)
+        bob, login = _signed(base, "bob", "temporary secret 1")
+        assert login["operator"]["must_change_password"] is True
+        # the guard covers GET and POST; the allowed routes stay open
+        assert _request(f"{base}{BASE}/today", headers=bob)[2]["error"]["code"] == "PASSWORD_CHANGE_REQUIRED"
+        blocked = _post(base, "/seen", {}, bob)
+        assert blocked[0] == 403 and blocked[2]["error"]["code"] == "PASSWORD_CHANGE_REQUIRED"
+        assert _request(f"{base}{BASE}/account/sessions", headers=bob)[0] == 403
+        assert _request(f"{base}{BASE}/account", headers=bob)[0] == 200
+        assert _request(f"{base}{BASE}/session", headers=bob)[0] == 200
+        assert _post(base, "/account/password",
+                     {"current": "temporary secret 1", "new": "my own long password"}, bob)[0] == 200
+        assert _request(f"{base}{BASE}/today", headers=bob)[0] == 200
+    assert "temporary secret 1" not in (state / "auth_events.jsonl").read_text()
+
+
+def test_admin_actions_need_the_admins_password_again(tmp_path, state):
+    with _served(tmp_path, state) as (_h, base):
+        adm, _ = _signed(base)
+        status, _, body = _post(base, "/people/ann/disable", {"password": "not my password!"}, adm)
+        assert status == 403 and body["error"]["code"] == "REAUTH"
+        assert _post(base, "/people/ann/disable", {}, adm)[0] == 403
+        assert _post(base, "/people/ann/disable", {"password": PW, "x": 1}, adm)[0] == 400
+    assert "reauth_failed" in (state / "auth_events.jsonl").read_text()
+
+
+def test_admin_reauth_shares_the_login_budget(tmp_path, state):
+    with _served(tmp_path, state) as (_h, base):
+        adm, _ = _signed(base)
+        for _ in range(5):
+            assert _post(base, "/people/ann/disable", {"password": "not my password!"}, adm)[0] == 403
+        assert _post(base, "/people/ann/disable", {"password": PW}, adm)[0] == 429
+
+
+def test_disabling_a_person_ends_their_sessions_at_once(tmp_path, state):
+    with _served(tmp_path, state) as (_h, base):
+        adm, _ = _signed(base)
+        ann, _ = _signed(base, "ann")
+        assert _post(base, "/people/ann/disable", {"password": PW}, adm)[0] == 200
+        assert _request(f"{base}{BASE}/session", headers=ann)[0] == 401
+        assert _login(base, "ann", PW)[0] == 401
+        assert _post(base, "/people/ann/enable", {"password": PW}, adm)[0] == 200
+        assert _login(base, "ann", PW)[0] == 200
+
+
+def test_the_last_admin_cannot_be_disabled_through_the_portal(tmp_path, state):
+    with _served(tmp_path, state) as (_h, base):
+        adm, _ = _signed(base)
+        status, _, body = _post(base, "/people/adm/disable", {"password": PW}, adm)
+        assert status == 422 and "last admin" in body["error"]["message"]
+        assert _post(base, "/people/ghost/disable", {"password": PW}, adm)[0] == 404
+
+
+def test_an_admin_set_password_ends_the_persons_sessions_and_demands_a_change(tmp_path, state):
+    with _served(tmp_path, state) as (_h, base):
+        adm, _ = _signed(base)
+        ann, _ = _signed(base, "ann")
+        assert _post(base, "/people/ann/password",
+                     {"password": PW, "new_password": "temporary secret 2"}, adm)[2] == {"changed": True}
+        assert _request(f"{base}{BASE}/session", headers=ann)[0] == 401
+        assert _login(base, "ann", "temporary secret 2")[2]["operator"]["must_change_password"] is True
+
+
+def test_email_and_role_changes_and_a_demoted_admin_loses_the_power_at_once(tmp_path, state):
+    with _served(tmp_path, state) as (_h, base):
+        adm, _ = _signed(base)
+        ann, _ = _signed(base, "ann")
+        assert _post(base, "/people/ann/role", {"password": PW, "role": "admin"}, adm)[2]["person"]["role"] == "admin"
+        assert _request(f"{base}{BASE}/people", headers=ann)[0] == 200   # ann's live session, read from the ledger
+        assert _post(base, "/people/ann/role", {"password": PW, "role": "operator"}, adm)[0] == 200
+        assert _request(f"{base}{BASE}/people", headers=ann)[0] == 403    # demoted: gone at once
+        assert _post(base, "/people/ann/email", {"password": PW, "email": "new@example.org"}, adm)[2]["person"]["email"] == "new@example.org"
+        assert _post(base, "/people/ann/role", {"password": PW, "role": "root"}, adm)[0] == 422
+
+
+def test_password_routes_ignore_the_idempotency_key(tmp_path, state):
+    with _served(tmp_path, state) as (_h, base):
+        adm, _ = _signed(base)
+        key = {**adm, "Idempotency-Key": "k-1"}
+        first = _post(base, "/people/ann/password", {"password": PW, "new_password": "temporary secret 2"}, key)
+        assert first[0] == 200
+        # same key, same body: executed again, not replayed from memory (re-authentication is checked)
+        bad = _post(base, "/people/ann/password", {"password": "nope nope nope!", "new_password": "temporary secret 2"}, key)
+        assert bad[0] == 403
+        again = _post(base, "/people/ann/password", {"password": PW, "new_password": "temporary secret 2"}, key)
+        assert again[0] == 200
