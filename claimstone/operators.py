@@ -83,8 +83,9 @@ def _hash(password: str, salt: bytes, params: dict[str, int]) -> str:
 
 
 def _check_id(operator_id: str) -> None:
-    if not operator_id.strip() or "\n" in operator_id or "\r" in operator_id:
-        raise OperatorError("operator id must be non-empty text without line breaks")
+    if (not operator_id.strip() or operator_id != operator_id.strip()
+            or not operator_id.isprintable()):
+        raise OperatorError("operator id must be non-empty printable text without padding or line breaks")
 
 
 ROLES = ("operator", "admin")
@@ -92,8 +93,8 @@ PASSWORD_MIN, PASSWORD_MAX = 12, 256
 
 
 def check_password(password: object, operator_id: str | None = None) -> str:
-    """The one password rule. Length only: no composition rules, and an upper bound because
-    scrypt's cost grows with the input."""
+    """The one password rule. Length only: no composition rules, and an upper bound
+    as hygiene (it keeps a request body sane), not as a cap on cost."""
     if not isinstance(password, str) or len(password) < PASSWORD_MIN:
         raise OperatorError(f"password must have at least {PASSWORD_MIN} characters")
     if len(password) > PASSWORD_MAX:
@@ -106,8 +107,9 @@ def check_password(password: object, operator_id: str | None = None) -> str:
 def _email(value: object) -> str | None:
     if value is None or value == "":
         return None
-    text = str(value).strip().lower()
-    if "@" not in text or " " in text or "\n" in text or len(text) > 254:
+    text = str(value).strip().casefold()
+    if ("@" not in text or len(text) > 254
+            or any(ch.isspace() or ord(ch) < 32 for ch in text)):
         raise OperatorError("email must look like an address")
     return text
 
@@ -117,13 +119,20 @@ def _locked(directory: pathlib.Path):
     """One writer at a time across processes (the CLI and the control server share the file):
     every rule below reads then appends, and must not interleave with another writer."""
     directory = pathlib.Path(directory)
+    created = not directory.exists()
     directory.mkdir(mode=0o700, parents=True, exist_ok=True)
-    with open(directory / ".operators.lock", "a") as handle:
-        fcntl.flock(handle, fcntl.LOCK_EX)
+    if created:
+        os.chmod(directory, 0o700)  # mkdir's mode is masked by the umask
+    fd = os.open(directory / ".operators.lock", os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)
+    try:
+        os.fchmod(fd, 0o600)
+        fcntl.flock(fd, fcntl.LOCK_EX)
         try:
             yield
         finally:
-            fcntl.flock(handle, fcntl.LOCK_UN)
+            fcntl.flock(fd, fcntl.LOCK_UN)
+    finally:
+        os.close(fd)
 
 
 def _fold(rows: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
@@ -133,8 +142,14 @@ def _fold(rows: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
     people: dict[str, dict[str, Any]] = {}
     for row in rows:
         oid = str(row.get("id"))
-        kind = row.get("kind") or ("disabled" if row.get("disabled") else "created")
+        kind = row.get("kind")
+        if not kind:  # legacy, version 1: only a hash makes a `created` row; anything else is noise
+            kind = "disabled" if row.get("disabled") else ("created" if "hash" in row and "salt" in row else None)
+        if kind is None:
+            continue
         if kind == "created":
+            if oid in people or "hash" not in row or "salt" not in row:
+                continue  # an id is never reused (the first row wins); a row without a hash is noise
             people[oid] = {
                 "id": oid, "name": row.get("name") or "", "role": row.get("role") or "admin",
                 "email": _email(row.get("email")), "scrypt": dict(row.get("scrypt") or SCRYPT),
@@ -207,8 +222,8 @@ def _person(everyone: dict[str, dict[str, Any]], oid: str) -> dict[str, Any]:
 def add_operator(directory, operator_id: str, name: str, password: str, *,
                  role: str | None = None, email: str | None = None, must_change: bool = False,
                  by: str = "cli", now: str | None = None) -> dict[str, Any]:
-    """Append a `created` row. An id with any row is refused for ever. With no `role`, the first
-    person recorded is an admin and later ones are operators."""
+    """Append a `created` row. An id with any row is refused for ever. With no `role`, while no
+    active admin exists the new person is an admin; otherwise an operator."""
     _check_id(operator_id)
     if not name.strip():
         raise OperatorError("operator name must be non-empty")
@@ -224,8 +239,9 @@ def add_operator(directory, operator_id: str, name: str, password: str, *,
         role = role or ("admin" if _active_admins(everyone) == 0 else "operator")
         if role not in ROLES:
             raise OperatorError(f"role must be one of {', '.join(ROLES)}")
-        return _write(directory, "created", operator_id, by, now, name=name, role=role,
-                      email=email, must_change_password=must_change, created_at=now or _now(),
+        stamp = now or _now()
+        return _write(directory, "created", operator_id, by, stamp, name=name, role=role,
+                      email=email, must_change_password=must_change, created_at=stamp,
                       **_hashed(password))
 
 
@@ -240,7 +256,8 @@ def disable_operator(directory, operator_id: str, *, by: str = "cli",
             raise OperatorError(f"operator already disabled: {operator_id}")
         if person["role"] == "admin" and _active_admins(everyone, operator_id) == 0:
             raise OperatorError("refused: this is the last admin")
-        return _write(directory, "disabled", operator_id, by, now)
+        # `disabled: True` is what version-1 code reads: after a rollback it must still drop the id.
+        return _write(directory, "disabled", operator_id, by, now, disabled=True)
 
 
 def enable_operator(directory, operator_id: str, *, by: str = "cli",

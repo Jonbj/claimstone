@@ -1678,19 +1678,21 @@ Read the `Dockerfile` (`grep -n "pip install" Dockerfile`) and change the projec
 
 ---
 
-### Task 10: The live run, and D128
+### Task 10: The live run, and D###
+
+D### = the next free decision number at the time of recording (D128–D130 were taken while this was designed).
 
 This task needs the owner at the keyboard (a Google consent screen) and is **not** delegated to a subagent.
 
 - [ ] **Step 1:** With the user: create the OAuth client (Web application, redirect URI per Task 9), put `CLAIMSTONE_GOOGLE_CLIENT_ID/SECRET` in `.env`, set `CLAIMSTONE_PUBLIC_URL=http://localhost:5173` or the portal URL actually used (per the Task 0 note), start the control server with `.[login]` installed.
 - [ ] **Step 2:** Registers the user's email with `claimstone operator set-email <id> <address>`, press the Google button on the portal login (plan 2) or open `/control/v1/login/google` by hand; confirm: signed in; `operators.jsonl` has one `google_linked` row and no token; `auth_events.jsonl` has `google_ok`; a second sign-in works; an account not on the list is refused with the single message.
-- [ ] **Step 3:** Add D128 to `docs/DESIGN_DECISIONS.md` (after D127), in the file's own format: the decision (append-only ledger extended; Google via Authlib behind `google_login.py`; loopback perimeter), **the measurement** (the live run of Step 2: what was shown, the Task 0 findings), what was rejected (SQLite for users, an external identity provider — with the reasons from the spec) and what is deliberately left open (opening the portal; the named-id lockout). Update `docs/superpowers/notes/2026-10-12-google-login-spike.md` "Live end-to-end run" line.
-- [ ] **Step 4: Commit** `D128: operator login — password management and Google sign-in`. Push the branch only on the user's word.
+- [ ] **Step 3:** Look up the next free number (`grep -n '^### D' docs/DESIGN_DECISIONS.md | tail`), add that decision to `docs/DESIGN_DECISIONS.md` after the last one, remove or absorb the interim "Operator ledger, `operator_version 2`" note Task 1 appended, in the file's own format: the decision (append-only ledger extended; Google via Authlib behind `google_login.py`; loopback perimeter), **the measurement** (the live run of Step 2: what was shown, the Task 0 findings), what was rejected (SQLite for users, an external identity provider — with the reasons from the spec) and what is deliberately left open (opening the portal; the named-id lockout). Update `docs/superpowers/notes/2026-10-12-google-login-spike.md` "Live end-to-end run" line.
+- [ ] **Step 4: Commit** `D###: operator login — password management and Google sign-in`. Push the branch only on the user's word.
 
 ---
 
 ## Self-review (done)
 
-- **Spec coverage:** row kinds and rules → T1; events ledger → T2; session id/method/absolute lifetime/revocation, address budget → T3–T4; password change, sessions list, end-others, account read → T4; people create/disable/enable/email/role/password, admin re-auth, last admin, session revocation → T5; Google flow, cookie, outcomes, link/unlink, off-by-default, optional extra → T7; CLI parity → T8; no-secret sweep and identical denial responses → T8; configuration and docs → T9; the three "to verify" items → T0 and T10; D128 → T10. The spec's "cookie `claimstone_oauth` with state, nonce, verifier" is implemented as a cookie carrying only an opaque id with the values server-side (T7): the same cookie, smaller trust surface; note this in D128.
+- **Spec coverage:** row kinds and rules → T1; events ledger → T2; session id/method/absolute lifetime/revocation, address budget → T3–T4; password change, sessions list, end-others, account read → T4; people create/disable/enable/email/role/password, admin re-auth, last admin, session revocation → T5; Google flow, cookie, outcomes, link/unlink, off-by-default, optional extra → T7; CLI parity → T8; no-secret sweep and identical denial responses → T8; configuration and docs → T9; the three "to verify" items → T0 and T10; D### → T10. The spec's "cookie `claimstone_oauth` with state, nonce, verifier" is implemented as a cookie carrying only an opaque id with the values server-side (T7): the same cookie, smaller trust surface; note this in D###.
 - **Placeholders:** none; the one deliberate deferral is T0's exact Authlib calls, which the spike pins before T7.
 - **Types:** `Sessions.create(..., role, method, must_change)`, `list_for(operator_id, current_token)`, `end_others(operator_id, keep_token)`, `end_operator`, `clear_must_change(token)`; `operators.*` signatures take `by=`; `account_service.apply_to_person → (person, ends)`; handler names match the route table in T4/T5/T7.

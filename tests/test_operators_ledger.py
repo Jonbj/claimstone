@@ -113,3 +113,78 @@ def test_new_rows_say_who_and_when_and_hold_no_plaintext(d):
     rows = [json.loads(line) for line in text.splitlines()]
     assert [r["kind"] for r in rows] == ["created", "password_set"]
     assert all(r["operator_version"] == 2 and r["by"] and r["at"] for r in rows)
+
+
+def test_a_v1_reader_still_sees_a_disabled_person_as_disabled(d):
+    operators.add_operator(d, "a", "Alpha", PW)
+    operators.add_operator(d, "b", "Beta", PW)
+    operators.disable_operator(d, "b", by="a")
+    active = {}
+    for row in operators._rows(d):                      # version-1 fold, after a rollback
+        if row.get("disabled"):
+            active.pop(str(row["id"]), None)
+        elif "hash" in row:
+            active[str(row["id"])] = row
+    assert set(active) == {"a"}
+
+
+def test_a_malformed_or_repeated_row_does_not_break_load(d):
+    operators.add_operator(d, "a", "Alpha", PW)
+    with open(d / "operators.jsonl", "a") as handle:
+        handle.write(json.dumps({"operator_version": 2, "id": "x", "at": "t"}) + "\n")
+        handle.write(json.dumps({"operator_version": 2, "kind": "created", "id": "a", "name": "Evil",
+                                 "salt": "00" * 16, "hash": "00" * 32}) + "\n")
+    assert set(operators.load(d)) == {"a"}
+    assert operators.load(d)["a"]["name"] == "Alpha"      # first created row wins
+
+
+def test_lock_file_is_owner_only(d):
+    import os
+    import stat
+    operators.add_operator(d, "a", "Alpha", PW)
+    assert stat.S_IMODE(os.stat(d / ".operators.lock").st_mode) == 0o600
+    assert stat.S_IMODE(os.stat(d).st_mode) == 0o700
+
+
+def test_ids_with_padding_or_control_characters_are_refused(d):
+    operators.add_operator(d, "a", "Alpha", PW)
+    for bad in ("a ", " a", "b\tc", "b\x00c"):
+        with pytest.raises(OperatorError):
+            operators.add_operator(d, bad, "Bad", PW)
+
+
+def test_an_email_with_inner_whitespace_is_refused(d):
+    with pytest.raises(OperatorError, match="email"):
+        operators.add_operator(d, "a", "Alpha", PW, email="a\t@example.org")
+
+
+def test_enable_refuses_when_the_email_was_taken_meanwhile(d):
+    operators.add_operator(d, "a", "Alpha", PW, email="a@example.org")
+    operators.add_operator(d, "b", "Beta", PW, email="b@example.org")
+    operators.disable_operator(d, "b", by="a")
+    operators.add_operator(d, "c", "Gamma", PW, email="b@example.org")     # a disabled address is free
+    with pytest.raises(OperatorError, match="email"):
+        operators.enable_operator(d, "b", by="a")
+
+
+def test_link_google_refuses_a_disabled_person(d):
+    operators.add_operator(d, "a", "Alpha", PW)
+    operators.add_operator(d, "b", "Beta", PW, email="b@example.org")
+    operators.disable_operator(d, "b", by="a")
+    with pytest.raises(OperatorError, match="disabled"):
+        operators.link_google(d, "b", sub="s", email="b@example.org", by="b")
+
+
+def _race(directory, ident):
+    try:
+        operators.add_operator(directory, ident, ident, PW, email="same@example.org")
+        return True
+    except OperatorError:
+        return False
+
+
+def test_two_processes_cannot_both_claim_one_email(d):
+    import multiprocessing
+    with multiprocessing.get_context("fork").Pool(2) as pool:
+        results = pool.starmap(_race, [(d, "p1"), (d, "p2")])
+    assert sorted(results) == [False, True]

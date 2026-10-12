@@ -1,6 +1,6 @@
 # Operator login: password management, Google sign-in, people — design
 
-Status: proposed, 2026-10-12. Decision: D128 (to be recorded with the live Google run that decides it).
+Status: proposed, 2026-10-12. Decision: D### (to be recorded with the live Google run that decides it). D### = the next free decision number at the time of recording (D128–D130 were taken while this was designed).
 
 ## Why
 
@@ -151,7 +151,7 @@ it through the same key-lookup seam the real code uses; no test reaches the netw
 2. Google accepts `http://localhost:<port>/…` as a redirect URI for a web client in the form used here,
    and what happens with `127.0.0.1`.
 3. The live sign-in with the owner's Google account succeeds end to end. That run is the measurement
-   D128 records.
+   D### records.
 
 ## Out of scope
 
