@@ -4,6 +4,8 @@ import ErrorState from "@/components/ErrorState";
 import RowFields from "@/components/RowFields";
 import IntegrityPanel from "@/components/IntegrityPanel";
 import ProjectTabs from "@/components/ProjectTabs";
+import SeriesChip from "@/components/scheduler/SeriesChip";
+import { useFlowSeries } from "@/hooks/useFlowSeries";
 import Pending from "@/components/Pending";
 import { useApi } from "@/hooks/useApi";
 import { usePoll } from "@/hooks/usePoll";
@@ -23,6 +25,7 @@ export default function ProjectPage() {
 
   const integrity = useApi(() => api.integrity(project), [project]);
   const index = useApi(() => api.projects(), []);
+  const seriesOf = useFlowSeries(project);
   const activity = useApi(() => api.activity(project, 50), [project]);
 
   usePoll(project || null, () => {
@@ -88,6 +91,9 @@ export default function ProjectPage() {
                 </Link>
                 <div className="flex flex-wrap items-baseline gap-2">
                   <Chip text={flow.binding_state} />
+                  {seriesOf.has(flow.flow_id) ? (
+                    <SeriesChip project={project} scheduleId={seriesOf.get(flow.flow_id)!} round={flow.selector?.round ?? null} />
+                  ) : null}
                   {flow.bound_after_data ? (
                     <span className="text-xs text-muted-foreground">
                       bound after data existed: rows written before binding are not verified

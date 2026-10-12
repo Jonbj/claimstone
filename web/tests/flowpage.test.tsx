@@ -19,6 +19,7 @@ const flowId = String((flowOverview.flow as { flow_id: string }).flow_id);
 let requested: string[];
 
 let overviewOverride: unknown = null;
+let schedulerBody: unknown = { schedules: [] };
 
 // Text of the page outside the collapsed technical details (whose notes come from the server).
 function outsideDetails(): string {
@@ -36,6 +37,7 @@ function mount(path: string, signedIn: boolean) {
         ? json(200, { operator: { id: "o1", name: "Ada", role: "admin", must_change_password: false }, csrf_token: "t" })
         : json(401, { error: { code: "UNAUTHORIZED", message: "no session" } });
     }
+    if (url.startsWith("/control/v1/p/demo/scheduler")) return json(200, schedulerBody);
     if (url.endsWith("/operations")) return json(200, { flow_id: flowId, operations: [] });
     if (url.includes("/overview")) {
       return json(200, url.includes("/unbound/") || url.includes("/u/") ? unboundOverview : (overviewOverride ?? flowOverview));
@@ -44,7 +46,7 @@ function mount(path: string, signedIn: boolean) {
       return json(200, { api_version: 1, projects: [{
         name: "demo", config: "OK", config_error: null, registry_version: 2, registry_sha256: "abc",
         registry_drift: null, integrity_error: null,
-        flows: [{ flow_id: flowId, selector_label: "round 1", binding_state: "CURRENT", bound_after_data: false, title: "Initial research" }],
+        flows: [{ flow_id: flowId, selector: { round: "round-1", manifest_only: false }, selector_label: "round 1", binding_state: "CURRENT", bound_after_data: false, title: "Initial research" }],
         unbound_selectors: [{ slug: "r0", label: "old round", selector: { round: "r0", manifest_only: false } }],
       }] });
     }
@@ -163,5 +165,20 @@ describe("F3: flow journey page", () => {
     await screen.findByRole("tablist", { name: "Blocks" });
     expect(screen.getByText("No selection scope is declared for this flow.")).toBeTruthy();
     expect(document.querySelector('[data-block="selection"]')?.textContent).toContain("not declared");
+  });
+
+  it("a flow that is in a series shows a chip linking to the series; a signed-out visitor sees none", async () => {
+    const sid = "a".repeat(64);
+    schedulerBody = { schedules: [{ schedule_id: sid, state: "AUTHORIZED", events: [],
+      plan: { version: 1, project: "demo", max_total_requests: 1, entries: [{ batch_id: "b", operation_ids: [], flow_id: flowId, stage: "discover", units: [], max_total_requests: 1, not_before: "x", expires_at: "y" }] } }] };
+    mount("/p/demo/f/sel1", true);
+    const chip = await screen.findByRole("link", { name: "Series · round round-1" });
+    expect(chip.getAttribute("href")).toBe(`/p/demo/scheduler/s/${sid}`);
+    cleanup();
+    mount("/p/demo/f/sel1", false);
+    await screen.findByRole("tablist", { name: "Blocks" });
+    expect(requested.some((u) => u.includes("/scheduler"))).toBe(false);
+    expect(screen.queryByRole("link", { name: /^Series/ })).toBeNull();
+    schedulerBody = { schedules: [] };
   });
 });

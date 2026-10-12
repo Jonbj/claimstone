@@ -92,6 +92,12 @@ export function useSession(): SessionState {
   return value;
 }
 
+/** The signed-in operator, or null; unlike `useSession` it does not insist on a provider, for parts of
+ *  a page that only add something when someone is signed in. */
+export function useOperator(): Operator | null {
+  return useContext(SessionContext)?.operator ?? null;
+}
+
 /** Where to go after signing in. Only a path that starts with a single `/` is followed: `//evil`
  *  (protocol-relative), `/\evil`, `https://…` and anything else fall back to `/`. */
 export function safeNext(next: string | null | undefined): string {

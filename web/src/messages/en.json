@@ -640,6 +640,8 @@
       "problems": "Problems:",
       "download": "Download the package (ZIP)",
       "contents": "The package holds four files and no copies of papers."
-    }
+    },
+    "flowChip": "Series · round {round}",
+    "flowChipNoRound": "Series"
   }
 }

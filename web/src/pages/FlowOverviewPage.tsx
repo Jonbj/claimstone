@@ -10,6 +10,8 @@ import { NeedsYou, RunningNote, TheQuestions, TheTopic } from "@/components/Jour
 import OperationsPanel from "@/components/OperationsPanel";
 import OverviewKpis from "@/components/OverviewKpis";
 import ProjectTabs from "@/components/ProjectTabs";
+import SeriesChip from "@/components/scheduler/SeriesChip";
+import { useFlowSeries } from "@/hooks/useFlowSeries";
 import Pending from "@/components/Pending";
 import QuestionMatrix from "@/components/QuestionMatrix";
 import SelectionPanel from "@/components/SelectionPanel";
@@ -38,6 +40,7 @@ export default function FlowOverviewPage({ kind }: { kind: "f" | "u" }) {
   // The selector of research flows is the project list's own; if it cannot be read it is simply
   // not offered (the page does not depend on it).
   const index = useApi(() => api.projects(), []);
+  const seriesOf = useFlowSeries(project);
   usePoll(project || null, () => overview.reload());
 
   if (overview.error) return <ErrorState error={overview.error} context="overview" />;
@@ -83,6 +86,10 @@ export default function FlowOverviewPage({ kind }: { kind: "f" | "u" }) {
             </>
           ) : null}
           {data.binding_state ? <Chip text={data.binding_state.state} /> : null}
+          {kind === "f" && flowId && seriesOf.has(flowId) ? (
+            <SeriesChip project={project} scheduleId={seriesOf.get(flowId)!}
+                        round={card?.flows?.find((f) => f.flow_id === flowId)?.selector?.round ?? null} />
+          ) : null}
           {compactBinding ? (
             <span data-binding-compact
                   title="The binding is compared against the live project; it never supplies a value.">
