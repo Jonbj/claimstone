@@ -1,7 +1,8 @@
 // People (admins): the table, the per-row inline forms that ask for the acting admin's password,
 // the add form, and what a non-admin sees (and does not request).
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { MemoryRouter } from "react-router";
+import { MemoryRouter, Route, Routes } from "react-router";
+import Shell from "@/components/Shell";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { setCsrfToken } from "@/lib/control";
 import { LocaleProvider, STORAGE_KEY } from "@/lib/i18n";
@@ -25,14 +26,16 @@ let calls: Call[];
 
 function server(role: "admin" | "operator", act?: (url: string) => Promise<Response>) {
   calls = [];
+  let current: string = role;
   vi.stubGlobal("fetch", (url: string, init: RequestInit = {}) => {
     const method = init.method ?? "GET";
     calls.push({ method, url, body: init.body ? JSON.parse(String(init.body)) : undefined });
     if (url.startsWith("/control/v1/session")) {
-      return json(200, { operator: { id: "ada", name: "Ada Lovelace", role, must_change_password: false }, csrf_token: "t" });
+      return json(200, { operator: { id: "ada", name: "Ada Lovelace", role: current, must_change_password: false }, csrf_token: "t" });
     }
     if (url === "/control/v1/people" && method === "GET") return json(200, { people: PEOPLE });
     if (url.startsWith("/control/v1/people")) {
+      if (url.endsWith("/ada/role") && !act) current = "operator";
       return act ? act(url) : json(200, { person: PEOPLE[1] });
     }
     return json(404, { error: { code: "NOT_FOUND", message: "no" } });
@@ -74,6 +77,129 @@ describe("People", () => {
     }
     expect(within(row("Cy Off")).getByRole("button", { name: "Enable: Cy Off" })).toBeTruthy();
     expect(within(row("Ada Lovelace")).getByRole("button", { name: "Make operator: Ada Lovelace" })).toBeTruthy();
+  });
+
+  it("tells password managers to leave the temporary-password fields alone", async () => {
+    server("admin");
+    mount();
+    await screen.findByText("Bob Byte");
+    const add = within(screen.getByRole("form", { name: "Add a person" }));
+    for (const field of [add.getByLabelText("Temporary password")]) {
+      expect(field.getAttribute("autocomplete")).toBe("off");
+      expect(field.getAttribute("name")).toBe("temporary");
+      expect(field.getAttribute("data-1p-ignore")).not.toBeNull();
+      expect(field.getAttribute("data-lpignore")).toBe("true");
+    }
+    expect(add.getByLabelText("Id").getAttribute("autocomplete")).toBe("off");
+    expect(add.getByLabelText("Your password").getAttribute("autocomplete")).toBe("current-password");
+    fireEvent.click(screen.getByRole("button", { name: "Set temporary password: Bob Byte" }));
+    const form = within(screen.getByRole("form", { name: "Set temporary password: Bob Byte" }));
+    const temp = form.getByLabelText("Temporary password");
+    expect(temp.getAttribute("autocomplete")).toBe("off");
+    expect(temp.getAttribute("name")).toBe("temporary");
+    expect(temp.getAttribute("data-lpignore")).toBe("true");
+    expect(form.getByLabelText("Your password").getAttribute("autocomplete")).toBe("current-password");
+  });
+
+  it("hides Set temporary password on the own row and points to My account", async () => {
+    server("admin");
+    mount();
+    await screen.findByText("Bob Byte");
+    expect(within(row("Ada Lovelace")).queryByRole("button", { name: /^Set temporary password/ })).toBeNull();
+    expect(within(row("Ada Lovelace")).getByText("To change your own password, use My account.")).toBeTruthy();
+    expect(within(row("Bob Byte")).queryByText("To change your own password, use My account.")).toBeNull();
+  });
+
+  it("has an Actions column; the open form sits outside the row and is linked from its button", async () => {
+    server("admin");
+    mount();
+    await screen.findByText("Bob Byte");
+    expect(screen.getAllByRole("columnheader").map((h) => h.textContent)).toContain("Actions");
+    const toggle = screen.getByRole("button", { name: "Disable: Bob Byte" });
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    expect(toggle.closest('[role="cell"]')).not.toBeNull();
+    fireEvent.click(toggle);
+    const form = screen.getByRole("form", { name: "Disable: Bob Byte" });
+    expect(form.closest('[role="row"]')).toBeNull();
+    expect(toggle.getAttribute("aria-expanded")).toBe("true");
+    expect(toggle.getAttribute("aria-controls")).toBe(form.id);
+    expect(row("Bob Byte").parentElement?.contains(form)).toBe(true);
+  });
+
+  it("moves focus into the form, back to the password after REAUTH, and back to the button on cancel", async () => {
+    server("admin", () => json(403, { error: { code: "REAUTH", message: "password did not match" } }));
+    mount();
+    await screen.findByText("Bob Byte");
+    const toggle = screen.getByRole("button", { name: "Change email: Bob Byte" });
+    fireEvent.click(toggle);
+    const form = within(screen.getByRole("form", { name: "Change email: Bob Byte" }));
+    await waitFor(() => expect(document.activeElement).toBe(form.getByLabelText("New email (leave empty to remove it)")));
+    fireEvent.change(form.getByLabelText("Your password"), { target: { value: "wrong" } });
+    fireEvent.click(form.getByRole("button", { name: "Confirm" }));
+    const message = await screen.findByText("Your password did not match.");
+    const field = form.getByLabelText("Your password");
+    await waitFor(() => expect(document.activeElement).toBe(field));
+    expect(field.getAttribute("aria-invalid")).toBe("true");
+    expect(field.getAttribute("aria-describedby")).toBe(message.id);
+    fireEvent.click(form.getByRole("button", { name: "Cancel" }));
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("button", { name: "Change email: Bob Byte" })));
+  });
+
+  it("keeps the table on screen while it reloads after an action", async () => {
+    server("admin");
+    mount();
+    await screen.findByText("Bob Byte");
+    fireEvent.click(screen.getByRole("button", { name: "Make admin: Bob Byte" }));
+    const form = within(screen.getByRole("form", { name: "Make admin: Bob Byte" }));
+    fireEvent.change(form.getByLabelText("Your password"), { target: { value: "mine" } });
+    fireEvent.click(form.getByRole("button", { name: "Confirm" }));
+    await waitFor(() => expect(posts()).toHaveLength(1));
+    expect(screen.getByText("Bob Byte")).toBeTruthy();
+    await waitFor(() => expect(screen.queryByRole("form", { name: "Make admin: Bob Byte" })).toBeNull());
+    expect(screen.getByText("Bob Byte")).toBeTruthy();
+  });
+
+  it("drops the admin page and the rail links when an admin demotes themselves", async () => {
+    server("admin");
+    vi.stubGlobal("matchMedia", () => ({ matches: false }));
+    render(
+      <MemoryRouter initialEntries={["/people"]}>
+        <LocaleProvider>
+          <SessionProvider>
+            <Routes>
+              <Route element={<Shell />}>
+                <Route path="people" element={<PeoplePage />} />
+              </Route>
+            </Routes>
+          </SessionProvider>
+        </LocaleProvider>
+      </MemoryRouter>,
+    );
+    await screen.findByText("Bob Byte");
+    expect(screen.getByRole("link", { name: "People" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Administration" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Make operator: Ada Lovelace" }));
+    const form = within(screen.getByRole("form", { name: "Make operator: Ada Lovelace" }));
+    fireEvent.change(form.getByLabelText("Your password"), { target: { value: "mine" } });
+    fireEvent.click(form.getByRole("button", { name: "Confirm" }));
+    expect(await screen.findByText("This page is for admins.")).toBeTruthy();
+    expect(screen.queryByRole("link", { name: "People" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Administration" })).toBeNull();
+    expect(screen.getByRole("link", { name: "My account" })).toBeTruthy();
+  });
+
+  it("asks who I am again when an action is refused with FORBIDDEN", async () => {
+    server("admin", () => json(403, { error: { code: "FORBIDDEN", message: "this needs an admin" } }));
+    mount();
+    await screen.findByText("Bob Byte");
+    const asked = () => calls.filter((c) => c.url.startsWith("/control/v1/session")).length;
+    const before = asked();
+    fireEvent.click(screen.getByRole("button", { name: "Disable: Bob Byte" }));
+    const form = within(screen.getByRole("form", { name: "Disable: Bob Byte" }));
+    fireEvent.change(form.getByLabelText("Your password"), { target: { value: "mine" } });
+    fireEvent.click(form.getByRole("button", { name: "Confirm" }));
+    expect(await screen.findByText("this needs an admin")).toBeTruthy();
+    await waitFor(() => expect(asked()).toBeGreaterThan(before));
   });
 
   it("tells a non-admin and never calls /people", async () => {
