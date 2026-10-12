@@ -1,10 +1,7 @@
 import { useLocale } from "@/lib/i18n";
 import { cumulativeOf, roundsOf } from "@/lib/scheduler";
 import type { Admission } from "@/lib/scheduler";
-import { ratio } from "./format";
-
-const percent = (rate: number | null | undefined) =>
-  typeof rate === "number" ? `${(rate * 100).toFixed(1)}%` : "—";
+import { percent, ratio } from "./format";
 
 function Figures({ a }: { a: Admission }) {
   const { t } = useLocale();

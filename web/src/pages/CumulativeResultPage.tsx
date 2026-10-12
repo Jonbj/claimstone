@@ -7,8 +7,10 @@ import QuestionRows from "@/components/scheduler/QuestionRows";
 import ResultBanner from "@/components/scheduler/ResultBanner";
 import { useApi } from "@/hooks/useApi";
 import { usePoll } from "@/hooks/usePoll";
+import { DOSSIER_MIN_MS, REFRESH_MS, useAsOf, useIdleReload, useVisibleInterval } from "@/hooks/useSchedulerRefresh";
 import { ApiError, api } from "@/lib/api";
 import type { PeriodicCumulativeDossier } from "@/lib/api-types";
+import { formatUtc } from "@/lib/datetime";
 import { useLocale } from "@/lib/i18n";
 import { useSession } from "@/lib/session";
 
@@ -16,14 +18,14 @@ import { useSession } from "@/lib/session";
 // is requested again: the file is what is on screen.
 function download(dossier: PeriodicCumulativeDossier, name: string): void {
   const url = URL.createObjectURL(new Blob([JSON.stringify(dossier, null, 2)], { type: "application/json" }));
-  try {
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = name;
-    link.click();
-  } finally {
-    URL.revokeObjectURL(url);
-  }
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = name;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  // Some browsers start the save after the click returns: keep the URL for a moment.
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 function Body({ project, id }: { project: string; id: string }) {
@@ -31,7 +33,12 @@ function Body({ project, id }: { project: string; id: string }) {
   // Read once on load, and again only when the poll says the ledgers moved.
   const dossier = useApi(() => api.periodicDossier(project, id), [project, id]);
   const projects = useApi(() => api.projects(), []);
-  usePoll(project || null, () => dossier.reload());
+  // Read on load; again when the ledgers move or every 15 s while visible, but at most once every
+  // 45 s and never while a read is in flight.
+  const reload = useIdleReload(dossier.reload, dossier.pending || dossier.refreshing, DOSSIER_MIN_MS);
+  usePoll(project || null, reload);
+  useVisibleInterval(reload, REFRESH_MS);
+  const asOf = useAsOf(dossier.data);
 
   if (dossier.error) {
     if (dossier.error instanceof ApiError && dossier.error.code === "NOT_FOUND") {
@@ -48,6 +55,7 @@ function Body({ project, id }: { project: string; id: string }) {
   return (
     <>
       <ResultBanner dossier={d} />
+      {asOf ? <p className="text-xs text-muted-foreground">{t("sched.asOf", { time: formatUtc(asOf) })}</p> : null}
       <AcquisitionPanel audit={d.audit} />
       <QuestionRows project={project} profiles={d.profiles} decisions={d.human_decisions} wholeStore={wholeStore} />
       <div className="flex flex-col items-start gap-1">

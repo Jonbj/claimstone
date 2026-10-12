@@ -41,7 +41,7 @@ const served = (body: unknown) => ({ dossier: () => json(200, body) });
 
 describe("Cumulative result page", () => {
   beforeEach(() => setCsrfToken(null));
-  afterEach(() => { cleanup(); vi.unstubAllGlobals(); localStorage.clear(); });
+  afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.useRealTimers(); localStorage.clear(); });
 
   it("shows the dossier state (label visible, server word in the title), every blocker verbatim, and no verdict", async () => {
     stub(served(resultDossier({ state: "WAITING_FOR_EVIDENCE",
@@ -154,11 +154,13 @@ describe("Cumulative result page", () => {
     let created: Blob[];
     let revoked: string[];
     let clicked: Array<{ download: string; href: string }>;
+    let anchorInDom: boolean[];
     beforeEach(() => {
-      created = []; revoked = []; clicked = [];
+      created = []; revoked = []; clicked = []; anchorInDom = [];
       URL.createObjectURL = vi.fn((blob: Blob) => { created.push(blob); return "blob:live-1"; });
       URL.revokeObjectURL = vi.fn((url: string) => { revoked.push(url); });
       vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (this: HTMLAnchorElement) {
+        anchorInDom.push(document.body.contains(this));
         clicked.push({ download: this.download, href: this.href });
       });
     });
@@ -170,6 +172,7 @@ describe("Cumulative result page", () => {
       mount();
       const button = await screen.findByRole("button", { name: "Download live report (JSON)" });
       const before = urls.length;
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
       fireEvent.click(button);
       expect(urls.length).toBe(before);
       expect(created).toHaveLength(1);
@@ -177,6 +180,13 @@ describe("Cumulative result page", () => {
       expect(clicked).toHaveLength(1);
       expect(clicked[0].download).toMatch(/\.json$/);
       expect(clicked[0].href).toBe("blob:live-1");
+      // the anchor was in the document while it was clicked, and is gone afterwards
+      expect(anchorInDom).toEqual([true]);
+      expect(document.querySelector("a[download]")).toBeNull();
+      // the object URL is revoked a moment later, not before the browser has taken it
+      expect(revoked).toEqual([]);
+      await act(async () => { await vi.advanceTimersByTimeAsync(1000); });
+      vi.useRealTimers();
       expect(revoked).toEqual(["blob:live-1"]);
     });
 
@@ -203,6 +213,7 @@ describe("Cumulative result page", () => {
   });
 
   it("reads the dossier once on load and again only when the poll fires", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
     const urls = stub(served(resultDossier()));
     mount();
     await screen.findByRole("region", { name: "Dossier" });
@@ -210,6 +221,10 @@ describe("Cumulative result page", () => {
     expect(reads()).toBe(1);
     await act(async () => { await new Promise((r) => setTimeout(r, 50)); });
     expect(reads()).toBe(1);
+    // the dossier is read at most once every 45 s: a poll at once changes nothing, one after it does
+    await act(async () => { firePoll(); });
+    expect(reads()).toBe(1);
+    vi.setSystemTime(Date.now() + 46_000);
     await act(async () => { firePoll(); });
     await waitFor(() => expect(reads()).toBe(2));
   });

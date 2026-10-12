@@ -329,15 +329,19 @@
       "neverSeen": "mai visto",
       "phase": "fase",
       "age": "{seconds} s fa",
-      "alert": "Il processo che esegue il lavoro approvato non è in funzione: il lavoro approvato resta in attesa. Nulla è fallito dal punto di vista scientifico.",
-      "note": "«Attivo» vuol dire che il processo sta controllando, non che qualcosa sia andato avanti."
+      "alert": "Il processo che esegue il lavoro approvato non risponde. Il lavoro approvato resta in attesa. È un segnale sul processo, non un risultato della ricerca.",
+      "note": "«Attivo» vuol dire che il processo sta controllando, non che qualcosa sia andato avanti.",
+      "neutral": "Di norma è fermo tra un passaggio e l'altro del supervisore; guarda «Scansione automatica» per sapere se la scansione è attiva."
     },
     "index": {
       "series": "Serie",
       "new": "Nuova serie",
       "empty": "Nessuna serie, per ora.",
       "rowLabel": "Serie {id}",
-      "rounds": "{n} round",
+      "rounds": {
+        "one": "{n} round",
+        "other": "{n} round"
+      },
       "maxRequests": "fino a {n} richieste",
       "open": "Apri la serie {id}",
       "loadMore": "Carica altre",
@@ -454,6 +458,7 @@
         "saved": "Scarica il dossier salvato attuale (JSON)",
         "note": "Il file è esattamente quello che questa pagina ha appena letto."
       }
-    }
+    },
+    "asOf": "Dati del {time}"
   }
 }

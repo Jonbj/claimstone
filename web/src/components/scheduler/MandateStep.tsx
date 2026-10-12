@@ -5,7 +5,7 @@ import StepCard from "./StepCard";
 import { WorkerLine } from "./WorkersStrip";
 import { identityName, ratio } from "./format";
 
-function Mandate({ row, worker }: { row: MandateStatus; worker: Worker | undefined }) {
+function Mandate({ row, worker }: { row: MandateStatus; worker: { worker: Worker; at: string } | undefined }) {
   const { t } = useLocale();
   const disabledBy = identityName(row.disabled_by);
   return (
@@ -20,13 +20,13 @@ function Mandate({ row, worker }: { row: MandateStatus; worker: Worker | undefin
           {t("sched.mandate.pending", { stage: b.stage, n: b.awaiting_approval, max: b.max_total_requests })}
         </p>
       ))}
-      {worker ? <WorkerLine name={t("sched.mandate.process")} worker={worker} /> : null}
+      {worker ? <WorkerLine name={t("sched.mandate.process")} worker={worker.worker} asOf={worker.at} /> : null}
     </div>
   );
 }
 
 export default function MandateStep({ rows, workers, complete }: {
-  rows: MandateStatus[] | null; workers: Record<string, Worker>; complete: boolean;
+  rows: MandateStatus[] | null; workers: Record<string, { worker: Worker; at: string }>; complete: boolean;
 }) {
   const { t } = useLocale();
   const first = rows?.[0];

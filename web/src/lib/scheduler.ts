@@ -104,9 +104,11 @@ export function overviewOfSeries(
   };
 }
 
-/** An operational alert: anything but a recently heard-from process. Never a scientific failure. */
+/** An operational alert exists for one process only: the installation supervisor, when it is STALE,
+ *  UNKNOWN or STOPPED. A mandate's worker is normally STOPPED between supervisor passes and the
+ *  operations worker may never have started; neither is an alert. Never a scientific failure. */
 export function workerAlert(worker: Worker): boolean {
-  return worker.state !== "ALIVE";
+  return worker.worker_key === "supervisor" && ["STALE", "UNKNOWN", "STOPPED"].includes(worker.state);
 }
 
 /** One acquisition summary of a round (`admission` in the dossier's audit), as the server sends it. */

@@ -9,7 +9,7 @@ import { LocaleProvider, STORAGE_KEY } from "@/lib/i18n";
 import { SessionProvider } from "@/lib/session";
 import SeriesPage from "@/pages/SeriesPage";
 import {
-  admission, authorized, err, indexPage, json, mandate, policy, SID, schedule, stub, worker,
+  authorized, dossier, err, indexPage, json, mandate, policy, SID, schedule, stub, worker,
 } from "./support/schedulerFixtures";
 
 // The poll is the page's only trigger for reading again: capture its callback and fire it by hand.
@@ -107,20 +107,21 @@ describe("Series page", () => {
     expect(document.body.textContent!.replace("non compra nulla", "")).not.toMatch(/buy|purchase|pay|acquista|compra|paga/i);
   });
 
-  it("a STALE mandate worker shows an operational process line; the mandate state stays visible", async () => {
+  it.each(["STALE", "STOPPED", "NOT_STARTED"])("a %s mandate worker is a neutral process line, never an alert; the mandate state stays visible", async (state) => {
     stub({
       schedule: () => json(200, schedule("AUTHORIZED")),
       index: [() => json(200, indexPage({
         schedules: [schedule("AUTHORIZED")], local_mandates: [mandate("ENABLED", SID, { pending_batches: [{ batch_id: "b1", stage: "extract", awaiting_approval: 2, max_total_requests: 7 }] })],
         workers: { supervisor: worker("supervisor", "ALIVE"), operations: worker("operations", "ALIVE"),
-                   mandates: { ["m".repeat(64)]: worker("m", "STALE") } },
+                   mandates: { ["m".repeat(64)]: worker("m", state) } },
       }))],
     });
     mount();
     const step = await screen.findByRole("region", { name: /Local model/ });
-    const process = await within(step).findByRole("status");
-    expect(process.textContent).toContain("Process");
-    expect(process.textContent).toContain("is not running");
+    await within(step).findByText(/Normally stopped between supervisor passes/);
+    expect(within(step).queryByRole("status")).toBeNull();
+    expect(within(step).getByText("Process")).toBeTruthy();
+    expect(within(step).getByTitle(state)).toBeTruthy();
     expect(within(step).getAllByTitle("ENABLED").length).toBeGreaterThan(0);
     expect(within(step).getByText(/5 \/ 100/)).toBeTruthy();
     expect(within(step).getByText(/2 awaiting approval/)).toBeTruthy();
@@ -159,6 +160,7 @@ describe("Series page", () => {
   });
 
   it("reads the dossier once on load and again only when the poll fires", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
     const urls = stub({ schedule: () => json(200, schedule("AUTHORIZED")) });
     mount();
     await screen.findByRole("region", { name: "Rounds" });
@@ -166,6 +168,10 @@ describe("Series page", () => {
     expect(dossiers()).toBe(1);
     await act(async () => { await new Promise((r) => setTimeout(r, 50)); });
     expect(dossiers()).toBe(1);
+    // the dossier is read at most once every 45 s: a poll at once changes nothing, one after it does
+    await act(async () => { firePoll(); });
+    expect(dossiers()).toBe(1);
+    vi.setSystemTime(Date.now() + 46_000);
     await act(async () => { firePoll(); });
     await waitFor(() => expect(dossiers()).toBe(2));
   });
@@ -178,7 +184,6 @@ describe("Series page", () => {
     mount();
     await screen.findByText(/Grants not loaded/);
     await waitFor(() => expect(urls.filter((u) => u.includes("/scheduler?")).length).toBe(10));
-    expect(admission().found).toBe(8); // fixture sanity
   });
 
   it("renders in Italian", async () => {
@@ -190,5 +195,96 @@ describe("Series page", () => {
     expect(screen.getByRole("region", { name: /Copie future/ })).toBeTruthy();
     expect(screen.getByRole("region", { name: "Round" })).toBeTruthy();
     expect(screen.getAllByText("Cosa permette").length).toBeGreaterThan(0);
+  });
+});
+
+describe("Series page refresh", () => {
+  beforeEach(() => {
+    setCsrfToken(null);
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval", "Date"] });
+    Object.defineProperty(document, "visibilityState", { value: "visible", configurable: true });
+  });
+  afterEach(() => {
+    cleanup(); vi.unstubAllGlobals(); vi.useRealTimers(); localStorage.clear();
+    Object.defineProperty(document, "visibilityState", { value: "visible", configurable: true });
+  });
+  const tick = (ms: number) => act(async () => { await vi.advanceTimersByTimeAsync(ms); });
+  const count = (urls: string[], part: string) => urls.filter((u) => u.includes(part)).length;
+  const grantsStub = (extra = {}) => stub({
+    schedule: () => json(200, schedule("AUTHORIZED")),
+    index: [withGrants()],
+    policyRead: () => json(200, policy("AUTHORIZED")),
+    mandateRead: () => json(200, mandate("ENABLED")),
+    ...extra,
+  });
+
+  it("every 15 s re-reads the schedule, a one-row probe and only the matched grants; the dossier waits 45 s", async () => {
+    const urls = grantsStub();
+    mount();
+    await screen.findByText(/qwen-extract/);
+    expect(urls.filter((u) => u.includes("/scheduler?"))).toEqual(["/control/v1/p/news/scheduler?limit=100"]);
+    urls.length = 0;
+    await tick(15_000);
+    expect(count(urls, "/schedules/")).toBe(1);
+    expect(urls.filter((u) => u.includes("/scheduler?"))).toEqual(["/control/v1/p/news/scheduler?limit=1"]);
+    expect(count(urls, "/copy-policies/")).toBe(1);
+    expect(count(urls, "/local-mandates/")).toBe(1);
+    expect(count(urls, "periodic-dossiers")).toBe(0);
+    await tick(15_000);
+    expect(count(urls, "periodic-dossiers")).toBe(0);
+    await tick(15_000);
+    expect(count(urls, "periodic-dossiers")).toBe(1);
+    expect(screen.getByText(/^As of /)).toBeTruthy();
+  });
+
+  it("never starts a second dossier read while one is in flight", async () => {
+    let reads = 0;
+    const urls = grantsStub({ dossier: () => { reads += 1; return reads === 1 ? json(200, dossier()) : new Promise<Response>(() => undefined); } });
+    mount();
+    await screen.findByText(/qwen-extract/);
+    await screen.findByRole("region", { name: "Rounds" });
+    await tick(45_000);
+    await tick(45_000);
+    await tick(45_000);
+    expect(count(urls, "periodic-dossiers")).toBe(2);
+  });
+
+  it("pauses while the tab is hidden", async () => {
+    const urls = grantsStub();
+    mount();
+    await screen.findByText(/qwen-extract/);
+    urls.length = 0;
+    Object.defineProperty(document, "visibilityState", { value: "hidden", configurable: true });
+    await tick(120_000);
+    expect(urls).toHaveLength(0);
+  });
+
+  it("a STALE supervisor elsewhere does not hide the calendar events or the round counts", async () => {
+    grantsStub({ schedule: () => json(200, schedule("AUTHORIZED", { events: [authorized("Bea Operator")] })) });
+    mount();
+    expect(await screen.findByText(/Bea Operator/)).toBeTruthy();
+    expect(screen.getByText("2 / 3")).toBeTruthy();
+  });
+
+  it("recomputes 'planned' as the window opens, without a reload", async () => {
+    vi.setSystemTime(new Date("2026-10-12T10:00:00Z"));
+    const opens: [string, string] = ["2026-10-12T10:00:20+00:00", "2026-10-30T00:00:00+00:00"];
+    grantsStub({ schedule: () => json(200, schedule("AUTHORIZED", {}, [opens])),
+      dossier: () => json(200, dossier({}, [{ round: "Round one", flow_id: "flow1", binding_state: "CURRENT", not_before: opens[0], expires_at: opens[1], operations: {}, successful_queries: 0, planned_queries: 3, admission: { found: 0, confirmed: 0, obtained: 0, rate: null, status: "INSUFFICIENT_ACQUISITION", basis: "obtained", rate_upper: null, final: false, blocking: [] } }])) });
+    mount();
+    const timeline = await screen.findByRole("region", { name: "Rounds" });
+    expect(within(timeline).getByText("planned")).toBeTruthy();
+    await tick(30_000);
+    expect(within(screen.getByRole("region", { name: "Rounds" })).queryByText("planned")).toBeNull();
+  });
+
+  it("stops reading when the page is left", async () => {
+    const urls = grantsStub();
+    mount();
+    await screen.findByText(/qwen-extract/);
+    cleanup();
+    urls.length = 0;
+    await tick(120_000);
+    expect(urls).toHaveLength(0);
   });
 });

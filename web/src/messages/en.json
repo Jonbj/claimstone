@@ -329,15 +329,19 @@
       "neverSeen": "never seen",
       "phase": "phase",
       "age": "{seconds} s ago",
-      "alert": "The process that runs approved work is not running: approved work waits. Nothing has failed scientifically.",
-      "note": "\"Alive\" means the process is scanning, not that anything advanced."
+      "alert": "The process that runs approved work is not responding. Approved work waits. This is a process signal, not a research result.",
+      "note": "\"Alive\" means the process is scanning, not that anything advanced.",
+      "neutral": "Normally stopped between supervisor passes; see Automatic scanning for whether scanning is on."
     },
     "index": {
       "series": "Series",
       "new": "New series",
       "empty": "No series yet.",
       "rowLabel": "Series {id}",
-      "rounds": "{n} rounds",
+      "rounds": {
+        "one": "{n} round",
+        "other": "{n} rounds"
+      },
       "maxRequests": "up to {n} requests",
       "open": "Open series {id}",
       "loadMore": "Load more",
@@ -454,6 +458,7 @@
         "saved": "Download current saved dossier (JSON)",
         "note": "The file is exactly what this page has just read."
       }
-    }
+    },
+    "asOf": "As of {time}"
   }
 }

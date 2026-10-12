@@ -141,8 +141,13 @@ export interface Routes {
   signedIn?: boolean;
   /** Index answers, in order; the last repeats. */
   index?: Array<() => Promise<Response>>;
+  /** Answers the index by URL instead of by order; wins over `index`. */
+  indexFor?: (url: string) => Promise<Response>;
   schedule?: () => Promise<Response>;
   dossier?: () => Promise<Response>;
+  /** Single-object reads (`GET …/copy-policies/{id}`, `…/local-mandates/{id}`); 404 when absent. */
+  policyRead?: (id: string) => Promise<Response>;
+  mandateRead?: (id: string) => Promise<Response>;
   /** `unbound_selectors` slugs of the project `news` in the project list. */
   unbound?: string[];
 }
@@ -159,8 +164,15 @@ export function stub(routes: Routes): string[] {
         : json(200, { operator: ME, csrf_token: "t" });
     }
     if (url.startsWith("/control/v1/p/news/scheduler")) {
+      if (routes.indexFor) return routes.indexFor(url);
       const list = routes.index ?? [() => json(200, indexPage())];
       return list[Math.min(served++, list.length - 1)]();
+    }
+    if (url.startsWith("/control/v1/p/news/copy-policies/")) {
+      return (routes.policyRead ?? (() => err(404, "NOT_FOUND", "no such copy policy")))(url.split("/").pop()!);
+    }
+    if (url.startsWith("/control/v1/p/news/local-mandates/")) {
+      return (routes.mandateRead ?? (() => err(404, "NOT_FOUND", "no such local mandate")))(url.split("/").pop()!);
     }
     if (url.startsWith("/control/v1/p/news/schedules/")) {
       return (routes.schedule ?? (() => err(404, "NOT_FOUND", "no such schedule")))();

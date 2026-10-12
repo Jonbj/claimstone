@@ -1,7 +1,8 @@
 import { useLocale } from "@/lib/i18n";
 import { roundsOf } from "@/lib/scheduler";
 import type { AuditRound, ScheduleStatus } from "@/lib/scheduler";
-import { ratio, utcRange } from "./format";
+import { useNow } from "@/hooks/useSchedulerRefresh";
+import { percent, ratio, utcRange } from "./format";
 
 function Cell({ entry, round, planned }: {
   entry: ScheduleStatus["plan"]["entries"][number]; round: AuditRound | undefined; planned: boolean;
@@ -27,7 +28,7 @@ function Cell({ entry, round, planned }: {
             <>
               <span className="text-xs">
                 {t("sched.series.confirmed")} <span>{ratio(admission.confirmed, admission.found)}</span>
-                {" · "}{t("sched.series.rate", { rate: admission.rate === null ? "—" : `${(admission.rate * 100).toFixed(1)}%` })}
+                {" · "}{t("sched.series.rate", { rate: percent(admission.rate) })}
               </span>
               <span className="font-mono text-xs">{admission.status}</span>
               {admission.found === 0 ? <span className="text-xs">{t("sched.series.noCandidates")}</span> : null}
@@ -45,7 +46,7 @@ function Cell({ entry, round, planned }: {
 export default function RoundTimeline({ schedule, audit }: { schedule: ScheduleStatus; audit: unknown }) {
   const { t } = useLocale();
   const rounds = roundsOf(audit);
-  const now = Date.now();
+  const now = useNow(30_000);
   return (
     <section aria-label={t("sched.series.timeline")} className="flex flex-col gap-2">
       <h2 className="text-sm font-semibold">{t("sched.series.timeline")}</h2>

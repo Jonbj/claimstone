@@ -22,3 +22,8 @@ export function ratio(part: number | null | undefined, whole: number | null | un
 export function identityName(identity: GrantEvent["identity"] | null | undefined): string {
   return identity?.name || identity?.operator || "";
 }
+
+/** A rate as a percentage with one decimal; anything that is not a number is a dash, never NaN. */
+export function percent(rate: unknown): string {
+  return typeof rate === "number" && Number.isFinite(rate) ? `${(rate * 100).toFixed(1)}%` : "—";
+}

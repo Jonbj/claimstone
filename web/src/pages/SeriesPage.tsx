@@ -8,22 +8,30 @@ import PlanStep from "@/components/scheduler/PlanStep";
 import PolicyStep from "@/components/scheduler/PolicyStep";
 import ResultStep from "@/components/scheduler/ResultStep";
 import RoundTimeline from "@/components/scheduler/RoundTimeline";
-import { findSeriesGrants } from "@/components/scheduler/grants";
 import { useApi } from "@/hooks/useApi";
 import { usePoll } from "@/hooks/usePoll";
+import { DOSSIER_MIN_MS, REFRESH_MS, useAsOf, useIdleReload, useVisibleInterval } from "@/hooks/useSchedulerRefresh";
+import { useSeriesGrants } from "@/hooks/useSeriesGrants";
 import { api } from "@/lib/api";
 import { ControlError, control } from "@/lib/control";
+import { formatUtc } from "@/lib/datetime";
 import { useLocale } from "@/lib/i18n";
 import { useSession } from "@/lib/session";
 
 function Body({ project, id }: { project: string; id: string }) {
   const { t } = useLocale();
-  // Three independent reads: a failure of one blanks only its own part of the page. The dossier is
-  // the expensive one: read on load, and again only when the poll says the ledgers moved.
+  // Three independent reads: a failure of one blanks only its own part of the page. The ledger poll
+  // and a 15 s visible-tab timer ask for a refresh; each read ignores the ask while it is in flight,
+  // and the dossier, which is expensive, is read at most once every 45 s.
   const schedule = useApi(() => control.schedule(project, id), [project, id]);
   const dossier = useApi(() => api.periodicDossier(project, id), [project, id]);
-  const grants = useApi(() => findSeriesGrants(project, id), [project, id]);
-  usePoll(project || null, () => { schedule.reload(); dossier.reload(); grants.reload(); });
+  const grants = useSeriesGrants(project, id);
+  const reloadSchedule = useIdleReload(schedule.reload, schedule.pending || schedule.refreshing);
+  const reloadDossier = useIdleReload(dossier.reload, dossier.pending || dossier.refreshing, DOSSIER_MIN_MS);
+  const refresh = () => { reloadSchedule(); reloadDossier(); void grants.refresh(); };
+  usePoll(project || null, refresh);
+  useVisibleInterval(refresh, REFRESH_MS);
+  const dossierAsOf = useAsOf(dossier.data);
 
   if (schedule.error) {
     if (schedule.error instanceof ControlError && schedule.error.status === 404) {
@@ -45,7 +53,10 @@ function Body({ project, id }: { project: string; id: string }) {
       ) : dossier.pending || !dossier.data ? (
         <Pending label={t("sched.series.timelineLoading")} />
       ) : (
-        <RoundTimeline schedule={s} audit={dossier.data.audit} />
+        <>
+          <RoundTimeline schedule={s} audit={dossier.data.audit} />
+          {dossierAsOf ? <p className="text-xs text-muted-foreground">{t("sched.asOf", { time: formatUtc(dossierAsOf) })}</p> : null}
+        </>
       )}
       <PlanStep schedule={s} />
       <CalendarStep schedule={s} />

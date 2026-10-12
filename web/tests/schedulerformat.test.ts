@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { identityName, ratio, requestsLine, utcRange } from "@/components/scheduler/format";
+import { identityName, percent, ratio, requestsLine, utcRange } from "@/components/scheduler/format";
 import { stateLabelKey } from "@/components/scheduler/labels";
 import { CATALOGS } from "@/lib/i18n";
 import { roundsOf } from "@/lib/scheduler";
@@ -62,5 +62,18 @@ describe("roundsOf", () => {
     expect(roundsOf({})).toEqual([]);
     expect(roundsOf({ rounds: "no" })).toEqual([]);
     expect(roundsOf(null)).toEqual([]);
+  });
+});
+
+describe("percent", () => {
+  it("is a dash for anything that is not a number, never NaN", () => {
+    expect(percent(null)).toBe("—");
+    expect(percent(undefined)).toBe("—");
+    expect(percent(Number.NaN)).toBe("—");
+    expect(percent("0.5" as unknown as number)).toBe("—");
+  });
+  it("is one decimal", () => {
+    expect(percent(0.375)).toBe("37.5%");
+    expect(percent(0)).toBe("0.0%");
   });
 });

@@ -1,17 +1,17 @@
-import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
 import ErrorState from "@/components/ErrorState";
 import Pending from "@/components/Pending";
 import ProjectTabs from "@/components/ProjectTabs";
+import Rounds from "@/components/scheduler/Rounds";
 import StateWord from "@/components/scheduler/StateWord";
 import WorkersStrip from "@/components/scheduler/WorkersStrip";
 import { utcRange } from "@/components/scheduler/format";
-import { useApi } from "@/hooks/useApi";
+import { REFRESH_MS, useVisibleInterval } from "@/hooks/useSchedulerRefresh";
+import { useSchedulerIndex } from "@/hooks/useSchedulerIndex";
 import { usePoll } from "@/hooks/usePoll";
-import { ControlError, control } from "@/lib/control";
 import { useLocale } from "@/lib/i18n";
 import { overviewOfSeries } from "@/lib/scheduler";
-import type { SchedulerIndex, SeriesOverview } from "@/lib/scheduler";
+import type { SeriesOverview } from "@/lib/scheduler";
 import { useSession } from "@/lib/session";
 
 const buttonClass = "inline-flex min-h-11 items-center rounded-lg px-4 text-sm font-medium ring-1 ring-gray-300 hover:bg-gray-50 dark:ring-gray-700 dark:hover:bg-gray-900";
@@ -36,7 +36,7 @@ function SeriesRow({ view, project, more }: { view: SeriesOverview; project: str
         className="flex flex-col gap-2 rounded-xl border border-border bg-card px-4 py-3">
       <div className="flex flex-wrap items-center gap-3">
         <StateWord word={view.state} />
-        <span className="text-sm">{t("sched.index.rounds", { n: view.rounds })}</span>
+        <span className="text-sm"><Rounds n={view.rounds} /></span>
         <span className="text-sm text-muted-foreground">{utcRange(view.windowStart, view.windowEnd)}</span>
         <span className="text-sm text-muted-foreground">
           {t("sched.index.maxRequests", { n: view.schedule.plan.max_total_requests })}
@@ -61,23 +61,18 @@ function SeriesRow({ view, project, more }: { view: SeriesOverview; project: str
 
 function Body({ project }: { project: string }) {
   const { t } = useLocale();
-  const first = useApi(() => control.schedulerIndex(project), [project]);
-  const [extra, setExtra] = useState<SchedulerIndex[]>([]);
-  const [restarted, setRestarted] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [moreError, setMoreError] = useState<Error | null>(null);
-  usePoll(project || null, () => first.reload());
+  const index = useSchedulerIndex(project);
+  // The ledger poll and a visible-tab timer both ask for a refresh; the hook ignores the ask while a
+  // read is still running.
+  usePoll(project || null, index.refresh);
+  useVisibleInterval(index.refresh, REFRESH_MS);
 
-  // Appended pages belong to one revision of the archive: when page one moves to another, they go.
-  const revision = first.data?.archive.revision ?? null;
-  useEffect(() => { setExtra([]); }, [revision]);
+  if (index.error && !index.pages) return <ErrorState error={index.error} context="scheduler" />;
+  if (!index.pages) return <Pending label={t("sched.loading")} />;
 
-  if (first.error) return <ErrorState error={first.error} context="scheduler" />;
-  if (first.pending || !first.data) return <Pending label={t("sched.loading")} />;
-
-  const pages = [first.data, ...extra];
-  const last = pages[pages.length - 1];
-  const next = last.archive.next_cursor;
+  const pages = index.pages;
+  const first = pages[0];
+  const next = pages[pages.length - 1].archive.next_cursor;
   const schedules = pages.flatMap((p) => p.schedules);
   const policies = pages.flatMap((p) => p.copy_policies);
   const mandates = pages.flatMap((p) => p.local_mandates);
@@ -85,30 +80,10 @@ function Body({ project }: { project: string }) {
     .sort((a, b) => Date.parse(b.windowStart) - Date.parse(a.windowStart) || 0);
   const single = mandates.filter((m) => !m.mandate.schedule_id);
 
-  async function loadMore() {
-    if (!next) return;
-    setBusy(true);
-    setMoreError(null);
-    try {
-      const page = await control.schedulerIndex(project, next);
-      setRestarted(false);
-      setExtra((previous) => [...previous, page]);
-    } catch (cause) {
-      if (cause instanceof ControlError && cause.code === "ARCHIVE_CHANGED") {
-        setExtra([]);
-        setRestarted(true);
-        first.reload();
-      } else {
-        setMoreError(cause instanceof Error ? cause : new Error(String(cause)));
-      }
-    } finally {
-      setBusy(false);
-    }
-  }
-
   return (
     <>
-      <WorkersStrip supervisor={first.data.workers.supervisor} operations={first.data.workers.operations} />
+      {index.error ? <ErrorState error={index.error} context="scheduler" /> : null}
+      <WorkersStrip supervisor={first.workers.supervisor} operations={first.workers.operations} />
       <section aria-label={t("sched.index.series")} className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-sm font-semibold">{t("sched.index.series")}</h2>
@@ -116,7 +91,7 @@ function Body({ project }: { project: string }) {
             {t("sched.index.new")}
           </Link>
         </div>
-        {restarted ? <p role="status" className="text-sm">{t("sched.index.restarted")}</p> : null}
+        {index.restarted ? <p role="status" className="text-sm">{t("sched.index.restarted")}</p> : null}
         {views.length === 0 ? (
           <p className="text-sm text-muted-foreground">{t("sched.index.empty")}</p>
         ) : (
@@ -126,9 +101,8 @@ function Body({ project }: { project: string }) {
             ))}
           </ul>
         )}
-        {moreError ? <ErrorState error={moreError} context="scheduler" /> : null}
         {next ? (
-          <button type="button" onClick={loadMore} disabled={busy} className={`${buttonClass} self-start`}>
+          <button type="button" onClick={index.more} disabled={index.busy} className={`${buttonClass} self-start`}>
             {t("sched.index.loadMore")}
           </button>
         ) : null}

@@ -34,9 +34,14 @@ describe("overviewOfSeries", () => {
 });
 
 describe("workerAlert", () => {
-  const w = (state: string): Worker => ({ worker_key: "supervisor", state: state as Worker["state"], last_seen_at: null, phase: null, age_seconds: null });
-  it.each([["STALE", true], ["UNKNOWN", true], ["STOPPED", true], ["NOT_STARTED", true], ["ALIVE", false]])(
-    "%s -> alert %s", (state, alert) => expect(workerAlert(w(state))).toBe(alert));
+  const w = (state: string, key = "supervisor"): Worker => ({ worker_key: key, state: state as Worker["state"], last_seen_at: null, phase: null, age_seconds: null });
+  it.each([["STALE", true], ["UNKNOWN", true], ["STOPPED", true], ["NOT_STARTED", false], ["ALIVE", false]])(
+    "the supervisor %s -> alert %s", (state, alert) => expect(workerAlert(w(state))).toBe(alert));
+  it.each(["ALIVE", "STALE", "UNKNOWN", "STOPPED", "NOT_STARTED"])(
+    "the operations worker and a mandate worker are never an alert (%s)", (state) => {
+      expect(workerAlert(w(state, "operations"))).toBe(false);
+      expect(workerAlert(w(state, "m".repeat(64)))).toBe(false);
+    });
 });
 
 describe("cumulativeOf", () => {
