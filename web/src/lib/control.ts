@@ -329,6 +329,33 @@ export interface OperationsList {
   flow_id: string;
   operations: OperationSummary[];
 }
+export interface StartFlowBody { title: string; round: string }
+export interface StartFlowResult { flow_id: string; created: boolean; title: string; round: string }
+export interface PlanBatchBody {
+  stage: "discover" | "acquire";
+  apis: string[];
+  allowed_hosts: string[];
+  max_units: number;
+  max_requests_each: number;
+  per_query: number;
+}
+export interface PlannedBatch {
+  batch_id: string;
+  operation_ids: string[];
+  units: Array<{
+    operation_id: string; subject: unknown; direct_url: string | null;
+    allowed_hosts: string[]; allowed_schemes: string[]; max_requests: number;
+    use_apis: boolean; retry_classes: string[];
+  }>;
+  selected: number;
+  skipped: Array<{ subject: string; reason: string }>;
+  max_total_requests: number;
+  remaining_unplanned: number;
+  stage: "discover" | "acquire";
+  flow_id: string;
+  project: string;
+  batch_version: number;
+}
 export type OperationLimits = OperationSummary["limits"];
 
 // new project (plan 1; docs/contracts/new_project.md)
@@ -480,6 +507,10 @@ function flowBase(project: string, flowId: string): string {
 }
 
 export const control = {
+  startFlow: (project: string, body: StartFlowBody) =>
+    post<StartFlowResult>(`/p/${enc(project)}/flows`, body),
+  planBatch: (project: string, flowId: string, body: PlanBatchBody) =>
+    post<PlannedBatch>(`${flowBase(project, flowId)}/batches`, body),
   // session
   /** Signing in stores the CSRF token in memory; the cookie is the server's HttpOnly one. */
   async signIn(id: string, password: string): Promise<SessionInfo> {

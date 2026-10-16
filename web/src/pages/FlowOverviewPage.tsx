@@ -220,7 +220,8 @@ export default function FlowOverviewPage({ kind }: { kind: "f" | "u" }) {
           intake: <NeedsYou needs={data.journey.needs_you} base={base} writable={kind === "f"} />,
           execution: (
             <>
-              {kind === "f" && flowId ? <OperationsPanel project={project} flowId={flowId} /> : null}
+              {kind === "f" && flowId ? <OperationsPanel project={project} flowId={flowId}
+                namedRound={data.selector.round !== null} hasCandidates={data.source_tracker.length > 0} /> : null}
               <RunningNote journey={data.journey} />
             </>
           ),

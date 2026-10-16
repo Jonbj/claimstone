@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import Chip from "@/components/Chip";
 import ErrorState from "@/components/ErrorState";
 import Pending from "@/components/Pending";
+import PlanBatchForm from "@/components/PlanBatchForm";
 import { useApi } from "@/hooks/useApi";
 import { control } from "@/lib/control";
 import type { OperationSummary } from "@/lib/control";
@@ -22,7 +23,9 @@ function limit(value: number | null, unit = ""): string {
   return value === null ? "— (none set)" : `${value}${unit}`;
 }
 
-export default function OperationsPanel({ project, flowId }: { project: string; flowId: string }) {
+export default function OperationsPanel({ project, flowId, namedRound = false, hasCandidates = false }: {
+  project: string; flowId: string; namedRound?: boolean; hasCandidates?: boolean;
+}) {
   const session = useSession();
   return (
     <section aria-label="Right now" className="rounded-lg bg-card p-5 shadow-sm ring-1 ring-gray-200 dark:ring-gray-800">
@@ -36,23 +39,25 @@ export default function OperationsPanel({ project, flowId }: { project: string; 
           </Link>
         </p>
       ) : (
-        <OperationsList project={project} flowId={flowId} />
+        <OperationsList project={project} flowId={flowId} namedRound={namedRound} hasCandidates={hasCandidates} />
       )}
     </section>
   );
 }
 
-function OperationsList({ project, flowId }: { project: string; flowId: string }) {
+function OperationsList({ project, flowId, namedRound, hasCandidates }: {
+  project: string; flowId: string; namedRound: boolean; hasCandidates: boolean;
+}) {
   const list = useApi(() => control.operations(project, flowId), [project, flowId]);
   const [confirming, setConfirming] = useState<OperationSummary | null>(null);
   if (list.error) return <ErrorState error={list.error} context="operations" />;
   if (list.pending || !list.data) return <Pending label="loading operations…" />;
   const operations = list.data.operations;
-  if (operations.length === 0) {
-    return <p className="text-sm text-muted-foreground">No operation is planned for this flow.</p>;
-  }
   return (
     <>
+      {namedRound ? <PlanBatchForm project={project} flowId={flowId} hasCandidates={hasCandidates}
+                                   onPlanned={list.reload} /> : null}
+      {operations.length === 0 ? <p className="text-sm text-muted-foreground">No operation is planned for this flow.</p> : null}
       <ul className="flex flex-col gap-4">
         {operations.map((op) => (
           <li key={op.operation_id} className="border-b pb-3 text-sm last:border-b-0 last:pb-0">
