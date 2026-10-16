@@ -173,6 +173,8 @@ def _copies(rs: Any, admitted: dict[str, Any] | None, running: set[str]) -> dict
         "not_obtained": (found - obtained) if found is not None and obtained is not None
         else None,
         "not_a_document": len(a["not_a_document"]) if "not_a_document" in a else None,
+        "not_attempted": (found - a["attempted"]) if found is not None
+        and a.get("attempted") is not None else None,
     }
     if "acquire" in running:
         status, text = "running", ("Obtaining copies: {confirmed} confirmed of {found} found "
@@ -188,8 +190,9 @@ def _copies(rs: Any, admitted: dict[str, Any] | None, running: set[str]) -> dict
                                    "{floor}); no verdicts can be produced.")
     else:
         status, text = "partial", ("{confirmed} of {found} found sources are confirmed so far "
-                                   "(rate {rate}, floor {floor}); {not_obtained} not obtained, "
-                                   "and the round is not final.")
+                                   "(rate {rate}, floor {floor}); {not_obtained} not obtained yet, "
+                                   "{not_attempted} of them not yet attempted; the round is "
+                                   "not final.")
     return _step(3, "copies", "Obtain legal copies", "claimstone", status, text, figures)
 
 

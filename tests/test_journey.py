@@ -121,6 +121,9 @@ def test_copies_partial_then_blocked_below_the_floor(tmp_path):
     steps = _by_key(_overview(project, store))
     assert steps["copies"]["status"] == "partial"
     assert steps["copies"]["figures"]["not_obtained"] == 1
+    # never attempted is said as such, not left to read as a refusal
+    assert steps["copies"]["figures"]["not_attempted"] == 1
+    assert "1 of them not yet attempted" in steps["copies"]["summary"]
     store.append("acquisitions.jsonl", {
         "candidate_key": "r1-c", "acquired": False, "http_status": 403,
         "failure_class": "PAYWALL_403", "url": "https://example.org/r1-c.pdf",

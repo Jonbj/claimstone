@@ -32,7 +32,7 @@ journey: { journey_version, topics[{id,label,terms}], questions{total,literature
 |---|---|---|---|---|
 | 1 | protocol | you | legacy selector: `not_applicable`; binding `CURRENT`: `done`; else `blocked` (names `binding_state.differences`) | registry_version, questions_total/literature/operational, bound_at (flow row `created_at`), drifted_parts |
 | 2 | search | claimstone | running; stage discover outputs none/0: `not_started`; admission unreadable or `awaiting_discovery` blocking: `partial`; else `done` | candidates, per_class (admission `by_class[*].found`), note (stage detail verbatim) |
-| 3 | copies | claimstone | running; found none/0: `not_started`; `final` and status `OK`: `done`; `final` and `INSUFFICIENT_ACQUISITION`: `blocked`; else `partial` | confirmed, found, obtained, rate, floor, status, not_obtained (found − obtained), not_a_document |
+| 3 | copies | claimstone | running; found none/0: `not_started`; `final` and status `OK`: `done`; `final` and `INSUFFICIENT_ACQUISITION`: `blocked`; else `partial` | confirmed, found, obtained, rate, floor, status, not_obtained (found − obtained: a shortfall, which includes sources never attempted), not_attempted (found − attempted), not_a_document |
 | 4 | documents | claimstone | running; normalize outputs none/0: `not_started`; admission unreadable or `awaiting_normalize` blocking: `partial`; else `done` | documents, rejected |
 | 5 | annotate | claimstone | running; extract progress none: `not_started`; done == total: `done`; else `partial` | readings_answered, readings_expected, annotations_kept, rejected |
 | 6 | review | claimstone | running; progress none: `not_started`; done == total: `done`; done > 0: `partial`; else `not_started` | reviewed, accepted |
