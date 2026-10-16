@@ -19,7 +19,7 @@ IN_FLIGHT = frozenset({"started", "call_started", "unit_completed"})
 
 STATE_NOTES = {
     "PLANNED": "waiting for a person to authorize this exact plan",
-    "AUTHORIZED": "authorized; waiting for the worker to start it",
+    "AUTHORIZED": "authorized; the installation supervisor or a worker starts it, usually within a minute",
     "RUNNING_OR_LOCK_HELD": "a writer holds the project lock; work is probably running",
     "INTERRUPTED": "started but no writer holds the lock: interrupted until a worker resumes it",
     "COMPLETED": "every planned unit has a recorded outcome",
