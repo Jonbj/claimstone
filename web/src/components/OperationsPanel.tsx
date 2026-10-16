@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router";
 import Chip from "@/components/Chip";
+import BatchesAwaitingAuthorization from "@/components/BatchesAwaitingAuthorization";
 import ErrorState from "@/components/ErrorState";
 import Pending from "@/components/Pending";
 import PlanBatchForm from "@/components/PlanBatchForm";
@@ -50,14 +51,21 @@ function OperationsList({ project, flowId, namedRound, hasCandidates }: {
 }) {
   const list = useApi(() => control.operations(project, flowId), [project, flowId]);
   const [confirming, setConfirming] = useState<OperationSummary | null>(null);
-  if (list.error) return <ErrorState error={list.error} context="operations" />;
-  if (list.pending || !list.data) return <Pending label="loading operations…" />;
-  const operations = list.data.operations;
+  const [batchRefreshToken, setBatchRefreshToken] = useState(0);
+  const operations = list.data?.operations ?? [];
+  function refreshAfterPlanning() {
+    list.reload();
+    setBatchRefreshToken((token) => token + 1);
+  }
   return (
     <>
       {namedRound ? <PlanBatchForm project={project} flowId={flowId} hasCandidates={hasCandidates}
-                                   onPlanned={list.reload} /> : null}
-      {operations.length === 0 ? <p className="text-sm text-muted-foreground">No operation is planned for this flow.</p> : null}
+                                   onPlanned={refreshAfterPlanning} /> : null}
+      <BatchesAwaitingAuthorization project={project} flowId={flowId} refreshToken={batchRefreshToken}
+                                    onAuthorized={list.reload} />
+      {list.error ? <ErrorState error={list.error} context="operations" /> : null}
+      {list.pending || !list.data ? <Pending label="loading operations…" /> : null}
+      {list.data && operations.length === 0 ? <p className="text-sm text-muted-foreground">No operation is planned for this flow.</p> : null}
       <ul className="flex flex-col gap-4">
         {operations.map((op) => (
           <li key={op.operation_id} className="border-b pb-3 text-sm last:border-b-0 last:pb-0">

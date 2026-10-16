@@ -46,6 +46,23 @@
     "plan": "Plan batch",
     "planning": "Planning…"
   },
+  "authorizeBatch": {
+    "heading": "Batches awaiting your authorization",
+    "awaiting": "{awaiting} of {selected} operations await authorization",
+    "ceiling": "at most {count} network requests",
+    "hosts": "Exact hosts: {hosts}",
+    "useApis": "Uses the open-access lookup APIs",
+    "skipped": "Skipped: {count} (show reasons)",
+    "open": "Authorize this batch",
+    "dialog": "Authorize batch",
+    "confirmTitle": "Authorize {stage} batch?",
+    "confirmIntro": "This authorizes exactly these limits, and nothing above them:",
+    "operations": "operations: {count}",
+    "confirm": "Confirm authorization",
+    "authorizing": "Authorizing…",
+    "cancel": "Cancel",
+    "planChanged": "The batch plan changed. Review the refreshed plan before authorizing it."
+  },
   "wizard": {
     "title": "New project",
     "lede": "Describe a topic, ask your questions, declare the sources and the bar. Claimstone checks each step and keeps a draft. Nothing runs while you fill in these steps, and creating the project starts nothing either: research begins only in a later stage, after you authorize it.",

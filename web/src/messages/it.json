@@ -46,6 +46,23 @@
     "plan": "Pianifica il batch",
     "planning": "Pianificazione…"
   },
+  "authorizeBatch": {
+    "heading": "Batch in attesa della tua autorizzazione",
+    "awaiting": "{awaiting} operazioni su {selected} attendono l'autorizzazione",
+    "ceiling": "al massimo {count} richieste di rete",
+    "hosts": "Host esatti: {hosts}",
+    "useApis": "Usa le API per cercare copie open access",
+    "skipped": "Saltati: {count} (mostra i motivi)",
+    "open": "Autorizza questo batch",
+    "dialog": "Autorizza il batch",
+    "confirmTitle": "Autorizzare il batch {stage}?",
+    "confirmIntro": "Questo autorizza esattamente questi limiti, e nulla al di sopra:",
+    "operations": "operazioni: {count}",
+    "confirm": "Conferma l'autorizzazione",
+    "authorizing": "Autorizzazione in corso…",
+    "cancel": "Annulla",
+    "planChanged": "Il piano del batch è cambiato. Controlla il piano aggiornato prima di autorizzarlo."
+  },
   "wizard": {
     "title": "Nuovo progetto",
     "lede": "Descrivi un argomento, scrivi le domande, dichiara le fonti e la soglia. Claimstone controlla ogni passo e conserva una bozza. Mentre compili questi passi non viene avviato nulla, e nemmeno la creazione del progetto avvia qualcosa: la ricerca comincia solo in una fase successiva, dopo che l'avrai autorizzata.",
