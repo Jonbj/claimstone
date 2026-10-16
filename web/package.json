@@ -8,10 +8,10 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "vite build && node scripts/check-csp.mjs",
+    "build": "vite build --configLoader runner && node scripts/check-csp.mjs",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "vitest run",
+    "test": "vitest run --configLoader runner",
     "gen:types": "json2ts ../docs/contracts/portal-api.schema.json > src/lib/api-types.ts"
   },
   "dependencies": {
