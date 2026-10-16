@@ -37,7 +37,7 @@ from urllib.parse import unquote, urlparse
 
 from claimstone import (account_service, admin, auth_events, autopilot, copy_policy, decisions,
                         drafts, export, flows, intake, network_schedule, new_project_service, operations,
-                        operations_view, operators, periodic, periodic_export, portal_state, scope,
+                        net, operations_view, operators, periodic, periodic_export, portal_state, scope,
                         synthesize, today, worker_runtime)
 from claimstone.config import ConfigError, RegistryDrift
 from claimstone.store import LedgerCorrupt, Store
@@ -364,6 +364,7 @@ ROUTES: tuple[Route, ...] = (
     # B12: the scheduler's operations. Planning stays with the scheduler and the CLI.
     Route("GET", ("p", "{project}", "flows", "{flow_id}", "operations"), "_operations_list"),
     Route("GET", ("p", "{project}", "flows", "{flow_id}", "batches"), "_batches_list"),
+    Route("GET", ("p", "{project}", "flows", "{flow_id}", "acquire-hosts"), "_acquire_hosts"),
     Route("POST", ("p", "{project}", "flows"), "_flow_start"),
     Route("POST", ("p", "{project}", "flows", "{flow_id}", "batches"), "_batch_plan"),
     Route("POST", ("p", "{project}", "flows", "{flow_id}", "batches", "{batch_id}",
@@ -1344,6 +1345,44 @@ def _flow_start(self: _Handler, params: dict[str, str], query: Any,
             'round': round_name}, 201 if created else 200
 
 
+def _acquire_hosts(self: _Handler, params: dict[str, str], query: Any,
+                   body: dict[str, Any]) -> tuple[Any, int]:
+    """The hosts an `acquire` plan for this flow would need, read from what is recorded: the hosts
+    of the URLs of candidates not yet attempted, and the hosts earlier attempts were refused at
+    because the plan did not list them. A suggestion, never a grant: the person edits the list and
+    the plan still needs its own authorization. Hosts the project excludes are never suggested."""
+    self._require_session()
+    project, store, _row, selector = _flow_only(self, params)
+    attempted = store.latest_by('acquisitions.jsonl', 'candidate_key')
+    excluded = tuple(project.excluded_hosts)
+
+    def allowed(host: str) -> bool:
+        return bool(host) and not any(host == h or host.endswith('.' + h) for h in excluded)
+
+    pending = [row for key, row in scope.candidates(store, selector).items()
+               if key not in attempted and row.get('source_class')
+               and str(row.get('url') or '').startswith(('http://', 'https://'))
+               and allowed(net.host_of(str(row['url'])))]
+    from_candidates: dict[str, int] = {}
+    for row in pending:
+        host = net.host_of(str(row['url']))
+        if allowed(host):
+            from_candidates[host] = from_candidates.get(host, 0) + 1
+    refused: dict[str, set[str]] = {}
+    for key, acquisition in attempted.items():
+        for attempt in acquisition.get('attempts') or []:
+            detail = str(attempt.get('detail') or '')
+            if attempt.get('failure_class') == net.EXCLUDED and detail.endswith(' is outside this plan'):
+                host = detail.split(' ', 1)[0].lower()
+                if allowed(host):
+                    refused.setdefault(host, set()).add(key)
+    return {'pending_candidates': len(pending),
+            'candidate_hosts': [{'host': host, 'candidates': n}
+                                for host, n in sorted(from_candidates.items())],
+            'refused_hosts': [{'host': host, 'candidates': len(keys)}
+                              for host, keys in sorted(refused.items())]}, 200
+
+
 def _batch_plan(self: _Handler, params: dict[str, str], query: Any,
                 body: dict[str, Any]) -> tuple[Any, int]:
     """Freeze a bounded set of one-query or one-candidate plans, in the `planned` state.
@@ -1807,6 +1846,7 @@ for _name, _function in (("_operations_list", _operations_list),
                          ("_local_mandate_disable", _local_mandate_disable),
                          ("_batches_list", _batches_list),
                          ("_batch_authorize", _batch_authorize),
+                         ("_acquire_hosts", _acquire_hosts),
                          ("_flow_start", _flow_start),
                          ("_batch_plan", _batch_plan),
                          ("_operation_authorize", _operation_authorize),

@@ -117,4 +117,32 @@ describe("network batch planning", () => {
       allowed_hosts: ["example.org", "api.unpaywall.org", "api.openalex.org"],
       max_units: 5, max_requests_each: 3, per_query: 25 });
   });
+  it("fills the acquire hosts from the record, lets the person add a refused host, and sends only that", async () => {
+    const writes: unknown[] = [];
+    vi.stubGlobal("fetch", (url: string, init?: RequestInit) => {
+      if (url === "/control/v1/session") return json(200, { operator: {
+        id: "o", name: "Operator", role: "admin", must_change_password: false }, csrf_token: "tok" });
+      if (url.endsWith("/operations")) return json(200, { flow_id: "f1", operations: [] });
+      if (url.endsWith("/acquire-hosts")) return json(200, { pending_candidates: 4,
+        candidate_hosts: [{ host: "doi.org", candidates: 3 }, { host: "repo.example.org", candidates: 1 }],
+        refused_hosts: [{ host: "pmc.ncbi.nlm.nih.gov", candidates: 2 }] });
+      if (init?.method === "POST") {
+        writes.push(JSON.parse(String(init.body)));
+        return json(201, { batch_id: "b1", operation_ids: [], units: [], selected: 4, max_total_requests: 12 });
+      }
+      return json(404, { error: { code: "NOT_FOUND", message: "unknown" } });
+    });
+    render(<MemoryRouter><SessionProvider><OperationsPanel project="demo" flowId="f1"
+      namedRound hasCandidates /></SessionProvider></MemoryRouter>);
+    await screen.findByRole("button", { name: "Plan batch" });
+    fireEvent.change(screen.getByLabelText("Stage"), { target: { value: "acquire" } });
+    await screen.findByText("At most 12 requests, to: doi.org, repo.example.org");
+    fireEvent.click(screen.getByRole("button", { name: "Add pmc.ncbi.nlm.nih.gov (2)" }));
+    expect(screen.getByText("At most 12 requests, to: doi.org, repo.example.org, pmc.ncbi.nlm.nih.gov"))
+      .toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Plan batch" }));
+    await waitFor(() => expect(writes).toHaveLength(1));
+    expect(writes[0]).toEqual({ stage: "acquire", apis: [], max_units: 4, max_requests_each: 3,
+      per_query: 25, allowed_hosts: ["doi.org", "repo.example.org", "pmc.ncbi.nlm.nih.gov"] });
+  });
 });

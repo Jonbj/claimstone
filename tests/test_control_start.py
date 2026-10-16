@@ -131,3 +131,28 @@ def test_use_apis_is_optional_boolean_and_acquire_only(ws):
         not_boolean = _plan(base, prefix, headers, flow_id, use_apis="yes")
     assert on_discover[0] == 422 and not_boolean[0] == 422
     assert not ws["store"].path(operations.LEDGER).exists()
+
+
+def test_acquire_hosts_are_suggested_from_the_record_and_never_include_excluded_hosts(ws):
+    excluded = ws["project"].excluded_hosts[0]
+    with _served(ws) as (base, prefix, headers):
+        flow_id = _start(base, prefix, headers)[2]["flow_id"]
+        for key, url in [("doi:1", "https://doi.org/10.1/a"), ("doi:2", "https://doi.org/10.1/b"),
+                         ("doi:3", "https://repo.example.org/x.pdf"),
+                         ("doi:4", f"https://{excluded}/x.pdf"), ("doi:5", "https://seen.example.org/p.pdf")]:
+            ws["store"].append("candidates.jsonl", {
+                "candidate_key": key, "round": "first-2026-10-16", "url": url,
+                "source_class": ws["project"].classes[0].id, "title": key,
+                "found_at": "2026-10-16T00:00:00+00:00"})
+        ws["store"].append("acquisitions.jsonl", {
+            "candidate_key": "doi:5", "failure_class": "EXCLUDED_HOST",
+            "attempts": [{"failure_class": "EXCLUDED_HOST", "detail": "pmc.ncbi.nlm.nih.gov is outside this plan"},
+                         {"failure_class": "EXCLUDED_HOST", "detail": f"{excluded} is outside this plan"},
+                         {"failure_class": "EXCLUDED_HOST", "detail": "other.example.org is excluded"}]})
+        got = _request(f"{base}{prefix}/flows/{flow_id}/acquire-hosts",
+                       headers={"Cookie": headers["Cookie"]})
+    assert got[0] == 200
+    assert got[2]["pending_candidates"] == 3
+    assert got[2]["candidate_hosts"] == [{"host": "doi.org", "candidates": 2},
+                                         {"host": "repo.example.org", "candidates": 1}]
+    assert got[2]["refused_hosts"] == [{"host": "pmc.ncbi.nlm.nih.gov", "candidates": 1}]

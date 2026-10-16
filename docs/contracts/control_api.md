@@ -446,6 +446,12 @@ As built (B12):
   Unpaywall and OpenAlex APIs for open-access locations: those two hosts, and every host a location may
   point to, must then be in `allowed_hosts`, or the request is refused as outside the plan.
   Authorizing stays the separate exact act above.
+- `GET …/flows/{flow_id}/acquire-hosts` (session required, read-only) → `{pending_candidates,
+  candidate_hosts: [{host, candidates}], refused_hosts: [{host, candidates}]}`: the hosts an `acquire` plan
+  would need, read from the record: the hosts of the URLs of candidates with no attempt yet, and the hosts
+  earlier attempts were refused at as "outside this plan". Hosts in the project's `excluded_hosts` are never
+  suggested. A suggestion, not a grant: the portal pre-fills the plan form with it, the person edits the list
+  and plans, and the plan still needs its own authorization.
 - Today (B9) now reports `continues_without_you` per project: the authorized, running or
   interrupted operations.
 

@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import ErrorState from "@/components/ErrorState";
+import { useApi } from "@/hooks/useApi";
 import { control } from "@/lib/control";
 import type { PlanBatchBody } from "@/lib/control";
 import { useLocale } from "@/lib/i18n";
@@ -25,6 +26,17 @@ export default function PlanBatchForm({ project, flowId, hasCandidates, onPlanne
   const [maxUnits, setMaxUnits] = useState(5);
   const [maxRequestsEach, setMaxRequestsEach] = useState(3);
   const [useApis, setUseApis] = useState(false);
+  const [hostsTouched, setHostsTouched] = useState(false);
+  // What the record says an acquire plan would need; a suggestion the person edits, never a grant.
+  const suggestions = useApi(
+    () => (stage === "acquire" ? control.acquireHosts(project, flowId) : Promise.resolve(null)),
+    [project, flowId, stage]);
+  const suggested = suggestions.data;
+  useEffect(() => {
+    if (stage !== "acquire" || !suggested || hostsTouched) return;
+    setHostsText(suggested.candidate_hosts.map((item) => item.host).join("\n"));
+    if (suggested.pending_candidates > 0) setMaxUnits(suggested.pending_candidates);
+  }, [stage, suggested, hostsTouched]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [validation, setValidation] = useState<string | null>(null);
@@ -65,7 +77,11 @@ export default function PlanBatchForm({ project, flowId, hasCandidates, onPlanne
     <form onSubmit={submit} noValidate className="mb-5 flex flex-col gap-3 rounded-md border border-border p-4">
       <h3 className="font-semibold">{t("planBatch.heading")}</h3>
       <label className="flex flex-col gap-1 text-sm">{t("planBatch.stage")}
-        <select value={stage} disabled={busy} onChange={(e) => setStage(e.target.value as "discover" | "acquire")}
+        <select value={stage} disabled={busy} onChange={(e) => {
+          const next = e.target.value as "discover" | "acquire";
+          setStage(next);
+          if (next === "discover") setMaxUnits(5);
+        }}
                 className="min-h-11 rounded-md border bg-background px-3">
           <option value="discover">{t("planBatch.discover")}</option>
           {hasCandidates ? <option value="acquire">{t("planBatch.acquire")}</option> : null}
@@ -88,9 +104,30 @@ export default function PlanBatchForm({ project, flowId, hasCandidates, onPlanne
       ) : (
         <>
           <label className="flex flex-col gap-1 text-sm">{t("planBatch.exactHosts")}
-            <textarea value={hostsText} disabled={busy} onChange={(e) => setHostsText(e.target.value)}
+            <textarea value={hostsText} disabled={busy} onChange={(e) => { setHostsTouched(true); setHostsText(e.target.value); }}
                       rows={4} className="rounded-md border bg-background px-3 py-2" />
           </label>
+          {suggested ? <p className="text-sm text-muted-foreground">{t("planBatch.suggested", {
+            count: suggested.pending_candidates,
+            hosts: suggested.candidate_hosts.map((item) => `${item.host} (${item.candidates})`).join(", ") || "—",
+          })}</p> : null}
+          {suggested && suggested.refused_hosts.length > 0 ? (
+            <div className="flex flex-col gap-1 text-sm">
+              <p>{t("planBatch.refusedEarlier")}</p>
+              <ul className="flex flex-wrap gap-2">
+                {suggested.refused_hosts.map((item) => (
+                  <li key={item.host}>
+                    <button type="button" disabled={busy || hostsText.split(/\r?\n/).map((h) => h.trim()).includes(item.host)}
+                            onClick={() => { setHostsTouched(true);
+                              setHostsText((old) => (old.trim() ? `${old.trim()}\n` : "") + item.host); }}
+                            className="min-h-11 rounded-md border px-3 disabled:opacity-50">
+                      {t("planBatch.addHost", { host: item.host, count: item.candidates })}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={useApis} disabled={busy}
                    onChange={(e) => setUseApis(e.target.checked)} />

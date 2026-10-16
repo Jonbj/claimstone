@@ -358,6 +358,11 @@ export interface PlannedBatch {
   project: string;
   batch_version: number;
 }
+export interface AcquireHosts {
+  pending_candidates: number;
+  candidate_hosts: Array<{ host: string; candidates: number }>;
+  refused_hosts: Array<{ host: string; candidates: number }>;
+}
 export type OperationLimits = OperationSummary["limits"];
 
 // new project (plan 1; docs/contracts/new_project.md)
@@ -656,6 +661,8 @@ export const control = {
   paidTest: () => post<never>("/admin/paid-test", {}),
 
   // operations
+  acquireHosts: (project: string, flowId: string) =>
+    get<AcquireHosts>(`${flowBase(project, flowId)}/acquire-hosts`),
   operations: (project: string, flowId: string) =>
     get<OperationsList>(`${flowBase(project, flowId)}/operations`),
   authorizeOperation: (project: string, flowId: string, operationId: string,
