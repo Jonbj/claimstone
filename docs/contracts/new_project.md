@@ -2,7 +2,7 @@
 
 **Written by:** the control server (`new_project_service`, via `POST /control/v1/new…`). **Read by:** the
 same routes, for the operator who started the draft. **Never read by** any stage, profile, verdict or
-export. Spec: `docs/superpowers/specs/2026-10-10-new-project-wizard-design.md`. Decision: D127.
+export. Decision: D127.
 
 A draft is what an operator typed before a project existed. The ledger lives in
 `store/_new-projects/wizard_drafts.jsonl` and is append-only; a draft's state is replayed from its rows.

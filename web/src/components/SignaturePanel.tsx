@@ -12,7 +12,7 @@ import type { Row, Verdict } from "@/lib/control";
 // The hash a signature binds to is the one **displayed**: it is pinned when the panel appears.
 // If the page later learns of a newer profile, the pinned hash is not swapped silently: the
 // panel says the evidence changed and blocks signing until the operator takes the new one.
-// The definitions are the verdict contract's table (2026-09-25-verdict-contract-design.md §4),
+// The definitions are the verdict contract's table (D16 in docs/DESIGN_DECISIONS.md),
 // shortened without changing what they say.
 export const MIN_RATIONALE_CHARS = 120;
 

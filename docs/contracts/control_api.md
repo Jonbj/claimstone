@@ -1,8 +1,7 @@
 # The control API — the contract
 
-**Status:** contract for `claimstone control` (`claimstone/control.py`), specified in
-`docs/superpowers/specs/2026-10-07-portal-backend-spec.md` (steps B4–B12) and decided by
-D87. The server is a separate process from the read API: it mounts the store read-write,
+**Status:** contract for `claimstone control` (`claimstone/control.py`), decided by D87
+(steps B4–B12 of the portal backend). The server is a separate process from the read API: it mounts the store read-write,
 holds an operator session, and is the only process through the web that writes.
 
 The read API (`claimstone api`, prefix `/api/v1`) stays read-only. Nothing in this

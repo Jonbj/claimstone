@@ -53,7 +53,7 @@ D53 adds the same no-row behaviour for `JATS_UNSUPPORTED`: tables the parser can
 (including CALS or image-only tables) are an infrastructure limitation. The run reports
 `fulltext_confirmed: null` and publishes no partial document/chunk generation. Malformed or
 non-article XML records `JATS_UNREADABLE`, consistent with malformed TEI.
-See [the JATS boundary and pending measurement](../superpowers/specs/2026-09-28-jats-normalize-design.md).
+See D78 in `docs/DESIGN_DECISIONS.md` for the JATS boundary.
 
 ## `chunks.jsonl`
 

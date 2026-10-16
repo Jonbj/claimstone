@@ -273,7 +273,7 @@ ipotesi falsificata del tutto. Esegui la ri-raccolta e cita il suo output.
 
 `tools/replay_answers.py <progetto>` misura il lavoro residuo senza modificare i ledger; con `--apply`
 applica il replay delle risposte salvate. I selettori delimitano la misura, mentre il replay tratta tutti
-i batch salvati. Vedi [la misura in produzione](replays/2026-09-28-production-replay.md).
+i batch salvati. Vedi la misura in produzione.
 
 ## Testare un prompt prima di adottarlo
 

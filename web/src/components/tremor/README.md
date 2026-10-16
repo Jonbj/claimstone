@@ -6,7 +6,7 @@ distribution (the copy-paste kit, not the `@tremor/react` npm package).
 - **Source version:** commit `ca4d588f47820ff3d514d37fa4ee08a4222dec11`, `main`, cloned 2026-10-06.
 - **Licence:** Apache-2.0 — the full text is in `LICENSE`, copied from the same commit.
 
-Copied for the portal dashboard (spec §8.2, `docs/superpowers/specs/2026-10-06-portal-frontend-docker-design.md`):
+Copied for the portal dashboard (D84):
 
 | file | Tremor version |
 |---|---|

@@ -1,5 +1,8 @@
 # Scheduler backlog from supervised use
 
+> **Removed references.** Paths under `docs/superpowers/`, `docs/replays/`, `docs/tools/` and `mockups/`
+> cited below were removed from the tree on 2026-10-16. Recover one with `git show 23a0a44:<path>`.
+
 Recorded 2026-09-29 and updated through 2026-10-09. Requirements and acceptance criteria;
 the current worker implements a subset (D87–D115).
 Manual calibration/debug remains the operator's chosen mode. Scientific rules remain in

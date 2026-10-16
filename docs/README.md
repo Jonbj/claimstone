@@ -8,18 +8,15 @@ Which file answers which question. *In italiano: [README.it.md](README.it.md).*
 |---|---|
 | know what this project is, in two minutes | [`../README.md`](../README.md) |
 | run a round and understand what comes out | [`GUIDE.md`](GUIDE.md) |
-| reproduce the production replay and remaining work | [`replays/2026-09-28-production-replay.md`](replays/2026-09-28-production-replay.md) |
 | know what is running and what is pending right now | [`HANDOFF.md`](HANDOFF.md) |
 | find implemented scheduler limits and remaining automation work | [`SCHEDULER_BACKLOG.md`](SCHEDULER_BACKLOG.md) |
 | adapt the frontend to the scheduler | [`design/portal/SCHEDULER_FRONTEND_HANDOFF.md`](design/portal/SCHEDULER_FRONTEND_HANDOFF.md) — UI states, available APIs, missing controls and acceptance walkthrough |
-| review the multi-flow research portal | [`superpowers/specs/2026-10-06-research-portal-design.md`](superpowers/specs/2026-10-06-research-portal-design.md) — proposal, corrected by its review; phases P0–P2b are implemented and specified in [`2026-10-06-research-portal-implementation-spec.md`](superpowers/specs/2026-10-06-research-portal-implementation-spec.md) |
 | serve the read-only portal over every project | `claimstone portal` — the dashboard's multi-project successor (D82); read-only, GET only, loopback by default |
-| run the portal in containers (React frontend + read-only API) | `./portal.sh` (`./portal.sh down` to stop) — D84; design and decisions in [`superpowers/specs/2026-10-06-portal-frontend-docker-design.md`](superpowers/specs/2026-10-06-portal-frontend-docker-design.md) §8; API contract [`contracts/portal-api.schema.json`](contracts/portal-api.schema.json) |
+| run the portal in containers (React frontend + read-only API) | `./portal.sh` (`./portal.sh down` to stop) — D84; API contract [`contracts/portal-api.schema.json`](contracts/portal-api.schema.json) |
 | develop the frontend | `.venv/bin/claimstone api` and `cd web && npm run dev` (http://localhost:5173); checks: `npm run typecheck && npm test && npm run build` |
 | work on the code as an agent | [`../CLAUDE.md`](../CLAUDE.md), then [`../AGENTS.md`](../AGENTS.md) |
 | argue with an architectural choice | [`DESIGN_DECISIONS.md`](DESIGN_DECISIONS.md) — find its entry first |
 | write to a ledger, or read one | [`contracts/`](contracts/) — one file per ledger |
-| know what a stage was supposed to do | [`superpowers/specs/`](superpowers/specs/) — one design per stage |
 
 ## The design record
 
@@ -60,18 +57,11 @@ write to — several fields exist to prevent a specific defect and look optional
 | [`contracts/exports.md`](contracts/exports.md) | a verifiable snapshot of one flow, and how it is checked |
 | [`contracts/new_project.md`](contracts/new_project.md) | the new-project wizard's drafts and routes |
 
-## The stage designs
+## Removed material
 
-[`superpowers/specs/`](superpowers/specs/) holds one design per stage, each marked implemented or not, plus
-two that are not stages:
-
-- **the verdict contract** — the five verdict states, why `operational` questions get none, and the two-layer
-  split that makes every verdict a person's. Read this before touching stage 5 or 6.
-- **the dashboard** — the original single-round read-only design; the working-tree implementation is separate from the multi-flow portal.
-- **the research portal** — the protocol-bound multi-flow design: scope fixes, flows, the read-only portal and verifiable exports (P0–P2b, implemented). Intake, offers, jobs and signing are P3/P4 and still proposals.
-
-A spec says what was intended. The design record says what was measured afterwards, and where they disagree
-the record wins.
+The per-stage specs and plans, the replay and review reports and the provider integration guides were
+removed from the tree on 2026-10-16 as superseded. They remain in git history: `git show 23a0a44:<path>`.
+Where `DESIGN_DECISIONS.md` or `HANDOFF.md` cites one, the decision entry carries the measurement.
 
 ## Language
 
