@@ -1,5 +1,7 @@
 import { Link, Navigate, useParams, useSearchParams } from "react-router";
 import Chip from "@/components/Chip";
+import StartFlowPanel from "@/components/StartFlowPanel";
+import { useLocale } from "@/lib/i18n";
 import ErrorState from "@/components/ErrorState";
 import RowFields from "@/components/RowFields";
 import IntegrityPanel from "@/components/IntegrityPanel";
@@ -17,6 +19,7 @@ import { api } from "@/lib/api";
 // reload — and a discreet "refreshing…" shows while the same view recomputes (the R2
 // review's rule: keep the numbers on screen, name the refresh).
 export default function ProjectPage() {
+  const { t } = useLocale();
   const { project: raw } = useParams();
   const project = raw ? decodeURIComponent(raw) : "";
   const [search] = useSearchParams();
@@ -119,7 +122,10 @@ export default function ProjectPage() {
               </li>
             ))}
             {(card.flows ?? []).length + (card.unbound_selectors ?? []).length === 0 ? (
-              <li className="text-sm text-muted-foreground">No flows and no legacy rounds.</li>
+              <li className="w-full">
+                <p className="mb-3 text-sm text-muted-foreground">{t("startFlow.empty")}</p>
+                <StartFlowPanel project={project} />
+              </li>
             ) : null}
           </ul>
         ) : (
