@@ -1,5 +1,8 @@
 # Handoff
 
+> **Removed references.** Paths under `docs/superpowers/`, `docs/replays/`, `docs/tools/` and `mockups/`
+> cited below were removed from the tree on 2026-10-16. Recover one with `git show 23a0a44:<path>`.
+
 Written 2026-09-28, after the first end-to-end round; completeness corrected by D45. It holds what the
 repository does not: live state, pending decisions, and the things that were established in conversation
 and would otherwise be lost.
@@ -920,7 +923,7 @@ Read the live profile without requests:
 
 The completed host audit is
 `store/pmc-screen-time/audits/question-round/1943dcbe8082fa76370d8b9fd0b013a55c59e74c04a6a2e24b3b9afa19442e4b.json`.
-See D52 and [the completed round report](replays/2026-09-28-q04-ready.md). The cumulative local v2
+See D52 and the completed round report. The cumulative local v2
 plan is retained for audit/resume; it is not an instruction to start the other seven questions.
 
 Alembic's curated manifest still has 28 unanswered readings and 6,183 prospective review calls covering
@@ -928,7 +931,7 @@ Alembic's curated manifest still has 28 unanswered readings and 6,183 prospectiv
 unresolved; the whole-store count must not replace the selected population.
 
 The earlier queue measurement was offline and used only temporary copies. See
-[the production replay report](replays/2026-09-28-production-replay.md) and local content-addressed
+the production replay report and local content-addressed
 audits under `store/<project>/audits/offline-replay/`.
 
 Two other instances exist and both stand below their floor and produce nothing: `alembic-s4` at 0.56 with a
@@ -1008,7 +1011,7 @@ It preserves table geometry, notes and explicit references and records `jats_par
 Unsupported tables leave sources awaiting. Existing production ledgers and Q04's hash are unchanged.
 The acquisition gate and Europe PMC resolver route are still pending, followed by an explicitly
 approved bounded pilot: no acquisition gain or real-article parser accuracy has yet been measured.
-See [the implemented boundary](superpowers/specs/2026-09-28-jats-normalize-design.md).
+See the implemented boundary.
 
 **Over-attachment in stage 4.** Every chunk is asked about every question of its kind and the model answers
 rather than declining. 23 of 41 and 36 of 42 claims do not speak to the question they cite. Nothing

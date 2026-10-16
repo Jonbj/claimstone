@@ -1,5 +1,8 @@
 # Design decisions, with the reason and the evidence
 
+> **Removed references.** Paths under `docs/superpowers/`, `docs/replays/`, `docs/tools/` and `mockups/`
+> cited below were removed from the tree on 2026-10-16. Recover one with `git show 23a0a44:<path>`.
+
 Recorded so they are not relitigated. Each carries what actually decided it.
 
 ## D1 — Extend, do not rewrite
@@ -2419,7 +2422,7 @@ applying it to production and measuring the remaining work without a model or pu
 `tools/replay_answers.py --apply` now performs that operation, verifies every original file prefix,
 checks that only result/gate/review/registry ledgers grow, and repeats the replay to prove zero writes.
 The measurement details and exact commands are in
-[the production replay report](replays/2026-09-28-production-replay.md).
+the production replay report.
 
 The actual accepted/rejected sets are 1,668/259 for PMC and 7,194/1,166 for alembic-s4, matching
 D48. Original claim ids retained are 1,668 and 6,991, with zero and 203 new ids. All original 83
@@ -2464,7 +2467,7 @@ complete. The dated plan imposes a USD 1 cumulative ceiling, reserves each whole
 contact, retains conservative reservations for unknown-cost attempts, excludes replay rows from
 cost and stops after the first failure. The DNS attempt reserves USD 0.339; that is an accounting
 bound, not a claim that the provider charged it. The host command and measured state are in
-[the continuation report](replays/2026-09-28-q04-continuation.md).
+the continuation report.
 
 Five tests cover budget enforcement, unknown-cost attempts and resume, pre-payment reader
 independence, newly harvested extraction extending review without repeated calls or adjudication,
@@ -2501,7 +2504,7 @@ Three additional operational tests verify harvesting before failure propagates, 
 calls without repayment on resume, and cumulative mixed-reader/unknown-cost accounting. Full checks:
 889 passed, 7 skipped; six valid project configurations; all 16 instrument versions acknowledged.
 Commands, plan hashes, source documentation and current audits are in
-[the continuation report](replays/2026-09-28-q04-continuation.md).
+the continuation report.
 
 ## D52 — Q04 completes its obligations; scientific interpretation remains human
 
@@ -2533,7 +2536,7 @@ new ledger decisions or a measured accuracy rate. The four accepted reasons do n
 conditions. A person alone chooses the verdict, states the PMC scope/coverage and signs the current hash.
 
 Commands, exact current measurements and the local reading packet are in
-[the completed round report](replays/2026-09-28-q04-ready.md). Required checks: 889 tests, 7 skipped;
+the completed round report. Required checks: 889 tests, 7 skipped;
 six valid projects; 16 acknowledged versions. Scientific agreement on the complete v2 task remains
 unmeasured, and spending on the other seven questions remains the operator's decision.
 
@@ -2559,7 +2562,7 @@ HTML/PDF generation inputs remain identical. The instrument checker tracks the n
 No production ledger, Q04 profile, registry, floor or model request was changed. No scholarly
 acquisition or paid model call was made. A JATS-aware acquisition gate, Europe PMC resolver route,
 operator-approved bounded pilot and live comparison remain pending; no improved acquisition rate
-is claimed. [The specification](superpowers/specs/2026-09-28-jats-normalize-design.md) records the
+is claimed. The specification records the
 implemented boundary and required next measurement.
 
 Required checks after this change: **911 passed, 7 skipped**, six valid project configurations,

@@ -21,7 +21,7 @@ D45 introduced `profile_version 2`; D46 adds `profile_version 3`; D47 adds `prof
 | `built_at` | UTC timestamp of the append; excluded from evidence identity |
 
 Results, direction counts, coverage, gate rejection reasons, review outcomes and linkage retain the fields
-specified in the [stage 6 spec](../superpowers/specs/2026-09-25-stage6-synthesize-design.md). Operational
+specified by D16 and D17 in `docs/DESIGN_DECISIONS.md`. Operational
 questions receive a `LITERATURE_VERDICT_NOT_APPLICABLE` row and no verdict.
 
 A valid empty extraction array completes a reading. A failed model call never does. At least one current

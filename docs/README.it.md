@@ -13,7 +13,6 @@ Quale file risponde a quale domanda. *In English: [README.md](README.md).*
 | lavorare sul codice come agente | [`../CLAUDE.md`](../CLAUDE.md), poi [`../AGENTS.md`](../AGENTS.md) *(inglese)* |
 | discutere una scelta architetturale | [`DESIGN_DECISIONS.md`](DESIGN_DECISIONS.md) *(inglese)* — prima trova la voce |
 | scrivere su un registro, o leggerne uno | [`contracts/`](contracts/) *(inglese)* — un file per registro |
-| sapere cosa uno stadio doveva fare | [`superpowers/specs/`](superpowers/specs/) *(inglese)* |
 
 ## Il registro delle decisioni
 
@@ -43,19 +42,11 @@ diversi campi esistono per prevenire un difetto preciso e sembrano opzionali fin
 | [`contracts/reviews.md`](contracts/reviews.md) | il verdetto di un secondo lettore su un'affermazione |
 | [`contracts/model_calls.md`](contracts/model_calls.md) | il confine su file che ogni stadio con modello attraversa |
 
-## Le specifiche degli stadi
+## Materiale rimosso
 
-[`superpowers/specs/`](superpowers/specs/) contiene un disegno per stadio, ognuno marcato implementato o no,
-più due che non sono stadi:
-
-- **il contratto dei verdetti** — i cinque stati, perché le domande `operational` non ne ricevono nessuno, e
-  la divisione in due livelli che rende ogni verdetto di una persona. Da leggere prima di toccare lo stadio 5
-  o il 6.
-- **la dashboard** — specificata, lasciata deliberatamente per ultima, e non costruita. Il suo valore ha
-  bisogno di dati in ogni stadio.
-
-Una specifica dice cosa era previsto. Il registro dice cosa è stato misurato dopo, e dove non concordano vince
-il registro.
+Le specifiche e i piani per stadio, i resoconti di replay e review e le guide di integrazione dei provider
+sono stati rimossi dall'albero il 2026-10-16 perché superati. Restano nella storia git: `git show 23a0a44:<percorso>`.
+Dove `DESIGN_DECISIONS.md` o `HANDOFF.md` ne citano uno, la voce della decisione porta la misura.
 
 ## Lingua
 

@@ -1,7 +1,7 @@
 # Operators — the ledger of who may hold a session
 
 Status: built 2026-10-12 (password management, sessions, people). Design:
-`docs/superpowers/specs/2026-10-12-operator-login-design.md`. Code: `claimstone/operators.py` (every
+design recorded in `docs/DESIGN_DECISIONS.md`. Code: `claimstone/operators.py` (every
 identity rule, and no rule elsewhere), `claimstone/auth_events.py`, `claimstone/account_service.py`,
 `claimstone/control.py`.
 

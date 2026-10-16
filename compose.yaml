@@ -202,7 +202,7 @@ services:
     restart: unless-stopped
     stop_grace_period: 10m
 
-  # The portal (D84, spec 2026-10-06-portal-frontend-docker-design.md §5 and §8). Two services behind a
+  # The portal (D84). Two services behind a
   # profile, so `up` alone still starts only GROBID: `./portal.sh` brings these up.
   #
   # `api` is a read model, not a stage service: it re-reads the ledgers on every request and has no code

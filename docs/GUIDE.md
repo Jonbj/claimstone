@@ -261,7 +261,7 @@ outright. Run the re-harvest and quote its output.
 
 The reproducible operational command is `tools/replay_answers.py <project>` for read-only workload
 measurement, or with `--apply` for stored-answer replay. Scope flags select the measurement; replay
-always processes every stored batch. See [the production measurement](replays/2026-09-28-production-replay.md).
+always processes every stored batch. See the production measurement.
 
 ## Testing a prompt before adoption
 

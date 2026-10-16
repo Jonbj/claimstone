@@ -25,7 +25,6 @@ a list.
    **Do not relitigate a decision from first principles** — find its entry, and argue with the measurement.
 6. **`docs/contracts/`** — one file per ledger, describing every field. Read the one for the ledger you
    are about to write.
-7. **`docs/superpowers/specs/`** — one design per stage, each marked implemented or not.
 
 ## What this machine needs
 
