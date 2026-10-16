@@ -3,8 +3,8 @@
 > **Removed references.** Paths under `docs/superpowers/`, `docs/replays/`, `docs/tools/` and `mockups/`
 > cited below were removed from the tree on 2026-10-16. Recover one with `git show 23a0a44:<path>`.
 
-Recorded 2026-09-29 and updated through 2026-10-09. Requirements and acceptance criteria;
-the current worker implements a subset (D87–D115).
+Recorded 2026-09-29 and updated through 2026-10-16. Requirements and acceptance criteria;
+the current worker implements a subset (D87–D132).
 Manual calibration/debug remains the operator's chosen mode. Scientific rules remain in
 CLAUDE.md and the measured decisions D10, D39, D48, D54 and D65–D67; this document does not
 change a floor, registry, population, scientific instrument or model assignment.
@@ -30,6 +30,16 @@ Heartbeats are ephemeral single-machine observations; a distributed lease,
 cooperative stop/resume and a live event stream remain open. Archive paging
 enumerates IDs, while cheap cross-project summaries remain a possible later
 optimization. The cumulative package contains no copies.
+
+2026-10-16 (D130–D132): one installation supervisor (`./portal.sh up`) discovers
+enabled mandates across projects; operators manage their own passwords (D131);
+and the portal itself can create a project's first flow and plan its first
+frozen network batch, with the supervisor executing only what a person
+authorized (D132). Acquire batch plans may name the OpenAlex/Unpaywall resolver
+APIs and suggest hosts from the recorded copy locations. The scheduler tab and
+its acceptance walkthrough are covered by
+`docs/design/portal/SCHEDULER_FRONTEND_HANDOFF.md` (frontend status 2026-10-12:
+done). Pause/resume, a live event stream and distributed leases remain open.
 
 2026-10-09 retrieval calibration (D117): an authorized six-request L02 variant
 probe returned 100 OpenAlex, 100 Crossref and 6 arXiv rows. The 172 distinct
@@ -362,9 +372,10 @@ The 2026-10-09 local mandate slice adds `scheduler auto-enable`, `auto-once`,
 scoped local passes with a cumulative model-call ceiling that survives
 restarts. It executes only independently authorized external plans; it neither
 schedules a new search/copy request nor renews its own allowance. Its network
-proposal policy is separate from the later finite schedule. Safe search-page
-and copy planning, incremental source selection and an end-of-run dossier
-remain. The local mandate authorizes no periodic network campaign.
+proposal policy is separate from the later finite schedule. At that point safe
+search-page and copy planning, incremental source selection and an end-of-run
+dossier remained open; the D125 copy policies and the D126 dossier below close
+the copy-planning and end-of-run items. The local mandate authorizes no periodic network campaign.
 Batch planning now scans past already settled query/candidate identities before
 applying its actionable-unit cap (D120), so repeated plans can reach later
 terms. It still does not generate cursor pages or approve a new sweep.
@@ -380,9 +391,11 @@ mandate attempts this automatically. Future child flows still need their own
 local mandate, and no scientific verdict is automated. D125 adds a separate
 finite policy for later candidates with matching scheduled query hits, exact
 approved HTTPS hosts/classes and lifetime caps. Remaining for periodic
-autonomous research: safe cursor depth, broader legal-copy resolution,
-automatic local-mandate inheritance for approved child flows and portal
-controls for finite schedules and copy policies.
+autonomous research: safe cursor depth and broader legal-copy resolution.
+Local-mandate inheritance for approved child flows (`auto-enable-series`,
+D128) and the portal controls for finite schedules, copy policies and mandates
+(D128 control routes; frontend completed 2026-10-12; the first flow and its
+first batch plannable from the portal since D132) have since been implemented.
 
 The following duties still need executable units:
 
@@ -415,7 +428,7 @@ start a network campaign.
 | Before another arXiv campaign | Enforce one legacy arXiv API request at a time and at least three seconds between requests across workers under our control, including robots/API requests. The current generic fetcher waits only 0.34 seconds per instance. | A concurrent-worker test proves a shared limit; recorded physical request starts respect it. See `https://info.arxiv.org/help/api/tou.html`. |
 | Before relying on arXiv zero hits | Freeze separately authorized query variants: exact phrase, title/abstract terms joined with `AND`, and justified synonyms or categories. Keep the old exact-phrase results and protocol intact. | On a known-source reference set, compare unique verified works, irrelevant results and request cost for each variant. A zero-result exact phrase never closes literature recall. D66 measured 19 such empty queries. |
 | Before broad Crossref expansion | Test `query.title` alongside current `query.bibliographic` in a new dated search protocol, with separate query identities and a fixed result/request cap. | Compare retrieval of known relevant works and marginal unique candidates. Do not rank or exclude studies solely by Crossref score or a query's top-N position. |
-| Before multiple workers or automatic retries | Apply provider-aware shared rate limits and bounded backoff to 429/5xx/timeouts. Reconcile `request_started` and query/acquisition rows before a retry; a retry consumes the same approved physical-request ceiling or needs a new named plan. | Restart and concurrent-worker tests show no unrecorded request, no over-ceiling retry and no 429 interpreted as an empty search. Crossref's 2025 list-query polite limit is 3 requests/second, below the new guide's suggested 8. See `https://www.crossref.org/blog/announcing-changes-to-rest-api-rate-limits/`. |
+| Before multiple workers or automatic retries | Apply provider-aware shared rate limits and bounded backoff to 429/5xx/timeouts. Reconcile `request_started` and query/acquisition rows before a retry; a retry consumes the same approved physical-request ceiling or needs a new named plan. | Restart and concurrent-worker tests show no unrecorded request, no over-ceiling retry and no 429 interpreted as an empty search. The enforced shared interval for `api.crossref.org` is one request per second (`claimstone/provider_limits.py`), at or below Crossref's announced polite limits. See `https://www.crossref.org/blog/announcing-changes-to-rest-api-rate-limits/`. |
 | When repeating DOI lookups | Reuse retained Unpaywall/OpenAlex responses by DOI and retrieval date; allow bounded refresh because OA locations change. Keep previous raw bytes and distinguish 404, `closed`, an OA landing page and a failed PDF transfer. | Two rounds can reuse a fresh record without a new request; a stale or failed location produces an explicit refresh proposal, not a silent permanent exclusion. |
 | Before version-sensitive deduplication | Store arXiv's canonical base ID, returned version and explicit work/version relationships alongside title and DOI. Do not change `candidate_key_version 2` silently or merge by title alone. | A v1/v2 pair and a preprint/journal pair stay traceable as artifacts without becoming two independent studies by accident. |
 | For search monitoring | Report per-query caps, unique-key yield, known-reference retrieval and metadata exclusions. Use diminishing yield to propose a stop, never to claim measured literature completeness. | Preview shows remaining unsearched/deeper queries and the operator can inspect a proposed stop against the frozen protocol. |

@@ -51,7 +51,7 @@ l'altro, un crash è ripartibile, e ogni cifra si trova con `grep`.
 ## Come si esegue
 
 ```bash
-.venv/bin/pytest -q                                    # 1026 test
+.venv/bin/pytest -q                                    # il conteggio è stampato, non registrato qui
 .venv/bin/claimstone validate --all-projects           # il controllo del contratto
 .venv/bin/claimstone report projects/<nome>            # il tasso di acquisizione e le sue perdite
 .venv/bin/claimstone verdicts projects/<nome>          # i profili, e qualunque firma
@@ -67,7 +67,8 @@ codice si rifiuta di inventarne uno, quindi `.env` deve contenere `CLAIMSTONE_CO
   domanda.
 - **[docs/GUIDE.it.md](docs/GUIDE.it.md)** — un percorso attraverso un giro intero, stadio per stadio, con
   cosa significa ogni numero. Da qui, se vuoi eseguirne uno.
-- **[docs/DESIGN_DECISIONS.md](docs/DESIGN_DECISIONS.md)** *(in inglese)* — 68 decisioni, ognuna con la
+- **[docs/DESIGN_DECISIONS.md](docs/DESIGN_DECISIONS.md)** *(in inglese)* — 132 decisioni numerate al
+  2026-10-16 (`grep -c '^## D' docs/DESIGN_DECISIONS.md` per il conteggio corrente), ognuna con la
   misura che l'ha decisa. Leggi la voce prima di discutere la scelta.
 - **[docs/HANDOFF.md](docs/HANDOFF.md)** *(in inglese)* — cosa sta girando, cosa è in sospeso, e quali
   decisioni appartengono a una persona e non al motore.
@@ -81,6 +82,43 @@ della stessa regola divergono, e la copia che diverge è quella che inganna. Que
 raramente e cambia raramente; inglese è ciò su cui si lavora.
 
 ## Stato
+
+Lo scheduler ha operazioni limitate per stadi con perimetro, chiamate a modelli, una query
+accademica e un'acquisizione di candidato alla volta. Un mandato locale può far avanzare il
+lavoro autorizzato attraverso gli stadi di ricerca e proporre batch di rete. Un operatore può
+approvare batch esatti tramite il servizio di controllo autenticato, oppure approvare un
+calendario finito e revocabile di batch già congelati. Un calendario finito può preparare round
+di ricerca datati; una policy di copia approvata separatamente consente al worker di acquisire
+futuri candidati corrispondenti su host esatti, entro tetti vitalizi. Un solo mandato di serie
+può coprire i flussi figli datati esatti, con un tetto vitalizio condiviso sulle chiamate locali
+a modelli. Il servizio di controllo autenticato può pianificare e approvare questi tre permessi
+separatamente. I limiti attuali sono nel
+[contratto dello scheduler](docs/contracts/scheduler_operations.md) *(inglese)*.
+Per un calendario periodico, `scheduler periodic-dossier` mostra la consegna live di evidenza
+cumulativa. `periodic-finalize` persiste i profili sull'intero corpus e un dossier in sola
+aggiunta solo quando ogni gate — calendario, acquisizione e lettura — passa; il worker locale di
+un flusso figlio datato lo tenta automaticamente. Nessun verdetto scientifico viene generato.
+Vedi [il contratto del dossier](docs/contracts/periodic_dossiers.md) *(inglese)*.
+
+Per un singolo flusso, `scheduler auto-enable PROGETTO FLOW_ID --extract-model MODELLO_A
+--review-model MODELLO_B --max-total-local-calls N` registra un mandato di lavoro locale
+limitato. `scheduler auto-worker PROGETTO MANDATE_ID` visita di nuovo quel flusso quando arrivano
+nuovi dati; `auto-status`, `auto-once` e `auto-disable` ispezionano, eseguono un passaggio e
+fermano. Il tetto totale di chiamate locali sopravvive ai riavvii del worker. Le operazioni di
+rete restano soggette a un'autorizzazione esatta e separata.
+`./portal.sh up` avvia un unico supervisore dell'installazione che scopre tutti i mandati
+abilitati; non serve più un container `auto-worker` separato per ogni nuovo flusso.
+`scheduler supervisor-status` ne riporta l'heartbeat. Le impostazioni opzionali `--discover-api`,
+`--discover-host` e `--acquire-host` lasciano che quel worker prepari i prossimi batch limitati;
+`auto-status` mostra quelli ancora in attesa di approvazione. Preparare un batch non fa nessuna
+richiesta di rete. La control API autenticata può elencare e autorizzare un batch congelato in
+una sola azione; da D132 il portale può anche creare il primo flusso di un progetto e pianificarne
+il primo batch di rete congelato — suggerendo gli host di acquisizione dalle posizioni di copia
+registrate — e il supervisore dell'installazione esegue solo ciò che una persona ha autorizzato.
+L'indice scheduler del progetto ora impagina i propri archivi e riporta l'heartbeat del processo
+worker separatamente dall'avanzamento dei ledger. Un dossier cumulativo finalizzato e corrente si
+può scaricare come ZIP verificabile contenente JSON, CSV, Markdown e un manifest; nessuna copia
+delle fonti è inclusa.
 
 Tutti e sei gli stadi sono implementati e un giro ha percorso l'intera pipeline sulla letteratura
 depositata in PubMed Central: 37 fonti su 40 confermate contro una soglia di 0,80, 1.721 annotazioni
@@ -96,4 +134,6 @@ D48 chiude le quindici correzioni del software; D49 applica il replay offline; D
 il giro cloud con budget limitato e preservano i risultati parziali. D52 registra il giro Q04 completato
 e la scheda di lettura. `docs/HANDOFF.md` contiene hash, scope, budget e decisione umana ancora pendente.
 
-Gli altri due corpus rimangono sotto la propria soglia e correttamente non producono conclusioni.
+Gli altri due corpus rimangono sotto la propria soglia e correttamente non producono conclusioni. Leggi
+`docs/HANDOFF.md` *(in inglese)* per cosa significa e cosa cambierebbe — e nota che ciò che ha chiuso il
+primo giro è stato cambiare la *popolazione*, dichiarata in anticipo, non abbassare la soglia.

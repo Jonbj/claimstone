@@ -107,7 +107,11 @@ Optional `--discover-api`, `--discover-host` and `--acquire-host` settings let
 that worker prepare the next bounded batches; `auto-status` shows those still
 awaiting approval. Preparing a batch makes no network request.
 The authenticated control API can list and authorize one frozen batch in a
-single action; the worker remains responsible for execution.
+single action; the worker remains responsible for execution. Since D132 the
+portal can also create a project's first flow and plan its first frozen
+network batch — suggesting acquisition hosts from the recorded copy
+locations — and the installation supervisor runs only what a person
+authorized.
 The project scheduler index now pages its archives and reports a worker
 process heartbeat separately from ledger progress. A finalized, current
 cumulative dossier can be downloaded as a verifiable ZIP containing JSON,

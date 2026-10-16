@@ -20,8 +20,9 @@ a list.
 3. **`docs/GUIDE.md`** — a whole round stage by stage, with what each number means and which commands
    re-judge what is already on disk without touching the network. Read this before running anything.
 4. **`docs/HANDOFF.md`** — what is running, what is pending, and the decisions that are a person's.
-5. **`docs/DESIGN_DECISIONS.md`** — 64 decisions, each with the measurement that decided it. It is 2,000
-   lines and not meant to be read cold: `HANDOFF.md` names the decisions that matter for what happens next.
+5. **`docs/DESIGN_DECISIONS.md`** — every dated decision, each with the measurement that decided it (132 at
+   2026-10-16; `grep -c '^## D' docs/DESIGN_DECISIONS.md` for the current count). Not meant to be read cold:
+   `HANDOFF.md` names the decisions that matter for what happens next.
    **Do not relitigate a decision from first principles** — find its entry, and argue with the measurement.
 6. **`docs/contracts/`** — one file per ledger, describing every field. Read the one for the ledger you
    are about to write.
@@ -41,8 +42,8 @@ a list.
 - **Node ≥ 22** is needed only to build or test the portal frontend under `web/` (`npm ci && npm run
   typecheck && npm test && npm run build`). The Python engine never depends on it. `./portal.sh` builds
   the frontend inside its own image, so running the portal needs only Docker (D84).
-- Run `.venv/bin/pytest -q` (1026 passing) and `.venv/bin/claimstone validate --all-projects` before and
-  after any change.
+- Run `.venv/bin/pytest -q` and `.venv/bin/claimstone validate --all-projects` before and
+  after any change — the count is printed by pytest, not recorded here.
 - `.venv/bin/python tools/check_instrument_versions.py` **must exit 0**. It refuses to pass when an
   instrument's version changed and `DESIGN_DECISIONS.md` does not say what changed. That refusal is the
   feature.

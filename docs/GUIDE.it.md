@@ -223,9 +223,9 @@ nell’hash e profili e firme restano distinti. `verdicts` ricalcola in memoria 
 profilo salvato differisce, eseguire `synthesize` e leggere il nuovo hash prima di firmare.
 
 D46 aggiunge `extraction.unregated` e `awaiting_regate`: le annotazioni giudicate da un vecchio gate
-non si possono firmare sotto quello attuale prima della ri-raccolta. Le revisioni del gate possono
-superare sia un’accettazione sia un rifiuto, conservando entrambi i ledger. I ledger reali sono intatti;
-D47 corregge il replay di risposte e annotazioni (R05/R09). La misura completa è riproducibile con
+non si possono firmare sotto quello attuale prima della ri-raccolta. Le revisioni del gate oggi superano
+sia un'accettazione sia un rifiuto, su entrambi i ledger. D47 corregge il replay di risposte e
+annotazioni (R05/R09). La misura completa è riproducibile con
 `tools/measure_answer_replay.py <progetto>`. D48 corregge anche le generazioni dei chunk e la revisione completa. D49 applica il replay ai ledger reali, conservando tutti i byte originali;
 le vecchie revisioni attestano il compito v1 e non possono certificare le annotazioni complete v2.
 Seguono completamento delle letture e nuove revisioni indipendenti,
@@ -466,4 +466,40 @@ batch, poi autorizza quel calendario finito con `scheduler schedule-authorize PR
 `scheduler periodic-audit PROGETTO ID` riporta per ogni round gli esiti delle query e la soglia di
 acquisizione, l'ammissione del flusso antenato e quella dell'intero corpus. Non emette mai un verdetto. Un
 nuovo candidato richiede comunque un piano di acquisizione autorizzato separatamente; pianificare la scoperta
-non pre-approva copie future sconosciute.
+non pre-approva copie future sconosciute. Per un margine limitato che copra le copie successive, usa
+`scheduler copy-policy-plan PROGETTO SCHEDULE_ID --allow-host HOST --source-class CLASSE
+--max-candidates N --max-requests-each N --not-before UTC --expires-at UTC`, ispeziona la policy,
+poi esegui `copy-policy-authorize PROGETTO POLICY_ID`. Il worker prepara acquisizioni esatte di candidati
+quando arrivano risultati di ricerca programmati corrispondenti. `copy-policy-status` mostra le riserve
+permanenti; `copy-policy-revoke` ferma gli avvi futuri. Host e classi sconosciuti restano fuori dal margine.
+
+Per i figli datati, `scheduler auto-enable-series PROGETTO SCHEDULE_ID
+--extract-model MODELLO_A --review-model MODELLO_B --max-total-local-calls N` registra un unico mandato
+locale con un tetto vitalizio condiviso. Il calendario deve essere già autorizzato. `scheduler
+auto-worker PROGETTO MANDATE_ID` visita ogni figlio nominato e tenta il dossier cumulativo; `auto-status`
+mostra il margine condiviso residuo. Revocare il calendario o disabilitare il mandato ferma i passaggi
+successivi. La control API autenticata espone le stesse azioni di pianificazione e approvazione sotto
+`/control/v1/p/{progetto}`; vedi [il contratto della control API](contracts/control_api.md).
+
+Su questa macchina, `./portal.sh up` avvia un solo supervisore per tutti i mandati abilitati. Scansiona
+`projects/` ogni 30 secondi e usa lo stesso tick protetto di `auto-worker`; nessun ID mandato dev'essere
+passato a un altro container. `scheduler supervisor-status --store store` riporta l'heartbeat
+dell'installazione. `scheduler supervise-once --projects-dir projects --store store` esegue un passaggio e
+riporta gli errori nominati dei progetti, utile per la diagnosi offline. Nessuno dei due comandi concede
+accesso alla rete, budget per modelli o un verdetto.
+
+Quando i round programmati e le loro letture finiscono, `scheduler periodic-dossier PROGETTO SCHEDULE_ID`
+mostra senza scrivere la consegna di evidenza live sull'intero corpus e i suoi blocchi. `periodic-finalize
+PROGETTO SCHEDULE_ID` accoda i profili cumulativi e un dossier content-addressed solo quando ogni gate è
+finale. Un mandato locale su un flusso figlio programmato tenta la stessa finalizzazione dopo ogni passaggio.
+Leggi i cinque stati di verdetto e firma per domanda nel consueto passo di adjudication umana; nessuno dei due
+comandi sceglie un verdetto. Il [contratto del dossier](contracts/periodic_dossiers.md) definisce gli stati
+del report e gli hash.
+
+`scheduler worker-status PROGETTO operations` (o un ID mandato) riporta l'attività recente dei processi
+worker. `ALIVE` è un heartbeat, non la prova che una query o una chiamata a modello sia finita; per quello,
+ispeziona il registro delle operazioni. Per un dossier finalizzato corrente, `scheduler periodic-export
+PROGETTO SCHEDULE_ID --dossier-id ID_FINALIZZATO` crea un pacchetto di report idempotente;
+`periodic-export-verify PROGETTO EXPORT_ID` controlla i suoi prefissi congelati di ledger e i file derivati.
+Il portale autenticato può creare, scaricare e verificare lo stesso pacchetto. Il suo indice scheduler usa
+`limit` e un cursore opaco; riavvia la paginazione se risponde `ARCHIVE_CHANGED`.

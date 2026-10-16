@@ -12,6 +12,19 @@ what order.
 
 ## Where the work stands
 
+2026-10-16 documentation review and D132: the bilingual reader-facing docs were reviewed
+against the code and corrected (decision counts, the contract map, the Italian guide's missing
+scheduler tail, the Italian README's missing scheduler status, stale backlog "remaining" items,
+the compose trial's service count). D132 lets the portal create a project's first flow and plan
+its first frozen network batch; the installation supervisor runs only what a person authorized.
+Acquire batch plans may name the OpenAlex/Unpaywall resolver APIs, and `GET …/acquire-hosts`
+suggests hosts from recorded copy locations — a suggestion, never a grant. The parallel frontend
+session's scheduler work is merged into this branch (portal-start-ui into portal-start-research).
+`tools/build_portal_fixtures.py` was re-run: the recent `not_attempted` tile field had reached
+the code without regenerating the committed fixtures, so `test_portal_fixtures` failed on HEAD;
+after regeneration pytest reports 1796 passed, 7 skipped. No ledger, network request or model
+call was made by this pass.
+
 2026-10-12 local deployment check: D130 is committed and pushed as `770a4f8`.
 Compose runs `supervisor` and healthy GROBID; its installation heartbeat is
 `ALIVE`/`IDLE`. A pass over the real store found six projects, zero active

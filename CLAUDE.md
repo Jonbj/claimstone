@@ -75,12 +75,12 @@ needed for a test, build it from public literature.
 ```
 claimstone/          the engine — no domain knowledge, ever
   config.py          loads and validates a project's three input files
-  cli.py             entry point; unimplemented stages say so rather than pretending
+  cli.py             entry point; every stage, portal and scheduler command
 projects/<name>/     one instance: topics.yaml, questions.yaml, sources.yaml
 store/<project>/     generated, gitignored; append-only JSONL plus fetched bytes
-docs/                DESIGN_DECISIONS.md and data contracts
+docs/                GUIDE, HANDOFF, DESIGN_DECISIONS.md, the data contracts
 tools/               scripts that derive a reported figure from the store, committed
-                     because the data they read cannot be
+                      because the data they read cannot be
 tests/
 ```
 
@@ -105,8 +105,16 @@ Per project under `store/<project>/`:
 | `candidates.jsonl` | discover | one row per candidate, with source class and the hash of the query that found it |
 | `acquisitions.jsonl` | acquire | one row per attempt: `http_status`, resolved OA location, licence, `failure_class` |
 | `raw/<sha256>.<ext>` | acquire | the fetched bytes, content-addressed |
+| `documents.jsonl`, `chunks.jsonl` | normalize | the parsed document shape and its chunks |
+| `claims.jsonl` | extract | a claim, its verified quote and converted values |
 | `rejections.jsonl` | extract | what was discarded and why — this is the denominator |
+| `reviews.jsonl` | review | a second reader's verdict on one claim |
+| `profiles.jsonl`, `adjudications.jsonl` | synthesize / adjudicate | the evidence profile per question, and a person's signed verdict |
 | `registry.jsonl` | any command | one row per question-registry version seen, with its hash. A changed hash under an unchanged version refuses to run (invariant 5) |
+
+The scheduler-era ledgers — operations, batches, network schedules, copy policies, local mandates,
+dossiers, worker heartbeats — follow the same append-only rule. Every ledger, core or scheduler,
+has a contract file under `docs/contracts/`: read the one for the ledger you are about to write.
 
 ## Working conventions
 
@@ -123,11 +131,11 @@ Per project under `store/<project>/`:
 ## Model backends
 
 **One boundary, several backends** (D13). A stage that needs a model writes work units to
-JSONL and reads results from JSONL; it never imports a vendor SDK. Backends available on this
-machine: the local `llama.cpp` server, `claude -p --output-format json`, `codex exec`,
-`opencode`, Ollama Cloud (API key, $60/month of credit on the $20 plan), and a metered API if
-one is opened. Every result row records `backend`, `model`, `harness_version` and
-`prompt_sha256`.
+JSONL and reads results from JSONL; it never imports a vendor SDK. Backends registered in code —
+pinned by a test against `runners.available()`: the local `llama.cpp` server, `claude -p
+--output-format json`, `codex exec`, `opencode`, and Ollama Cloud (API key, metered, with budget
+and price ceilings on every drain). Every result row records `backend`, `model`, `harness_version`
+and `prompt_sha256`.
 
 Which backend serves which lane is **a measurement, not a decision**: the same work units go
 to two backends and the results are compared. Do not hard-code a lane to a vendor.

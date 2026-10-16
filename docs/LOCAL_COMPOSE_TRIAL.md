@@ -1,7 +1,8 @@
 # Local Docker Compose trial
 
-This trial runs the current portal, API, GROBID and one scheduler worker on this
-machine. The only published listener is `127.0.0.1:8788`; it is for local use.
+This trial runs the current portal (web, read-only API and authenticated control service), GROBID
+and one scheduler worker on this machine. The only published listener is `127.0.0.1:8788`; it is
+for local use.
 The worker reads the append-only operation ledger for `alembic-s4-lungo` and runs
 only operations that were already authorized. Starting the stack does not plan
 or authorize discovery, acquisition, model calls, purchases or verdicts.
@@ -17,7 +18,7 @@ authorizations before any external work. `./trial.sh` below remains the
 older, project-specific operations-worker smoke test.
 
 ```bash
-./trial.sh up       # build and wait for all four services
+./trial.sh up       # build and wait for the stack (web pulls in api, control and GROBID)
 ./trial.sh status   # container status
 ./trial.sh down     # stop the worker; leave portal and GROBID running
 ```

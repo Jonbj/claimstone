@@ -5,7 +5,9 @@
 > the cumulative result and the verified package. Not covered: pause/resume
 > (501 on the server), the event stream, a summary endpoint, and signing
 > whole-corpus profiles (the sign route is per flow). Design:
-> `docs/superpowers/specs/2026-10-12-scheduler-portal-design.md`.
+> `docs/superpowers/specs/2026-10-12-scheduler-portal-design.md` — removed
+> from the tree on 2026-10-16; recover it with
+> `git show 23a0a44:docs/superpowers/specs/2026-10-12-scheduler-portal-design.md`.
 
 Read this before adapting `web/` to the scheduler. This is an implementation
 handoff, not a visual redesign. The current portal design under
