@@ -208,4 +208,37 @@ describe("F1: control client transport", () => {
       "GET /control/v1/new-templates", "GET /control/v1/new-templates/general",
     ]);
   });
+
+  it("starts a flow and plans a batch with the exact JSON, CSRF token and idempotency keys", async () => {
+    setCsrfToken("tok");
+    mockFetch(reply(201, { flow_id: "f1", created: true, title: "First search", round: "first-2026-10-16" }));
+    const started = await control.startFlow("a b", { title: "First search", round: "first-2026-10-16" });
+    expect(started.flow_id).toBe("f1");
+    const batch = { stage: "discover" as const, apis: ["openalex"], allowed_hosts: ["api.openalex.org"],
+      max_units: 5, max_requests_each: 3, per_query: 10 };
+    await control.planBatch("a b", "f/1", batch);
+    expect(calls.map((call) => call.url)).toEqual([
+      "/control/v1/p/a%20b/flows", "/control/v1/p/a%20b/flows/f%2F1/batches",
+    ]);
+    expect(JSON.parse(String(calls[0].init.body))).toEqual({ title: "First search", round: "first-2026-10-16" });
+    expect(JSON.parse(String(calls[1].init.body))).toEqual(batch);
+    for (const call of calls) {
+      expect(call.init.method).toBe("POST");
+      expect(call.init.credentials).toBe("same-origin");
+      expect(headersOf(call)["Content-Type"]).toBe("application/json");
+      expect(headersOf(call)["X-CSRF-Token"]).toBe("tok");
+      expect(headersOf(call)["Idempotency-Key"]).toMatch(/^[0-9a-f-]{36}$/);
+    }
+  });
+
+  it("keeps flow and batch refusal messages verbatim", async () => {
+    setCsrfToken("tok");
+    mockFetch(reply(409, { error: { code: "REFUSED", message: "registry drifted" } }));
+    await expect(control.startFlow("p", { title: "x", round: "r" }))
+      .rejects.toMatchObject({ status: 409, code: "REFUSED", message: "registry drifted" });
+    mockFetch(reply(422, { error: { code: "VALIDATION", message: "bad hosts" } }));
+    await expect(control.planBatch("p", "f", { stage: "acquire", apis: [], allowed_hosts: [],
+      max_units: 1, max_requests_each: 1, per_query: 25 }))
+      .rejects.toMatchObject({ status: 422, code: "VALIDATION", message: "bad hosts" });
+  });
 });
