@@ -53,11 +53,17 @@ def summary(store: Store, rows: list[dict[str, Any]]) -> dict[str, Any]:
             spent += float(cost)
     authorized = next((row for row in rows if row["event"] == "authorized"), None)
     limit = plan.get("max_spend_usd")
+    note = STATE_NOTES.get(state, "")
+    if state == "FAILED":
+        # the ledger names the cause; say it, so "prepare a new plan" is not a mystery
+        cause = ": ".join(str(rows[-1][key]) for key in ("failure_class", "detail")
+                          if rows[-1].get(key))
+        note = f"{note}: {cause}" if cause else note
     return {
         "operation_id": rows[0]["operation_id"],
         "stage": plan.get("stage"),
         "state": state,
-        "state_note": STATE_NOTES.get(state, ""),
+        "state_note": note,
         "limits": {"network_requests": plan.get("max_network_requests"),
                    "model_calls": plan.get("max_model_calls"),
                    "spend_usd": limit},

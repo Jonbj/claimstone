@@ -1376,11 +1376,25 @@ def _acquire_hosts(self: _Handler, params: dict[str, str], query: Any,
                 host = detail.split(' ', 1)[0].lower()
                 if allowed(host):
                     refused.setdefault(host, set()).add(key)
+    in_scope = scope.candidates(store, selector)
+    retryable: dict[str, int] = {}
+    for key, acquisition in attempted.items():
+        failure = acquisition.get('failure_class')
+        if key in in_scope and failure in net.TERMINAL and allowed(net.host_of(str(in_scope[key].get('url') or ''))):
+            retryable[failure] = retryable.get(failure, 0) + 1
+    # A plain-http URL spends one request on the redirect to https before the document; a
+    # candidate that already hit the ceiling says the same. Both are recorded facts.
+    plain_http = sum(str(row['url']).startswith('http://') for row in pending)
+    limit_hit = retryable.get(net.REQUEST_LIMIT, 0)
     return {'pending_candidates': len(pending),
             'candidate_hosts': [{'host': host, 'candidates': n}
                                 for host, n in sorted(from_candidates.items())],
             'refused_hosts': [{'host': host, 'candidates': len(keys)}
-                              for host, keys in sorted(refused.items())]}, 200
+                              for host, keys in sorted(refused.items())],
+            'retryable_classes': [{'failure_class': name, 'candidates': n}
+                                  for name, n in sorted(retryable.items())],
+            'plain_http_candidates': plain_http,
+            'suggested_max_requests_each': 5 if (plain_http or limit_hit) else 3}, 200
 
 
 def _batch_plan(self: _Handler, params: dict[str, str], query: Any,
@@ -1392,7 +1406,18 @@ def _batch_plan(self: _Handler, params: dict[str, str], query: Any,
     use_apis = body.get('use_apis', False)
     if type(use_apis) is not bool:
         raise ControlError(422, 'VALIDATION', 'use_apis must be true or false')
-    _required_body(self, {key: value for key, value in body.items() if key != 'use_apis'},
+    retry_classes = body.get('retry_classes')
+    retry_reason = body.get('retry_reason')
+    if retry_classes is not None:
+        if body.get('stage') != 'acquire':
+            raise ControlError(422, 'VALIDATION', 'retry applies only to acquire')
+        retry_classes = _strings(retry_classes, 'retry_classes')
+        if not isinstance(retry_reason, str) or not retry_reason.strip() or len(retry_reason) > 400:
+            raise ControlError(422, 'VALIDATION', 'a retry needs a stated reason (1-400 characters)')
+    elif retry_reason is not None:
+        raise ControlError(422, 'VALIDATION', 'retry_reason without retry_classes')
+    _required_body(self, {key: value for key, value in body.items()
+                          if key not in {'use_apis', 'retry_classes', 'retry_reason'}},
                    {'stage', 'apis', 'allowed_hosts', 'max_units', 'max_requests_each', 'per_query'})
     if body['stage'] not in {'discover', 'acquire'}:
         raise ControlError(422, 'VALIDATION', 'stage must be discover or acquire')
@@ -1408,7 +1433,8 @@ def _batch_plan(self: _Handler, params: dict[str, str], query: Any,
             project, store, str(row['flow_id']), body['stage'], apis=apis, allowed_hosts=hosts,
             max_units=_integer(body['max_units'], 'max_units'),
             max_requests_each=_integer(body['max_requests_each'], 'max_requests_each'),
-            per_query=_integer(body['per_query'], 'per_query'), use_apis=use_apis)
+            per_query=_integer(body['per_query'], 'per_query'), use_apis=use_apis,
+            retry_classes=retry_classes, retry_reason=retry_reason)
     except operations.OperationError as exc:
         raise _scheduler_refusal(exc) from None
     return result, 201

@@ -4974,3 +4974,17 @@ robots (200) and the API (200), ten candidates, zero rejections, no model call, 
 ten records from one query, not a measure of coverage. Superseded: B12's "planning stays with the
 scheduler and the CLI" for batches; the CLI remains the way to plan single operations.
 
+
+
+## D133 — A second acquisition round is plannable from the portal; a failure names its cause (2026-10-16)
+
+The D132 trial's first acquire batch (10 candidates, ceiling 3 requests each, three hosts) obtained 1
+copy: 6 `EXCLUDED_HOST` (doi.org redirected to publisher hosts outside the plan), 2 `REDIRECT_ERROR`,
+1 `REQUEST_LIMIT_REACHED` (an open-access `http://` URL spent one request on the redirect to `https`
+and the ceiling ended before the PDF). Retrying needed a campaign, which only the CLI could plan.
+`POST …/batches` now takes `retry_classes` with a stated `retry_reason` (the backend rule, unchanged);
+`GET …/acquire-hosts` reports which terminal classes could be retried and suggests a ceiling of 5
+when plain-`http` URLs are pending. Operations that FAILED now carry the ledger's own failure class and
+detail in `state_note` (an earlier rebuild had failed ten with "project or code identity changed" and the
+portal said only "stopped by a named failure"). No gate moves: a retry is a new plan and a new
+authorization, and the acquisition floor still decides whether the round may be read.

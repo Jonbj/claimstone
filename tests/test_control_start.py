@@ -156,3 +156,65 @@ def test_acquire_hosts_are_suggested_from_the_record_and_never_include_excluded_
     assert got[2]["candidate_hosts"] == [{"host": "doi.org", "candidates": 2},
                                          {"host": "repo.example.org", "candidates": 1}]
     assert got[2]["refused_hosts"] == [{"host": "pmc.ncbi.nlm.nih.gov", "candidates": 1}]
+
+
+def _candidate(ws, key, url):
+    ws["store"].append("candidates.jsonl", {
+        "candidate_key": key, "round": "first-2026-10-16", "url": url,
+        "source_class": ws["project"].classes[0].id, "title": key,
+        "found_at": "2026-10-16T00:00:00+00:00"})
+
+
+def test_acquire_hosts_report_retryable_classes_and_a_higher_ceiling_for_plain_http(ws):
+    with _served(ws) as (base, prefix, headers):
+        flow_id = _start(base, prefix, headers)[2]["flow_id"]
+        _candidate(ws, "doi:1", "http://old.example.org/a.pdf")
+        _candidate(ws, "doi:2", "https://repo.example.org/b.pdf")
+        ws["store"].append("acquisitions.jsonl", {
+            "candidate_key": "doi:2", "failure_class": "REQUEST_LIMIT_REACHED", "attempts": []})
+        got = _request(f"{base}{prefix}/flows/{flow_id}/acquire-hosts",
+                       headers={"Cookie": headers["Cookie"]})[2]
+    assert got["plain_http_candidates"] == 1 and got["suggested_max_requests_each"] == 5
+    assert got["retryable_classes"] == [{"failure_class": "REQUEST_LIMIT_REACHED", "candidates": 1}]
+
+
+def test_a_retry_needs_a_reason_and_applies_only_to_acquire(ws):
+    with _served(ws) as (base, prefix, headers):
+        flow_id = _start(base, prefix, headers)[2]["flow_id"]
+        no_reason = _plan(base, prefix, headers, flow_id, stage="acquire", apis=[],
+                          retry_classes=["REQUEST_LIMIT_REACHED"])
+        orphan = _plan(base, prefix, headers, flow_id, stage="acquire", apis=[],
+                       retry_reason="why")
+        on_discover = _plan(base, prefix, headers, flow_id, retry_classes=["REDIRECT_ERROR"],
+                            retry_reason="again")
+    assert no_reason[0] == 422 and orphan[0] == 422 and on_discover[0] == 422
+    assert not ws["store"].path(operations.LEDGER).exists()
+
+
+def test_a_retry_plan_is_frozen_for_the_candidate_that_hit_the_ceiling(ws):
+    with _served(ws) as (base, prefix, headers):
+        flow_id = _start(base, prefix, headers)[2]["flow_id"]
+        _candidate(ws, "doi:2", "https://repo.example.org/b.pdf")
+        ws["store"].append("acquisitions.jsonl", {
+            "candidate_key": "doi:2", "failure_class": "REQUEST_LIMIT_REACHED", "attempts": []})
+        status, _h, batch = _plan(base, prefix, headers, flow_id, stage="acquire", apis=[],
+                                  allowed_hosts=["repo.example.org"], max_requests_each=5,
+                                  retry_classes=["REQUEST_LIMIT_REACHED"],
+                                  retry_reason="ceiling was 3; http redirect used one")
+    assert status == 201 and batch["selected"] == 1 and batch["max_total_requests"] == 5
+    assert batch["units"][0]["retry_classes"] == ["REQUEST_LIMIT_REACHED"]
+
+
+def test_a_failed_operation_states_its_cause_in_the_state_note(ws):
+    from claimstone import operations_view
+    with _served(ws) as (base, prefix, headers):
+        flow_id = _start(base, prefix, headers)[2]["flow_id"]
+        batch = _plan(base, prefix, headers, flow_id)[2]
+    operation_id = batch["operation_ids"][0]
+    operations.authorize(ws["store"], operation_id, identity={"operator": "op1"})
+    operations._append(ws["store"], operation_id, flow_id, "failed", "worker",
+                       failure_class="OperationError",
+                       detail="project or code identity changed; prepare a new plan")
+    [item] = operations_view.for_flow(ws["store"], flow_id)
+    assert item["state"] == "FAILED"
+    assert "prepare a new plan" in item["state_note"] and "OperationError" in item["state_note"]

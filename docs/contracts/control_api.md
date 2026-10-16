@@ -445,9 +445,15 @@ As built (B12):
   An optional `use_apis: true` (acquire only; default false, 422 otherwise) lets each unit also ask the
   Unpaywall and OpenAlex APIs for open-access locations: those two hosts, and every host a location may
   point to, must then be in `allowed_hosts`, or the request is refused as outside the plan.
+  Optional `retry_classes` (acquire only; terminal network classes) with a mandatory `retry_reason`
+  (1–400 characters) re-plans candidates whose last attempt ended in one of those classes: a named
+  campaign, as on the CLI. `retry_reason` without `retry_classes`, or either on `discover`, is 422.
   Authorizing stays the separate exact act above.
 - `GET …/flows/{flow_id}/acquire-hosts` (session required, read-only) → `{pending_candidates,
-  candidate_hosts: [{host, candidates}], refused_hosts: [{host, candidates}]}`: the hosts an `acquire` plan
+  candidate_hosts: [{host, candidates}], refused_hosts: [{host, candidates}],
+  retryable_classes: [{failure_class, candidates}], plain_http_candidates,
+  suggested_max_requests_each}` (5 when a pending URL is plain `http` or a candidate already hit the
+  request ceiling, otherwise 3; a plain-`http` URL spends one request on the redirect to `https`): the hosts an `acquire` plan
   would need, read from the record: the hosts of the URLs of candidates with no attempt yet, and the hosts
   earlier attempts were refused at as "outside this plan". Hosts in the project's `excluded_hosts` are never
   suggested. A suggestion, not a grant: the portal pre-fills the plan form with it, the person edits the list
