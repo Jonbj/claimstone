@@ -364,6 +364,8 @@ ROUTES: tuple[Route, ...] = (
     # B12: the scheduler's operations. Planning stays with the scheduler and the CLI.
     Route("GET", ("p", "{project}", "flows", "{flow_id}", "operations"), "_operations_list"),
     Route("GET", ("p", "{project}", "flows", "{flow_id}", "batches"), "_batches_list"),
+    Route("POST", ("p", "{project}", "flows"), "_flow_start"),
+    Route("POST", ("p", "{project}", "flows", "{flow_id}", "batches"), "_batch_plan"),
     Route("POST", ("p", "{project}", "flows", "{flow_id}", "batches", "{batch_id}",
                    "authorize"), "_batch_authorize"),
     Route("POST", ("p", "{project}", "flows", "{flow_id}", "operations", "{operation_id}",
@@ -1314,6 +1316,60 @@ def _batches_list(self: _Handler, params: dict[str, str], query: Any,
     return {'flow_id': str(row['flow_id']), 'batches': batches}, 200
 
 
+_ROUND_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
+
+
+def _flow_start(self: _Handler, params: dict[str, str], query: Any,
+                body: dict[str, Any]) -> tuple[Any, int]:
+    """Bind a named round to the project's protocol: the first act of a research flow.
+
+    It records a binding and, for a project that declares a population, freezes that population
+    for the round. It sends no request; a flow with no candidates is an empty scope, not a
+    closed cohort."""
+    _required_body(self, body, {'title', 'round'})
+    title, round_name = body['title'], body['round']
+    if not isinstance(title, str) or not title.strip() or len(title) > 120:
+        raise ControlError(422, 'VALIDATION', 'title must be 1 to 120 characters')
+    if not isinstance(round_name, str) or not _ROUND_NAME.match(round_name):
+        raise ControlError(422, 'VALIDATION',
+                           'round must be 1 to 64 letters, digits, dots, dashes or underscores, '
+                           'starting with a letter or digit')
+    project, store = _scheduler_context(self, params)
+    try:
+        row, created = flows.create(project, store, selector=scope.Selector(round_name, False),
+                                    title=title.strip())
+    except (ValueError, ConfigError) as exc:
+        raise ControlError(409, 'REFUSED', str(exc)) from None
+    return {'flow_id': row['flow_id'], 'created': created, 'title': row.get('title'),
+            'round': round_name}, 201 if created else 200
+
+
+def _batch_plan(self: _Handler, params: dict[str, str], query: Any,
+                body: dict[str, Any]) -> tuple[Any, int]:
+    """Freeze a bounded set of one-query or one-candidate plans, in the `planned` state.
+
+    Planning executes nothing and asks no host anything; the batch still needs the separate,
+    exact authorization of a person before any worker may start it."""
+    _required_body(self, body, {'stage', 'apis', 'allowed_hosts', 'max_units',
+                                'max_requests_each', 'per_query'})
+    if body['stage'] not in {'discover', 'acquire'}:
+        raise ControlError(422, 'VALIDATION', 'stage must be discover or acquire')
+    apis = body['apis'] if body['stage'] == 'discover' else []
+    if body['stage'] == 'discover':
+        apis = _strings(body['apis'], 'apis')
+    hosts = _strings(body['allowed_hosts'], 'allowed_hosts')
+    project, store, row, _selector = _flow_only(self, params)
+    try:
+        result = operations.plan_batch(
+            project, store, str(row['flow_id']), body['stage'], apis=apis, allowed_hosts=hosts,
+            max_units=_integer(body['max_units'], 'max_units'),
+            max_requests_each=_integer(body['max_requests_each'], 'max_requests_each'),
+            per_query=_integer(body['per_query'], 'per_query'))
+    except operations.OperationError as exc:
+        raise _scheduler_refusal(exc) from None
+    return result, 201
+
+
 def _batch_authorize(self: _Handler, params: dict[str, str], query: Any,
                      body: dict[str, Any]) -> tuple[Any, int]:
     """Authorize exactly the batch and total request ceiling the operator saw."""
@@ -1746,6 +1802,8 @@ for _name, _function in (("_operations_list", _operations_list),
                          ("_local_mandate_disable", _local_mandate_disable),
                          ("_batches_list", _batches_list),
                          ("_batch_authorize", _batch_authorize),
+                         ("_flow_start", _flow_start),
+                         ("_batch_plan", _batch_plan),
                          ("_operation_authorize", _operation_authorize),
                          ("_operation_not_built", _operation_not_built),
                          ("_admin_read", _admin_read), ("_admin_check", _admin_check),

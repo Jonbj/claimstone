@@ -424,7 +424,7 @@ As built (B12):
 - `POST …/operations/{operation_id}/pause` and `…/resume` → 501. The operation ledger's transition
   table has no `stopping` event yet, and appending one would make the whole ledger invalid. **Not
   built**: it belongs to the scheduler track.
-- Planning is not offered: plans come from the scheduler and the CLI.
+- Single operations are still planned by the scheduler and the CLI; a discovery or acquisition **batch** is planned from the portal (D132, below).
 - `GET …/batches` → `{flow_id, batches}` for frozen operation batches in this
   flow. Each batch includes its ID, exact units and hosts, skipped subjects,
   summed physical-request ceiling, current operation states and the number
@@ -433,6 +433,16 @@ As built (B12):
   `{operation_ids, max_total_requests}` → 201 when it authorizes new units, 200
   on an idempotent repeat. A mismatch is 409 `PLAN_DIFFERS`; the event names
   the authenticated portal operator on every newly authorized operation.
+- `POST /control/v1/p/{p}` `/flows` with `{title, round}` → 201 `{flow_id, created: true, title, round}`, or 200
+  `created: false` for the same binding. It binds the named round to the protocol as it stands (for a
+  project that declares a population, it freezes that population for the round) and sends no request. `title` is 1 to
+  120 characters; `round` matches `[A-Za-z0-9][A-Za-z0-9._-]{0,63}`; both are required and nothing else is accepted
+  (422 `VALIDATION`). A drifted registry or a changed population is 409 `REFUSED`.
+- `POST …/flows/{flow_id}/batches` with `{stage: "discover"|"acquire", apis, allowed_hosts, max_units,
+  max_requests_each, per_query}` → 201 with the frozen batch (`batch_id`, `operation_ids`, `units`,
+  `max_total_requests`). It writes `planned` rows only and contacts no host. Exact hosts are required
+  (`apis` only for `discover`); a flow with no candidates cannot plan `acquire` (409 `REFUSED`).
+  Authorizing stays the separate exact act above.
 - Today (B9) now reports `continues_without_you` per project: the authorized, running or
   interrupted operations.
 

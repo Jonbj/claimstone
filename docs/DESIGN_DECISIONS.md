@@ -4950,3 +4950,27 @@ place so adding it is a module and two routes, not a data migration. Not covered
 beyond this computer (a proxy with HTTPS, and revisiting that anyone who can reach the login can lock
 a named id for 15 minutes), password reset by email and two-factor authentication.
 
+
+## D132 — The first flow and its first network batch are planned from the portal; the supervisor runs what a person authorized (2026-10-16)
+
+An end-to-end trial in the real portal stopped at three points, each measured: a new project had
+no flow and `Nuova serie` repeats an existing one (the wizard's `Avvia la ricerca` is disabled);
+planning the first discovery batch was a CLI-only act; and after the portal's `Authorize` the
+operation sat in `authorized — waiting for the worker` until `scheduler tick` was run by hand,
+because the supervisor (D130) drove only mandates, which need two local models and a call cap a
+network search does not.
+
+Three changes, none of which moves a gate. `POST …/flows {title, round}` binds a named round
+(`flows.create`, unchanged) and sends no request. `POST …/flows/{id}/batches` calls
+`operations.plan_batch` unchanged: it freezes `planned` rows, requires exact hosts and a request
+ceiling per unit, and executes nothing. The supervisor's pass now also runs
+`operations.tick` (at most three operations per project per pass) under the same `operations`
+beacon as `scheduler worker`, so a second process is refused, never run twice. It starts only
+operations that already carry a person's `authorized` event; it plans and authorizes nothing.
+
+The trial it answers (2026-10-16, a throwaway project, one OpenAlex query for `exercise treatment
+depression`, ten results requested, ceiling three requests): two physical requests were recorded,
+robots (200) and the API (200), ten candidates, zero rejections, no model call, USD 0. That is
+ten records from one query, not a measure of coverage. Superseded: B12's "planning stays with the
+scheduler and the CLI" for batches; the CLI remains the way to plan single operations.
+
