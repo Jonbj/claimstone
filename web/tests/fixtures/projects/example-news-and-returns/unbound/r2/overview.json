@@ -193,6 +193,7 @@
      "floor": 0.8,
      "found": 2,
      "not_a_document": 0,
+     "not_attempted": 1,
      "not_obtained": 2,
      "obtained": 0,
      "rate": 0.0,
@@ -201,7 +202,7 @@
     "key": "copies",
     "n": 3,
     "status": "partial",
-    "summary": "0 of 2 found sources are confirmed so far (rate 0.00, floor 0.80); 2 not obtained, and the round is not final.",
+    "summary": "0 of 2 found sources are confirmed so far (rate 0.00, floor 0.80); 2 not obtained yet, 1 of them not yet attempted; the round is not final.",
     "title": "Obtain legal copies"
    },
    {

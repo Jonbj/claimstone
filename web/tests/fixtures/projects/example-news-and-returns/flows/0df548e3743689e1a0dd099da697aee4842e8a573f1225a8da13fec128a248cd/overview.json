@@ -625,6 +625,7 @@
      "floor": 0.8,
      "found": 2,
      "not_a_document": 0,
+     "not_attempted": 0,
      "not_obtained": 0,
      "obtained": 2,
      "rate": 1.0,
