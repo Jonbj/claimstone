@@ -331,3 +331,22 @@ def test_unpriced_openalex_route_is_refused_before_transport(tmp_path):
     outcome = RecordingFetcher(fetcher, Store('one', base=tmp_path)).get(
         'https://api.openalex.org/unreviewed')
     assert outcome.failure_class == net.UNPRICED_ROUTE
+
+
+def _transport_failure(recorded_at):
+    return {'event': 'transport', 'failure_class': net.TIMEOUT,
+            'url': 'https://slow.example/a', 'recorded_at': recorded_at}
+
+
+def test_only_dated_failures_count_towards_a_host_budget(tmp_path):
+    import datetime as dt
+    from claimstone.store import Store
+
+    store = Store('t', base=tmp_path)
+    now = dt.datetime.now(dt.timezone.utc)
+    store.append('requests.jsonl', _transport_failure(now.isoformat()))
+    store.append('requests.jsonl', _transport_failure(now.replace(tzinfo=None).isoformat()))
+    store.append('requests.jsonl', _transport_failure('not a time'))
+    store.append('requests.jsonl', _transport_failure(
+        (now - dt.timedelta(days=30)).isoformat()))
+    assert net.recorded_host_failures(store, 'slow.example') == 1

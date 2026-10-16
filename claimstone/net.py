@@ -186,10 +186,14 @@ def recorded_host_failures(store: Any, host: str, ttl_s: int = 48 * 3600) -> int
             continue
         try:
             stamp = dt.datetime.fromisoformat(str(row['recorded_at']))
-            when = stamp.timestamp() if stamp.tzinfo else 0
+            when = stamp.timestamp()
         except (KeyError, TypeError, ValueError, OverflowError):
             # An undated failure cannot safely be assigned to the TTL.
             # The ledger validator handles malformed rows separately.
+            continue
+        if stamp.tzinfo is None:
+            # A naive time is read in the machine's zone by `timestamp()`; no writer here emits
+            # one, and guessing its zone would date the failure wrongly. Excluded, as undated.
             continue
         count += when >= cutoff
     return count

@@ -117,3 +117,36 @@ def test_a_ledger_under_a_subpath_can_be_appended_to(tmp_path):
     store = Store("t", base=tmp_path)
     store.append("calls/extract/b1/requests.jsonl", {"call_id": "x"})
     assert [row["call_id"] for row in store.read("calls/extract/b1/requests.jsonl")] == ["x"]
+
+
+def test_stored_bytes_are_written_once_and_left_alone(tmp_path):
+    store = Store("t", base=tmp_path)
+    digest, path = store.store_bytes(b"payload", ".bin")
+    before = path.stat().st_mtime_ns
+    again, same = store.store_bytes(b"payload", ".bin")
+    assert (again, same) == (digest, path)
+    assert path.stat().st_mtime_ns == before
+
+
+def test_a_truncated_byte_file_is_rewritten_not_reused(tmp_path):
+    # A crash mid-write leaves a file whose name claims a hash its content does not have.
+    store = Store("t", base=tmp_path)
+    digest, path = store.store_bytes(b"complete payload", ".bin")
+    path.write_bytes(b"complete")
+    _, same = store.store_bytes(b"complete payload", ".bin")
+    assert same == path and path.read_bytes() == b"complete payload"
+
+
+def test_storing_bytes_leaves_no_scratch_file(tmp_path):
+    store = Store("t", base=tmp_path)
+    _, path = store.store_bytes(b"payload", ".bin")
+    assert [p.name for p in path.parent.iterdir()] == [path.name]
+
+
+def test_without_torn_tail_is_the_one_rule():
+    from claimstone.store import without_torn_tail
+
+    assert without_torn_tail(b"") == (b"", 0)
+    assert without_torn_tail(b'{"a": 1}\n') == (b'{"a": 1}\n', 0)
+    assert without_torn_tail(b'{"a": 1}\n{"b"') == (b'{"a": 1}\n', 4)
+    assert without_torn_tail(b'{"a": 1}') == (b"", 8)

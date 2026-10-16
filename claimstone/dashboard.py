@@ -14,6 +14,8 @@ given what the data is. Colour never carries meaning alone: every state also car
 
 from __future__ import annotations
 
+import base64
+import hashlib
 import html
 import ipaddress
 import json
@@ -123,6 +125,20 @@ el.textContent=j.running.length?j.running.join(' · '):'no ledger written in the
 catch(e){}}
 setInterval(poll,2000);poll();
 """
+
+
+def script_hash(script: str) -> str:
+    """The CSP source expression allowing exactly this inline script and no other."""
+    digest = hashlib.sha256(script.encode("utf-8")).digest()
+    return "'sha256-" + base64.b64encode(digest).decode("ascii") + "'"
+
+
+def inline_page_csp(script: str) -> str:
+    """The policy for a self-contained page: one hashed inline script, inline styles (the
+    pages style meters with `style=`), fetches to its own origin only."""
+    return ("default-src 'none'; style-src 'unsafe-inline'; "
+            f"script-src {script_hash(script)}; connect-src 'self'; img-src 'self'; "
+            "base-uri 'none'; form-action 'none'; frame-ancestors 'none'")
 
 
 def _esc(value: Any) -> str:
@@ -333,6 +349,9 @@ class _Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("Referrer-Policy", "no-referrer")
+        self.send_header("Content-Security-Policy", inline_page_csp(_SCRIPT))
         self.end_headers()
         self.wfile.write(body)
 
