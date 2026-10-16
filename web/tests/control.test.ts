@@ -231,6 +231,43 @@ describe("F1: control client transport", () => {
     }
   });
 
+  it("reads batches with a credentialed GET and authorizes the exact values read", async () => {
+    const batch = { batch_id: "b/1", operation_ids: ["op2", "op1"], max_total_requests: 7,
+      stage: "acquire", created_at: "2026-10-16T00:00:00Z", units: [], selected: 2,
+      remaining_unplanned: 0, skipped: [], awaiting_approval: 2 };
+    setCsrfToken("tok");
+    mockFetch((call) => reply(call.init.method === "GET" ? 200 : 201,
+      call.init.method === "GET" ? { flow_id: "f/1", batches: [batch] } :
+        { batch: { ...batch, authorized_now: 2 } })());
+    const read = await control.batches("a b", "f/1");
+    await control.authorizeBatch("a b", "f/1", read.batches[0].batch_id, {
+      operation_ids: read.batches[0].operation_ids,
+      max_total_requests: read.batches[0].max_total_requests,
+    });
+    expect(calls.map((call) => `${call.init.method} ${call.url}`)).toEqual([
+      "GET /control/v1/p/a%20b/flows/f%2F1/batches",
+      "POST /control/v1/p/a%20b/flows/f%2F1/batches/b%2F1/authorize",
+    ]);
+    expect(calls[0].init.credentials).toBe("same-origin");
+    expect(calls[0].init.headers).toBeUndefined();
+    expect(calls[1].init.credentials).toBe("same-origin");
+    expect(headersOf(calls[1])["X-CSRF-Token"]).toBe("tok");
+    expect(headersOf(calls[1])["Idempotency-Key"]).toMatch(/^[0-9a-f-]{36}$/);
+    expect(JSON.parse(String(calls[1].init.body))).toEqual({
+      operation_ids: ["op2", "op1"], max_total_requests: 7,
+    });
+  });
+
+  it("maps batch PLAN_DIFFERS and REFUSED without replacing the server message", async () => {
+    setCsrfToken("tok");
+    for (const code of ["PLAN_DIFFERS", "REFUSED"]) {
+      mockFetch(reply(409, { error: { code, message: `server says ${code}` } }));
+      await expect(control.authorizeBatch("p", "f", "b", {
+        operation_ids: ["op1"], max_total_requests: 3,
+      })).rejects.toMatchObject({ status: 409, code, message: `server says ${code}` });
+    }
+  });
+
   it("keeps flow and batch refusal messages verbatim", async () => {
     setCsrfToken("tok");
     mockFetch(reply(409, { error: { code: "REFUSED", message: "registry drifted" } }));

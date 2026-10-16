@@ -358,6 +358,30 @@ export interface PlannedBatch {
   project: string;
   batch_version: number;
 }
+export type BatchUnit = PlannedBatch["units"][number] & { state: string };
+export interface BatchSummary {
+  batch_id: string;
+  stage: "discover" | "acquire";
+  created_at: string;
+  operation_ids: string[];
+  units: BatchUnit[];
+  max_total_requests: number;
+  selected: number;
+  remaining_unplanned: number;
+  skipped: Array<{ subject: string; reason: string }>;
+  awaiting_approval: number;
+}
+export interface BatchesList {
+  flow_id: string;
+  batches: BatchSummary[];
+}
+export interface AuthorizeBatchBody {
+  operation_ids: string[];
+  max_total_requests: number;
+}
+export interface AuthorizedBatch extends BatchSummary {
+  authorized_now: number;
+}
 export interface AcquireHosts {
   pending_candidates: number;
   candidate_hosts: Array<{ host: string; candidates: number }>;
@@ -518,6 +542,10 @@ export const control = {
     post<StartFlowResult>(`/p/${enc(project)}/flows`, body),
   planBatch: (project: string, flowId: string, body: PlanBatchBody) =>
     post<PlannedBatch>(`${flowBase(project, flowId)}/batches`, body),
+  batches: (project: string, flowId: string) =>
+    get<BatchesList>(`${flowBase(project, flowId)}/batches`),
+  authorizeBatch: (project: string, flowId: string, batchId: string, body: AuthorizeBatchBody) =>
+    post<{ batch: AuthorizedBatch }>(`${flowBase(project, flowId)}/batches/${enc(batchId)}/authorize`, body),
   // session
   /** Signing in stores the CSRF token in memory; the cookie is the server's HttpOnly one. */
   async signIn(id: string, password: string): Promise<SessionInfo> {
