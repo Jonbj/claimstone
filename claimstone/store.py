@@ -21,10 +21,22 @@ import datetime as _dt
 import fcntl
 import hashlib
 import json
+import os
 import pathlib
 import threading
 from contextlib import contextmanager
 from typing import Any, Iterable, Iterator
+
+
+def without_torn_tail(data: bytes) -> tuple[bytes, int]:
+    """The complete rows of a ledger's bytes, and how many trailing bytes were not one.
+
+    The one definition of a torn tail: a final line with no newline was never accepted by any
+    reader, whether or not it happens to parse. Everything up to the last newline is kept."""
+    if not data or data.endswith(b"\n"):
+        return data, 0
+    cut = data.rfind(b"\n") + 1
+    return data[:cut], len(data) - cut
 
 
 def sha256_bytes(data: bytes) -> str:
@@ -127,12 +139,10 @@ class Store:
         path = self.root / name
         if not path.exists():
             return
-        data = path.read_bytes()
-        if not data or data.endswith(b"\n"):
+        complete, discarded = without_torn_tail(path.read_bytes())
+        if not discarded:
             return
-        cut = data.rfind(b"\n")
-        discarded = len(data) - (cut + 1)
-        path.write_bytes(data[: cut + 1] if cut >= 0 else b"")
+        path.write_bytes(complete)
         if name in self.torn_tail:
             self.torn_tail.remove(name)
         if name == self.REPAIR_LEDGER:
@@ -197,11 +207,10 @@ class Store:
             path = self.root / name
             if not path.exists():
                 return False
-            data = path.read_bytes()
-            if not data or data.endswith(b"\n"):
+            complete, discarded = without_torn_tail(path.read_bytes())
+            if not discarded:
                 return False
-            cut = data.rfind(b"\n")
-            path.write_bytes(data[: cut + 1] if cut >= 0 else b"")
+            path.write_bytes(complete)
             if name in self.torn_tail:
                 self.torn_tail.remove(name)
             return True
@@ -223,8 +232,14 @@ class Store:
             directory = self.root / where
             directory.mkdir(parents=True, exist_ok=True)
             target = directory / f"{digest}{suffix}"
-            if not target.exists():
-                target.write_bytes(data)
+            # The name is the claim that the bytes hash to `digest`, so a file that does not is
+            # damage, not a copy: a crash mid-write used to leave a truncated one that
+            # `exists()` then accepted forever. Write beside it and rename, and rewrite a
+            # mismatching file rather than reuse it.
+            if not target.exists() or sha256_bytes(target.read_bytes()) != digest:
+                scratch = directory / f".{digest}{suffix}.tmp.{os.getpid()}"
+                scratch.write_bytes(data)
+                os.replace(scratch, target)
             return digest, target
 
     def store_bytes(self, data: bytes, suffix: str) -> tuple[str, pathlib.Path]:

@@ -50,7 +50,7 @@ crash is resumable, and every figure is greppable.
 ## Running it
 
 ```bash
-.venv/bin/pytest -q                                    # 1026 passing
+.venv/bin/pytest -q                                    # the count is printed, not recorded here
 .venv/bin/claimstone validate --all-projects           # the contract check
 .venv/bin/claimstone report projects/<name>            # the acquisition rate and its losses
 .venv/bin/claimstone verdicts projects/<name>          # the profiles, and any signature

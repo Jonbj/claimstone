@@ -24,15 +24,16 @@ from claimstone.config import (ConfigError, check_registry_drift, discover_proje
 from claimstone.store import Store
 from claimstone.transport import LOOPBACK_HOSTS, BaseHandler
 
-from claimstone.dashboard import _STYLE, _chip, _esc, _frac
-
-CSP = ("default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; "
-       "connect-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'; "
-       "frame-ancestors 'none'")
+from claimstone.dashboard import _STYLE, _chip, _esc, _frac, inline_page_csp
 
 BOUND_AFTER_DATA = ("bound after data existed: rows written before binding are not verified "
                     "against this protocol")
 
+# One static script for every page, so the CSP can name its hash instead of allowing all inline
+# script. The project to poll arrives as `data-poll` on <body>, HTML-escaped where it is written
+# and read back as a string, never spliced into this source. The poll is the dashboard's
+# approach at the portal's 3 s cadence: reload when the ledger signature moved and the page is
+# visible. No SSE, no WebSocket (spec §4.12).
 _SCRIPT = """
 const root=document.documentElement;
 const saved=(()=>{try{return localStorage.getItem('cs-theme')}catch(e){return null}})();
@@ -40,21 +41,19 @@ const mq=matchMedia('(prefers-color-scheme: light)');
 root.dataset.theme=saved||(mq.matches?'light':'dark');
 document.getElementById('tgl').onclick=()=>{const t=root.dataset.theme==='dark'?'light':'dark';
 root.dataset.theme=t;try{localStorage.setItem('cs-theme',t)}catch(e){}};
+const project=document.body.dataset.poll;
+if(project){
+const POLL='/api/poll?project='+encodeURIComponent(project);
+let last=null;
+async function poll(){try{const r=await fetch(POLL);const j=await r.json();
+const sig=JSON.stringify(j.ledgers);
+if(last!==null&&sig!==last&&document.visibilityState==='visible'){location.reload();return}
+last=sig;}catch(e){}}
+setInterval(poll,3000);poll();
+}
 """
 
-
-def _poll_script(project_name: str) -> str:
-    """The dashboard's polling approach at the portal's 3 s cadence: reload when the ledger
-    signature moved and the page is visible. No SSE, no WebSocket (spec §4.12)."""
-    return (
-        f"const POLL='{_esc('/api/poll?project=' + project_name)}';\n"
-        "let last=null;\n"
-        "async function poll(){try{const r=await fetch(POLL);const j=await r.json();"
-        "const sig=JSON.stringify(j.ledgers);"
-        "if(last!==null&&sig!==last&&document.visibilityState==='visible'){location.reload();return}"
-        "last=sig;}catch(e){}}\n"
-        "setInterval(poll,3000);poll();\n"
-    )
+CSP = inline_page_csp(_SCRIPT)
 
 
 def _page(title: str, breadcrumb: list[tuple[str, str]], body: str,
@@ -65,12 +64,12 @@ def _page(title: str, breadcrumb: list[tuple[str, str]], body: str,
         for label, href in breadcrumb)
     code = f"{revision[:12]}" if revision else "unknown"
     dirt = " · dirty tree" if dirty else ""
-    script = _SCRIPT + (_poll_script(poll_project) if poll_project else "")
+    poll = f' data-poll="{_esc(poll_project)}"' if poll_project else ""
     return f"""<!doctype html>
 <html lang="en" data-theme="dark">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>claimstone · {_esc(title)}</title><style>{_STYLE}</style></head>
-<body>
+<body{poll}>
 <header>
   <h1>{crumbs}</h1>
   <span class="meta">read-only derived view · re-read from disk on every request</span>
@@ -80,7 +79,7 @@ def _page(title: str, breadcrumb: list[tuple[str, str]], body: str,
 <main>
 {body}
 </main>
-<script>{script}</script>
+<script>{_SCRIPT}</script>
 </body></html>"""
 
 

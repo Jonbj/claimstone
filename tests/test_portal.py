@@ -107,6 +107,32 @@ def test_security_headers_on_html_and_json(workspace):
             assert "form-action 'none'" in headers["Content-Security-Policy"], path
 
 
+def test_csp_allows_the_one_inline_script_by_hash_not_all_inline_script(workspace):
+    """SEC-001: the policy names the page's script by hash, so injected script does not run."""
+    import base64
+    import re
+    with _served(workspace) as (_httpd, base, _store):
+        for path in ("/", "/inbox", "/admin"):
+            _status, headers, body = _get(base + path)
+            policy = headers["Content-Security-Policy"]
+            script_src = re.search(r"script-src ([^;]*)", policy).group(1)
+            assert "unsafe-inline" not in script_src, path
+            scripts = re.findall(r"<script>(.*?)</script>", body, re.S)
+            assert len(scripts) == 1, path
+            digest = base64.b64encode(hashlib.sha256(scripts[0].encode()).digest()).decode()
+            assert script_src == f"'sha256-{digest}'", path
+
+
+def test_the_polled_project_is_data_not_script_source():
+    """SEC-002: a hostile project name is escaped as an attribute and absent from the script."""
+    hostile = "x'</script><img src=1 onerror=alert(1)>\""
+    page = portal._page("t", [], "", None, None, poll_project=hostile)
+    assert hostile not in page
+    assert "<img" not in page
+    assert page.count("<script>") == 1 and page.count("</script>") == 1
+    assert "&lt;/script&gt;" in page.split("<body", 1)[1].split(">", 1)[0]
+
+
 def test_path_parameters_are_looked_up_never_used_as_paths(workspace):
     """H-T4: traversal, unknown projects and malformed flow ids are all plain 404s."""
     with _served(workspace) as (_httpd, base, _store):

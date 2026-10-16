@@ -23,6 +23,8 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import Any
 
+from claimstone.store import without_torn_tail
+
 OPERATOR_VERSION = 2
 
 LEDGER = "operators.jsonl"
@@ -58,11 +60,7 @@ def _rows(directory: pathlib.Path) -> list[dict[str, Any]]:
     path = pathlib.Path(directory) / LEDGER
     if not path.exists():
         return []
-    data = path.read_bytes()
-    if not data.endswith(b"\n") and b"\n" in data:
-        data = data[: data.rfind(b"\n") + 1]
-    elif not data.endswith(b"\n"):
-        data = b""
+    data, _ = without_torn_tail(path.read_bytes())
     return [json.loads(line) for line in data.decode("utf-8").splitlines() if line.strip()]
 
 

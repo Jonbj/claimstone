@@ -81,6 +81,24 @@ def test_one_real_get_proves_the_wiring(server):
     assert "meter" not in discover and "%" not in discover
 
 
+def test_the_page_carries_the_defensive_headers_and_a_hashed_script_policy(server):
+    import base64
+    import hashlib
+    import re
+    with urllib.request.urlopen(
+            f"http://127.0.0.1:{server.server_address[1]}/", timeout=5) as response:
+        headers, body = response.headers, response.read().decode("utf-8")
+    assert headers["Cache-Control"] == "no-store"
+    assert headers["X-Content-Type-Options"] == "nosniff"
+    assert headers["Referrer-Policy"] == "no-referrer"
+    policy = headers["Content-Security-Policy"]
+    script_src = re.search(r"script-src ([^;]*)", policy).group(1)
+    assert "unsafe-inline" not in script_src
+    (script,) = re.findall(r"<script>(.*?)</script>", body, re.S)
+    digest = base64.b64encode(hashlib.sha256(script.encode()).digest()).decode()
+    assert script_src == f"'sha256-{digest}'"
+
+
 def test_api_routes_answer_json(server):
     base = f"http://127.0.0.1:{server.server_address[1]}"
     _, state = _get(f"{base}/api/state")
