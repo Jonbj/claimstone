@@ -90,4 +90,31 @@ describe("network batch planning", () => {
       allowed_hosts: ["example.org", "repo.example.org"], max_units: 5,
       max_requests_each: 3, per_query: 25 }]);
   });
+  it("adds the resolver hosts and use_apis only when the box is ticked, for acquire", async () => {
+    const writes: unknown[] = [];
+    vi.stubGlobal("fetch", (url: string, init?: RequestInit) => {
+      if (url === "/control/v1/session") return json(200, { operator: {
+        id: "o", name: "Operator", role: "admin", must_change_password: false }, csrf_token: "tok" });
+      if (url.endsWith("/operations")) return json(200, { flow_id: "f1", operations: [] });
+      if (init?.method === "POST") {
+        writes.push(JSON.parse(String(init.body)));
+        return json(201, { batch_id: "b1", operation_ids: ["op1"], units: [], selected: 1,
+          max_total_requests: 3 });
+      }
+      return json(404, { error: { code: "NOT_FOUND", message: "unknown" } });
+    });
+    render(<MemoryRouter><SessionProvider><OperationsPanel project="demo" flowId="f1"
+      namedRound hasCandidates /></SessionProvider></MemoryRouter>);
+    await screen.findByRole("button", { name: "Plan batch" });
+    fireEvent.change(screen.getByLabelText("Stage"), { target: { value: "acquire" } });
+    fireEvent.change(screen.getByLabelText("Exact hosts, one per line"), { target: { value: "example.org" } });
+    fireEvent.click(screen.getByRole("checkbox", { name: /Unpaywall and OpenAlex/ }));
+    expect(screen.getByText("At most 15 requests, to: example.org, api.unpaywall.org, api.openalex.org"))
+      .toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Plan batch" }));
+    await waitFor(() => expect(writes).toHaveLength(1));
+    expect(writes[0]).toEqual({ stage: "acquire", apis: [], use_apis: true,
+      allowed_hosts: ["example.org", "api.unpaywall.org", "api.openalex.org"],
+      max_units: 5, max_requests_each: 3, per_query: 25 });
+  });
 });

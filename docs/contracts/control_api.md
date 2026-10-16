@@ -442,6 +442,9 @@ As built (B12):
   max_requests_each, per_query}` → 201 with the frozen batch (`batch_id`, `operation_ids`, `units`,
   `max_total_requests`). It writes `planned` rows only and contacts no host. Exact hosts are required
   (`apis` only for `discover`); a flow with no candidates cannot plan `acquire` (409 `REFUSED`).
+  An optional `use_apis: true` (acquire only; default false, 422 otherwise) lets each unit also ask the
+  Unpaywall and OpenAlex APIs for open-access locations: those two hosts, and every host a location may
+  point to, must then be in `allowed_hosts`, or the request is refused as outside the plan.
   Authorizing stays the separate exact act above.
 - Today (B9) now reports `continues_without_you` per project: the authorized, running or
   interrupted operations.

@@ -32,6 +32,8 @@
     "maxCandidates": "Numero massimo di candidati",
     "maxRequestsPerQuery": "Richieste massime per query",
     "maxRequestsEach": "Richieste massime per candidato",
+    "useApis": "Cerca anche copie open access tramite le API di Unpaywall e OpenAlex",
+    "useApisNote": "Aggiunge {hosts} agli host consentiti. Una copia trovata su un altro host viene rifiutata perché fuori dal piano: elenca i repository che accetti.",
     "exactHosts": "Host esatti, uno per riga",
     "allowedHosts": "Host consentiti",
     "worstCase": "Al massimo {count} richieste verso: {hosts}",

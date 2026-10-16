@@ -338,6 +338,8 @@ export interface PlanBatchBody {
   max_units: number;
   max_requests_each: number;
   per_query: number;
+  /** acquire only: also ask the Unpaywall and OpenAlex APIs for open-access locations */
+  use_apis?: boolean;
 }
 export interface PlannedBatch {
   batch_id: string;

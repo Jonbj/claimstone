@@ -11,6 +11,7 @@ const API_HOSTS = {
   arxiv: "export.arxiv.org",
 } as const;
 type Api = keyof typeof API_HOSTS;
+const RESOLVER_HOSTS = ["api.unpaywall.org", "api.openalex.org"] as const;
 const EXACT_HOST = /^(?=.{1,253}$)[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?)*$/;
 
 export default function PlanBatchForm({ project, flowId, hasCandidates, onPlanned }: {
@@ -23,11 +24,13 @@ export default function PlanBatchForm({ project, flowId, hasCandidates, onPlanne
   const [perQuery, setPerQuery] = useState(10);
   const [maxUnits, setMaxUnits] = useState(5);
   const [maxRequestsEach, setMaxRequestsEach] = useState(3);
+  const [useApis, setUseApis] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [validation, setValidation] = useState<string | null>(null);
   const hosts = stage === "discover" ? apis.map((api) => API_HOSTS[api])
-    : hostsText.split(/\r?\n/).map((host) => host.trim()).filter(Boolean);
+    : [...new Set([...hostsText.split(/\r?\n/).map((host) => host.trim()).filter(Boolean),
+        ...(useApis ? RESOLVER_HOSTS : [])])];
   const positive = [maxUnits, maxRequestsEach, ...(stage === "discover" ? [perQuery] : [])]
     .every((value) => Number.isSafeInteger(value) && value > 0);
   const safeCeiling = positive && Number.isSafeInteger(maxUnits * maxRequestsEach);
@@ -44,6 +47,7 @@ export default function PlanBatchForm({ project, flowId, hasCandidates, onPlanne
       stage, apis: stage === "discover" ? apis : [], allowed_hosts: hosts,
       max_units: maxUnits, max_requests_each: maxRequestsEach,
       per_query: stage === "discover" ? perQuery : 25,
+      ...(stage === "acquire" && useApis ? { use_apis: true } : {}),
     };
     setBusy(true);
     setError(null);
@@ -82,10 +86,19 @@ export default function PlanBatchForm({ project, flowId, hasCandidates, onPlanne
           <NumberField label={t("planBatch.perQuery")} value={perQuery} setValue={setPerQuery} busy={busy} />
         </>
       ) : (
-        <label className="flex flex-col gap-1 text-sm">{t("planBatch.exactHosts")}
-          <textarea value={hostsText} disabled={busy} onChange={(e) => setHostsText(e.target.value)}
-                    rows={4} className="rounded-md border bg-background px-3 py-2" />
-        </label>
+        <>
+          <label className="flex flex-col gap-1 text-sm">{t("planBatch.exactHosts")}
+            <textarea value={hostsText} disabled={busy} onChange={(e) => setHostsText(e.target.value)}
+                      rows={4} className="rounded-md border bg-background px-3 py-2" />
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={useApis} disabled={busy}
+                   onChange={(e) => setUseApis(e.target.checked)} />
+            {t("planBatch.useApis")}
+          </label>
+          {useApis ? <p className="text-sm text-muted-foreground">
+            {t("planBatch.useApisNote", { hosts: RESOLVER_HOSTS.join(", ") })}</p> : null}
+        </>
       )}
       <NumberField label={stage === "discover" ? t("planBatch.maxQueries") : t("planBatch.maxCandidates")}
                    value={maxUnits} setValue={setMaxUnits} busy={busy} />

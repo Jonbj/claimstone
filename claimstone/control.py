@@ -1350,10 +1350,15 @@ def _batch_plan(self: _Handler, params: dict[str, str], query: Any,
 
     Planning executes nothing and asks no host anything; the batch still needs the separate,
     exact authorization of a person before any worker may start it."""
-    _required_body(self, body, {'stage', 'apis', 'allowed_hosts', 'max_units',
-                                'max_requests_each', 'per_query'})
+    use_apis = body.get('use_apis', False)
+    if type(use_apis) is not bool:
+        raise ControlError(422, 'VALIDATION', 'use_apis must be true or false')
+    _required_body(self, {key: value for key, value in body.items() if key != 'use_apis'},
+                   {'stage', 'apis', 'allowed_hosts', 'max_units', 'max_requests_each', 'per_query'})
     if body['stage'] not in {'discover', 'acquire'}:
         raise ControlError(422, 'VALIDATION', 'stage must be discover or acquire')
+    if use_apis and body['stage'] != 'acquire':
+        raise ControlError(422, 'VALIDATION', 'use_apis applies only to acquire')
     apis = body['apis'] if body['stage'] == 'discover' else []
     if body['stage'] == 'discover':
         apis = _strings(body['apis'], 'apis')
@@ -1364,7 +1369,7 @@ def _batch_plan(self: _Handler, params: dict[str, str], query: Any,
             project, store, str(row['flow_id']), body['stage'], apis=apis, allowed_hosts=hosts,
             max_units=_integer(body['max_units'], 'max_units'),
             max_requests_each=_integer(body['max_requests_each'], 'max_requests_each'),
-            per_query=_integer(body['per_query'], 'per_query'))
+            per_query=_integer(body['per_query'], 'per_query'), use_apis=use_apis)
     except operations.OperationError as exc:
         raise _scheduler_refusal(exc) from None
     return result, 201

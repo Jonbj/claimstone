@@ -401,7 +401,13 @@ def _execution_block(running: list[dict[str, Any]] | None) -> dict[str, Any]:
     if running is None:
         return _block("execution", "Execution", "unavailable", "operations unreadable", {})
     live = len(_in_flight(running))
-    return _block("execution", "Execution", "running" if live else "idle",
+    awaiting = sum(1 for item in running if item.get("state") == "PLANNED")
+    status = "running" if live else "waits_for_you" if awaiting else "idle"
+    if awaiting:
+        return _block("execution", "Execution", status,
+                      "{live} running · {awaiting} to authorize · {listed} listed",
+                      {"live": live, "awaiting": awaiting, "listed": len(running)})
+    return _block("execution", "Execution", status,
                   "{live} running · {listed} listed", {"live": live, "listed": len(running)})
 
 
@@ -420,8 +426,8 @@ def _reading_block(steps: list[dict[str, Any]]) -> dict[str, Any]:
 
 def running_operations(store: Store, flow_row: dict[str, Any] | None
                        ) -> tuple[list[dict[str, Any]] | None, str | None]:
-    """`operations_view.continuing()` restricted to this flow: authorized, running or
-    interrupted operations. `[]` for a legacy selector; `None` and a named note when the
+    """`operations_view.continuing()` restricted to this flow: planned (waiting for a person to
+    authorize), authorized, running or interrupted operations. `[]` for a legacy selector; `None` and a named note when the
     operations ledger is damaged. `for_flow` is the same replay filtered by flow id (the
     summary row carries no flow id of its own), narrowed here to the continuing events."""
     if flow_row is None:
@@ -432,7 +438,8 @@ def running_operations(store: Store, flow_row: dict[str, Any] | None
     except (operations.OperationError, LedgerCorrupt):
         return None, OPERATIONS_NOTE
     keep = [row for row in rows
-            if row["last_event"] == "authorized" or row["last_event"] in operations_view.IN_FLIGHT]
+            if row["last_event"] in ("planned", "authorized")
+            or row["last_event"] in operations_view.IN_FLIGHT]
     return [{"operation_id": row["operation_id"], "stage": row["stage"], "state": row["state"],
              "state_note": row["state_note"]} for row in keep], None
 

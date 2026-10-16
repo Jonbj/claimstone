@@ -122,3 +122,12 @@ def test_planning_and_starting_require_a_session(ws):
                            payload={"title": "t", "round": "r-1"})
     assert started[0] in (401, 403)
     assert flows.flows(ws["store"]) == {}
+
+
+def test_use_apis_is_optional_boolean_and_acquire_only(ws):
+    with _served(ws) as (base, prefix, headers):
+        flow_id = _start(base, prefix, headers)[2]["flow_id"]
+        on_discover = _plan(base, prefix, headers, flow_id, use_apis=True)
+        not_boolean = _plan(base, prefix, headers, flow_id, use_apis="yes")
+    assert on_discover[0] == 422 and not_boolean[0] == 422
+    assert not ws["store"].path(operations.LEDGER).exists()

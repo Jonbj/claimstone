@@ -295,8 +295,11 @@ def test_planned_operation_is_not_running(tmp_path):
     project, store, flow = _fixture(tmp_path)
     operations.plan(project, store, flow["flow_id"], "extract-build", batch="e1")
     overview = _overview(project, store, "new")
-    assert overview["journey"]["running"] == []
+    # listed with its state so the execution tile can say a plan awaits a person; never "running"
+    assert [row["state"] for row in overview["journey"]["running"]] == ["PLANNED"]
     assert _by_key(overview)["annotate"]["status"] != "running"
+    tiles = {b["key"]: b for b in overview["journey"]["blocks"]}
+    assert tiles["execution"]["status"] == "waits_for_you"
 
 
 def test_stage_mapping_covers_the_spec():
@@ -437,6 +440,15 @@ def test_execution_tile_rules():
     live = [{"stage": "extract-drain", "state": "RUNNING_OR_LOCK_HELD"}, authorized[0]]
     tile = journey._execution_block(live)
     assert tile["status"] == "running" and tile["figure"] == "1 running · 2 listed"
+
+
+def test_execution_tile_waits_for_you_when_a_plan_awaits_authorization():
+    planned = [{"stage": "discover", "state": "PLANNED"}]
+    tile = journey._execution_block(planned)
+    assert tile["status"] == "waits_for_you"
+    assert tile["figure"] == "0 running · 1 to authorize · 1 listed"
+    live = [{"stage": "extract-drain", "state": "RUNNING_OR_LOCK_HELD"}, planned[0]]
+    assert journey._execution_block(live)["status"] == "running"
 
 
 def test_a_legacy_selector_has_a_protocol_tile_that_says_it_is_not_verified(tmp_path):

@@ -15,8 +15,9 @@ journey: { journey_version, topics[{id,label,terms}], questions{total,literature
 - `figures` holds the numbers the summary quotes. Unknown is `null` in `figures` and "—" in the
   sentence, never 0. A summary is a fixed template chosen by status; no wording varies by result.
 - "Literature question" means any question whose `kind` is not `operational`.
-- `running` lists this flow's operations whose last event is `authorized`, `started`,
-  `call_started` or `unit_completed` (the scheduler's "continuing" set), each with its `state`.
+- `running` lists this flow's operations whose last event is `planned`, `authorized`, `started`,
+  `call_started` or `unit_completed` (the scheduler's "continuing" set plus plans awaiting a person), each
+  with its `state`; a `planned` one drives no step status, only the execution tile.
   Stages are mapped as follows: `discover`, `acquire` and `normalize` to themselves;
   `extract-build|drain|harvest` to extract; `review-build|drain|harvest` to review; `synthesize` to
   itself.
@@ -74,7 +75,7 @@ nothing is waiting), `advisory`, `not_declared` and `unavailable`.
 | pipeline | from steps 2-7: `done` if all `done`; else `blocked` if any; else `running` if any; else `not_started` if all; else `partial` | `{done} of {total} steps done` (a count of steps, never a percentage), plus ` · {n} candidates in {k} other round(s)` when the tile is `not_started` and the store holds candidates in other rounds |
 | selection | `not_declared` when nothing is declared; `unavailable` (declaration unreadable, or any scope in a named error); otherwise `advisory`. **Never `done`.** | `{screened_count} seen · {unobserved_count} unseen` for one scope, `{n} scopes` for several; `no scope for this flow`, `declaration unreadable` or `{n} scope(s) unreadable` otherwise |
 | intake | `waits_for_you` if `needs_you.required` > 0; `idle` if 0; `unavailable` if null; `not_applicable` for a legacy selector | `{required} required · {optional} optional` |
-| execution | `running` if an operation is running in the strict sense above; else `idle` (also for a legacy selector, whose `running` is `[]` by contract); `unavailable` if `running` is null | `{live} running · {listed} listed` |
+| execution | `running` if an operation is running in the strict sense above; else `waits_for_you` if a planned operation awaits a person's authorization; else `idle` (also for a legacy selector, whose `running` is `[]` by contract); `unavailable` if `running` is null | `{live} running · {listed} listed`, or `{live} running · {awaiting} to authorize · {listed} listed` when a plan awaits authorization |
 | reading | step 8's status | `{ready_to_sign} to sign · {signed} of {literature_total} signed` |
 
 The Protocol tile's figure is read from the live project, so for a flow whose binding is `DRIFTED` it

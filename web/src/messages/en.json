@@ -32,6 +32,8 @@
     "maxCandidates": "Max candidates",
     "maxRequestsPerQuery": "Max requests per query",
     "maxRequestsEach": "Max requests each",
+    "useApis": "Also look for open-access copies through the Unpaywall and OpenAlex APIs",
+    "useApisNote": "Adds {hosts} to the allowed hosts. A copy found at any other host is refused as outside this plan, so list the repositories you accept.",
     "exactHosts": "Exact hosts, one per line",
     "allowedHosts": "Allowed hosts",
     "worstCase": "At most {count} requests, to: {hosts}",
