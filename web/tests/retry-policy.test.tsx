@@ -56,7 +56,7 @@ describe("retry policy control methods", () => {
 describe("retry policy plan form", () => {
   afterEach(() => { cleanup(); vi.unstubAllGlobals(); setCsrfToken(null); });
 
-  it("shows the defaults and pre-fills hosts from the record only", async () => {
+  it("shows the defaults and pre-fills only the hosts of candidates not yet attempted, never refused hosts", async () => {
     setCsrfToken("tok");
     vi.stubGlobal("fetch", (url: string) => {
       if (url.endsWith("/retry-policies")) return json(200, { flow_id: "f1", policies: [] });
@@ -75,7 +75,7 @@ describe("retry policy plan form", () => {
     expect((screen.getByLabelText("First wait (hours)") as HTMLInputElement).value).toBe("6");
     expect((screen.getByLabelText("Longest wait (hours)") as HTMLInputElement).value).toBe("48");
     expect((screen.getByLabelText("Expires on") as HTMLInputElement).value).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-    await waitFor(() => expect((screen.getByLabelText("Exact hosts, one per line") as HTMLTextAreaElement).value).toBe("example.org\nused.example"));
+    await waitFor(() => expect((screen.getByLabelText("Exact hosts, one per line") as HTMLTextAreaElement).value).toBe("example.org"));
     expect(screen.getByText(/never longer than 48 h/)).toBeTruthy();
   });
 

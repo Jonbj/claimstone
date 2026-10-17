@@ -57,17 +57,14 @@ export default function RetryPolicyPanel({ project, flowId }: { project: string;
   const [validation, setValidation] = useState<string | null>(null);
   const inFlight = useRef(false);
 
-  // Hosts pre-filled from the record only: the candidates' own hosts plus the hosts an earlier
-  // attempt already used. A suggestion the person edits, never a grant; the server's list is the
-  // only source, so nothing the server did not return is ever suggested.
+  // Hosts pre-filled from the record only: the hosts of candidates not yet attempted. Hosts an earlier
+  // plan refused are deliberately not suggested here: they are usually publishers behind a paywall,
+  // and a retry policy that quietly widened to them would defeat the exact-host rule. A suggestion
+  // the person edits, never a grant.
   const suggestions = useApi(() => control.acquireHosts(project, flowId), [project, flowId]);
   useEffect(() => {
     if (hostsTouched || !suggestions.data) return;
-    const hosts = [
-      ...suggestions.data.candidate_hosts.map((item) => item.host),
-      ...suggestions.data.refused_hosts.map((item) => item.host),
-    ];
-    setHostsText([...new Set(hosts)].join("\n"));
+    setHostsText(suggestions.data.candidate_hosts.map((item) => item.host).join("\n"));
   }, [suggestions.data, hostsTouched]);
 
   const hosts = [...new Set([
