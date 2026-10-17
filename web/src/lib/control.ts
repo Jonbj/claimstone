@@ -271,6 +271,12 @@ export interface SeriesMandateBody {
   review_model: string;
   max_total_local_calls: number;
 }
+export interface FlowMandateBody {
+  flow_id: string;
+  extract_model: string;
+  review_model: string;
+  max_total_local_calls: number;
+}
 /** What `autopilot.enable_series` answers: the new mandate's id and its frozen terms, not a status. */
 export interface SeriesMandateEnabled { mandate_id: string; mandate: MandateStatus["mandate"] }
 /** What `autopilot.disable` answers. */
@@ -340,6 +346,8 @@ export interface PlanBatchBody {
   per_query: number;
   /** acquire only: also ask the Unpaywall and OpenAlex APIs for open-access locations */
   use_apis?: boolean;
+  retry_classes?: string[];
+  retry_reason?: string;
 }
 export interface PlannedBatch {
   batch_id: string;
@@ -386,6 +394,9 @@ export interface AcquireHosts {
   pending_candidates: number;
   candidate_hosts: Array<{ host: string; candidates: number }>;
   refused_hosts: Array<{ host: string; candidates: number }>;
+  retryable_classes: Array<{ failure_class: string; candidates: number }>;
+  plain_http_candidates: number;
+  suggested_max_requests_each: number;
 }
 export type OperationLimits = OperationSummary["limits"];
 
@@ -671,6 +682,8 @@ export const control = {
   revokeCopyPolicy: (p: string, id: string, sha: string) =>
     post<PolicyStatus>(`/p/${enc(p)}/copy-policies/${enc(id)}/revoke`, { policy_sha256: sha }),
   enableSeriesMandate: (p: string, body: SeriesMandateBody) => post<SeriesMandateEnabled>(`/p/${enc(p)}/local-mandates/series`, body),
+  enableFlowMandate: (project: string, flowId: string, body: FlowMandateBody) =>
+    post<SeriesMandateEnabled>(`${flowBase(project, flowId)}/local-mandates`, body),
   disableMandate: (p: string, id: string) =>
     post<MandateDisabled>(`/p/${enc(p)}/local-mandates/${enc(id)}/disable`, { mandate_id: id }),
   createPeriodicExport: (p: string, scheduleId: string, dossierId: string) =>

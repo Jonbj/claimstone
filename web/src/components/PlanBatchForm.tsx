@@ -25,6 +25,9 @@ export default function PlanBatchForm({ project, flowId, hasCandidates, onPlanne
   const [perQuery, setPerQuery] = useState(10);
   const [maxUnits, setMaxUnits] = useState(5);
   const [maxRequestsEach, setMaxRequestsEach] = useState(3);
+  const [requestsTouched, setRequestsTouched] = useState(false);
+  const [retryClasses, setRetryClasses] = useState<string[]>([]);
+  const [retryReason, setRetryReason] = useState("");
   const [useApis, setUseApis] = useState(false);
   const [hostsTouched, setHostsTouched] = useState(false);
   // What the record says an acquire plan would need; a suggestion the person edits, never a grant.
@@ -37,6 +40,12 @@ export default function PlanBatchForm({ project, flowId, hasCandidates, onPlanne
     setHostsText(suggested.candidate_hosts.map((item) => item.host).join("\n"));
     if (suggested.pending_candidates > 0) setMaxUnits(suggested.pending_candidates);
   }, [stage, suggested, hostsTouched]);
+  useEffect(() => {
+    if (stage === "acquire" && suggested && !requestsTouched &&
+        Number.isSafeInteger(suggested.suggested_max_requests_each)) {
+      setMaxRequestsEach(suggested.suggested_max_requests_each);
+    }
+  }, [stage, suggested, requestsTouched]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [validation, setValidation] = useState<string | null>(null);
@@ -52,7 +61,10 @@ export default function PlanBatchForm({ project, flowId, hasCandidates, onPlanne
     event.preventDefault();
     if (busy) return;
     const problem = !safeCeiling ? t("planBatch.positive")
-      : !validHosts ? t("planBatch.hostInvalid") : null;
+      : !validHosts ? t("planBatch.hostInvalid")
+      : stage === "acquire" && retryClasses.length > 0 &&
+        (retryReason.trim().length < 1 || retryReason.trim().length > 400)
+        ? t("planBatch.retryReasonInvalid") : null;
     setValidation(problem);
     if (problem) return;
     const body: PlanBatchBody = {
@@ -60,6 +72,9 @@ export default function PlanBatchForm({ project, flowId, hasCandidates, onPlanne
       max_units: maxUnits, max_requests_each: maxRequestsEach,
       per_query: stage === "discover" ? perQuery : 25,
       ...(stage === "acquire" && useApis ? { use_apis: true } : {}),
+      ...(stage === "acquire" && retryClasses.length > 0 ? {
+        retry_classes: retryClasses, retry_reason: retryReason.trim(),
+      } : {}),
     };
     setBusy(true);
     setError(null);
@@ -135,12 +150,35 @@ export default function PlanBatchForm({ project, flowId, hasCandidates, onPlanne
           </label>
           {useApis ? <p className="text-sm text-muted-foreground">
             {t("planBatch.useApisNote", { hosts: RESOLVER_HOSTS.join(", ") })}</p> : null}
+          {suggested && suggested.suggested_max_requests_each === 5 ?
+            <p className="text-sm text-muted-foreground">{t("planBatch.httpSuggestion", {
+              count: suggested.plain_http_candidates,
+            })}</p> : null}
+          {suggested && suggested.retryable_classes?.length > 0 ? (
+            <fieldset disabled={busy} className="flex flex-col gap-2 text-sm">
+              <legend className="font-medium">{t("planBatch.retryHeading")}</legend>
+              <p>{t("planBatch.retryNote")}</p>
+              {suggested.retryable_classes.map(({ failure_class, candidates }) => (
+                <label key={failure_class} className="flex items-center gap-2">
+                  <input type="checkbox" checked={retryClasses.includes(failure_class)}
+                    onChange={(e) => setRetryClasses((old) => e.target.checked
+                      ? [...old, failure_class] : old.filter((item) => item !== failure_class))} />
+                  {failure_class} ({candidates})
+                </label>
+              ))}
+              <label className="flex flex-col gap-1">{t("planBatch.retryWhy")}
+                <input type="text" maxLength={400} required={retryClasses.length > 0}
+                  value={retryReason} onChange={(e) => setRetryReason(e.target.value)}
+                  className="min-h-11 rounded-md border bg-background px-3" />
+              </label>
+            </fieldset>
+          ) : null}
         </>
       )}
       <NumberField label={stage === "discover" ? t("planBatch.maxQueries") : t("planBatch.maxCandidates")}
                    value={maxUnits} setValue={setMaxUnits} busy={busy} />
       <NumberField label={stage === "discover" ? t("planBatch.maxRequestsPerQuery") : t("planBatch.maxRequestsEach")}
-                   value={maxRequestsEach} setValue={setMaxRequestsEach} busy={busy} />
+                   value={maxRequestsEach} setValue={(value) => { setRequestsTouched(true); setMaxRequestsEach(value); }} busy={busy} />
       <p className="text-sm">{t("planBatch.allowedHosts")}: {hosts.length ? hosts.join(", ") : "—"}</p>
       <p className="text-sm font-medium">{t("planBatch.worstCase", {
         count: safeCeiling ? maxUnits * maxRequestsEach : "—", hosts: hosts.length ? hosts.join(", ") : "—",

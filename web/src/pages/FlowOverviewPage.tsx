@@ -8,6 +8,7 @@ import InboxCards from "@/components/InboxCards";
 import JourneySteps from "@/components/JourneySteps";
 import { NeedsYou, RunningNote, TheQuestions, TheTopic } from "@/components/JourneySide";
 import OperationsPanel from "@/components/OperationsPanel";
+import WorkLocallyPanel from "@/components/WorkLocallyPanel";
 import OverviewKpis from "@/components/OverviewKpis";
 import ProjectTabs from "@/components/ProjectTabs";
 import SeriesChip from "@/components/scheduler/SeriesChip";
@@ -21,6 +22,7 @@ import { BarList } from "@/components/tremor/BarList/BarList";
 import { useApi } from "@/hooks/useApi";
 import { usePoll } from "@/hooks/usePoll";
 import { api } from "@/lib/api";
+import { useOperator } from "@/lib/session";
 
 // Steps 2-7 are the pipeline; step 1 sits under Protocol and step 8 under Human reading.
 const PIPELINE_STEPS = ["search", "copies", "documents", "annotate", "review", "profiles"] as const;
@@ -32,6 +34,7 @@ const PIPELINE_STEPS = ["search", "copies", "documents", "annotate", "review", "
 // recomputes. The BarList is fed only by `rejections_by_reason` (F11); the next
 // action is the server's own first card carrying a command, rendered verbatim.
 export default function FlowOverviewPage({ kind }: { kind: "f" | "u" }) {
+  const operator = useOperator();
   const { project: raw, sel: rawSel } = useParams();
   const project = raw ? decodeURIComponent(raw) : "";
   const sel = rawSel ? decodeURIComponent(rawSel) : "";
@@ -222,6 +225,7 @@ export default function FlowOverviewPage({ kind }: { kind: "f" | "u" }) {
             <>
               {kind === "f" && flowId ? <OperationsPanel project={project} flowId={flowId}
                 namedRound={data.selector.round !== null} hasCandidates={data.source_tracker.length > 0} /> : null}
+              {kind === "f" && flowId && operator ? <WorkLocallyPanel project={project} flowId={flowId} /> : null}
               <RunningNote journey={data.journey} />
             </>
           ),
