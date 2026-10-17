@@ -35,7 +35,7 @@ from typing import Any, Callable
 import urllib.parse
 from urllib.parse import unquote, urlparse
 
-from claimstone import (account_service, admin, auth_events, autopilot, copy_policy, decisions,
+from claimstone import (account_service, admin, auth_events, autopilot, copy_policy, retry_policy, decisions,
                         drafts, export, flows, intake, network_schedule, new_project_service, operations,
                         net, operations_view, operators, periodic, periodic_export, portal_state, scope,
                         synthesize, today, worker_runtime)
@@ -398,6 +398,16 @@ ROUTES: tuple[Route, ...] = (
           "_copy_policy_authorize"),
     Route("POST", ("p", "{project}", "copy-policies", "{policy_id}", "revoke"),
           "_copy_policy_revoke"),
+    Route("POST", ("p", "{project}", "flows", "{flow_id}", "retry-policies"),
+          "_retry_policy_plan"),
+    Route("GET", ("p", "{project}", "flows", "{flow_id}", "retry-policies"),
+          "_retry_policy_list"),
+    Route("GET", ("p", "{project}", "retry-policies", "{policy_id}"),
+          "_retry_policy_read"),
+    Route("POST", ("p", "{project}", "retry-policies", "{policy_id}", "authorize"),
+          "_retry_policy_authorize"),
+    Route("POST", ("p", "{project}", "retry-policies", "{policy_id}", "revoke"),
+          "_retry_policy_revoke"),
     Route("GET", ("p", "{project}", "local-mandates", "{mandate_id}"),
           "_local_mandate_read"),
     Route("POST", ("p", "{project}", "local-mandates", "series"),
@@ -1767,6 +1777,95 @@ def _copy_policy_revoke(self: _Handler, params: dict[str, str], query: Any,
     return result, 200
 
 
+def _retry_policy_plan(self: _Handler, params: dict[str, str], query: Any,
+                       body: dict[str, Any]) -> tuple[Any, int]:
+    fields = {'allowed_hosts', 'max_retries', 'max_attempts_each',
+              'max_requests_each', 'use_apis', 'base_delay_hours',
+              'max_delay_hours', 'expires_at'}
+    _required_body(self, body, fields)
+    project, store = _scheduler_context(self, params)
+    if not isinstance(body['expires_at'], str) or type(body['use_apis']) is not bool:
+        raise ControlError(422, 'VALIDATION', 'expiry and use_apis are required')
+    try:
+        result = retry_policy.plan(
+            project, store, params['flow_id'],
+            allowed_hosts=_strings(body['allowed_hosts'], 'allowed_hosts'),
+            max_retries=_integer(body['max_retries'], 'max_retries'),
+            max_attempts_each=_integer(body['max_attempts_each'], 'max_attempts_each'),
+            max_requests_each=_integer(body['max_requests_each'], 'max_requests_each'),
+            use_apis=body['use_apis'],
+            base_delay_hours=_integer(body['base_delay_hours'], 'base_delay_hours'),
+            max_delay_hours=_integer(body['max_delay_hours'], 'max_delay_hours'),
+            expires_at=body['expires_at'])
+    except operations.OperationError as exc:
+        raise _scheduler_refusal(exc) from None
+    return result, 201
+
+
+def _retry_policy_list(self: _Handler, params: dict[str, str], query: Any,
+                       body: dict[str, Any]) -> tuple[Any, int]:
+    project, store = _scheduler_context(self, params)
+    try:
+        operations._flow(project, store, params['flow_id'])
+        histories = retry_policy._read(store)
+        keys = [key for key, rows in histories.items()
+                if rows[0]['policy']['project'] == project.name and
+                rows[0]['policy']['flow_id'] == params['flow_id']]
+        order = {key: index for index, key in enumerate(keys)}
+        keys.sort(key=lambda key: (histories[key][0]['at'], order[key]), reverse=True)
+        return {'policies': [retry_policy.status(store, key) for key in keys]}, 200
+    except operations.OperationError as exc:
+        raise _scheduler_refusal(exc) from None
+
+
+def _retry_policy_read(self: _Handler, params: dict[str, str], query: Any,
+                       body: dict[str, Any]) -> tuple[Any, int]:
+    project, store = _scheduler_context(self, params)
+    try:
+        result = retry_policy.status(store, params['policy_id'])
+    except operations.OperationError as exc:
+        if str(exc) == 'unknown retry policy':
+            raise portal_state.NotFound('no such retry policy') from None
+        raise _scheduler_refusal(exc) from None
+    if result['policy']['project'] != project.name:
+        raise portal_state.NotFound('no such retry policy in this project')
+    return result, 200
+
+
+def _retry_policy_authorize(self: _Handler, params: dict[str, str], query: Any,
+                            body: dict[str, Any]) -> tuple[Any, int]:
+    fields = {'policy_sha256', 'max_retries', 'max_requests_each', 'max_total_requests'}
+    _required_body(self, body, fields)
+    shown, _ = _retry_policy_read(self, params, query, {})
+    spec = shown['policy']
+    if (body['policy_sha256'] != shown['policy_id'] or
+            any(type(body[name]) is not int or body[name] != spec[name]
+                for name in ('max_retries', 'max_requests_each', 'max_total_requests'))):
+        raise ControlError(409, 'PLAN_DIFFERS', 'retry policy hash or limits changed')
+    _project, store = _scheduler_context(self, params)
+    try:
+        result = retry_policy.authorize(store, shown['policy_id'],
+                                        identity=_operator_identity(self))
+    except operations.OperationError as exc:
+        raise _scheduler_refusal(exc) from None
+    return result, 201 if shown['state'] == 'PLANNED' else 200
+
+
+def _retry_policy_revoke(self: _Handler, params: dict[str, str], query: Any,
+                         body: dict[str, Any]) -> tuple[Any, int]:
+    _required_body(self, body, {'policy_sha256'})
+    shown, _ = _retry_policy_read(self, params, query, {})
+    if body['policy_sha256'] != shown['policy_id']:
+        raise ControlError(409, 'PLAN_DIFFERS', 'retry policy hash changed')
+    _project, store = _scheduler_context(self, params)
+    try:
+        result = retry_policy.revoke(store, shown['policy_id'],
+                                     identity=_operator_identity(self))
+    except operations.OperationError as exc:
+        raise _scheduler_refusal(exc) from None
+    return result, 200
+
+
 def _local_mandate_read(self: _Handler, params: dict[str, str], query: Any,
                         body: dict[str, Any]) -> tuple[Any, int]:
     project, store = _scheduler_context(self, params)
@@ -1866,6 +1965,11 @@ for _name, _function in (("_operations_list", _operations_list),
                          ("_copy_policy_read", _copy_policy_read),
                          ("_copy_policy_authorize", _copy_policy_authorize),
                          ("_copy_policy_revoke", _copy_policy_revoke),
+                         ("_retry_policy_plan", _retry_policy_plan),
+                         ("_retry_policy_list", _retry_policy_list),
+                         ("_retry_policy_read", _retry_policy_read),
+                         ("_retry_policy_authorize", _retry_policy_authorize),
+                         ("_retry_policy_revoke", _retry_policy_revoke),
                          ("_local_mandate_read", _local_mandate_read),
                          ("_local_mandate_series", _local_mandate_series),
                          ("_local_mandate_single", _local_mandate_single),

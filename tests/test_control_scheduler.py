@@ -133,6 +133,54 @@ def test_portal_rejects_unmatched_child_flows_and_anonymous_scheduler_read(tmp_p
                                  'max_total_local_calls': 1})[0] == 404
 
 
+def test_retry_policy_routes_require_session_and_exact_authorization(tmp_path):
+    ws = _workspace(tmp_path)
+    now = dt.datetime.now(dt.timezone.utc)
+    flow_id = ws['source_flow']
+    with _served(ws) as (base, headers):
+        collection = base + f'/flows/{flow_id}/retry-policies'
+        body = {'allowed_hosts': ['repo.example.org'], 'max_retries': 2,
+                'max_attempts_each': 2, 'max_requests_each': 3, 'use_apis': False,
+                'base_delay_hours': 1, 'max_delay_hours': 4,
+                'expires_at': (now + dt.timedelta(days=1)).isoformat()}
+        assert _request(collection)[0] == 401
+        assert _request(collection, method='POST', payload=body)[0] == 401
+        assert _request(collection, method='POST', headers=headers,
+                        payload={key: value for key, value in body.items()
+                                 if key != 'max_retries'})[0] == 422
+        assert _request(collection, method='POST', headers=headers,
+                        payload=body | {'extra': 1})[0] == 400
+        planned = _request(collection, method='POST', headers=headers, payload=body)
+        assert planned[0] == 201
+        policy_id = planned[2]['policy_id']
+        policy_url = base + f'/retry-policies/{policy_id}'
+        assert _request(collection, headers={'Cookie': headers['Cookie']})[2]['policies'][0]['policy_id'] == policy_id
+        assert _request(policy_url, headers={'Cookie': headers['Cookie']})[2]['state'] == 'PLANNED'
+        assert _request(policy_url + '/authorize', method='POST',
+                        headers={'Cookie': headers['Cookie'], 'Origin': base},
+                        payload={'policy_sha256': policy_id, 'max_retries': 2,
+                                 'max_requests_each': 3, 'max_total_requests': 6})[0] == 403
+        limits = {'policy_sha256': policy_id, 'max_retries': 2,
+                  'max_requests_each': 3, 'max_total_requests': 6}
+        mismatch = _request(policy_url + '/authorize', method='POST', headers=headers,
+                            payload=limits | {'max_retries': 1})
+        assert mismatch[0] == 409 and mismatch[2]['error']['code'] == 'PLAN_DIFFERS'
+        authorized = _request(policy_url + '/authorize', method='POST', headers=headers,
+                              payload=limits)
+        assert authorized[0] == 201
+        assert authorized[2]['events'][0]['identity']['operator'] == 'op1'
+        assert _request(policy_url + '/authorize', method='POST', headers=headers,
+                        payload=limits)[0] == 200
+        assert _request(policy_url + '/revoke', method='POST', headers=headers,
+                        payload={'policy_sha256': policy_id})[2]['state'] == 'REVOKED'
+        newer = _request(collection, method='POST', headers=headers,
+                         payload=body | {'expires_at': (now + dt.timedelta(days=2)).isoformat()})
+        assert newer[0] == 201
+        listed = _request(collection, headers={'Cookie': headers['Cookie']})[2]['policies']
+        assert [item['policy_id'] for item in listed] == [newer[2]['policy_id'], policy_id]
+    assert not list(ws['store'].read('requests.jsonl'))
+
+
 def test_scheduler_archive_pages_and_refuses_a_stale_cursor(tmp_path):
     from urllib.parse import quote
 
