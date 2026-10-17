@@ -735,7 +735,9 @@ def execute(project: Project, store: Store, operation_id: str,
                               'reconciled': False}
             elif stage == 'normalize':
                 from claimstone import grobid as grobid_module, normalize
-                client = grobid or grobid_module.Grobid()
+                # the supervisor's container reaches GROBID by service name, through this variable
+                client = grobid or grobid_module.Grobid(
+                    url=os.environ.get('CLAIMSTONE_GROBID_URL') or grobid_module.DEFAULT_URL)
                 rows_done = list(normalize.run(store, client,
                                                thresholds=project.normalize_thresholds,
                                                selector=selector))

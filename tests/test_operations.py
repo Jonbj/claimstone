@@ -679,3 +679,26 @@ def test_drive_runs_preapproved_network_query_before_local_pass(tmp_path, monkey
     assert result['network']['processed'] == 1
     assert result['network']['operations'][0]['state'] == 'COMPLETED'
     assert result['local_calls'] == 0
+
+
+def test_normalize_reaches_the_parser_named_by_the_environment(tmp_path, monkeypatch):
+    from claimstone import grobid
+
+    project, store, flow = _fixture(tmp_path)
+    seen = []
+
+    class Recorder(grobid.Grobid):
+        def __init__(self, *args, **kwargs):
+            seen.append(kwargs.get('url'))
+            super().__init__(*args, **kwargs)
+
+    monkeypatch.setattr(grobid, 'Grobid', Recorder)
+    monkeypatch.setenv('CLAIMSTONE_GROBID_URL', 'http://grobid:8070')
+    plan = operations.plan(project, store, flow['flow_id'], 'normalize')
+    operation_id = operations._digest(plan)
+    operations.authorize(store, operation_id)
+    try:
+        operations.execute(project, store, operation_id)
+    except Exception:
+        pass   # no parser answers here; only the address that was tried matters
+    assert seen == ['http://grobid:8070']
