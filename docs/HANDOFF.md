@@ -12,6 +12,24 @@ what order.
 
 ## Where the work stands
 
+2026-10-18 live trial `prova-esercizio-depressione` (throwaway, public literature; not in git): three
+acquisition rounds from the portal ended at 2 copies of 10 (rate 0.20 against floor 0.80), so the flow is
+`INSUFFICIENT_ACQUISITION` and has no verdict, as the invariant requires. What the trial closed: D133 (retry
+round from the portal, failure cause shown), D134 (retry policy with exponential backoff, deterministic jitter,
+`Retry-After` floor and host-breaker check; its first automatic retry ran at 15:12 UTC and correctly stopped at an
+out-of-plan redirect), D135 (a one-flow mandate may use the metered backend inside its own frozen budget; the
+portal's "Work locally" panel sets backend, budget and price ceilings) and D136 (metered extraction is sent
+`think: false`). The mandate ran end to end from the portal: normalize 2 documents, extract 28 calls (21 claims
+accepted, 9 `TRUNCATED` — the D51 reasoning defect, fixed afterwards and not re-run), review 21 calls (7
+`SUPPORTED`, 14 `OVERSTATED`, unread by a person). Priced cost USD 0.644 for 49 calls against a USD 24.50
+reservation: the reservation is the worst case, not the spend. A bug found by the run: `normalize` ignored
+`CLAIMSTONE_GROBID_URL` inside the supervisor container; fixed with a test. **A rebuild invalidates the active
+mandate and the retry policy (they freeze `code_sha256`) and the portal session**: the live mandate predates D136
+and must be disabled and re-enabled with a person's confirmation to pick it up. Open: `TRUNCATED` retry from the
+scheduler path; notification outbox (portal first, then Telegram #5 and e-mail #6 on GitHub); controlled intake
+for paywalled PDFs (L02); `main` is 20 commits ahead of origin and not pushed. Four trial worktrees/branches are
+merged and await removal by the user.
+
 2026-10-16 documentation review and D132: the bilingual reader-facing docs were reviewed
 against the code and corrected (decision counts, the contract map, the Italian guide's missing
 scheduler tail, the Italian README's missing scheduler status, stale backlog "remaining" items,
