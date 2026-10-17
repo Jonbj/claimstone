@@ -199,7 +199,8 @@ def plan(project: Project, store: Store, flow_id: str, stage: str, *,
          topic_id: str | None = None, term: str | None = None,
          per_query: int | None = None, run_label: str | None = None,
          use_apis: bool = False, retry_classes: list[str] | None = None,
-         retry_reason: str | None = None) -> dict[str, Any]:
+         retry_reason: str | None = None,
+         retry_after_s: int = 6 * 3600) -> dict[str, Any]:
     if stage not in STAGE_INPUTS:
         raise OperationError(f'unsupported stage: {stage}')
     if stage in {'extract-build', 'review-build', 'extract-drain', 'review-drain',
@@ -306,7 +307,7 @@ def plan(project: Project, store: Store, flow_id: str, stage: str, *,
                 raise OperationError('earlier physical acquisition request has no outcome; inspect before retry')
             if not list(acquire.eligible_candidates([selected_candidate],
                     {str(candidate_key): prior_acquisition} if prior_acquisition else {},
-                    retry_classes=retries,
+                    retry_classes=retries, retry_after_s=retry_after_s,
                     round_name=selector.round, manifest_only=selector.manifest_only)):
                 raise OperationError('candidate is not eligible under the current retry policy')
         call_ids: list[str] = []
@@ -559,6 +560,11 @@ def execute(project: Project, store: Store, operation_id: str,
             from claimstone import copy_policy
             if plan_row['stage'] != 'acquire' or not copy_policy.due(store, copy_policy_id):
                 raise OperationError('copy policy authorization is not currently active')
+        retry_policy_id = (rows[1].get('identity') or {}).get('retry_policy_id')
+        if retry_policy_id:
+            from claimstone import retry_policy
+            if plan_row['stage'] != 'acquire' or not retry_policy.due(store, retry_policy_id):
+                raise OperationError('retry policy authorization is not currently active')
         if plan_row['code_sha256'] != _code_identity():
             raise OperationError('project or code identity changed; prepare a new plan')
         held, selector = _flow(project, store, plan_row['flow_id'])
@@ -775,8 +781,9 @@ def tick(project: Project, store: Store, *, max_operations: int = 1,
     """Execute up to N authorized or interrupted local operations, in plan order."""
     if type(max_operations) is not int or max_operations < 1:
         raise OperationError('max_operations must be positive')
-    from claimstone import copy_policy
+    from claimstone import copy_policy, retry_policy
     copy_policy.materialize_due(project, store, flow_id=flow_id)
+    retry_policy.materialize_due(project, store, flow_id=flow_id)
     grouped = _events(store)
     ready = [operation_id for operation_id, rows in grouped.items()
              if rows[-1]['event'] in {'authorized', 'started', 'call_started', 'unit_completed'}
@@ -790,6 +797,9 @@ def tick(project: Project, store: Store, *, max_operations: int = 1,
     ready = [operation_id for operation_id in ready
              if not (grouped[operation_id][1].get('identity') or {}).get('copy_policy_id') or
              copy_policy.due(store, grouped[operation_id][1]['identity']['copy_policy_id'])]
+    ready = [operation_id for operation_id in ready
+             if not (grouped[operation_id][1].get('identity') or {}).get('retry_policy_id') or
+             retry_policy.due(store, grouped[operation_id][1]['identity']['retry_policy_id'])]
     results: list[dict[str, Any]] = []
     for operation_id in ready[:max_operations]:
         try:

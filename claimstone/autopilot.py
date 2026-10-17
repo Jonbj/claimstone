@@ -268,8 +268,9 @@ def tick(project: Project, store: Store, mandate_id: str) -> dict[str, Any]:
                 operations._code_identity() != mandate['code_sha256']):
             raise operations.OperationError('protocol or code changed; renew the local mandate')
         identity = dict(mandate['authorized_by']) | {'mandate_id': mandate_id}
-        from claimstone import copy_policy
+        from claimstone import copy_policy, retry_policy
         copy_policy.materialize_due(project, store, flow_id=mandate['flow_id'])
+        retry_policy.materialize_due(project, store, flow_id=mandate['flow_id'])
         result = operations.drive_local(
             project, store, mandate['flow_id'],
             extract_model=mandate['extract_model'],
@@ -296,7 +297,7 @@ def tick(project: Project, store: Store, mandate_id: str) -> dict[str, Any]:
 def _tick_series(project: Project, store: Store, mandate_id: str,
                  state: dict[str, Any]) -> dict[str, Any]:
     """Drive every named child flow under one lifetime reservation counter."""
-    from claimstone import copy_policy, network_schedule, periodic_dossier
+    from claimstone import copy_policy, network_schedule, periodic_dossier, retry_policy
     mandate = state['mandate']
     schedule = network_schedule.status(store, mandate['schedule_id'])
     if schedule['state'] != 'AUTHORIZED' or schedule['plan']['project'] != project.name:
@@ -313,6 +314,7 @@ def _tick_series(project: Project, store: Store, mandate_id: str,
         if held['binding']['protocol_sha256'] != mandate['protocol_sha256']:
             raise operations.OperationError('series child protocol changed; renew mandate')
         copy_policy.materialize_due(project, store, flow_id=flow_id)
+        retry_policy.materialize_due(project, store, flow_id=flow_id)
         result = operations.drive_local(
             project, store, flow_id,
             extract_model=mandate['extract_model'],
