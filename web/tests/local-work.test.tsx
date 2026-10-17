@@ -75,8 +75,9 @@ describe("one-flow local mandate", () => {
     });
     render(<WorkLocallyPanel project="demo" flowId="f1" />);
     await screen.findByRole("button", { name: "Enable local work" });
-    expect((screen.getByLabelText("Max local model calls") as HTMLInputElement).value).toBe("");
-    expect((screen.getByLabelText("Max local model calls") as HTMLInputElement).placeholder).toBe("100");
+    expect((screen.getByLabelText("Max local model calls") as HTMLInputElement).value).toBe("100");
+    expect((screen.getByLabelText("Extraction model") as HTMLInputElement).value).toBe("deepseek-v4.1-flash");
+    expect((screen.getByLabelText("Review model") as HTMLInputElement).value).toBe("mistral-large-3:675b");
     fireEvent.change(screen.getByLabelText("Extraction model"), { target: { value: "model-a" } });
     fireEvent.change(screen.getByLabelText("Review model"), { target: { value: "model-a" } });
     expect(screen.getByText("The extraction and review models must differ.")).toBeTruthy();

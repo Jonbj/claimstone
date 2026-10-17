@@ -25,9 +25,9 @@ async function flowMandates(project: string, flowId: string): Promise<MandateSta
 export default function WorkLocallyPanel({ project, flowId }: { project: string; flowId: string }) {
   const { t } = useLocale();
   const mandates = useApi(() => flowMandates(project, flowId), [project, flowId]);
-  const [extract, setExtract] = useState("");
-  const [review, setReview] = useState("");
-  const [callsText, setCallsText] = useState("");
+  const [extract, setExtract] = useState("deepseek-v4.1-flash");
+  const [review, setReview] = useState("mistral-large-3:675b");
+  const [callsText, setCallsText] = useState("100");
   const [confirming, setConfirming] = useState<"enable" | string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<Error | null>(null);
