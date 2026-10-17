@@ -63,3 +63,6 @@ calls up to `budget_cents`: each drain it plans carries these fields, reserves `
 `authorize` refuses it when reservations under `budget_id` would exceed the budget. The earlier sentence that a
 mandate cannot approve a paid model call holds for mandates without `paid`. `auto-status` adds `model_backend`
 and `paid_budget` (`budget_cents`, `reserved_cents`, `max_call_cents`, prices) or `null`.
+
+A metered mandate's extraction drains also carry `think: false` in the frozen plan (D136); review drains carry no
+`think` key. A plan without the key is a plan that asked for the model's own default.

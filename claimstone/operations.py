@@ -200,7 +200,7 @@ def plan(project: Project, store: Store, flow_id: str, stage: str, *,
          per_query: int | None = None, run_label: str | None = None,
          use_apis: bool = False, retry_classes: list[str] | None = None,
          retry_reason: str | None = None,
-         retry_after_s: int = 6 * 3600) -> dict[str, Any]:
+         retry_after_s: int = 6 * 3600, think: bool | None = None) -> dict[str, Any]:
     if stage not in STAGE_INPUTS:
         raise OperationError(f'unsupported stage: {stage}')
     if stage in {'extract-build', 'review-build', 'extract-drain', 'review-drain',
@@ -214,6 +214,8 @@ def plan(project: Project, store: Store, flow_id: str, stage: str, *,
     if draining and backend not in {'llamacpp', 'ollama-cloud'}:
         raise OperationError('scheduler model backend must be llamacpp or ollama-cloud')
     paid = draining and backend == 'ollama-cloud'
+    if think is not None and not paid:
+        raise OperationError('reasoning on or off applies only to an ollama-cloud drain')
     if paid and (not budget_id or not re.fullmatch(r'[a-zA-Z0-9_-]{1,80}', budget_id)
                  or any(type(value) is not int or value < 1 for value in
                         (budget_cents, max_call_cents, price_in_cents, price_out_cents))):
@@ -314,7 +316,8 @@ def plan(project: Project, store: Store, flow_id: str, stage: str, *,
         harness = None
         if draining:
             from claimstone import model_call, runners
-            runner = _IdentityCheckedRunner(runners.build(backend, model=model))
+            runner = _IdentityCheckedRunner(runners.build(
+                backend, model=model, **({'think': think} if think is not None else {})))
             harness = runner.harness_version()
             queue = model_call.Queue(store, lane=stage.split('-', 1)[0], batch=batch)
             prior = queue.results(backend=backend, model=model)
@@ -379,6 +382,8 @@ def plan(project: Project, store: Store, flow_id: str, stage: str, *,
                   'max_network_requests': max_requests if stage in {'acquire', 'discover'} else 0,
                   'max_model_calls': len(call_ids),
                   'max_spend_usd': (len(call_ids) * max_call_cents / 100 if paid else 0)}
+        if think is not None:
+            frozen['think'] = think   # absent for every older plan, so their digests are unchanged
         frozen['run_label'] = run_label
         operation_id = _digest(frozen)
         existing = _events(store).get(operation_id)
@@ -620,6 +625,8 @@ def execute(project: Project, store: Store, operation_id: str,
                 if backend == 'ollama-cloud':
                     options = {'price_in': plan_row['price_in_cents'] / 100,
                                'price_out': plan_row['price_out_cents'] / 100}
+                    if 'think' in plan_row:
+                        options['think'] = plan_row['think']
                 runner = _IdentityCheckedRunner(runners.build(
                     backend, model=plan_row['model'], **options))
                 if runner.harness_version() != plan_row['harness_version']:
@@ -847,6 +854,10 @@ def drive_local(project: Project, store: Store, flow_id: str, *,
     if backend not in {'llamacpp', 'ollama-cloud'} or (backend == 'ollama-cloud') != bool(paid):
         raise OperationError('a paid backend needs its budget and price ceilings; a local one has none')
     drain_options = dict(paid or {}) | {'backend': backend}
+    # D136: deepseek-v4.1-flash spent its whole 2,500-token output budget reasoning before the first
+    # character of JSON (D51 measured 9 of 13 truncated; with thinking off, 9 of 9 valid). The review
+    # lane's model has no such mode and is sent no `think` field.
+    extract_options = drain_options | ({'think': False} if paid else {})
     # Freeze the already approved external work at invocation time. New plans
     # authorized while this command runs wait for a later invocation.
     ready_network = [rows for rows in _events(store).values()
@@ -896,7 +907,7 @@ def drive_local(project: Project, store: Store, flow_id: str, *,
             try:
                 drained = run_stage('extract-drain', batch=extract_batch,
                                     model=extract_model, max_calls=remaining,
-                                    **drain_options)
+                                    **extract_options)
                 remaining -= drained['calls']
             except OperationError as exc:
                 if 'no never-attempted calls' not in str(exc):

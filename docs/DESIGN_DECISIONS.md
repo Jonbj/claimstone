@@ -5041,3 +5041,21 @@ still decides whether synthesis may run. Prices are declared upper estimates in 
 not provider prices; the provider's account spending controls are the hard cap (GUIDE). The first run is meant to
 calibrate the budget: `paid_budget.reserved_cents` in the mandate status, and the per-call `cost_usd` in the
 results, give the real figure to set the next ceiling from.
+
+
+## D136 — A metered mandate sends the extraction lane `think: false` (2026-10-18)
+
+The first metered mandate run (D135, 2026-10-17, 2 documents, 49 calls, USD 0.644 priced, none unknown) truncated
+**9 of 28 extraction calls** (`TRUNCATED`) and none of 21 review calls. It is the same defect D51 measured on the
+CLI path — 9 of 13 truncated at the 2,500-token output cap, zero characters of body, the whole budget spent
+reasoning by `deepseek-v4.1-flash`, and 9 of 9 valid with `--no-think` — reached again by a different route:
+`runners.build` in the scheduler path was never given `think`, so the harness version that D51 says must
+distinguish the two cases was recorded as the reasoning one.
+
+Decision: `operations.plan` takes `think` for a metered drain and freezes it in the plan only when set (older
+plans, which lack the key, keep their digests); the mandate sends `think: false` for the extraction lane and
+nothing for the review lane, because `mistral-large-3:675b` completed 21 of 21 without it and sending a field to a
+model with no thinking mode would be the runner inventing a request (the runner's own note). The call id and
+cap are unchanged. The 9 truncated calls of that run keep their recorded result; re-asking them is a named
+campaign (`TRUNCATED` retry), which the scheduler's drain path does not offer yet, so they are not re-run by
+the mandate.

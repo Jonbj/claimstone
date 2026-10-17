@@ -206,13 +206,16 @@ def test_paid_mandate_runs_metered_calls_inside_its_frozen_budget(tmp_path, monk
                              usage={'input_tokens': 10, 'output_tokens': 1})
 
     def build(name, *, model, **options):
-        built.append((name, model))
+        built.append((name, model, options.get('think', 'unset')))
         return Remote(model)
 
     monkeypatch.setattr(runners, 'build', build)
     result = autopilot.tick(project, store, mandate_id)
     assert 1 <= result['local_calls'] <= 3
-    assert {name for name, _ in built} == {'ollama-cloud'}
+    assert {name for name, _, _ in built} == {'ollama-cloud'}
+    # extraction is sent think=false (D136); a lane that was not asked is sent nothing
+    assert {think for _, model, think in built if model == 'reader-a'} == {False}
+    assert {think for _, model, think in built if model == 'reader-b'} <= {'unset'}
     drains = [rows[0]['plan'] for rows in operations._events(store).values()
               if rows[0]['plan']['stage'] == 'extract-drain']
     assert drains[0]['backend'] == 'ollama-cloud'
