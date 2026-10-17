@@ -77,7 +77,7 @@ function DecisionsSignedIn({ project, flowId }: { project: string; flowId: strin
           ))}
         </div>
       ) : (
-        <section className="rounded-xl bg-card p-5 shadow-sm ring-1 ring-gray-200 dark:ring-gray-800">
+        <section className="rounded-xl border border-border bg-card p-5">
           <p className="text-sm text-muted-foreground">
             nothing waits for a person in this flow
           </p>
@@ -87,7 +87,7 @@ function DecisionsSignedIn({ project, flowId }: { project: string; flowId: strin
       <RecordOfferForm project={project} flowId={flowId} onDone={onDone} />
       <RetryCampaignForm project={project} flowId={flowId} onDone={onDone} />
 
-      <section className="rounded-xl bg-card p-5 shadow-sm ring-1 ring-gray-200 dark:ring-gray-800">
+      <section className="rounded-xl border border-border bg-card p-5">
         <h2 className="mb-2 text-base font-semibold">Decided recently</h2>
         <DecidedRecently rows={data.decided_recently} />
       </section>

@@ -14,7 +14,7 @@ export default function SourceDossierView({ dossier }: { dossier: SourceDossier 
 
   return (
     <>
-      <section className="rounded-lg bg-card p-5 shadow-sm ring-1 ring-gray-200 dark:ring-gray-800">
+      <section className="rounded-xl border border-border bg-card p-5">
         <h2 className="mb-1 text-base font-semibold">candidate</h2>
         <p className="text-sm">
           <span className="font-mono text-[13px]">{dossier.candidate_key}</span>
@@ -32,7 +32,7 @@ export default function SourceDossierView({ dossier }: { dossier: SourceDossier 
         ) : null}
       </section>
 
-      <section className="rounded-lg bg-card p-5 shadow-sm ring-1 ring-gray-200 dark:ring-gray-800">
+      <section className="rounded-xl border border-border bg-card p-5">
         <h2 className="mb-1 text-base font-semibold">acquisitions — every row, ledger order</h2>
         {dossier.acquisitions.length > 0 ? (
           <table className="mt-2 w-full border-collapse text-sm">
@@ -76,7 +76,7 @@ export default function SourceDossierView({ dossier }: { dossier: SourceDossier 
         )}
       </section>
 
-      <section className="rounded-lg bg-card p-5 shadow-sm ring-1 ring-gray-200 dark:ring-gray-800">
+      <section className="rounded-xl border border-border bg-card p-5">
         <h2 className="mb-1 text-base font-semibold">document and chunks</h2>
         <p className="text-sm">
           {document
@@ -91,7 +91,7 @@ export default function SourceDossierView({ dossier }: { dossier: SourceDossier 
         </p>
       </section>
 
-      <section className="rounded-lg bg-card p-5 shadow-sm ring-1 ring-gray-200 dark:ring-gray-800">
+      <section className="rounded-xl border border-border bg-card p-5">
         <h2 className="mb-1 text-base font-semibold">advisory — AI provisional</h2>
         {Object.entries(dossier.advisory).some(([, rows]) => rows.length > 0) ? (
           Object.entries(dossier.advisory).map(([ledger, rows]) =>
@@ -115,7 +115,7 @@ export default function SourceDossierView({ dossier }: { dossier: SourceDossier 
         <p className="mt-2 text-xs text-muted-foreground">{dossier.advisory_note}</p>
       </section>
 
-      <section className="rounded-lg bg-card p-5 shadow-sm ring-1 ring-gray-200 dark:ring-gray-800">
+      <section className="rounded-xl border border-border bg-card p-5">
         <h2 className="mb-1 text-base font-semibold">claims by question</h2>
         <p className="text-sm">
           {claims.length > 0

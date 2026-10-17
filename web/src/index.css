@@ -17,6 +17,7 @@
     /* v3 "Assay" (D137): one sans family for titles too; `font-serif` classes now resolve to it. */
     --font-serif: 'Schibsted Grotesk Variable', system-ui, sans-serif;
     /* v2.1 colour meanings (spec §1 rule 8); every chip also carries its word. */
+    --color-link: var(--link);
     --color-waits: var(--waits);
     --color-waits-soft: var(--waits-soft);
     --color-waits-ink: var(--waits-ink);
@@ -109,6 +110,7 @@
     --sidebar-accent-foreground: #f1f3f5;
     --sidebar-border: #232a31;
     --sidebar-ring: #f5a524;
+    --link: #94560a;
     --waits: #f5a524;
     --waits-soft: #fdf0d5;
     --waits-ink: #7a4608;
@@ -162,6 +164,7 @@
     --sidebar-accent-foreground: #f1f3f5;
     --sidebar-border: #1b222a;
     --sidebar-ring: #f5a524;
+    --link: #f5c26b;
     --waits: #f5a524;
     --waits-soft: #3a2a0a;
     --waits-ink: #f5c26b;

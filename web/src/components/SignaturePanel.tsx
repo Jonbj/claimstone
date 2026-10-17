@@ -36,7 +36,7 @@ const DEFINITIONS: Record<Verdict, { name: string; means: string }> = {
   },
 };
 
-const card = "rounded-xl bg-card p-5 shadow-sm ring-1 ring-gray-200 dark:ring-gray-800";
+const card = "rounded-xl border-2 border-foreground bg-card p-6";
 const banner = "rounded-lg border border-amber-400 bg-amber-50 p-3 text-sm text-amber-950 dark:bg-amber-950/30 dark:text-amber-100";
 
 /** Characters as the server counts them (code points, after trimming). */
@@ -183,9 +183,9 @@ export default function SignaturePanel({
   return (
     <form className={`${card} flex flex-col gap-4`} aria-label="Sign the verdict" onSubmit={sign}>
       <div>
-        <h2 className="text-lg">Your verdict on {qid}</h2>
+        <h2 className="text-xl font-semibold tracking-tight">Your verdict on {qid}</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Bound to profile <span className="font-mono" title={shownHash}>{shownHash.slice(0, 12)}</span>.
+          An agent does not sign: you do, bound to profile <span className="font-mono" title={shownHash}>{shownHash.slice(0, 12)}</span>.
           If the evidence changes later, your signature is marked stale, never silently kept.
         </p>
       </div>
@@ -244,7 +244,7 @@ export default function SignaturePanel({
           Verdict · {verdict ? DEFINITIONS[verdict].name : "none selected"}
         </legend>
         {VERDICTS.map((v) => (
-          <label key={v} className="flex gap-3 rounded-lg border border-border p-3">
+          <label key={v} className="flex gap-3 rounded-lg border border-border bg-card p-3 has-[:checked]:border-foreground has-[:checked]:ring-1 has-[:checked]:ring-foreground">
             <input
               type="radio"
               name="verdict"

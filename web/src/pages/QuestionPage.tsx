@@ -18,7 +18,7 @@ import { useSession } from "@/lib/session";
 // reads the profile and signs; an agent does not (§4.2 rule 4). The next signing action
 // is the server's own `adjudication_card` (the inbox's card), rendered verbatim: null
 // means nothing can be signed now. Polls every 3 s (rule 8).
-const card = "rounded-lg bg-card p-5 shadow-sm ring-1 ring-gray-200 dark:ring-gray-800";
+const card = "rounded-xl border border-border bg-card p-5";
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -26,6 +26,15 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       <span className="font-semibold">{label} </span>
       {children}
     </p>
+  );
+}
+
+function Tile({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-1 rounded-lg border border-border p-3">
+      <span className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">{label}</span>
+      {children}
+    </div>
   );
 }
 
@@ -94,7 +103,7 @@ export default function QuestionPage({ kind }: { kind: "f" | "u" }) {
         Sign in to sign.{" "}
         <Link
           to={`/login?next=${encodeURIComponent(location.pathname)}`}
-          className="text-blue-600 hover:underline dark:text-blue-400"
+          className="text-link hover:underline"
         >
           Sign in
         </Link>
@@ -137,8 +146,9 @@ export default function QuestionPage({ kind }: { kind: "f" | "u" }) {
         </div>
       ) : null}
       <header>
-        <h1 className="text-[26px] font-normal">
-          <span className="font-mono">{data.id}</span>: {data.text}
+        <span className="chip font-mono">{data.id} · {data.kind}</span>
+        <h1 className="mt-2 text-[28px] leading-tight">
+          <span className="sr-only">{data.id}: </span>{data.text}
           {detail.refreshing || (detail.pending && held) ? (
             <span className="pending ml-3" role="status">
               refreshing…
@@ -159,15 +169,24 @@ export default function QuestionPage({ kind }: { kind: "f" | "u" }) {
         {fields.blocking.length > 0 ? (
           <Field label="blocking:">{fields.blocking.join(", ")}</Field>
         ) : null}
-        <Field label="coverage">
-          {String(fields.coverage.sources ?? "—")} / {String(fields.coverage.examined ?? "—")}{" "}
-          examined
-        </Field>
-        <Field label="direction count">
-          {joined(Object.entries(fields.direction_count))} ({fields.direction_count_note})
-        </Field>
-        <Field label="gate rejected">{joined(Object.entries(fields.gate_rejected ?? {}))}</Field>
-        <Field label="reviewed, not usable">{joined(Object.entries(fields.reviewed_not_usable ?? {}))}</Field>
+        <div className="my-3 grid grid-cols-[repeat(auto-fit,minmax(190px,1fr))] gap-3">
+          <Tile label="coverage">
+            <span className="font-mono text-2xl">
+              {String(fields.coverage.sources ?? "—")} / {String(fields.coverage.examined ?? "—")}
+            </span>
+            <span className="text-xs text-muted-foreground">examined</span>
+          </Tile>
+          <Tile label="direction count">
+            <span className="font-mono text-sm">{joined(Object.entries(fields.direction_count))}</span>
+            <span className="text-xs text-muted-foreground">{fields.direction_count_note}</span>
+          </Tile>
+          <Tile label="gate rejected">
+            <span className="font-mono text-sm">{joined(Object.entries(fields.gate_rejected ?? {}))}</span>
+          </Tile>
+          <Tile label="reviewed, not usable">
+            <span className="font-mono text-sm">{joined(Object.entries(fields.reviewed_not_usable ?? {}))}</span>
+          </Tile>
+        </div>
         <Field label="awaiting review">{fields.awaiting_review}</Field>
         <Field label="linkage">{String(fields.linkage)}</Field>
         {fields.extraction ? (
@@ -196,7 +215,7 @@ export default function QuestionPage({ kind }: { kind: "f" | "u" }) {
         {data.results.length > 0 ? (
           <table className="mt-2 w-full min-w-[520px] border-collapse text-sm">
             <thead>
-              <tr className="border-b border-border text-left">
+              <tr className="border-b border-border text-left text-xs uppercase tracking-[0.06em] text-muted-foreground">
                 <th className="p-2 font-semibold">claim</th>
                 <th className="p-2 font-semibold">source</th>
                 <th className="p-2 font-semibold">stance</th>
@@ -210,7 +229,7 @@ export default function QuestionPage({ kind }: { kind: "f" | "u" }) {
                   <td className="p-2 font-mono text-[13px]">
                     <Link
                       to={`${base}/claim/${encodeURIComponent(String(row.claim_id))}`}
-                      className="text-blue-600 hover:underline dark:text-blue-400"
+                      className="text-link hover:underline"
                     >
                       {String(row.claim_id).slice(0, 16)}
                     </Link>

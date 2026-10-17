@@ -23,7 +23,7 @@ export interface DiffRequest {
 // `from` prefill is the one hash the question page already holds. A comparison
 // is fetched only on the compare action, never on load — the collapsed
 // `<details>` keeps the page's existing behaviour unchanged (R5.3).
-const card = "rounded-lg bg-card p-5 shadow-sm ring-1 ring-gray-200 dark:ring-gray-800";
+const card = "rounded-xl border border-border bg-card p-5";
 const input = "w-full rounded border border-border bg-card px-2 py-1 font-mono text-xs";
 
 // The contract keeps `added`/`removed` result rows and `changed` field pairs
@@ -52,7 +52,7 @@ function EntryLineageLink({ base, resultId }: { base: string; resultId: string }
   return (
     <Link
       to={`${base}/claim/${encodeURIComponent(resultId)}`}
-      className="font-mono text-[13px] text-blue-600 hover:underline dark:text-blue-400"
+      className="font-mono text-[13px] text-link hover:underline"
     >
       {resultId.slice(0, 16)}
     </Link>

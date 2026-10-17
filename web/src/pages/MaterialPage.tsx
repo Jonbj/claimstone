@@ -60,7 +60,7 @@ function MaterialSignedIn({ project, flowId }: { project: string; flowId: string
       <ProposeForm project={project} flowId={flowId} onDone={onDone} />
       <UploadForm project={project} flowId={flowId} onDone={onDone} />
 
-      <section className="rounded-xl bg-card p-5 shadow-sm ring-1 ring-gray-200 dark:ring-gray-800">
+      <section className="rounded-xl border border-border bg-card p-5">
         <h2 className="text-base font-semibold">Proposed material</h2>
         <p className="mb-3 mt-0.5 text-[13px] text-muted-foreground">
           newest first, the server's order — one line per item with its latest state

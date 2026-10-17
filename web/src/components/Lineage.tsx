@@ -24,8 +24,8 @@ const claimOf = (lineage: Lineage) =>
 
 function Step({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="grid gap-3 md:grid-cols-[7rem_1fr]">
-      <span className="text-sm font-semibold text-muted-foreground">{label}</span>
+    <div className="grid gap-3 border-t border-border pt-4 first:border-t-0 first:pt-0 md:grid-cols-[7rem_1fr]">
+      <span className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">{label}</span>
       <div className="min-w-0 text-sm">{children}</div>
     </div>
   );
@@ -78,18 +78,17 @@ export default function LineageView({ lineage, sourceHref }: {
   const tail = at < 0 ? "" : text.slice(at + quote.length);
 
   return (
-    <section className="flex flex-col gap-4 rounded-lg bg-card p-5 shadow-sm ring-1 ring-gray-200 dark:ring-gray-800">
+    <section className="flex flex-col gap-4 rounded-xl border border-border bg-card p-5">
       <h2 className="text-base font-semibold">The claim</h2>
       <div className="flex flex-col gap-4">
         <Step label="claim">
-          {claim.claim}
-          <br />
+          <span className="block text-[17px] font-medium leading-snug">{claim.claim}</span>
           stance {claim.stance} · question {claim.question_id} · class {claim.source_class}
           <br />
           gate v{claim.claim_gate_version} rev {claim.gate_revision} · {claim.backend}/
           {claim.model} ({claim.harness_version})
         </Step>
-        <blockquote className="border-l-[3px] border-border pl-3 text-sm">
+        <blockquote className="rounded-r-md border-l-[3px] border-primary bg-muted/50 py-2 pl-3 pr-2 text-sm leading-relaxed">
           <q>{claim.evidence_quote}</q>
         </blockquote>
 
@@ -97,7 +96,7 @@ export default function LineageView({ lineage, sourceHref }: {
           <Step label="review">awaiting review</Step>
         ) : (
           <Step label="review">
-            {review.verdict} — {review.reason}
+            <Chip text={review.verdict} /> {review.reason}
             <br />
             review v{review.review_version} · {readerLabel(review.reviewed_by)}
           </Step>
@@ -185,7 +184,7 @@ export default function LineageView({ lineage, sourceHref }: {
               <>
                 {" · "}
                 <Link to={sourceHref(candidate.candidate_key)}
-                      className="text-blue-600 hover:underline dark:text-blue-400">
+                      className="text-link hover:underline">
                   Source dossier →
                 </Link>
               </>

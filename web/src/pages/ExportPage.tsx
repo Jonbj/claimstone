@@ -12,7 +12,7 @@ import { useSession } from "@/lib/session";
 // the read API's, and the two actions are the control API's. Nothing here runs a check on load:
 // Verify is a button, per row, because a verification is an action and never a side effect of
 // opening a page (B10). Only flows can be exported, so there is no `/u/` route.
-const card = "rounded-lg bg-card p-5 shadow-sm ring-1 ring-gray-200 dark:ring-gray-800";
+const card = "rounded-xl border border-border bg-card p-5";
 const primary = "min-h-11 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-50";
 
 type CopyEntry = Record<string, unknown>;
@@ -101,13 +101,13 @@ export default function ExportPage() {
   const signedIn = session.operator !== null;
   const loginLink = (
     <Link to={`/login?next=${encodeURIComponent(`${base}/export`)}`}
-          className="text-blue-600 hover:underline dark:text-blue-400">Sign in</Link>
+          className="text-link hover:underline">Sign in</Link>
   );
 
   return (
     <section className="flex flex-col gap-5">
       <header>
-        <p className="text-sm"><Link to={base} className="text-blue-600 hover:underline dark:text-blue-400">
+        <p className="text-sm"><Link to={base} className="text-link hover:underline">
           ← {flowId}</Link></p>
         <h1 className="text-[26px]">Export</h1>
         <p className="mt-0.5 text-sm text-muted-foreground">
@@ -171,7 +171,7 @@ export default function ExportPage() {
                     {signedIn ? (
                       <button type="button" disabled={verifying !== null}
                               onClick={() => void verify(row.export_id)}
-                              className="min-h-11 rounded-md px-4 text-sm ring-1 ring-gray-300 disabled:opacity-50">
+                              className="min-h-11 rounded-md px-4 text-sm border border-border disabled:opacity-50">
                         {verifying === row.export_id ? "Verifying…" : "Verify"}
                       </button>
                     ) : (

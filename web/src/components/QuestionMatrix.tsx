@@ -12,7 +12,7 @@ export type MatrixRow = Overview["questions"]["rows"][number];
 
 // The direction segments are coloured by position, never by meaning: the words
 // beside the bar carry the meaning (rule 7).
-const SEGMENT_COLORS = ["bg-blue-500", "bg-sky-500", "bg-gray-300", "bg-indigo-400"];
+const SEGMENT_COLORS = ["bg-done", "bg-contradicts", "bg-provisional", "bg-neutral-ink"];
 
 export default function QuestionMatrix({
   rows,
@@ -44,7 +44,7 @@ export default function QuestionMatrix({
                   {base ? (
                     <Link
                       to={`${base}/q/${encodeURIComponent(row.id)}`}
-                      className="text-blue-600 hover:underline dark:text-blue-400"
+                      className="text-link hover:underline"
                     >
                       {row.id}
                     </Link>
