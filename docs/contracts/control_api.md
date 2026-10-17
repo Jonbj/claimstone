@@ -478,6 +478,11 @@ records the authenticated operator; the control server never executes a stage.
 | `GET /copy-policies/{policy_id}` | — | Policy, reservations, state and events |
 | `POST /copy-policies/{policy_id}/authorize` | `{policy_sha256, max_candidates, max_requests_each, max_total_requests}` | 201/200; contingent copy permission |
 | `POST /copy-policies/{policy_id}/revoke` | `{policy_sha256}` | 200; stops later copy starts |
+| `POST /flows/{flow_id}/retry-policies` | `{allowed_hosts, max_retries, max_attempts_each, max_requests_each, use_apis, retry_after_hours, expires_at}` | 201; frozen retry policy ([retry_policies](retry_policies.md)), `PLANNED` |
+| `GET /flows/{flow_id}/retry-policies` | — | `{policies: [status]}` newest first |
+| `GET /retry-policies/{policy_id}` | — | Policy, reservations, state and events |
+| `POST /retry-policies/{policy_id}/authorize` | `{policy_sha256, max_retries, max_requests_each, max_total_requests}` | 201/200; permission to retry transient failures |
+| `POST /retry-policies/{policy_id}/revoke` | `{policy_sha256}` | 200; stops later retry starts |
 | `GET /local-mandates/{mandate_id}` | — | Mandate, child IDs, reservations and state |
 | `POST /local-mandates/series` | `{schedule_id, flow_ids, extract_model, review_model, max_total_local_calls}` | 201; one shared lifetime cap over the exact child flows |
 | `POST /flows/{flow_id}/local-mandates` | `{flow_id, extract_model, review_model, max_total_local_calls}` | 201; one-flow local mandate |

@@ -4988,3 +4988,23 @@ when plain-`http` URLs are pending. Operations that FAILED now carry the ledger'
 detail in `state_note` (an earlier rebuild had failed ten with "project or code identity changed" and the
 portal said only "stopped by a named failure"). No gate moves: a retry is a new plan and a new
 authorization, and the acquisition floor still decides whether the round may be read.
+
+
+## D134 — A person may authorize, once, that transient acquisition failures are retried on their own (2026-10-17)
+
+The D133 trial's three acquisition rounds (2026-10-16/17, `exercise treatment depression`, 10 candidates)
+ended at 2 copies of 10, and showed a gap between what the engine intends and what runs. `net.TRANSIENT`
+failures are meant to "come back on their own" (`acquire.should_attempt`), but no process plans the new
+attempt: the supervisor (D132) runs only operations a person already authorized, and a retry is a new plan.
+And one candidate with a live open-access copy (Europe PMC: `SERVER_ERROR_5XX`, `CONNECTION_ERROR`) was
+recorded under the headline class `EXCLUDED_HOST` — the last attempt's — so it would never have returned.
+
+Decision: a **retry policy**, a sibling of the copy policy and with the same shape (planned → authorized by a
+person → revocable; frozen code and protocol; lifetime ceilings; finite window), scoped to one flow, exact
+hosts and a per-operation request ceiling. Within it the executor plans and authorizes ordinary `acquire`
+operations for candidates whose last attempt is old enough and *transient-unfinished*. Nothing else moves:
+terminal classes (paywall, robots, redirect, excluded host, `REQUEST_LIMIT_REACHED`) still need a person's
+named campaign; the headline class is not rewritten; the acquisition floor still decides whether a round may be
+read; every request still passes robots, host, redirect and per-domain-budget gates. The measurement that decided
+the scope: of the 9 candidates left after round 2, exactly one failed for a transient reason, and it was
+misfiled. Contract: `docs/contracts/retry_policies.md`.
