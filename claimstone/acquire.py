@@ -284,7 +284,9 @@ def should_attempt(
     failure_class = previous.get("failure_class")
     if failure_class in retry_classes:
         return True
-    if net.is_terminal(failure_class):
+    if (failure_class not in net.TRANSIENT and
+            not any(attempt.get('failure_class') in net.TRANSIENT
+                    for attempt in previous.get('attempts', []) if isinstance(attempt, dict))):
         return False
     return _age_seconds(previous) >= retry_after_s
 

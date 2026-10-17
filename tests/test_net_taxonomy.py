@@ -30,6 +30,21 @@ def test_is_terminal_agrees_with_the_sets():
     assert net.is_terminal("SOMETHING_NOBODY_DECLARED") is True
 
 
+def test_retry_after_is_recorded_only_on_429_and_503():
+    for code, expected in ((429, 42), (503, 42), (500, None)):
+        class Response:
+            status_code = code
+            url = 'https://repo.example.org/paper'
+            headers = {'Retry-After': '42', 'Content-Type': 'text/plain'}
+            content = b''
+
+        fetcher = net.Fetcher()
+        fetcher._session = type('Session', (), {'get': staticmethod(lambda *a, **k: Response())})()
+        fetcher._robots_allows = lambda _url: True
+        row = fetcher.get('https://repo.example.org/paper').as_row()
+        assert row.get('retry_after_s') == expected
+
+
 def test_fake_fetcher_satisfies_the_protocol():
     from tests.fakes import FakeFetcher
 

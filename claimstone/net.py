@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import os
 import datetime as dt
+from email.utils import parsedate_to_datetime
 import ipaddress
 import time
 import socket
@@ -148,9 +149,10 @@ class Outcome:
     request_url: str = ""
     redirect_chain: list[str] = field(default_factory=list)
     provider_usage: dict[str, str | int | float] = field(default_factory=dict)
+    retry_after_s: int | None = None
 
     def as_row(self) -> dict[str, Any]:
-        return {
+        row = {
             "url": self.url,
             "request_url": self.request_url or self.url,
             "redirect_chain": list(self.redirect_chain),
@@ -164,6 +166,27 @@ class Outcome:
             "elapsed_s": round(self.elapsed_s, 2),
             "provider_usage": dict(self.provider_usage),
         }
+        if self.retry_after_s is not None:
+            row['retry_after_s'] = self.retry_after_s
+        return row
+
+
+def parse_retry_after(value: str | None, *, now: dt.datetime | None = None) -> int | None:
+    if value is None:
+        return None
+    stripped = value.strip()
+    if stripped.isascii() and stripped.isdecimal():
+        # Avoid the interpreter's large-integer digit limit on a hostile header.
+        digits = stripped.lstrip('0') or '0'
+        return 604800 if len(digits) > 6 else min(int(digits), 604800)
+    try:
+        when = parsedate_to_datetime(stripped)
+        if when.tzinfo is None:
+            return None
+        current = now or dt.datetime.now(dt.timezone.utc)
+        return max(0, min(604800, int((when - current).total_seconds())))
+    except (TypeError, ValueError, OverflowError):
+        return None
 
 
 
@@ -491,13 +514,14 @@ class Fetcher:
             detail = ('daily credits exhausted' if provider_usage.get('daily_remaining') == '0'
                       else 'rate limited or daily credits exhausted')
             return finish(Outcome(url, False, status, RATE_LIMITED, detail, ctype,
-                           elapsed_s=elapsed))
+                           elapsed_s=elapsed, retry_after_s=parse_retry_after(response.headers.get('Retry-After'))))
         if status == 404:
             return finish(Outcome(url, False, status, NOT_FOUND, "not found", ctype, elapsed_s=elapsed))
         if status >= 500:
             self._record_failure(refused_by)
             return finish(Outcome(url, False, status, SERVER_ERROR, f"status {status}", ctype,
-                           elapsed_s=elapsed))
+                           elapsed_s=elapsed,
+                           retry_after_s=parse_retry_after(response.headers.get('Retry-After')) if status == 503 else None))
         if status >= 400:
             return finish(Outcome(url, False, status, f"HTTP_{status}", f"status {status}", ctype,
                            elapsed_s=elapsed))

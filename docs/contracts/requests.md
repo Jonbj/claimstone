@@ -22,6 +22,7 @@ ledger; it does not write production acquisition or document rows.
 | `content_type`, `bytes`, `elapsed_s` | available response metadata |
 | `raw_sha256`, `raw_path` | available body stored under requests/raw, content-addressed |
 | `provider_usage` | OpenAlex rate-limit headers on transport rows and, when returned, `meta.cost_usd` or `meta.cost` on validated JSON rows; empty for other providers |
+| `retry_after_s` | present only for a parseable `Retry-After` on HTTP 429 or 503; integer seconds clamped to 0–604800 |
 | `recorded_at` | UTC event timestamp |
 
 `redirect` records a completed redirect response before checking its next destination. A refused

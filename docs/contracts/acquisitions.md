@@ -30,6 +30,7 @@ whether a round may produce verdicts at all.
 | `content_type`, `bytes` | what came back |
 | `failure_class` | the class of the **last** attempt: what stopped us. `null` when acquired |
 | `attempts` | every step of the cascade, in order, each with its own `failure_class`, `gate_kind`, `gate_reason` and `stored_path` |
+| `attempts[].retry_after_s` | on a parseable `Retry-After` from HTTP 429 or 503, integer seconds clamped to 0–604800; absent otherwise |
 | `fetched_at` | UTC, ISO 8601, seconds |
 
 `gate.thresholds` and `gate.gate_version` are on the row because a rate computed under different
@@ -99,7 +100,7 @@ Terminal — retrying changes nothing until the world changes, so a retry needs 
 `UNEXPECTED_CONTENT_TYPE` · `LANDING_PAGE_ONLY` · `ABSTRACT_ONLY` · `TOO_SHORT` ·
 `CORRUPT_PDF` · `NOT_TEXT` · `NO_LOCATIONS`
 
-Transient — the next ordinary run tries again on its own once the TTL has passed:
+Transient — the next ordinary run tries again on its own once the TTL has passed. A not-acquired row also qualifies when any attempt in its cascade has a transient class, even if the final headline class is terminal; the headline remains unchanged:
 
 `TIMEOUT` · `CONNECTION_ERROR` · `SERVER_ERROR_5XX` · `RATE_LIMITED_429` ·
 `DOMAIN_BUDGET_EXHAUSTED` · `EMPTY_RESPONSE` · `WAYBACK_MISS`
