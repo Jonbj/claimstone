@@ -210,16 +210,10 @@ def test_an_authorized_retry_executes_even_when_younger_than_the_routine_wait(tm
     [operation_id] = retry_policy.materialize_due(project, store)
     seen = []
 
-    class Fetcher:
-        def __init__(self, **_kwargs):
-            pass
-
-        def get(self, url, expect=None):
+    class Fetcher(net.Fetcher):
+        def get(self, url, *args, **kwargs):
             seen.append(url)
             return net.Outcome(url, False, 503, net.SERVER_ERROR, 'status 503', '')
-
-        def __getattr__(self, name):
-            raise AssertionError(f'unexpected fetcher use: {name}')
 
     monkeypatch.setattr(net, 'Fetcher', Fetcher)
     result = operations.execute(project, store, operation_id)
