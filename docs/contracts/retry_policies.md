@@ -13,15 +13,15 @@ calls a model and never signs anything.
 ## The frozen policy
 
 `{version, project, flow_id, selector, allowed_hosts, max_retries, max_attempts_each,
-max_requests_each, max_total_requests, use_apis, retry_after_hours, not_before, expires_at,
-code_sha256, protocol_sha256}`
+max_requests_each, max_total_requests, use_apis, base_delay_hours, max_delay_hours, not_before,
+expires_at, code_sha256, protocol_sha256}`
 
 - `allowed_hosts`: exact lowercase hosts (no wildcard, none in the project's `excluded_hosts`). With
   `use_apis: true` the two resolver hosts `api.unpaywall.org` and `api.openalex.org` must be listed.
 - `max_retries`: lifetime ceiling on retry operations (1–200). `max_attempts_each`: ceiling per candidate
   (1–5), counted over operations authorized by this policy. `max_requests_each`: 1–20.
   `max_total_requests = max_retries * max_requests_each`.
-- `retry_after_hours`: 6–168; a candidate is not retried before its last attempt is that old.
+- `base_delay_hours` (1–72) and `max_delay_hours` (`base_delay_hours`–168): the backoff, see "Delay".
 - `not_before` is the planning instant; `expires_at` is a future UTC instant within 366 days.
 - `code_sha256` and `protocol_sha256` freeze the code and the protocol: a policy planned under other code
   or another protocol starts nothing (the person plans a new one).
@@ -34,17 +34,43 @@ authorizes — under the project writer lock, the policy's lifetime ceilings and
 `retry_classes`) for every candidate of the flow such that **all** hold:
 
 1. its latest acquisition row is not acquired and is *transient-unfinished* (below);
-2. that row is at least `retry_after_hours` old;
+2. the row is old enough: `fetched_at + delay(n)` has passed, where *n* is the number of operations this
+   policy has already authorized for the candidate plus one (see "Delay");
 3. its URL host is in `allowed_hosts`;
 4. no operation for the candidate is active, and the policy has authorized fewer than `max_attempts_each`
    operations for it;
 5. the policy has authorized fewer than `max_retries` operations and the sum of their request ceilings
-   plus this one stays within `max_total_requests`.
+   plus this one stays within `max_total_requests`;
+6. the candidate's host has not exhausted its failure budget (`net.recorded_host_failures` ≥ the fetcher's
+   `max_403_per_host` within its TTL): such a candidate is **skipped without reserving anything**, so a
+   breaker that is open costs no attempt, and it is considered again on a later tick.
 
 The operation's `authorized` event carries `identity.retry_policy_id`. The executor refuses to start such
 an operation unless `retry_policy.due` (policy authorized, not revoked, inside its window) still holds.
 Everything the ordinary executor enforces stays: `robots.txt`, redirect and host gates, the per-domain
 failure budget, exact hosts, the request ceiling.
+
+## Delay
+
+Between two attempts at one candidate the wait grows and is spread, the standard shape for retrying a
+shared service politely (exponential backoff with jitter, AWS Architecture Blog 2015; Google SRE book,
+"Handling Overload"; RFC 9110 §10.2.3 and RFC 6585 for `Retry-After`):
+
+```
+nominal(n) = min(max_delay_hours, base_delay_hours * 2**(n-1))          # n = 1, 2, 3, ...
+delay(n)   = nominal(n)/2 + u * nominal(n)/2                             # "equal jitter": never below half
+earliest   = fetched_at(last attempt) + max(delay(n) hours, retry_after_s of that attempt, if recorded)
+```
+
+- `u` in [0, 1) is **deterministic**: the first 8 bytes of `sha256(policy_id | candidate_key | n)` read
+  as an unsigned integer divided by 2**64. No randomness enters an append-only ledger, a test can pin the
+  value, and two candidates still do not come back together.
+- `retry_after_s`: the host's own `Retry-After` (delta-seconds or an HTTP date, on 429 and 503) is recorded
+  on the attempt row by `net.py` when present and parseable, clamped to 0–604800 s, otherwise absent. A
+  request is never made earlier than the host asked, whatever the backoff says.
+- The earliest instant is computed on read from `acquisitions.jsonl`; no timer state is stored.
+- After `max_attempts_each` attempts the policy gives up on that candidate. The candidate keeps its last
+  recorded class; the portal says "gave up after N attempts".
 
 ## Transient-unfinished
 

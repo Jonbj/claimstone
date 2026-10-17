@@ -5008,3 +5008,10 @@ named campaign; the headline class is not rewritten; the acquisition floor still
 read; every request still passes robots, host, redirect and per-domain-budget gates. The measurement that decided
 the scope: of the 9 candidates left after round 2, exactly one failed for a transient reason, and it was
 misfiled. Contract: `docs/contracts/retry_policies.md`.
+
+The delay is not a flat wait. Reading `net.py` showed three facts: there is a per-host failure budget (a
+circuit breaker, 48 h window) that nothing in the planning path consulted; the `Retry-After` header was
+never read; and `should_attempt` used one fixed 6 h wait. The policy therefore carries exponential backoff
+with deterministic equal jitter (`base_delay_hours`, `max_delay_hours`), honours a recorded `Retry-After`
+as a floor, skips — without reserving an attempt — a candidate whose host has an open breaker, and gives up
+at `max_attempts_each`. Deterministic jitter keeps the ledger free of randomness and the schedule testable.
