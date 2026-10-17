@@ -89,14 +89,43 @@ describe("one-flow local mandate", () => {
     expect(within(dialog).getByText("Extraction model: model-a")).toBeTruthy();
     expect(within(dialog).getByText("Review model: model-b")).toBeTruthy();
     expect(within(dialog).getByText("Max local model calls: 25")).toBeTruthy();
+    expect(within(dialog).getByText("Where the models run: Ollama Cloud (metered)")).toBeTruthy();
+    expect(within(dialog).getByText("Budget ceiling (USD): 50")).toBeTruthy();
     fireEvent.click(within(dialog).getByRole("button", { name: "Confirm" }));
     expect(await screen.findByText("flow preview blocked")).toBeTruthy();
     expect(writes).toHaveLength(1);
     expect(writes[0].url).toBe("/control/v1/p/demo/flows/f1/local-mandates");
     expect(JSON.parse(String(writes[0].init.body))).toEqual({ flow_id: "f1", extract_model: "model-a",
-      review_model: "model-b", max_total_local_calls: 25 });
+      review_model: "model-b", max_total_local_calls: 25, backend: "ollama-cloud",
+      budget_cents: 5000, max_call_cents: 50, price_in_cents: 300, price_out_cents: 1200 });
     expect(writes[0].init.headers).toMatchObject({ "X-CSRF-Token": "tok",
       "Content-Type": "application/json", "Idempotency-Key": expect.any(String) });
+  });
+
+  it("sends no spending field for the local backend and blocks an inconsistent budget", async () => {
+    setCsrfToken("tok");
+    const writes: Array<{ body: Record<string, unknown> }> = [];
+    vi.stubGlobal("fetch", (url: string, init?: RequestInit) => {
+      if (url.includes("/scheduler?")) return json(200, { local_mandates: [], archive: {
+        revision: "r", next_cursor: null } });
+      if (init?.method === "POST") {
+        writes.push({ body: JSON.parse(String(init.body)) });
+        return json(201, { mandate_id: "m2", mandate: {} });
+      }
+      return json(404, {});
+    });
+    render(<WorkLocallyPanel project="demo" flowId="f1" />);
+    const enable = await screen.findByRole("button", { name: "Enable local work" });
+    fireEvent.change(screen.getByLabelText("Reserved per call (USD)"), { target: { value: "80" } });
+    expect(screen.getByText(/per-call reservation cannot exceed the budget/)).toBeTruthy();
+    expect((enable as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.change(screen.getByLabelText("Where the models run"), { target: { value: "llamacpp" } });
+    expect(screen.queryByLabelText("Budget ceiling (USD)")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Enable local work" }));
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Confirm" }));
+    await waitFor(() => expect(writes).toHaveLength(1));
+    expect(writes[0].body).toEqual({ flow_id: "f1", extract_model: "deepseek-v4.1-flash",
+      review_model: "mistral-large-3:675b", max_total_local_calls: 100 });
   });
 
   it("reads all scheduler pages, shows an active mandate, and confirms disable", async () => {

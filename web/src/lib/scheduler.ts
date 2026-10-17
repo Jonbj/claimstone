@@ -64,6 +64,11 @@ export interface MandateStatus {
   reserved_local_calls: number;
   remaining_local_calls: number;
   pending_batches: Array<{ batch_id: string; stage: string; awaiting_approval: number; max_total_requests: number }>;
+  model_backend?: "llamacpp" | "ollama-cloud";
+  paid_budget?: {
+    budget_cents: number; reserved_cents: number; max_call_cents: number;
+    price_in_cents: number; price_out_cents: number;
+  } | null;
   mandate: {
     schedule_id?: string; extract_model: string; review_model: string; max_total_local_calls: number;
     /** Who enabled it, and when (nanoseconds since the epoch), as the mandate itself records. */

@@ -71,6 +71,16 @@
     "confirmEnable": "Enable this local mandate?",
     "confirmDisable": "Disable this local mandate?",
     "confirmAction": "Confirm",
+    "backend": "Where the models run",
+    "backendCloud": "Ollama Cloud (metered)",
+    "backendLocal": "This machine (llama.cpp)",
+    "budget": "Budget ceiling (USD)",
+    "perCall": "Reserved per call (USD)",
+    "priceIn": "Input price estimate (USD per million tokens)",
+    "priceOut": "Output price estimate (USD per million tokens)",
+    "meteredInvalid": "Every amount must be at least 0.01 and the per-call reservation cannot exceed the budget.",
+    "explainMetered": "This lets the supervisor run extraction and review model calls on Ollama Cloud, at most {count} in total and never above a budget of {budget} USD. Document text is sent to that service and calls are billed. It makes no request to scholarly hosts, gives no verdict, signs nothing, and can be disabled. Prices are your upper estimates, not the provider's; the provider's account limits remain the hard cap.",
+    "budgetUsed": "Reserved {reserved} of {budget} USD",
     "cancel": "Cancel"
   },
   "retryPolicy": {

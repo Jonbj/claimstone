@@ -71,6 +71,16 @@
     "confirmEnable": "Attivare questo mandato locale?",
     "confirmDisable": "Disattivare questo mandato locale?",
     "confirmAction": "Conferma",
+    "backend": "Dove girano i modelli",
+    "backendCloud": "Ollama Cloud (a consumo)",
+    "backendLocal": "Questa macchina (llama.cpp)",
+    "budget": "Tetto di budget (USD)",
+    "perCall": "Riserva per chiamata (USD)",
+    "priceIn": "Stima prezzo input (USD per milione di token)",
+    "priceOut": "Stima prezzo output (USD per milione di token)",
+    "meteredInvalid": "Ogni importo deve essere almeno 0,01 e la riserva per chiamata non può superare il budget.",
+    "explainMetered": "Questo consente al supervisore di eseguire le chiamate ai modelli per estrazione e revisione su Ollama Cloud, al massimo {count} in totale e mai oltre un budget di {budget} USD. Il testo dei documenti viene inviato a quel servizio e le chiamate sono a pagamento. Non invia richieste agli host scientifici, non emette verdetti, non firma nulla e può essere disattivato. I prezzi sono stime massime tue, non del fornitore; i limiti dell'account presso il fornitore restano il tetto effettivo.",
+    "budgetUsed": "Riservati {reserved} di {budget} USD",
     "cancel": "Annulla"
   },
   "retryPolicy": {

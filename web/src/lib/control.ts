@@ -276,6 +276,12 @@ export interface FlowMandateBody {
   extract_model: string;
   review_model: string;
   max_total_local_calls: number;
+  /** D135: `ollama-cloud` makes the calls metered; all four ceilings are then required, in cents (prices per million tokens). */
+  backend?: "llamacpp" | "ollama-cloud";
+  budget_cents?: number;
+  max_call_cents?: number;
+  price_in_cents?: number;
+  price_out_cents?: number;
 }
 /** What `autopilot.enable_series` answers: the new mandate's id and its frozen terms, not a status. */
 export interface SeriesMandateEnabled { mandate_id: string; mandate: MandateStatus["mandate"] }

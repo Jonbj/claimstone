@@ -28,12 +28,22 @@ export default function WorkLocallyPanel({ project, flowId }: { project: string;
   const [extract, setExtract] = useState("deepseek-v4.1-flash");
   const [review, setReview] = useState("mistral-large-3:675b");
   const [callsText, setCallsText] = useState("100");
+  const [backend, setBackend] = useState<"ollama-cloud" | "llamacpp">("ollama-cloud");
+  const [budgetText, setBudgetText] = useState("50");
+  const [perCallText, setPerCallText] = useState("0.50");
+  const [priceInText, setPriceInText] = useState("3.00");
+  const [priceOutText, setPriceOutText] = useState("12.00");
   const [confirming, setConfirming] = useState<"enable" | string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const inFlight = useRef(false);
   const calls = Number(callsText);
-  const valid = extract.trim().length > 0 && review.trim().length > 0 &&
+  const cents = (text: string) => Math.round(Number(text) * 100);
+  const metered = backend === "ollama-cloud";
+  const meteredValid = !metered || [budgetText, perCallText, priceInText, priceOutText].every(
+    (text) => text.trim().length > 0 && Number.isSafeInteger(cents(text)) && cents(text) >= 1) &&
+    cents(perCallText) <= cents(budgetText);
+  const valid = meteredValid && extract.trim().length > 0 && review.trim().length > 0 &&
     extract.trim() !== review.trim() && callsText.trim().length > 0 &&
     Number.isSafeInteger(calls) && calls >= 1;
   const active = mandates.data?.filter((mandate) => mandate.state === "ENABLED") ?? [];
@@ -48,6 +58,11 @@ export default function WorkLocallyPanel({ project, flowId }: { project: string;
         await control.enableFlowMandate(project, flowId, {
           flow_id: flowId, extract_model: extract.trim(), review_model: review.trim(),
           max_total_local_calls: calls,
+          ...(metered ? {
+            backend: "ollama-cloud" as const, budget_cents: cents(budgetText),
+            max_call_cents: cents(perCallText), price_in_cents: cents(priceInText),
+            price_out_cents: cents(priceOutText),
+          } : {}),
         });
       } else {
         await control.disableMandate(project, confirming);
@@ -72,6 +87,11 @@ export default function WorkLocallyPanel({ project, flowId }: { project: string;
         <p>{t("workLocally.extract")}: {mandate.mandate.extract_model}</p>
         <p>{t("workLocally.review")}: {mandate.mandate.review_model}</p>
         <p>{t("workLocally.calls")}: {mandate.mandate.max_total_local_calls}</p>
+        <p>{t("workLocally.backend")}: {mandate.model_backend ?? "llamacpp"}</p>
+        {mandate.paid_budget ? <p>{t("workLocally.budgetUsed", {
+          reserved: (mandate.paid_budget.reserved_cents / 100).toFixed(2),
+          budget: (mandate.paid_budget.budget_cents / 100).toFixed(2),
+        })}</p> : null}
         <p>{t("workLocally.reserved")}: {mandate.reserved_local_calls}</p>
         <p>{t("workLocally.remaining")}: {mandate.remaining_local_calls}</p>
         <p>{t("workLocally.flows")}: {mandate.flow_ids.join(", ")}</p>
@@ -93,7 +113,23 @@ export default function WorkLocallyPanel({ project, flowId }: { project: string;
           <input type="number" min="1" step="1" placeholder="100" value={callsText} disabled={busy || confirming !== null}
             onChange={(event) => setCallsText(event.target.value)}
             className="min-h-11 rounded-md border bg-background px-3" /></label>
-        <p>{t("workLocally.explain", { count: callsText || "—" })}</p>
+        <label className="flex flex-col gap-1">{t("workLocally.backend")}
+          <select value={backend} disabled={busy || confirming !== null}
+            onChange={(event) => setBackend(event.target.value as "ollama-cloud" | "llamacpp")}
+            className="min-h-11 rounded-md border bg-background px-3">
+            <option value="ollama-cloud">{t("workLocally.backendCloud")}</option>
+            <option value="llamacpp">{t("workLocally.backendLocal")}</option>
+          </select></label>
+        {metered ? <>
+          {([["budget", budgetText, setBudgetText], ["perCall", perCallText, setPerCallText],
+             ["priceIn", priceInText, setPriceInText], ["priceOut", priceOutText, setPriceOutText]] as const).map(
+            ([key, value, setter]) => <label key={key} className="flex flex-col gap-1">{t(`workLocally.${key}`)}
+              <input type="number" min="0.01" step="0.01" value={value} disabled={busy || confirming !== null}
+                onChange={(event) => setter(event.target.value)}
+                className="min-h-11 rounded-md border bg-background px-3" /></label>)}
+          {meteredValid ? null : <p role="alert">{t("workLocally.meteredInvalid")}</p>}
+          <p>{t("workLocally.explainMetered", { count: callsText || "—", budget: budgetText || "—" })}</p>
+        </> : <p>{t("workLocally.explain", { count: callsText || "—" })}</p>}
         <button type="button" disabled={!valid || busy} onClick={() => setConfirming("enable")}
           className="min-h-11 self-start rounded-md bg-teal-600 px-4 text-white disabled:opacity-50">
           {t("workLocally.enable")}</button>
@@ -109,6 +145,13 @@ export default function WorkLocallyPanel({ project, flowId }: { project: string;
         <li>{t("workLocally.extract")}: {extract.trim()}</li>
         <li>{t("workLocally.review")}: {review.trim()}</li>
         <li>{t("workLocally.calls")}: {calls}</li>
+        <li>{t("workLocally.backend")}: {metered ? t("workLocally.backendCloud") : t("workLocally.backendLocal")}</li>
+        {metered ? <>
+          <li>{t("workLocally.budget")}: {budgetText}</li>
+          <li>{t("workLocally.perCall")}: {perCallText}</li>
+          <li>{t("workLocally.priceIn")}: {priceInText}</li>
+          <li>{t("workLocally.priceOut")}: {priceOutText}</li>
+        </> : null}
       </ul> : <p className="text-sm">{confirming}</p>}
       <div className="mt-3 flex gap-3">
         <button type="button" disabled={busy} onClick={confirm}>{t("workLocally.confirmAction")}</button>
