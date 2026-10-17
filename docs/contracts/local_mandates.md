@@ -52,3 +52,14 @@ call or verdict. `auto-status` returns `flow_ids`, `reserved_local_calls`,
 `remaining_local_calls` and `disabled_by` when set. The CLI command is
 `scheduler auto-enable-series PROJECT SCHEDULE_ID --extract-model A
 --review-model B --max-total-local-calls N`.
+
+## Metered model backend (D135)
+
+A version 2 mandate may add `model_backend: "ollama-cloud"` and `paid`:
+`budget_id` (unique per mandate), `budget_cents`, `max_call_cents`, `price_in_cents`, `price_out_cents`
+(declared upper estimates, USD cents per million tokens). Both are absent for a local mandate, and a mandate
+without them uses `llamacpp` as before. Enabling such a mandate is the operator's authorization of paid model
+calls up to `budget_cents`: each drain it plans carries these fields, reserves `max_call_cents × calls`, and
+`authorize` refuses it when reservations under `budget_id` would exceed the budget. The earlier sentence that a
+mandate cannot approve a paid model call holds for mandates without `paid`. `auto-status` adds `model_backend`
+and `paid_budget` (`budget_cents`, `reserved_cents`, `max_call_cents`, prices) or `null`.

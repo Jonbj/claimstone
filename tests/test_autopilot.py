@@ -156,3 +156,70 @@ def test_mandate_proposals_reject_incomplete_discovery_scope(tmp_path):
                          review_model='reader-b', max_total_local_calls=1,
                          discover_apis=['openalex'])
     assert list(store.read(autopilot.LEDGER)) == []
+
+
+def _seed_one_document(store):
+    store.append('candidates.jsonl', {'candidate_key': 'doi:10.1/one', 'source_id': 'S01',
+                                      'source_class': 'ACA', 'round': 'new'})
+    store.append('documents.jsonl', {'source_id': 'S01', 'fulltext_confirmed': True})
+    store.append('chunks.jsonl', {'source_id': 'S01', 'chunk_id': 'S01#one',
+                                  'text': 'News predicts future returns.'})
+
+
+def test_paid_mandate_needs_its_ceilings_and_a_paid_backend(tmp_path):
+    project, store, flow_id = _fixture(tmp_path)
+    kwargs = dict(extract_model='reader-a', review_model='reader-b', max_total_local_calls=5)
+    with pytest.raises(operations.OperationError, match='positive budget'):
+        autopilot.enable(project, store, flow_id, backend='ollama-cloud', **kwargs)
+    with pytest.raises(operations.OperationError, match='exceeds the budget'):
+        autopilot.enable(project, store, flow_id, backend='ollama-cloud', budget_cents=5,
+                         max_call_cents=6, price_in_cents=1, price_out_cents=1, **kwargs)
+    with pytest.raises(operations.OperationError, match='need the ollama-cloud'):
+        autopilot.enable(project, store, flow_id, budget_cents=5, **kwargs)
+    assert list(store.read(autopilot.LEDGER)) == []
+
+
+def test_paid_mandate_runs_metered_calls_inside_its_frozen_budget(tmp_path, monkeypatch):
+    project, store, flow_id = _fixture(tmp_path)
+    _seed_one_document(store)
+    grant = autopilot.enable(project, store, flow_id, extract_model='reader-a',
+                             review_model='reader-b', max_total_local_calls=3,
+                             backend='ollama-cloud', budget_cents=500, max_call_cents=100,
+                             price_in_cents=100, price_out_cents=100)
+    mandate_id = grant['mandate_id']
+    assert grant['mandate']['model_backend'] == 'ollama-cloud'
+    built = []
+
+    class Remote:
+        name = 'ollama-cloud'
+        max_concurrency = 1
+        min_interval_s = 0
+
+        def __init__(self, model):
+            self.model = model
+
+        def harness_version(self):
+            return 'ollama-cloud/test'
+
+        def run(self, request):
+            return RawAnswer(body=b'[]', model=self.model, cost_usd=0.01,
+                             usage={'input_tokens': 10, 'output_tokens': 1})
+
+    def build(name, *, model, **options):
+        built.append((name, model))
+        return Remote(model)
+
+    monkeypatch.setattr(runners, 'build', build)
+    result = autopilot.tick(project, store, mandate_id)
+    assert 1 <= result['local_calls'] <= 3
+    assert {name for name, _ in built} == {'ollama-cloud'}
+    drains = [rows[0]['plan'] for rows in operations._events(store).values()
+              if rows[0]['plan']['stage'] == 'extract-drain']
+    assert drains[0]['backend'] == 'ollama-cloud'
+    assert drains[0]['budget_id'].startswith('mandate-')
+    assert drains[0]['budget_cents'] == 500
+    state = autopilot.status(store, mandate_id)
+    assert state['model_backend'] == 'ollama-cloud'
+    assert state['paid_budget']['reserved_cents'] == 100 * state['reserved_local_calls']
+    assert state['paid_budget']['reserved_cents'] <= state['paid_budget']['budget_cents']
+    assert state['paid_budget']['budget_cents'] == 500

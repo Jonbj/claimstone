@@ -5015,3 +5015,29 @@ never read; and `should_attempt` used one fixed 6 h wait. The policy therefore c
 with deterministic equal jitter (`base_delay_hours`, `max_delay_hours`), honours a recorded `Retry-After`
 as a floor, skips — without reserving an attempt — a candidate whose host has an open breaker, and gives up
 at `max_attempts_each`. Deterministic jitter keeps the ledger free of randomness and the schedule testable.
+
+
+## D135 — A one-flow local mandate may name the metered backend, with its own frozen budget (2026-10-17)
+
+The trial's next step was the portal's "Work locally" panel with `deepseek-v4.1-flash` (extraction) and
+`mistral-large-3:675b` (review), the pair D51/D52 measured on Ollama Cloud. Reading `operations.drive_local`
+showed the panel could not honour that: the mandate's pass was written for `llamacpp` only (the backend was a
+literal in six places), so the mandate would have asked the local server, which was down and does not hold those
+models. Metered drains existed only as single operations planned from the CLI, with a budget ID, per-call
+reservation and price ceilings (D13's "budget and price ceilings on every drain").
+
+Decision: a mandate may carry `model_backend: "ollama-cloud"` and a `paid` object — `budget_id` (one per
+mandate, derived from the flow and the creation time so a later mandate never inherits a ceiling),
+`budget_cents`, `max_call_cents`, `price_in_cents`, `price_out_cents`. Enabling it is the operator's
+authorization of paid calls **up to that budget and no further**; this replaces the sentence "cannot approve any
+paid model call" in the mandate contract for such mandates only. The mechanism is not new: every drain the
+mandate plans is an ordinary `extract-drain`/`review-drain` plan with those fields, still reserved by
+`max_call_cents × calls` and refused by `authorize` when the cumulative reservation under the budget ID would
+exceed the budget. The call ceiling (`max_total_local_calls`) still applies on top. A mandate without
+`model_backend` is exactly what it was. Series mandates remain local-only.
+
+Nothing else moves: no network request to a scholarly host, no verdict, no signing, and the acquisition floor
+still decides whether synthesis may run. Prices are declared upper estimates in USD cents per million tokens,
+not provider prices; the provider's account spending controls are the hard cap (GUIDE). The first run is meant to
+calibrate the budget: `paid_budget.reserved_cents` in the mandate status, and the per-call `cost_usd` in the
+results, give the real figure to set the next ceiling from.

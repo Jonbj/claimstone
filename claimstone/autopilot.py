@@ -56,8 +56,28 @@ def enable(project: Project, store: Store, flow_id: str, *, extract_model: str,
            proposal_max_units: int = 10,
            proposal_max_requests_each: int = 3,
            proposal_per_query: int = 25,
-           identity: dict[str, Any] | None = None) -> dict[str, Any]:
-    """Record local permission and optional bounded, unapproved batch proposals."""
+           identity: dict[str, Any] | None = None,
+           backend: str = 'llamacpp',
+           budget_cents: int | None = None, max_call_cents: int | None = None,
+           price_in_cents: int | None = None,
+           price_out_cents: int | None = None) -> dict[str, Any]:
+    """Record local permission and optional bounded, unapproved batch proposals.
+
+    `backend='ollama-cloud'` makes the model passes metered (D135): the mandate then freezes a
+    budget and per-call and price ceilings, which are the operator's authorization for paid
+    calls up to that budget and no further.
+    """
+    if backend not in {'llamacpp', 'ollama-cloud'}:
+        raise operations.OperationError('model backend must be llamacpp or ollama-cloud')
+    spend = (budget_cents, max_call_cents, price_in_cents, price_out_cents)
+    if backend == 'ollama-cloud':
+        if any(type(value) is not int or value < 1 for value in spend):
+            raise operations.OperationError(
+                'a paid mandate needs positive budget, per-call and price ceilings in cents')
+        if max_call_cents > budget_cents:
+            raise operations.OperationError('the per-call ceiling exceeds the budget')
+    elif any(value is not None for value in spend):
+        raise operations.OperationError('budget and price ceilings need the ollama-cloud backend')
     if (not extract_model or not review_model or extract_model == review_model or
             type(max_total_local_calls) is not int or max_total_local_calls < 0):
         raise operations.OperationError('two different models and a nonnegative total call cap are required')
@@ -105,6 +125,13 @@ def enable(project: Project, store: Store, flow_id: str, *, extract_model: str,
             },
             'authorized_by': identity, 'created_ns': time.time_ns(),
         }
+        if backend == 'ollama-cloud':
+            # one budget ID per mandate, so a later mandate never inherits this ceiling
+            mandate['model_backend'] = backend
+            mandate['paid'] = {
+                'budget_id': f'mandate-{flow_id[:16]}-{mandate["created_ns"]}',
+                'budget_cents': budget_cents, 'max_call_cents': max_call_cents,
+                'price_in_cents': price_in_cents, 'price_out_cents': price_out_cents}
         mandate_id = operations._digest(mandate)
         store.append(LEDGER, {'version': 2, 'mandate_id': mandate_id,
                               'event': 'enabled', 'mandate': mandate,
@@ -187,6 +214,17 @@ def _reserved(store: Store, mandate_id: str) -> int:
     return total
 
 
+def _reserved_cents(store: Store, mandate_id: str) -> int:
+    total = 0
+    for rows in operations._events(store).values():
+        plan = rows[0]['plan']
+        if (len(rows) > 1 and rows[1]['event'] == 'authorized' and
+                (rows[1].get('identity') or {}).get('mandate_id') == mandate_id and
+                plan.get('budget_id')):
+            total += plan['max_call_cents'] * len(plan['call_ids'])
+    return total
+
+
 def status(store: Store, mandate_id: str) -> dict[str, Any]:
     with store.writer_lock():
         rows = _rows(store).get(mandate_id)
@@ -207,7 +245,15 @@ def status(store: Store, mandate_id: str) -> dict[str, Any]:
                 pending.append({'batch_id': batch['batch_id'], 'stage': batch['stage'],
                                 'awaiting_approval': len(awaiting),
                                 'max_total_requests': batch['max_total_requests']})
+        paid = mandate.get('paid')
         return {'mandate_id': mandate_id,
+                'model_backend': mandate.get('model_backend', 'llamacpp'),
+                'paid_budget': (None if not paid else {
+                    'budget_cents': paid['budget_cents'],
+                    'reserved_cents': _reserved_cents(store, mandate_id),
+                    'max_call_cents': paid['max_call_cents'],
+                    'price_in_cents': paid['price_in_cents'],
+                    'price_out_cents': paid['price_out_cents']}),
                 'state': 'ENABLED' if len(rows) == 1 else 'DISABLED',
                 'flow_id': mandate['flow_id'],
                 'flow_ids': mandate.get('flow_ids', [mandate['flow_id']]),
@@ -277,7 +323,9 @@ def tick(project: Project, store: Store, mandate_id: str) -> dict[str, Any]:
             review_model=mandate['review_model'],
             max_local_calls=state['remaining_local_calls'],
             authorization_identity=identity,
-            authorization_label=mandate_id)
+            authorization_label=mandate_id,
+            backend=mandate.get('model_backend', 'llamacpp'),
+            paid=mandate.get('paid'))
         from claimstone import periodic_dossier
         dossiers = []
         for schedule_id in periodic_dossier.due_for_flow(store, mandate['flow_id']):

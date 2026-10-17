@@ -1916,7 +1916,19 @@ def _local_mandate_series(self: _Handler, params: dict[str, str], query: Any,
 def _local_mandate_single(self: _Handler, params: dict[str, str], query: Any,
                           body: dict[str, Any]) -> tuple[Any, int]:
     fields = {'flow_id', 'extract_model', 'review_model', 'max_total_local_calls'}
-    _required_body(self, body, fields)
+    paid_fields = {'backend', 'budget_cents', 'max_call_cents', 'price_in_cents',
+                   'price_out_cents'}
+    self._only_keys(body, frozenset(fields | paid_fields))
+    if not fields <= set(body):
+        raise ControlError(422, 'VALIDATION', 'required fields: ' + ', '.join(sorted(fields)))
+    backend = body.get('backend', 'llamacpp')
+    if backend not in {'llamacpp', 'ollama-cloud'}:
+        raise ControlError(422, 'VALIDATION', 'backend must be llamacpp or ollama-cloud')
+    if (backend == 'ollama-cloud') != ((paid_fields - {'backend'}) <= set(body)) or (
+            backend == 'llamacpp' and set(body) & (paid_fields - {'backend'})):
+        raise ControlError(422, 'VALIDATION',
+                           'ollama-cloud needs budget_cents, max_call_cents, price_in_cents '
+                           'and price_out_cents; llamacpp takes none of them')
     project, store, flow, _selector = _flow_only(self, params)
     if body['flow_id'] != flow['flow_id']:
         raise ControlError(409, 'PLAN_DIFFERS', 'flow ID changed')
@@ -1930,7 +1942,11 @@ def _local_mandate_single(self: _Handler, params: dict[str, str], query: Any,
             extract_model=body['extract_model'],
             review_model=body['review_model'],
             max_total_local_calls=body['max_total_local_calls'],
-            identity=_operator_identity(self))
+            identity=_operator_identity(self), backend=backend,
+            budget_cents=body.get('budget_cents'),
+            max_call_cents=body.get('max_call_cents'),
+            price_in_cents=body.get('price_in_cents'),
+            price_out_cents=body.get('price_out_cents'))
     except operations.OperationError as exc:
         raise _scheduler_refusal(exc) from None
     return result, 201

@@ -262,3 +262,29 @@ def test_portal_packages_and_serves_only_a_current_cumulative_dossier(tmp_path, 
         checked = _request(base + f'/periodic-exports/{export_id}/verify',
                            method='POST', headers=headers, payload={})
         assert checked[0] == 200 and checked[2]['holds'] is True
+
+
+def test_one_flow_mandate_takes_paid_ceilings_only_together_with_the_cloud_backend(tmp_path):
+    ws = _workspace(tmp_path)
+    flow_id = ws['source_flow']
+    base_body = {'flow_id': flow_id, 'extract_model': 'reader-a', 'review_model': 'reader-b',
+                 'max_total_local_calls': 4}
+    paid = {'backend': 'ollama-cloud', 'budget_cents': 5000, 'max_call_cents': 50,
+            'price_in_cents': 300, 'price_out_cents': 1200}
+    with _served(ws) as (base, headers):
+        url = base + f'/flows/{flow_id}/local-mandates'
+        assert _request(url, method='POST', headers=headers,
+                        payload=base_body | {'budget_cents': 5})[0] == 422
+        assert _request(url, method='POST', headers=headers,
+                        payload=base_body | {'backend': 'ollama-cloud'})[0] == 422
+        assert _request(url, method='POST', headers=headers,
+                        payload=base_body | {'backend': 'other'})[0] == 422
+        assert not list(ws['store'].read(autopilot.LEDGER))
+        made = _request(url, method='POST', headers=headers, payload=base_body | paid)
+        assert made[0] == 201
+        shown = _request(base + f"/local-mandates/{made[2]['mandate_id']}",
+                         headers={'Cookie': headers['Cookie']})[2]
+        assert shown['model_backend'] == 'ollama-cloud'
+        assert shown['paid_budget'] == {'budget_cents': 5000, 'reserved_cents': 0,
+                                        'max_call_cents': 50, 'price_in_cents': 300,
+                                        'price_out_cents': 1200}

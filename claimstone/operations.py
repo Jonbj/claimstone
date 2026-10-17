@@ -827,17 +827,24 @@ def drive_local(project: Project, store: Store, flow_id: str, *,
                 extract_model: str, review_model: str,
                 max_local_calls: int,
                 authorization_identity: dict[str, Any] | None = None,
-                authorization_label: str | None = None) -> dict[str, Any]:
+                authorization_label: str | None = None,
+                backend: str = 'llamacpp',
+                paid: dict[str, Any] | None = None) -> dict[str, Any]:
     """One user-authorized pass through scoped local stages, stopping at human/network gates.
 
     The CLI invocation or a standing local mandate is the operator's bounded
     instruction. Each generated plan still receives its own append-only
     authorization event.
-    No scholarly URL or paid backend is contacted here.
+    No scholarly URL is contacted here. A paid backend (`ollama-cloud`) is used only when the
+    mandate declared one, with its own frozen budget and price ceilings (D135); each drain
+    plan is still reserved and authorized against that budget, never beyond it.
     """
     if (not extract_model or not review_model or extract_model == review_model or
             type(max_local_calls) is not int or max_local_calls < 0):
         raise OperationError('two different local models and a nonnegative call ceiling are required')
+    if backend not in {'llamacpp', 'ollama-cloud'} or (backend == 'ollama-cloud') != bool(paid):
+        raise OperationError('a paid backend needs its budget and price ceilings; a local one has none')
+    drain_options = dict(paid or {}) | {'backend': backend}
     # Freeze the already approved external work at invocation time. New plans
     # authorized while this command runs wait for a later invocation.
     ready_network = [rows for rows in _events(store).values()
@@ -883,31 +890,33 @@ def drive_local(project: Project, store: Store, flow_id: str, *,
     if confirmed:
         run_stage('extract-build', batch=extract_batch)
         extract_queue = model_call.Queue(store, lane='extract', batch=extract_batch)
-        if remaining and extract_queue.pending(backend='llamacpp', model=extract_model):
+        if remaining and extract_queue.pending(backend=backend, model=extract_model):
             try:
                 drained = run_stage('extract-drain', batch=extract_batch,
-                                    model=extract_model, max_calls=remaining)
+                                    model=extract_model, max_calls=remaining,
+                                    **drain_options)
                 remaining -= drained['calls']
             except OperationError as exc:
                 if 'no never-attempted calls' not in str(exc):
                     raise
-        if extract_queue.results(backend='llamacpp', model=extract_model):
+        if extract_queue.results(backend=backend, model=extract_model):
             run_stage('extract-harvest', batch=extract_batch)
 
     claims = claim_records.current(store)[0]
     if any(str(row.get('source_id')) in allowed for row in claims.values()):
         run_stage('review-build', batch=review_batch,
-                  reviewer=('llamacpp', review_model))
+                  reviewer=(backend, review_model))
         review_queue = model_call.Queue(store, lane='review', batch=review_batch)
-        if remaining and review_queue.pending(backend='llamacpp', model=review_model):
+        if remaining and review_queue.pending(backend=backend, model=review_model):
             try:
                 drained = run_stage('review-drain', batch=review_batch,
-                                    model=review_model, max_calls=remaining)
+                                    model=review_model, max_calls=remaining,
+                                    **drain_options)
                 remaining -= drained['calls']
             except OperationError as exc:
                 if 'no never-attempted calls' not in str(exc):
                     raise
-        if review_queue.results(backend='llamacpp', model=review_model):
+        if review_queue.results(backend=backend, model=review_model):
             run_stage('review-harvest', batch=review_batch)
 
     try:

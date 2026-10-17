@@ -483,9 +483,9 @@ records the authenticated operator; the control server never executes a stage.
 | `GET /retry-policies/{policy_id}` | — | Policy, reservations, state and events |
 | `POST /retry-policies/{policy_id}/authorize` | `{policy_sha256, max_retries, max_requests_each, max_total_requests}` | 201/200; permission to retry transient failures |
 | `POST /retry-policies/{policy_id}/revoke` | `{policy_sha256}` | 200; stops later retry starts |
-| `GET /local-mandates/{mandate_id}` | — | Mandate, child IDs, reservations and state |
+| `GET /local-mandates/{mandate_id}` | — | Mandate, child IDs, reservations and state; `model_backend` and `paid_budget` (`budget_cents`, `reserved_cents`, `max_call_cents`, prices) or `null` |
 | `POST /local-mandates/series` | `{schedule_id, flow_ids, extract_model, review_model, max_total_local_calls}` | 201; one shared lifetime cap over the exact child flows |
-| `POST /flows/{flow_id}/local-mandates` | `{flow_id, extract_model, review_model, max_total_local_calls}` | 201; one-flow local mandate |
+| `POST /flows/{flow_id}/local-mandates` | `{flow_id, extract_model, review_model, max_total_local_calls}`, optionally `backend: "ollama-cloud"` with all of `budget_cents, max_call_cents, price_in_cents, price_out_cents` (D135) | 201; one-flow local mandate; the paid fields are 422 unless `backend` is `ollama-cloud`, which needs all four |
 | `POST /local-mandates/{mandate_id}/disable` | `{mandate_id}` | 200; stops later local passes |
 
 All request bodies require exactly the shown keys. The client must repeat the
