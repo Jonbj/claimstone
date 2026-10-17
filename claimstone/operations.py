@@ -719,6 +719,9 @@ def execute(project: Project, store: Store, operation_id: str,
                     rows_done = list(acquire.run(
                         [candidate], store, fetcher, campaign=operation_id,
                         retry_classes=frozenset(plan_row['retry_classes']),
+                        # a retry policy already enforced its own (longer or shorter) delay when it
+                        # started this operation; the routine wait must not veto it a second time
+                        retry_after_s=0 if retry_policy_id else acquire.DEFAULT_RETRY_AFTER_S,
                         use_apis=plan_row['use_apis'], thresholds=project.gate_thresholds,
                         policy=project.gate_policy, classes=project.classes,
                         round_name=selector.round,

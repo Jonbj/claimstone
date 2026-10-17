@@ -199,3 +199,29 @@ def test_changed_code_or_protocol_starts_nothing(tmp_path, monkeypatch):
     monkeypatch.setattr(operations, '_code_identity', original)
     monkeypatch.setattr(flows, 'protocol_digest', lambda _project: 'different')
     assert retry_policy.materialize_due(project, store) == []
+
+
+def test_an_authorized_retry_executes_even_when_younger_than_the_routine_wait(tmp_path, monkeypatch):
+    """The policy's own delay gates the start; the routine six-hour wait must not veto it again."""
+    project, store, flow_id = _fixture(tmp_path)
+    _candidate(store, 'one', hours=3)          # younger than DEFAULT_RETRY_AFTER_S (6 h)
+    policy = _plan(project, store, flow_id, base_delay_hours=2, max_delay_hours=4)
+    retry_policy.authorize(store, policy['policy_id'])
+    [operation_id] = retry_policy.materialize_due(project, store)
+    seen = []
+
+    class Fetcher:
+        def __init__(self, **_kwargs):
+            pass
+
+        def get(self, url, expect=None):
+            seen.append(url)
+            return net.Outcome(url, False, 503, net.SERVER_ERROR, 'status 503', '')
+
+        def __getattr__(self, name):
+            raise AssertionError(f'unexpected fetcher use: {name}')
+
+    monkeypatch.setattr(net, 'Fetcher', Fetcher)
+    result = operations.execute(project, store, operation_id)
+    assert seen == ['https://repo.example.org/one.pdf']
+    assert result['acquired'] is False and result['failure_class'] == net.SERVER_ERROR
