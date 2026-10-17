@@ -13,7 +13,7 @@ import { useSession } from "@/lib/session";
 // Verify is a button, per row, because a verification is an action and never a side effect of
 // opening a page (B10). Only flows can be exported, so there is no `/u/` route.
 const card = "rounded-lg bg-card p-5 shadow-sm ring-1 ring-gray-200 dark:ring-gray-800";
-const primary = "min-h-11 rounded-md bg-teal-600 px-4 text-sm font-medium text-white disabled:opacity-50";
+const primary = "min-h-11 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-50";
 
 type CopyEntry = Record<string, unknown>;
 

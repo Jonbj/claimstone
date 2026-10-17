@@ -171,7 +171,7 @@ export default function RetryPolicyPanel({ project, flowId }: { project: string;
         <p>{t("retryPolicy.attempts")}: {policy.policy.max_attempts_each}</p>
         {policy.state === "PLANNED" ? (
           <button type="button" disabled={busy} onClick={() => { setConfirming({ policy, kind: "authorize" }); setError(null); setPlanChanged(false); }}
-            className="min-h-11 rounded-md bg-teal-600 px-4 text-sm font-medium text-white disabled:opacity-50">
+            className="min-h-11 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-50">
             {t("retryPolicy.authorize")}</button>
         ) : policy.state === "AUTHORIZED" ? (
           <button type="button" disabled={busy} onClick={() => { setConfirming({ policy, kind: "revoke" }); setError(null); setPlanChanged(false); }}
@@ -213,7 +213,7 @@ export default function RetryPolicyPanel({ project, flowId }: { project: string;
         <p className="text-sm">{t("retryPolicy.planningNothing")}</p>
         {validation ? <p role="alert" className="text-sm text-not-obtained">{validation}</p> : null}
         <button type="submit" disabled={busy}
-          className="min-h-11 self-start rounded-md bg-teal-600 px-4 text-sm font-medium text-white disabled:opacity-50">
+          className="min-h-11 self-start rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-50">
           {busy ? t("retryPolicy.planning") : t("retryPolicy.plan")}
         </button>
       </form>
@@ -222,7 +222,7 @@ export default function RetryPolicyPanel({ project, flowId }: { project: string;
     {planChanged ? <p role="alert" className="mt-3 text-sm">{t("retryPolicy.planChanged")}</p> : null}
     {confirming ? <div role="dialog" aria-modal="true"
       aria-label={confirming.kind === "authorize" ? t("retryPolicy.confirmAuthorize") : t("retryPolicy.confirmRevoke")}
-      className="mt-4 rounded-lg bg-card p-5 ring-2 ring-teal-600">
+      className="mt-4 rounded-lg bg-card p-5 ring-2 ring-primary">
       <h3 className="font-semibold">{confirming.kind === "authorize" ? t("retryPolicy.confirmAuthorize") : t("retryPolicy.confirmRevoke")}</h3>
       {confirming.kind === "authorize" ? <ul className="list-disc pl-5 text-sm">
         <li>{t("retryPolicy.hosts")}: {confirming.policy.policy.allowed_hosts.join(", ")}</li>
@@ -237,7 +237,7 @@ export default function RetryPolicyPanel({ project, flowId }: { project: string;
       </ul> : <p className="text-sm">{confirming.policy.policy_id}</p>}
       <div className="mt-3 flex gap-3">
         <button type="button" disabled={busy} onClick={confirm}
-          className="min-h-11 rounded-md bg-teal-600 px-4 text-sm font-medium text-white disabled:opacity-50">
+          className="min-h-11 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-50">
           {t("retryPolicy.confirm")}</button>
         <button type="button" disabled={busy} onClick={() => setConfirming(null)}
           className="min-h-11 rounded-md border px-3">

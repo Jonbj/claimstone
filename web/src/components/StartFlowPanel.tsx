@@ -55,7 +55,7 @@ export default function StartFlowPanel({ project }: { project: string }) {
           </label>
           {validation ? <p role="alert" className="text-sm text-not-obtained">{validation}</p> : null}
           {error ? <ErrorState error={error} context="flow" /> : null}
-          <button type="submit" disabled={busy} className="min-h-11 self-start rounded-md bg-teal-600 px-4 text-sm font-medium text-white disabled:opacity-50">
+          <button type="submit" disabled={busy} className="min-h-11 self-start rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-50">
             {busy ? t("startFlow.creating") : t("startFlow.create")}
           </button>
         </form>

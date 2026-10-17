@@ -82,7 +82,7 @@ export default function BatchesAwaitingAuthorization({ project, flowId, refreshT
                 </details>
                 <button type="button" disabled={running}
                         onClick={() => { setConfirming(batch); setError(null); setPlanChanged(false); }}
-                        className="mt-3 min-h-11 rounded-md bg-teal-600 px-4 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50">
+                        className="mt-3 min-h-11 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:brightness-95 disabled:opacity-50">
                   {t("authorizeBatch.open")}
                 </button>
               </li>;
@@ -92,7 +92,7 @@ export default function BatchesAwaitingAuthorization({ project, flowId, refreshT
       ) : null}
       {confirming ? (
         <div role="dialog" aria-modal="true" aria-label={t("authorizeBatch.dialog")}
-             className="mb-5 rounded-lg bg-card p-5 ring-2 ring-teal-600">
+             className="mb-5 rounded-lg bg-card p-5 ring-2 ring-primary">
           <h3 className="text-base font-semibold">{t("authorizeBatch.confirmTitle", { stage: confirming.stage })}</h3>
           <p className="mt-1 text-sm">{t("authorizeBatch.confirmIntro")}</p>
           <ul className="mt-1 list-disc pl-5 text-sm">
@@ -103,7 +103,7 @@ export default function BatchesAwaitingAuthorization({ project, flowId, refreshT
           {error ? <div className="mt-2"><ErrorState error={error} context="authorize batch" /></div> : null}
           <div className="mt-3 flex gap-2">
             <button type="button" disabled={running} onClick={confirm}
-                    className="min-h-11 rounded-md bg-teal-600 px-4 text-sm font-medium text-white disabled:opacity-50">
+                    className="min-h-11 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-50">
               {running ? t("authorizeBatch.authorizing") : t("authorizeBatch.confirm")}
             </button>
             <button type="button" disabled={running} onClick={() => { setConfirming(null); setError(null); }}

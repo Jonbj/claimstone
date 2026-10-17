@@ -1,3 +1,4 @@
+import LogoMark from "@/components/LogoMark";
 import { useEffect, useState } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router";
 import LocaleSwitch from "@/components/LocaleSwitch";
@@ -114,18 +115,19 @@ export default function Shell() {
       : []),
   ];
   return (
-    <div className="min-h-screen bg-muted/40 text-foreground min-[900px]:flex">
+    <div className="min-h-screen bg-background text-foreground min-[900px]:flex">
       <nav
         aria-label="Primary"
         className="flex flex-wrap items-center gap-x-4 gap-y-2 bg-rail px-4 py-3 text-rail-muted min-[900px]:sticky min-[900px]:top-0 min-[900px]:h-screen min-[900px]:w-[232px] min-[900px]:shrink-0 min-[900px]:flex-col min-[900px]:flex-nowrap min-[900px]:items-stretch min-[900px]:gap-1 min-[900px]:px-3.5 min-[900px]:py-5"
       >
-        <Link to="/" className="font-serif text-2xl text-rail-foreground min-[900px]:mb-3 min-[900px]:px-2.5">
-          Claimstone
+        <Link to="/" className="flex items-center gap-2.5 text-lg font-semibold tracking-tight text-rail-foreground min-[900px]:mb-3 min-[900px]:px-2.5">
+          <LogoMark size={28} />
+          <span>Claimstone</span>
         </Link>
         <div className="flex flex-col min-[900px]:mb-3">
           <Link
             to={session.operator ? "/new" : `/login?next=${encodeURIComponent("/new")}`}
-            className="flex min-h-11 items-center justify-center rounded-lg bg-rail-active px-3 text-sm font-semibold text-rail-foreground"
+            className="flex min-h-11 items-center justify-center rounded-lg bg-primary px-3 text-sm font-semibold text-primary-foreground hover:brightness-95"
           >
             {t("shell.newProject")}
           </Link>

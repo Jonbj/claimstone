@@ -131,7 +131,7 @@ export default function WorkLocallyPanel({ project, flowId }: { project: string;
           <p>{t("workLocally.explainMetered", { count: callsText || "—", budget: budgetText || "—" })}</p>
         </> : <p>{t("workLocally.explain", { count: callsText || "—" })}</p>}
         <button type="button" disabled={!valid || busy} onClick={() => setConfirming("enable")}
-          className="min-h-11 self-start rounded-md bg-teal-600 px-4 text-white disabled:opacity-50">
+          className="min-h-11 self-start rounded-md bg-primary px-4 text-primary-foreground disabled:opacity-50">
           {t("workLocally.enable")}</button>
       </div> : null}
     {mandates.data && !mandates.refreshing && active.length === 0 ?
@@ -139,7 +139,7 @@ export default function WorkLocallyPanel({ project, flowId }: { project: string;
         {t("workLocally.state")}: {mandate.state} · {mandate.mandate_id}
       </p>) : null}
     {confirming ? <div role="dialog" aria-modal="true" aria-label={t("workLocally.confirm")}
-      className="mt-4 rounded-lg bg-card p-5 ring-2 ring-teal-600">
+      className="mt-4 rounded-lg bg-card p-5 ring-2 ring-primary">
       <h3 className="font-semibold">{confirming === "enable" ? t("workLocally.confirmEnable") : t("workLocally.confirmDisable")}</h3>
       {confirming === "enable" ? <ul className="list-disc pl-5 text-sm">
         <li>{t("workLocally.extract")}: {extract.trim()}</li>

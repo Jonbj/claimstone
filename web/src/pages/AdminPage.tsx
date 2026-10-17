@@ -18,7 +18,7 @@ import { useSession } from "@/lib/session";
 // into a password field, sent once, and the field is cleared after every submit, success or
 // failure; it is never rendered back and never kept in storage. The password is asked again.
 const card = "rounded-lg bg-card p-5 shadow-sm ring-1 ring-gray-200 dark:ring-gray-800";
-const primary = "min-h-11 rounded-md bg-teal-600 px-4 text-sm font-medium text-white disabled:opacity-50";
+const primary = "min-h-11 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-50";
 const input = "min-h-11 w-full rounded-md border border-border bg-background px-3 text-sm";
 
 /** The server's own 501 sentence for the paid test call (control.py `_admin_paid_test`). */

@@ -1,9 +1,10 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "./styles/shadcn-tailwind.css";
-@import "@fontsource-variable/geist";
-@import "@fontsource-variable/geist-mono";
-@import "@fontsource/instrument-serif";
+@import "@fontsource-variable/schibsted-grotesk";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/500.css";
+@import "@fontsource/ibm-plex-mono/600.css";
 
 /* §8.3: light theme first; the dark theme is toggled with a `data-theme` attribute
    on <html>, not the OS media query. */
@@ -11,10 +12,10 @@
 
 @theme inline {
     --font-heading: var(--font-sans);
-    --font-sans: 'Geist Variable', sans-serif;
-    --font-mono: 'Geist Mono Variable', monospace;
-    /* v2.1 (spec §1 rule 9): Instrument Serif for page titles and question statements. */
-    --font-serif: 'Instrument Serif', Georgia, serif;
+    --font-sans: 'Schibsted Grotesk Variable', system-ui, sans-serif;
+    --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+    /* v3 "Assay" (D137): one sans family for titles too; `font-serif` classes now resolve to it. */
+    --font-serif: 'Schibsted Grotesk Variable', system-ui, sans-serif;
     /* v2.1 colour meanings (spec §1 rule 8); every chip also carries its word. */
     --color-waits: var(--waits);
     --color-waits-soft: var(--waits-soft);
@@ -73,108 +74,109 @@
     --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* v3 "Assay" tokens (D137): slate and amber from the website brand. Amber is the one primary action;
+   state colours keep their v2.1 meanings and every chip still carries its word. */
 :root {
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.205 0 0);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.97 0 0);
-    --secondary-foreground: oklch(0.205 0 0);
-    --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.97 0 0);
-    --accent-foreground: oklch(0.205 0 0);
-    --destructive: oklch(0.577 0.245 27.325);
-    --border: oklch(0.922 0 0);
-    --input: oklch(0.922 0 0);
-    --ring: oklch(0.708 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
-    --radius: 0.625rem;
-    --sidebar: oklch(0.985 0 0);
-    --sidebar-foreground: oklch(0.145 0 0);
-    --sidebar-primary: oklch(0.205 0 0);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.97 0 0);
-    --sidebar-accent-foreground: oklch(0.205 0 0);
-    --sidebar-border: oklch(0.922 0 0);
-    --sidebar-ring: oklch(0.708 0 0);
-    /* v2.1 meanings: violet waits for you; teal Claimstone acting; blue contradicts;
-       emerald done or supports; amber still being read or provisional; rose not obtained
-       or below floor; slate neutral or qualifies. */
-    --waits: #7c3aed;
-    --waits-soft: #f5f3ff;
-    --waits-ink: #5b21b6;
-    --acting: #0d9488;
-    --acting-soft: #ccfbf1;
-    --acting-ink: #115e59;
-    --contradicts: #0277bd;
-    --done: #059669;
-    --provisional: #d97706;
-    --not-obtained: #e11d48;
-    --neutral-soft: #f1f5f9;
-    --neutral-ink: #334155;
-    /* The dark left rail is dark in both themes. */
-    --rail: #0f172a;
-    --rail-foreground: #f8fafc;
-    --rail-muted: #cbd5e1;
-    --rail-active: #1e293b;
-    --rail-border: #1e293b;
+    --background: #f6f7f8;
+    --foreground: #14171a;
+    --card: #ffffff;
+    --card-foreground: #14171a;
+    --popover: #ffffff;
+    --popover-foreground: #14171a;
+    --primary: #f5a524;
+    --primary-foreground: #0a0c0f;
+    --secondary: #eceff1;
+    --secondary-foreground: #14171a;
+    --muted: #eceff1;
+    --muted-foreground: #56616b;
+    --accent: #eceff1;
+    --accent-foreground: #14171a;
+    --destructive: #b4372b;
+    --border: #dde1e5;
+    --input: #cfd5da;
+    --ring: #94560a;
+    --chart-1: #1d2227;
+    --chart-2: #56616b;
+    --chart-3: #94560a;
+    --chart-4: #f5a524;
+    --chart-5: #dde1e5;
+    --radius: 0.75rem;
+    --sidebar: #14181c;
+    --sidebar-foreground: #f1f3f5;
+    --sidebar-primary: #f5a524;
+    --sidebar-primary-foreground: #0a0c0f;
+    --sidebar-accent: #232b32;
+    --sidebar-accent-foreground: #f1f3f5;
+    --sidebar-border: #232a31;
+    --sidebar-ring: #f5a524;
+    --waits: #f5a524;
+    --waits-soft: #fdf0d5;
+    --waits-ink: #7a4608;
+    --acting: #1d6b5c;
+    --acting-soft: #dff3ee;
+    --acting-ink: #14564a;
+    --contradicts: #0b6aa8;
+    --done: #1f7a3a;
+    --provisional: #94560a;
+    --not-obtained: #b4372b;
+    --neutral-soft: #eceff1;
+    --neutral-ink: #3d4853;
+    --rail: #14181c;
+    --rail-foreground: #f1f3f5;
+    --rail-muted: #aab3bc;
+    --rail-active: #232b32;
+    --rail-border: #232a31;
 }
 
 /* §8.3: the dark palette is selected by the same `data-theme` attribute the toggle
    writes, so one mechanism switches both the variables and the `dark:` variants. */
 [data-theme="dark"] {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.205 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.922 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.704 0.191 22.216);
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.556 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
-    --sidebar: oklch(0.205 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.488 0.243 264.376);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(0.556 0 0);
-    --waits: #a78bfa;
-    --waits-soft: #2e1065;
-    --waits-ink: #ddd6fe;
-    --acting: #2dd4bf;
-    --acting-soft: #134e4a;
-    --acting-ink: #99f6e4;
-    --contradicts: #38bdf8;
-    --done: #34d399;
-    --provisional: #fbbf24;
-    --not-obtained: #fb7185;
-    --neutral-soft: #1e293b;
-    --neutral-ink: #cbd5e1;
+    --background: #0e1114;
+    --foreground: #e9ecef;
+    --card: #151a1f;
+    --card-foreground: #e9ecef;
+    --popover: #151a1f;
+    --popover-foreground: #e9ecef;
+    --primary: #f5a524;
+    --primary-foreground: #0a0c0f;
+    --secondary: #1b222a;
+    --secondary-foreground: #e9ecef;
+    --muted: #1b222a;
+    --muted-foreground: #9aa4ae;
+    --accent: #1b222a;
+    --accent-foreground: #e9ecef;
+    --destructive: #ff8a7a;
+    --border: #252c33;
+    --input: #2f3841;
+    --ring: #f5a524;
+    --chart-1: #e9ecef;
+    --chart-2: #9aa4ae;
+    --chart-3: #f5a524;
+    --chart-4: #94560a;
+    --chart-5: #252c33;
+    --sidebar: #0a0c0f;
+    --sidebar-foreground: #f1f3f5;
+    --sidebar-primary: #f5a524;
+    --sidebar-primary-foreground: #0a0c0f;
+    --sidebar-accent: #1b222a;
+    --sidebar-accent-foreground: #f1f3f5;
+    --sidebar-border: #1b222a;
+    --sidebar-ring: #f5a524;
+    --waits: #f5a524;
+    --waits-soft: #3a2a0a;
+    --waits-ink: #f5c26b;
+    --acting: #5fd0b5;
+    --acting-soft: #0f2b25;
+    --acting-ink: #8fe3cf;
+    --contradicts: #6cb8ec;
+    --done: #7fd491;
+    --provisional: #f5c26b;
+    --not-obtained: #ff8a7a;
+    --neutral-soft: #1b222a;
+    --neutral-ink: #c3cad1;
+    --rail: #0a0c0f;
+    --rail-active: #1b222a;
+    --rail-border: #1b222a;
 }
 
 @layer base {
@@ -190,10 +192,11 @@
   html {
     @apply font-sans;
     }
-  /* Page titles use the serif; identifiers and counts use `font-mono` where they appear. */
+  /* Page titles: the same family, heavier and tighter; identifiers and counts use `font-mono`. */
   h1 {
     font-family: var(--font-serif);
-    font-weight: 400;
+    font-weight: 600;
+    letter-spacing: -0.02em;
     }
 }
 /* Ported base components (§4.2 rules 1, 3, 5, 7): the class names come from
@@ -202,11 +205,13 @@
 @layer components {
   .chip {
     display: inline-block;
-    border-radius: 0.5rem;
+    border-radius: 999px;
     border: 1px solid var(--border);
     background: var(--muted);
-    padding: 0.05rem 0.45rem;
+    padding: 0.1rem 0.6rem;
     font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.4;
     white-space: nowrap;
   }
   .chip.dashed {

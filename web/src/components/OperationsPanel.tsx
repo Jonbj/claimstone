@@ -104,7 +104,7 @@ function OperationsList({ project, flowId, namedRound, hasCandidates }: {
               {op.state === "PLANNED" ? (
                 <button
                   type="button"
-                  className="min-h-11 rounded-md bg-teal-600 px-4 text-sm font-medium text-white hover:bg-teal-700"
+                  className="min-h-11 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:brightness-95"
                   onClick={() => setConfirming(op)}
                 >
                   Authorize
@@ -159,7 +159,7 @@ function AuthorizeDialog({ project, flowId, op, onClose, onDone }: {
 
   return (
     <div role="dialog" aria-modal="true" aria-label="Authorize operation"
-         className="mt-4 rounded-lg bg-card p-5 ring-2 ring-teal-600">
+         className="mt-4 rounded-lg bg-card p-5 ring-2 ring-primary">
       <h3 className="text-base font-semibold">Authorize {op.stage ?? "operation"}?</h3>
       <p className="mt-1 text-sm">
         This authorizes exactly these limits, and nothing above them:
@@ -172,7 +172,7 @@ function AuthorizeDialog({ project, flowId, op, onClose, onDone }: {
       {error ? <div className="mt-2"><ErrorState error={error} context="authorize" /></div> : null}
       <div className="mt-3 flex gap-2">
         <button type="button" disabled={running} onClick={confirm}
-                className="min-h-11 rounded-md bg-teal-600 px-4 text-sm font-medium text-white disabled:opacity-50">
+                className="min-h-11 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-50">
           {running ? "Authorizing…" : "Confirm authorization"}
         </button>
         <button type="button" disabled={running} onClick={onClose}
