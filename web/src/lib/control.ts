@@ -400,6 +400,57 @@ export interface AcquireHosts {
 }
 export type OperationLimits = OperationSummary["limits"];
 
+// retry policies (D134; docs/contracts/retry_policies.md, control_api.md). The policy is the
+// frozen ledger row; the portal renders its own fields and sends them back verbatim.
+export interface RetryPolicyBody {
+  allowed_hosts: string[];
+  max_retries: number;
+  max_attempts_each: number;
+  max_requests_each: number;
+  use_apis: boolean;
+  base_delay_hours: number;
+  max_delay_hours: number;
+  expires_at: string;
+}
+export type RetryPolicyState = "PLANNED" | "AUTHORIZED" | "REVOKED";
+export interface RetryPolicy {
+  version: number;
+  project: string;
+  flow_id: string;
+  selector: unknown;
+  allowed_hosts: string[];
+  max_retries: number;
+  max_attempts_each: number;
+  max_requests_each: number;
+  max_total_requests: number;
+  use_apis: boolean;
+  base_delay_hours: number;
+  max_delay_hours: number;
+  not_before: string;
+  expires_at: string;
+  code_sha256: string;
+  protocol_sha256: string;
+}
+export interface RetryPolicyStatus {
+  policy_id: string;
+  state: RetryPolicyState;
+  policy: RetryPolicy;
+  reserved_retries: number;
+  remaining_retries: number;
+  reserved_requests: number;
+  events: unknown[];
+}
+export interface RetryPoliciesList {
+  flow_id: string;
+  policies: RetryPolicyStatus[];
+}
+export interface AuthorizeRetryPolicyBody {
+  policy_sha256: string;
+  max_retries: number;
+  max_requests_each: number;
+  max_total_requests: number;
+}
+
 // new project (plan 1; docs/contracts/new_project.md)
 export type Figures = Record<string, unknown>;
 
@@ -704,6 +755,17 @@ export const control = {
   // operations
   acquireHosts: (project: string, flowId: string) =>
     get<AcquireHosts>(`${flowBase(project, flowId)}/acquire-hosts`),
+  // retry policies (D134). The policy_id is the policy's own digest, so it is sent back as the
+  // `policy_sha256` on authorize and revoke, exactly as the list returned it.
+  planRetryPolicy: (project: string, flowId: string, body: RetryPolicyBody) =>
+    post<RetryPolicyStatus>(`${flowBase(project, flowId)}/retry-policies`, body),
+  retryPolicies: (project: string, flowId: string) =>
+    get<RetryPoliciesList>(`${flowBase(project, flowId)}/retry-policies`),
+  authorizeRetryPolicy: (project: string, policyId: string, body: AuthorizeRetryPolicyBody) =>
+    post<RetryPolicyStatus>(`/p/${enc(project)}/retry-policies/${enc(policyId)}/authorize`, body),
+  revokeRetryPolicy: (project: string, policyId: string) =>
+    post<RetryPolicyStatus>(`/p/${enc(project)}/retry-policies/${enc(policyId)}/revoke`,
+                           { policy_sha256: policyId }),
   operations: (project: string, flowId: string) =>
     get<OperationsList>(`${flowBase(project, flowId)}/operations`),
   authorizeOperation: (project: string, flowId: string, operationId: string,
