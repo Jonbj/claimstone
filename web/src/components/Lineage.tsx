@@ -1,7 +1,17 @@
 import Chip from "@/components/Chip";
 import type { ReactNode } from "react";
 import { Link } from "react-router";
+
 import type { Lineage } from "@/lib/api-types";
+
+/** The reviewer as the ledger records it: an object since reviews carry backend, model and harness. */
+type Reader = { backend?: string; model?: string; harness_version?: string };
+function readerLabel(reader: Reader | string | null): string {
+  if (reader === null) return "";
+  if (typeof reader === "string") return reader;
+  return [reader.backend, reader.model].filter(Boolean).join("/") +
+    (reader.harness_version ? ` (${reader.harness_version})` : "");
+}
 
 // Invariant 1, end to end (§8.3): a vertical list of the six steps — claim → review
 // → chunk → document → acquisition → candidate. A missing step is a named state,
@@ -30,7 +40,7 @@ export default function LineageView({ lineage, sourceHref }: {
 }) {
   const claim = claimOf(lineage);
   const review = lineage.steps.review as
-    | { verdict: string; reason: string; review_version: number; reviewed_by: string | null }
+    | { verdict: string; reason: string; review_version: number; reviewed_by: Reader | string | null }
     | null;
   const chunk = lineage.steps.chunk;
   const document = lineage.steps.document as
@@ -89,7 +99,7 @@ export default function LineageView({ lineage, sourceHref }: {
           <Step label="review">
             {review.verdict} — {review.reason}
             <br />
-            review v{review.review_version} · {review.reviewed_by ?? ""}
+            review v{review.review_version} · {readerLabel(review.reviewed_by)}
           </Step>
         )}
 
