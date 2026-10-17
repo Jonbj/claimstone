@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<title>A · Assay — Flusso</title>
+
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Schibsted+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.a{font-family:'Schibsted Grotesk',system-ui,sans-serif;color:#14171a}
+.a .mono{font-family:'IBM Plex Mono',ui-monospace,monospace}
+.a .nav{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;color:#aab3bc;font-size:14px;text-decoration:none}
+.a .nav.on{background:#232b32;color:#f1f3f5}
+.a .card{background:#fff;border:1px solid #dde1e5;border-radius:12px}
+.a .chip{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:600;line-height:1.4}
+.a .btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 18px;border-radius:9px;font:600 14px 'Schibsted Grotesk',sans-serif;border:1px solid #cfd5da;background:#fff;color:#14171a;text-decoration:none}
+.a .btn.primary{background:#f5a524;border-color:#f5a524;color:#0a0c0f}
+.a .tile{padding:14px 16px;border:1px solid #dde1e5;background:#fff;border-radius:12px;display:flex;flex-direction:column;gap:4px}
+.a .tile.sel{outline:2px solid #14171a;outline-offset:-2px}
+.a .step{display:flex;gap:16px;padding:16px 20px;border-top:1px solid #eceff1;align-items:flex-start}
+.a .dot{flex:0 0 28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700}
+</style>
+</helmet>
+<div class="a" style="display:flex;flex-wrap:wrap;min-height:1180px;background:#f6f7f8">
+  <aside style="flex:0 0 232px;background:#14181c;padding:20px 14px;display:flex;flex-direction:column;gap:6px;box-sizing:border-box">
+    <div style="display:flex;align-items:center;gap:10px;padding:4px 8px 18px">
+      <svg width="30" height="30" viewBox="0 0 64 64" role="img" aria-label="Claimstone"><path d="M11 26 L37 11 L56 22 L53 47 L19 54 L8 41 Z" fill="#3d4853" stroke="#3d4853" stroke-width="7" stroke-linejoin="round"/><path d="M16 43 L47 25" stroke="#f5a524" stroke-width="8" stroke-linecap="round" fill="none"/><path d="M25 49 L38 41.5" stroke="#f5a524" stroke-opacity=".55" stroke-width="3" stroke-linecap="round" fill="none"/></svg>
+      <span style="font-weight:600;font-size:18px;color:#f1f3f5">Claimstone</span>
+    </div>
+    <a class="btn primary" href="#" style="margin-bottom:10px">+ Nuovo progetto</a>
+    <a class="nav" href="#">Oggi</a>
+    <a class="nav on" href="#">Progetti</a>
+    <a class="nav" href="#">Decisioni</a>
+    <a class="nav" href="#">Scheduler</a>
+    <a class="nav" href="#">Amministrazione</a>
+  </aside>
+  <main style="flex:999 1 640px;min-width:0;padding:32px 48px;box-sizing:border-box;display:flex;flex-direction:column;gap:22px;max-width:1048px">
+    <nav aria-label="Percorso" style="font-size:13px;color:#56616b">Progetti / Esercizio e depressione / <strong style="color:#14171a">Prima ricerca</strong></nav>
+    <header style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;justify-content:space-between">
+      <div>
+        <h1 style="margin:0;font-size:32px;font-weight:600;letter-spacing:-.02em">Prima ricerca</h1>
+        <p class="mono" style="margin:8px 0 0;color:#56616b;font-size:12px">round first-2026-10-16 · protocollo f537d7b1…8f1c · corrente</p>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn" href="#">Aggiungi materiale</a><a class="btn" href="#">Esporta</a></div>
+    </header>
+
+    <section aria-label="Blocchi" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px">
+      <div class="tile"><span style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#6b7681">Protocollo</span><span style="font-weight:600">● Congelato</span><span style="font-size:12px;color:#56616b">1 domanda · soglia 0,80</span></div>
+      <div class="tile sel"><span style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#6b7681">Pipeline</span><span style="font-weight:600;color:#8d2a1f">■ Bloccata</span><span style="font-size:12px;color:#56616b">3 di 8 passi</span></div>
+      <div class="tile"><span style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#6b7681">Selezione fonti</span><span style="font-weight:600;color:#56616b">○ Non dichiarata</span><span style="font-size:12px;color:#56616b">nessun ambito</span></div>
+      <div class="tile"><span style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#6b7681">Inserimento manuale</span><span style="font-weight:600;color:#56616b">○ Niente in attesa</span><span style="font-size:12px;color:#56616b">0 richieste</span></div>
+      <div class="tile"><span style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#6b7681">Esecuzione</span><span style="font-weight:600;color:#14564a">◐ 0 in corso</span><span style="font-size:12px;color:#56616b">mandato attivo</span></div>
+      <div class="tile"><span style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#6b7681">Lettura umana</span><span style="font-weight:600;color:#56616b">○ Da iniziare</span><span style="font-size:12px;color:#56616b">0 di 1 firmate</span></div>
+    </section>
+
+    <section aria-label="Stato della soglia" style="border-radius:14px;background:#14181c;color:#f1f3f5;padding:24px 28px;display:flex;flex-wrap:wrap;gap:24px;align-items:center">
+      <div style="flex:1 1 420px;min-width:0">
+        <span class="chip" style="background:#3a1612;color:#ff8a7a">■ Nessun verdetto prodotto</span>
+        <h2 style="margin:12px 0 6px;font-size:22px;font-weight:600;letter-spacing:-.01em">La soglia di acquisizione non è raggiunta</h2>
+        <p style="margin:0;color:#c3cad1;font-size:15px;line-height:1.55">Solo 2 fonti su 10 trovate sono documenti confermati. Sotto lo 0,80 Claimstone non emette conclusioni: una lettura incompleta che si dichiara completa è peggio di nessuna lettura. Non è un errore, è la regola.</p>
+      </div>
+      <div style="flex:0 0 220px">
+        <div class="mono" style="font-size:38px;font-weight:500;color:#f5a524;line-height:1">0,20</div>
+        <div style="font-size:13px;color:#98a2ad;margin:6px 0 12px">soglia 0,80</div>
+        <div style="position:relative;height:10px;border-radius:99px;background:#2a323a"><div style="width:20%;height:100%;border-radius:99px;background:#f5a524"></div><div style="position:absolute;left:80%;top:-5px;width:2px;height:20px;background:#f1f3f5"></div></div>
+      </div>
+      <div style="flex:1 1 100%;display:flex;gap:10px;flex-wrap:wrap"><a class="btn primary" href="#">Recupera altre copie</a><a class="btn" href="#" style="background:transparent;color:#f1f3f5;border-color:#3d4853">Registra un'offerta o carica un PDF</a></div>
+    </section>
+
+    <section class="card" aria-label="Pipeline" style="overflow:hidden">
+      <h2 style="margin:0;padding:18px 20px;font-size:17px;font-weight:600">Pipeline</h2>
+      <div class="step"><span class="dot" style="background:#e6f3e8;color:#1f5d2c">✓</span><div style="flex:1"><div style="font-weight:600">2 · Cerca nell'ambito dichiarato</div><div style="color:#56616b;font-size:14px;margin-top:2px">10 candidati trovati · un solo canale (parola chiave): la completezza non è stimabile</div></div><span class="chip" style="background:#e6f3e8;color:#1f5d2c">Fatto</span></div>
+      <div class="step" style="background:#fdf6f5"><span class="dot" style="background:#f9e1dd;color:#8d2a1f">!</span><div style="flex:1"><div style="font-weight:600">3 · Ottieni le copie legali</div><div style="color:#56616b;font-size:14px;margin-top:2px">2 ottenute · 5 non ottenute (paywall) · 2 reindirizzamenti fuori piano · 1 host escluso</div></div><span class="chip" style="background:#f9e1dd;color:#8d2a1f">Bloccato</span></div>
+      <div class="step"><span class="dot" style="background:#e6f3e8;color:#1f5d2c">✓</span><div style="flex:1"><div style="font-weight:600">4 · Prepara i documenti</div><div style="color:#56616b;font-size:14px;margin-top:2px">2 documenti preparati, 0 scartati</div></div><span class="chip" style="background:#e6f3e8;color:#1f5d2c">Fatto</span></div>
+      <div class="step"><span class="dot" style="background:#fdf0d5;color:#7a4608">▲</span><div style="flex:1"><div style="font-weight:600">5 · Annota ogni passaggio</div><div style="color:#56616b;font-size:14px;margin-top:2px">21 annotazioni tenute · 1 scartata · 9 chiamate senza risposta</div></div><span class="chip" style="background:#fdf0d5;color:#7a4608">Parziale</span></div>
+      <div class="step"><span class="dot" style="background:#e6f3e8;color:#1f5d2c">✓</span><div style="flex:1"><div style="font-weight:600">6 · Revisione indipendente</div><div style="color:#56616b;font-size:14px;margin-top:2px">Tutte le 21 annotazioni hanno una revisione di un secondo lettore</div></div><span class="chip" style="background:#e6f3e8;color:#1f5d2c">Fatto</span></div>
+      <div class="step"><span class="dot" style="background:#eceff1;color:#56616b">7</span><div style="flex:1"><div style="font-weight:600;color:#56616b">7 · Profili di evidenza</div><div style="color:#56616b;font-size:14px;margin-top:2px">Si costruiscono solo oltre la soglia</div></div><span class="chip" style="background:#eceff1;color:#56616b">Non iniziato</span></div>
+    </section>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":1180}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

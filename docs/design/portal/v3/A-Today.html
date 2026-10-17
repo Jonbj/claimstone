@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<title>A · Assay — Oggi</title>
+
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Schibsted+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.a{font-family:'Schibsted Grotesk',system-ui,sans-serif;color:#14171a}
+.a .mono{font-family:'IBM Plex Mono',ui-monospace,monospace}
+.a .nav{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;color:#aab3bc;font-size:14px;text-decoration:none}
+.a .nav:hover{background:#1f262c;color:#f1f3f5}
+.a .nav.on{background:#232b32;color:#f1f3f5}
+.a .card{background:#fff;border:1px solid #dde1e5;border-radius:12px}
+.a .chip{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:600;line-height:1.4}
+.a .btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 18px;border-radius:9px;font:600 14px 'Schibsted Grotesk',sans-serif;border:1px solid #cfd5da;background:#fff;color:#14171a;cursor:pointer;text-decoration:none}
+.a .btn.primary{background:#f5a524;border-color:#f5a524;color:#0a0c0f}
+.a .btn:focus-visible{outline:3px solid #94560a;outline-offset:2px}
+</style>
+</helmet>
+<div class="a" style="display:flex;flex-wrap:wrap;min-height:960px;background:#f6f7f8">
+  <aside style="flex:0 0 232px;background:#14181c;padding:20px 14px;display:flex;flex-direction:column;gap:6px;box-sizing:border-box">
+    <div style="display:flex;align-items:center;gap:10px;padding:4px 8px 18px">
+      <svg width="30" height="30" viewBox="0 0 64 64" role="img" aria-label="Claimstone"><path d="M11 26 L37 11 L56 22 L53 47 L19 54 L8 41 Z" fill="#3d4853" stroke="#3d4853" stroke-width="7" stroke-linejoin="round"/><path d="M16 43 L47 25" stroke="#f5a524" stroke-width="8" stroke-linecap="round" fill="none"/><path d="M25 49 L38 41.5" stroke="#f5a524" stroke-opacity=".55" stroke-width="3" stroke-linecap="round" fill="none"/></svg>
+      <span style="font-weight:600;font-size:18px;color:#f1f3f5;letter-spacing:-.01em">Claimstone</span>
+    </div>
+    <a class="btn primary" href="#" style="margin-bottom:10px">+ Nuovo progetto</a>
+    <a class="nav on" href="#">Oggi</a>
+    <a class="nav" href="#">Progetti</a>
+    <a class="nav" href="#">Decisioni <span class="chip" style="margin-left:auto;background:#3a2a0a;color:#f5a524">2</span></a>
+    <a class="nav" href="#">Scheduler</a>
+    <a class="nav" href="#">Amministrazione</a>
+    <div style="margin-top:auto;border-top:1px solid #232a31;padding:14px 8px 0;display:flex;flex-direction:column;gap:8px">
+      <span style="color:#f1f3f5;font-size:14px;font-weight:600">stefano</span>
+      <span class="mono" style="color:#6b7681;font-size:12px">rev 6a26bcc</span>
+      <span style="color:#98a2ad;font-size:13px">IT · EN · tema chiaro</span>
+    </div>
+  </aside>
+  <main style="flex:999 1 640px;min-width:0;padding:36px 48px;box-sizing:border-box;display:flex;flex-direction:column;gap:28px;max-width:1048px">
+    <header>
+      <h1 style="margin:0;font-size:32px;font-weight:600;letter-spacing:-.02em">Dall'ultima visita</h1>
+      <p style="margin:6px 0 0;color:#56616b;font-size:15px">Sabato 18 ottobre · ultima visita ieri alle 23:23</p>
+    </header>
+
+    <section aria-label="Aspetta te" style="display:flex;flex-direction:column;gap:12px">
+      <h2 style="margin:0;font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#94560a">Aspetta te · 2</h2>
+      <div class="card" style="padding:20px 22px;border-left:4px solid #f5a524;display:flex;flex-wrap:wrap;gap:16px;align-items:center">
+        <div style="flex:1 1 380px;min-width:0">
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="chip" style="background:#fdf0d5;color:#7a4608">● In attesa di te</span><span style="color:#56616b;font-size:13px">Esercizio e depressione · Prima ricerca</span></div>
+          <p style="margin:8px 0 4px;font-size:17px;font-weight:600">Un piano di acquisizione attende l'autorizzazione</p>
+          <p style="margin:0;color:#56616b;font-size:14px;line-height:1.5">10 candidati · 4 host · al massimo 60 richieste. Pianificare non ha fatto nessuna richiesta.</p>
+        </div>
+        <a class="btn primary" href="#">Rivedi e autorizza</a>
+      </div>
+      <div class="card" style="padding:20px 22px;display:flex;flex-wrap:wrap;gap:16px;align-items:center">
+        <div style="flex:1 1 380px;min-width:0">
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="chip" style="background:#fdf0d5;color:#7a4608">● In attesa di te</span><span style="color:#56616b;font-size:13px">Esercizio e depressione · Prima ricerca</span></div>
+          <p style="margin:8px 0 4px;font-size:17px;font-weight:600">5 copie sono dietro paywall</p>
+          <p style="margin:0;color:#56616b;font-size:14px;line-height:1.5">Registra un'offerta verificata oppure carica il PDF che possiedi. Nulla conta finché non supera gli stessi controlli.</p>
+        </div>
+        <a class="btn" href="#">Apri le decisioni</a>
+      </div>
+    </section>
+
+    <section aria-label="Claimstone sta agendo" style="display:flex;flex-direction:column;gap:12px">
+      <h2 style="margin:0;font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#1d6b5c">Claimstone sta agendo · 1</h2>
+      <div class="card" style="padding:20px 22px;display:flex;flex-wrap:wrap;gap:20px;align-items:center">
+        <div style="flex:1 1 360px;min-width:0">
+          <span class="chip" style="background:#dff3ee;color:#14564a">◐ In corso</span>
+          <p style="margin:8px 0 4px;font-size:17px;font-weight:600">Lavoro locale con modelli a consumo</p>
+          <p style="margin:0;color:#56616b;font-size:14px;line-height:1.5">Estrazione e revisione con tetto di 100 chiamate. Il supervisore è attivo, visto 3 s fa.</p>
+        </div>
+        <div style="flex:1 1 260px;min-width:0">
+          <div style="display:flex;justify-content:space-between;font-size:13px;color:#56616b"><span>Riservato</span><span class="mono">24,50 / 50 USD</span></div>
+          <div style="height:8px;border-radius:99px;background:#e6e9ec;margin:6px 0 10px;overflow:hidden"><div style="width:49%;height:100%;background:#1d6b5c"></div></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;color:#56616b"><span>Speso (reale)</span><span class="mono">0,64 USD</span></div>
+          <div style="height:8px;border-radius:99px;background:#e6e9ec;margin:6px 0 0;overflow:hidden"><div style="width:1.3%;height:100%;background:#f5a524;min-width:4px"></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section aria-label="Cosa è cambiato" style="display:flex;flex-direction:column;gap:12px">
+      <h2 style="margin:0;font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#56616b">Cosa è cambiato</h2>
+      <div class="card" style="padding:6px 22px">
+        <div style="display:flex;gap:14px;padding:14px 0;border-bottom:1px solid #eceff1;align-items:baseline;flex-wrap:wrap"><span class="mono" style="font-size:12px;color:#6b7681;flex:0 0 52px">19:09</span><span style="flex:1 1 300px;font-size:15px">2 documenti normalizzati e divisi in 28 passaggi</span><span class="chip" style="background:#e6f3e8;color:#1f5d2c">✓ Fatto</span></div>
+        <div style="display:flex;gap:14px;padding:14px 0;border-bottom:1px solid #eceff1;align-items:baseline;flex-wrap:wrap"><span class="mono" style="font-size:12px;color:#6b7681;flex:0 0 52px">19:11</span><span style="flex:1 1 300px;font-size:15px">Estrazione: 21 affermazioni con citazione verificata, 9 chiamate troncate</span><span class="chip" style="background:#fdf0d5;color:#7a4608">▲ Parziale</span></div>
+        <div style="display:flex;gap:14px;padding:14px 0;align-items:baseline;flex-wrap:wrap"><span class="mono" style="font-size:12px;color:#6b7681;flex:0 0 52px">19:12</span><span style="flex:1 1 300px;font-size:15px">Revisione indipendente: 7 SUPPORTED, 14 OVERSTATED — nessun verdetto</span><span class="chip" style="background:#e6f3e8;color:#1f5d2c">✓ Fatto</span></div>
+      </div>
+    </section>
+
+    <section aria-label="Progetti" style="display:flex;flex-direction:column;gap:12px">
+      <h2 style="margin:0;font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#56616b">Progetti</h2>
+      <a href="#" class="card" style="padding:18px 22px;display:flex;flex-wrap:wrap;gap:14px;align-items:center;text-decoration:none;color:inherit">
+        <div style="flex:1 1 300px"><p style="margin:0;font-size:17px;font-weight:600">Esercizio e depressione</p><p style="margin:4px 0 0;color:#56616b;font-size:13px">Prima ricerca · protocollo congelato · 1 domanda</p></div>
+        <span class="chip" style="background:#f9e1dd;color:#8d2a1f">■ Bloccato: 2 di 10 copie, soglia 0,80</span>
+      </a>
+    </section>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":960}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

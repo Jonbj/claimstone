@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<title>A · Assay — Domanda e firma</title>
+
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Schibsted+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.a{font-family:'Schibsted Grotesk',system-ui,sans-serif;color:#14171a}
+.a .mono{font-family:'IBM Plex Mono',ui-monospace,monospace}
+.a .nav{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;color:#aab3bc;font-size:14px;text-decoration:none}
+.a .nav.on{background:#232b32;color:#f1f3f5}
+.a .card{background:#fff;border:1px solid #dde1e5;border-radius:12px}
+.a .chip{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:600;line-height:1.4}
+.a .btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 18px;border-radius:9px;font:600 14px 'Schibsted Grotesk',sans-serif;border:1px solid #cfd5da;background:#fff;color:#14171a;text-decoration:none}
+.a .btn.primary{background:#f5a524;border-color:#f5a524;color:#0a0c0f}
+.a .opt{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border:1px solid #dde1e5;border-radius:10px;background:#fff}
+.a .opt.on{border-color:#14171a;box-shadow:inset 0 0 0 1px #14171a}
+.a q{quotes:none;font-style:normal}
+</style>
+</helmet>
+<div class="a" style="display:flex;flex-wrap:wrap;min-height:1240px;background:#f6f7f8">
+  <aside style="flex:0 0 232px;background:#14181c;padding:20px 14px;display:flex;flex-direction:column;gap:6px;box-sizing:border-box">
+    <div style="display:flex;align-items:center;gap:10px;padding:4px 8px 18px">
+      <svg width="30" height="30" viewBox="0 0 64 64" role="img" aria-label="Claimstone"><path d="M11 26 L37 11 L56 22 L53 47 L19 54 L8 41 Z" fill="#3d4853" stroke="#3d4853" stroke-width="7" stroke-linejoin="round"/><path d="M16 43 L47 25" stroke="#f5a524" stroke-width="8" stroke-linecap="round" fill="none"/><path d="M25 49 L38 41.5" stroke="#f5a524" stroke-opacity=".55" stroke-width="3" stroke-linecap="round" fill="none"/></svg>
+      <span style="font-weight:600;font-size:18px;color:#f1f3f5">Claimstone</span>
+    </div>
+    <a class="btn primary" href="#" style="margin-bottom:10px">+ Nuovo progetto</a>
+    <a class="nav" href="#">Oggi</a>
+    <a class="nav on" href="#">Progetti</a>
+    <a class="nav" href="#">Decisioni</a>
+    <a class="nav" href="#">Scheduler</a>
+    <a class="nav" href="#">Amministrazione</a>
+  </aside>
+  <main style="flex:999 1 640px;min-width:0;padding:32px 48px;box-sizing:border-box;display:flex;flex-direction:column;gap:22px;max-width:1048px">
+    <nav aria-label="Percorso" style="font-size:13px;color:#56616b">Esercizio e depressione / Prima ricerca / <strong style="color:#14171a">Q01</strong></nav>
+    <header>
+      <span class="chip mono" style="background:#e6e9ec;color:#3d4853">Q01 · effetto</span>
+      <h1 style="margin:10px 0 0;font-size:30px;font-weight:600;letter-spacing:-.02em;line-height:1.2">L'esercizio fisico riduce i sintomi depressivi negli adulti con depressione?</h1>
+      <p style="margin:10px 0 0;padding:10px 14px;border-radius:10px;background:#fdf0d5;color:#7a4608;font-size:13px;display:inline-block">Esempio illustrativo: così si presenterebbe un profilo oltre la soglia. Nel progetto reale la firma non è ancora possibile.</p>
+    </header>
+
+    <section class="card" aria-label="Profilo di evidenza" style="padding:22px 24px">
+      <h2 style="margin:0 0 14px;font-size:17px;font-weight:600">Profilo di evidenza</h2>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px">
+        <div><div style="font-size:12px;color:#6b7681;text-transform:uppercase;letter-spacing:.06em">Copertura</div><div class="mono" style="font-size:26px;font-weight:500;margin-top:4px">9 / 10</div><div style="font-size:13px;color:#56616b">fonti esaminate · sopra la soglia 0,80</div></div>
+        <div><div style="font-size:12px;color:#6b7681;text-transform:uppercase;letter-spacing:.06em">Conteggio per direzione</div><div class="mono" style="font-size:26px;font-weight:500;margin-top:4px">6 · 1 · 2</div><div style="font-size:13px;color:#56616b">a favore · contro · qualificano — <strong>un conteggio, non una forza</strong></div></div>
+        <div><div style="font-size:12px;color:#6b7681;text-transform:uppercase;letter-spacing:.06em">Scartate dal controllo</div><div class="mono" style="font-size:26px;font-weight:500;margin-top:4px">1</div><div style="font-size:13px;color:#56616b">valore non interpretabile</div></div>
+        <div><div style="font-size:12px;color:#6b7681;text-transform:uppercase;letter-spacing:.06em">Revisione indipendente</div><div class="mono" style="font-size:26px;font-weight:500;margin-top:4px">7 · 14</div><div style="font-size:13px;color:#56616b">SUPPORTED · OVERSTATED</div></div>
+      </div>
+    </section>
+
+    <section class="card" aria-label="Risultati" style="padding:6px 24px 10px">
+      <h2 style="margin:18px 0 6px;font-size:17px;font-weight:600">Risultati con la loro citazione</h2>
+      <div style="padding:16px 0;border-top:1px solid #eceff1">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><span class="chip" style="background:#e6f3e8;color:#1f5d2c">✓ SUPPORTED</span><span class="chip" style="background:#e6e9ec;color:#3d4853">ACA · rivista</span><span class="mono" style="font-size:12px;color:#6b7681">doi:10.2174/1876391x00901010078</span></div>
+        <p style="margin:10px 0 8px;font-size:15px;line-height:1.5">Le meta-analisi recenti sostengono le prove crescenti a favore dell'esercizio come trattamento.</p>
+        <blockquote style="margin:0;padding:10px 14px;border-left:3px solid #f5a524;background:#fbfaf6;font-size:14px;line-height:1.55;color:#2c3338"><q>Recent meta-analyses support the growing evidence</q> <span class="mono" style="font-size:11px;color:#6b7681">· citazione verificata nel testo</span></blockquote>
+      </div>
+      <div style="padding:16px 0;border-top:1px solid #eceff1">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><span class="chip" style="background:#fdf0d5;color:#7a4608">▲ OVERSTATED</span><span class="chip" style="background:#e6e9ec;color:#3d4853">ACA · rivista</span><span class="mono" style="font-size:12px;color:#6b7681">doi:10.1016/…</span></div>
+        <p style="margin:10px 0 8px;font-size:15px;line-height:1.5">Il secondo lettore ritiene l'affermazione più forte di quanto dica il passaggio.</p>
+        <a href="#" style="font-size:13px;color:#94560a;font-weight:600">Apri la catena: affermazione → revisione → passaggio → documento →</a>
+      </div>
+    </section>
+
+    <section class="card" aria-label="Firma" style="padding:24px;border:2px solid #14171a">
+      <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:baseline;justify-content:space-between"><h2 style="margin:0;font-size:20px;font-weight:600">Il tuo verdetto</h2><span style="font-size:13px;color:#56616b">Un agente non firma. Firmi tu, contro l'impronta di ciò che hai letto.</span></div>
+      <fieldset style="border:0;padding:0;margin:16px 0 0;display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))">
+        <legend style="font-size:13px;color:#56616b;margin-bottom:8px">Quattro verdetti firmabili; il quinto, «mai chiesta», non si firma. Nessuno assorbe un altro</legend>
+        <label class="opt on"><input type="radio" name="v" checked style="margin-top:3px"><span><strong>Supportata</strong><br><span style="font-size:13px;color:#56616b">L'evidenza letta sostiene la domanda.</span></span></label>
+        <label class="opt"><input type="radio" name="v" style="margin-top:3px"><span><strong>Contraddetta</strong><br><span style="font-size:13px;color:#56616b">L'evidenza letta la contraddice.</span></span></label>
+        <label class="opt"><input type="radio" name="v" style="margin-top:3px"><span><strong>Contesa in letteratura</strong><br><span style="font-size:13px;color:#56616b">Disaccordo vivo: non è "nessuna prova".</span></span></label>
+        <label class="opt"><input type="radio" name="v" style="margin-top:3px"><span><strong>Senza risposta in letteratura</strong><br><span style="font-size:13px;color:#56616b">Non trovata evidenza: non significa "nessun effetto".</span></span></label>
+      </fieldset>
+      <label style="display:block;margin-top:16px;font-size:14px;font-weight:600">Motivazione<textarea rows="3" style="display:block;width:100%;box-sizing:border-box;margin-top:6px;padding:10px 12px;border:1px solid #cfd5da;border-radius:9px;font:14px 'Schibsted Grotesk',sans-serif">Sei risultati a favore con citazione verificata; la copertura supera la soglia.</textarea></label>
+      <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:center;margin-top:16px;padding-top:16px;border-top:1px solid #eceff1">
+        <label style="display:flex;gap:10px;align-items:center;font-size:14px;flex:1 1 320px"><input type="checkbox" checked> Ho letto il profilo con impronta <span class="mono" style="font-size:12px;background:#eceff1;padding:2px 6px;border-radius:5px">a4c1…9e07</span></label>
+        <a class="btn primary" href="#" style="min-height:48px;padding:0 26px;font-size:15px">Firma il verdetto</a>
+      </div>
+      <p style="margin:12px 0 0;font-size:12px;color:#6b7681">Se l'evidenza cambia dopo, la firma viene segnata come non aggiornata e non resta in silenzio.</p>
+    </section>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":1240}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

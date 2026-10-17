@@ -5059,3 +5059,19 @@ model with no thinking mode would be the runner inventing a request (the runner'
 cap are unchanged. The 9 truncated calls of that run keep their recorded result; re-asking them is a named
 campaign (`TRUNCATED` retry), which the scheduler's drain path does not offer yet, so they are not re-run by
 the mandate.
+
+
+## D137 — The portal's look and feel is "Assay", the website's identity (2026-10-18)
+
+The portal's styling had grown from a generic shadcn palette and a teal/violet/blue chip system that shared
+nothing with the Claimstone mark, titles in a serif, and a dense log-like first screen. Three directions were
+prototyped on the same three screens and real figures of the trial project (Today, a flow blocked by the
+acquisition floor, a question with the signing block): A "Assay" (the website's slate and amber), B "Carta"
+(ivory and serif, top navigation), C "Banco" (dark console). The owner chose A.
+
+Decision: tokens, fonts (Schibsted Grotesk, IBM Plex Mono, self-hosted) and the shell move to the website's
+identity; amber is the single primary action; state colours keep their v2.1 meanings and every chip keeps its
+word, now with a symbol; the page structure follows the reference mockups in `docs/design/portal/v3/`. No
+behaviour, API, label key or invariant changes (a blocked flow still produces no verdict; an agent still does not
+sign). Done first, by tokens alone: `index.css`, the shell and the hard-coded teal buttons; the pages follow
+one group at a time. The tokens-only pass was verified in the running portal.
