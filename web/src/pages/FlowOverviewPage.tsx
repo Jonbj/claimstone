@@ -9,6 +9,7 @@ import JourneySteps from "@/components/JourneySteps";
 import { NeedsYou, RunningNote, TheQuestions, TheTopic } from "@/components/JourneySide";
 import OperationsPanel from "@/components/OperationsPanel";
 import WorkLocallyPanel from "@/components/WorkLocallyPanel";
+import RetryPolicyPanel from "@/components/RetryPolicyPanel";
 import OverviewKpis from "@/components/OverviewKpis";
 import ProjectTabs from "@/components/ProjectTabs";
 import SeriesChip from "@/components/scheduler/SeriesChip";
@@ -226,6 +227,7 @@ export default function FlowOverviewPage({ kind }: { kind: "f" | "u" }) {
               {kind === "f" && flowId ? <OperationsPanel project={project} flowId={flowId}
                 namedRound={data.selector.round !== null} hasCandidates={data.source_tracker.length > 0} /> : null}
               {kind === "f" && flowId && operator ? <WorkLocallyPanel project={project} flowId={flowId} /> : null}
+              {kind === "f" && flowId && operator ? <RetryPolicyPanel project={project} flowId={flowId} /> : null}
               <RunningNote journey={data.journey} />
             </>
           ),
