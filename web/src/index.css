@@ -201,6 +201,10 @@
     font-weight: 600;
     letter-spacing: -0.02em;
     }
+  /* Hashes, paths and ids are unbreakable tokens: wrap them rather than scroll the page on a phone. */
+  h1, h2, h3, code, .font-mono {
+    overflow-wrap: anywhere;
+    }
 }
 /* Ported base components (§4.2 rules 1, 3, 5, 7): the class names come from
    vocabulary.ts, which never invents words. CONTRADICTED is blue, never red:
