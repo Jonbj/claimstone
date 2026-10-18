@@ -5366,3 +5366,46 @@ batches are not derived yet: they have their own `planned` states and need their
 **Instruments touched.** A new per-project ledger (`notifications.jsonl`) and a new command (`notify`). No existing
 row shape changed, so no existing figure moves. The decision number is D153 because D147–D152 are held by open
 branches; the gap is deliberate, not a missing entry.
+
+## D154 — E-mail is a second channel on the same outbox, with TLS required and no content in the message (2026-10-18)
+
+Issue #6 asked for e-mail notices on the outbox D153 built. The measurement that shapes this decision is where the
+message is stored: Telegram keeps it on Telegram's servers, e-mail keeps it in at least two mail servers, in clear,
+for as long as the recipient keeps it. The outbox's structural guarantee — a fixed field set and a `code` that must
+parse as an identifier — therefore does more work here than on Telegram: it is the reason a title, quote or claim
+cannot leak into a subject line by accident.
+
+**Same ledger, same key, same attempts.** `EmailChannel` is a channel like `TelegramChannel`: it consumes `event`
+rows, writes `attempt` rows, and a `SENT` on one channel does not mark the event sent on the other. No new ledger,
+no new row kind, no change to the derivation. The channel name in the attempt row is the switch that keeps the
+retry budgets independent.
+
+**TLS is mandatory, and the plaintext mode is not reachable from the environment.** `starttls` is the default (port
+587) and negotiates TLS before `AUTH`; `tls` (port 465) wraps the connection from the first byte. Both use
+`ssl.create_default_context()`, which verifies the certificate chain and the hostname. `CLAIMSTONE_SMTP_SECURITY
+=none` is refused; the constructor accepts `security="none"` only so a test can speak to a local stub, and no
+environment variable can select it. `smtplib` is stdlib, behind the same small boundary as the Telegram client, and
+deliberately not routed through `net.RecordingFetcher`.
+
+**The message carries ids, a count and a way in.** Plain text only: no HTML alternative, no remote images, no
+tracking pixel, no reply-to control surface. The subject is the reason phrase and the project; the body is the same
+text Telegram sends. Credentials, host, sender and recipient live only in the environment, are redacted from every
+recorded `detail`, and are never written to a message or a ledger. One recipient is enforced; a list is refused
+rather than silently honoured, because the issue leaves that question open and "one address" is the smaller
+promise.
+
+**Every SMTP failure is a class, not a silence.** `AUTH_<code>`, `RECIPIENTS_REFUSED`, `SMTP_<code>`, `SMTP_ERROR`,
+`TLS_ERROR`, `DISCONNECTED`, `CONNECTION`, `TIMEOUT` are recorded on the attempt. An exception thrown by the
+transport is caught by `deliver` and recorded as `EXCEPTION`, as for any channel; nothing is swallowed to make a
+drain look clean. Deliverability (SPF/DKIM/DMARC) is the sending account's concern and is documented as out of
+scope, not solved here.
+
+**Digest mode is deferred with its reason.** A digest is one message for N events, while the outbox records one
+attempt per event and consumes an event only on `SENT` for that channel. Implementing it would either mark N
+events sent from one attempt — losing the per-event outcome — or add a new delivery shape and a new row. Immediate
+delivery with the per-drain rate limit is the conservative first version; the issue's own open question ("digest by
+default, or immediate for needs-a-person only?") confirms the default was not settled. A digest remains a new
+decision, not an omission.
+
+**Instruments touched.** No new ledger and no changed row shape: `notifications.jsonl` is D153's, and the attempt
+row already carries `channel`. A new channel is a new way to fill the same ledger, so no existing figure moves.

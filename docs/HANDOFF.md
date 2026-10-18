@@ -26,10 +26,10 @@ reservation: the reservation is the worst case, not the spend. A bug found by th
 `CLAIMSTONE_GROBID_URL` inside the supervisor container; fixed with a test. **A rebuild invalidates the active
 mandate and the retry policy (they freeze `code_sha256`) and the portal session**: the live mandate predates D136
 and must be disabled and re-enabled with a person's confirmation to pick it up. Open: `TRUNCATED` retry from the
-scheduler path; the notification outbox and Telegram (#5, D153) are built — `claimstone notify` derives
-the outbox and `--channel telegram` drains it; e-mail (#6) reads the same outbox and is not built; controlled intake
-for paywalled PDFs (L02); `main` is 20 commits ahead of origin and not pushed. Four trial worktrees/branches are
-merged and await removal by the user.
+scheduler path; the notification outbox, Telegram (#5, D153) and e-mail (#6, D154) are built —
+`claimstone notify` derives the outbox and `--channel telegram` or `--channel email` drains it; digest mode and a
+recipient list are deferred, with reasons; controlled intake for paywalled PDFs (L02); `main` is 20 commits ahead
+of origin and not pushed. Four trial worktrees/branches are merged and await removal by the user.
 
 2026-10-16 documentation review and D132: the bilingual reader-facing docs were reviewed
 against the code and corrected (decision counts, the contract map, the Italian guide's missing
