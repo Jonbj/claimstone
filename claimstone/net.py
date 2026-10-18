@@ -27,7 +27,7 @@ from typing import Protocol
 
 from .provider_limits import ProviderCreditLimit, ProviderRouteUnpriced, provider_slot
 
-FETCH_VERSION = 7
+FETCH_VERSION = 8
 
 REDIRECT = "REDIRECT_ERROR"
 
@@ -45,6 +45,9 @@ TIMEOUT = "TIMEOUT"
 CONNECTION = "CONNECTION_ERROR"
 EXCLUDED = "EXCLUDED_HOST"
 ROBOTS = "ROBOTS_DISALLOWED"
+# robots.txt could not be read because the server or the network failed (RFC 9309 §2.3.1.4: treat the
+# host as disallowed). Transient: it says nothing about the host's rules, so the next run asks again.
+ROBOTS_UNREACHABLE = "ROBOTS_UNREACHABLE"
 BUDGET = "DOMAIN_BUDGET_EXHAUSTED"
 BAD_TYPE = "UNEXPECTED_CONTENT_TYPE"
 EMPTY = "EMPTY_RESPONSE"
@@ -80,13 +83,16 @@ TERMINAL = frozenset(
 )
 TRANSIENT = frozenset(
     {TIMEOUT, CONNECTION, SERVER_ERROR, RATE_LIMITED, BUDGET, EMPTY, WAYBACK_MISS,
-     PROVIDER_LIMIT}
+     PROVIDER_LIMIT, ROBOTS_UNREACHABLE}
 )
 
 
 def is_terminal(failure_class: str | None) -> bool:
     """An unrecognised class counts as terminal: a typo must cost a retry, not a loop."""
     return failure_class not in TRANSIENT
+
+
+_UNREACHABLE = object()  # sentinel in `_robots`: robots.txt could not be read at all
 
 
 class ContactNotConfigured(RuntimeError):
@@ -272,7 +278,7 @@ class Fetcher:
     max_physical_requests: int | None = None
 
     _host_failures: dict[str, list[float]] = field(default_factory=dict)
-    _robots: dict[str, urllib.robotparser.RobotFileParser | None] = field(default_factory=dict)
+    _robots: dict[str, Any] = field(default_factory=dict)
     robots_notes: dict[str, str] = field(default_factory=dict)
     _session: requests.Session | None = None
     _last_request: float = 0.0
@@ -336,25 +342,36 @@ class Fetcher:
         the number that decides whether a round may produce verdicts. So the file is
         fetched here, and only a genuine 200 text/plain robots file is binding.
         """
+        return self._robots_state(url) == "allow"
+
+    def _robots_state(self, url: str) -> str:
+        """`allow`, `deny`, or `unreachable` (the server or the network failed to answer for robots.txt)."""
         if not self.obey_robots:
-            return True
+            return "allow"
         host = host_of(url)
         parsed = urllib.parse.urlsplit(url)
         origin = f"{parsed.scheme}://{parsed.netloc}"
         if origin not in self._robots:
             self._robots[origin] = self._load_robots(url, host)
         parser = self._robots[origin]
+        if parser is _UNREACHABLE:
+            return "unreachable"
         if parser is None:
-            return True
+            return "allow"
         try:
-            return parser.can_fetch(USER_AGENT.split("/")[0], url)
+            return "allow" if parser.can_fetch(USER_AGENT.split("/")[0], url) else "deny"
         except Exception:
-            return True
+            return "allow"
 
     def _load_robots(self, url: str, host: str) -> urllib.robotparser.RobotFileParser | None:
         """Return a parser only if a real robots.txt was served; otherwise None (permissive)."""
         parsed = urllib.parse.urlsplit(url)
         outcome = self._get(f"{parsed.scheme}://{parsed.netloc}/robots.txt", check_robots=False)
+        if outcome.failure_class in (TIMEOUT, CONNECTION, SERVER_ERROR) or (outcome.status or 0) >= 500:
+            # The server or the network failed: we do not know the host's rules, so we do not act as if
+            # it had none (D139). 4xx below is different: the file is absent or unreadable by us.
+            self.robots_notes[host] = f"unreachable: {outcome.failure_class or outcome.status}"
+            return _UNREACHABLE
         if not outcome.ok:
             self.robots_notes[host] = f"not served: {outcome.failure_class}"
             return None
@@ -401,8 +418,8 @@ class Fetcher:
             outcome.provider_usage = dict(provider_usage)
             if self.on_outcome:
                 blocked = outcome.status is None and outcome.failure_class in (
-                    EXCLUDED, BUDGET, ROBOTS, REDIRECT, ADDRESS_REFUSED, REQUEST_LIMIT,
-                    PROVIDER_LIMIT, UNPRICED_ROUTE)
+                    EXCLUDED, BUDGET, ROBOTS, ROBOTS_UNREACHABLE, REDIRECT, ADDRESS_REFUSED,
+                    REQUEST_LIMIT, PROVIDER_LIMIT, UNPRICED_ROUTE)
                 self.on_outcome(outcome, 'blocked' if blocked else ('transport' if check_robots else 'robots'))
             return outcome
 
@@ -433,6 +450,9 @@ class Fetcher:
             if self.budget_exhausted(host):
                 return finish(Outcome(url, False, failure_class=BUDGET, detail=f'recent failures on {host}'))
             if check_robots and not self._robots_allows(url):
+                if self._robots_state(url) == "unreachable":
+                    return finish(Outcome(url, False, failure_class=ROBOTS_UNREACHABLE,
+                                          detail=f'robots.txt of {host} could not be read; not assumed allowed'))
                 return finish(Outcome(url, False, failure_class=ROBOTS, detail='robots.txt disallows'))
             # Fetching robots can itself spend the remaining host budget.
             if self.budget_exhausted(host):

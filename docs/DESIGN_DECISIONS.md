@@ -5099,3 +5099,26 @@ should be re-discovered into a new round, not mixed (same instruction as D24).
 What supersedes what: any candidate count taken under `candidate_key_version 2` for a corpus with non-Latin titles is not
 comparable to one taken under 3. The test pins both directions: titles that must stay distinct, and Latin titles whose
 folded form must not move.
+
+## D139 — A robots.txt that cannot be read is not permission; `fetch_version 8` (2026-10-18)
+
+D8 and D48 chose to treat a missing, forbidden or unreadable `robots.txt` as "no stated rules", for a measured reason:
+`urllib` reads a 403 as "disallow everything" and parses an HTML error page as rules, which invented prohibitions at
+`federalreserve.gov`, `sec.gov` and `users.nber.org` and deflated the acquisition rate. That reasoning holds for the
+cases it measured — the host *answered*, with a 404, a 403 or a page that is not a robots file.
+
+An independent review (GPT-6, finding C1) pointed at the case it did not measure: the host did **not answer**, because
+the server returned 5xx or the connection failed or timed out. [RFC 9309 §2.3.1.4](https://www.rfc-editor.org/rfc/rfc9309.html#section-2.3.1.4)
+says a crawler must then assume complete disallow; §2.3.1.3 says 4xx means the file is unavailable and every path may be
+crawled. The old code collapsed both into "allowed", so a host in the middle of an outage received our requests exactly
+when it had least ability to tell us no.
+
+Now: 4xx and a non-robots body behave as before (no stated rules). A 5xx or a transport failure on `/robots.txt` yields the
+new class `ROBOTS_UNREACHABLE`, the paper is **not** requested, and the answer is cached for the rest of the run so a host
+is asked once, not once per URL. The class is **transient**: it says nothing about the host's rules, so the next ordinary
+run, or a retry policy under D134, asks again. It is not counted as `ROBOTS_DISALLOWED`, which stays terminal.
+
+Cost, stated: during a host outage the acquisition rate can be lower than before, and a source that was fetched then is
+deferred now. That is the intended direction of the error — a rate that rises because we ignored a host's silence is the
+unsafe kind. `FETCH_VERSION` 7 → 8; figures taken before and after are not comparable for hosts that were failing on
+robots.txt at the time (none has been identified in the stores on this machine).

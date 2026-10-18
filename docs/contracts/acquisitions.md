@@ -103,7 +103,8 @@ Terminal — retrying changes nothing until the world changes, so a retry needs 
 Transient — the next ordinary run tries again on its own once the TTL has passed. A not-acquired row also qualifies when any attempt in its cascade has a transient class, even if the final headline class is terminal; the headline remains unchanged:
 
 `TIMEOUT` · `CONNECTION_ERROR` · `SERVER_ERROR_5XX` · `RATE_LIMITED_429` ·
-`DOMAIN_BUDGET_EXHAUSTED` · `EMPTY_RESPONSE` · `WAYBACK_MISS`
+`DOMAIN_BUDGET_EXHAUSTED` · `EMPTY_RESPONSE` · `WAYBACK_MISS` · `ROBOTS_UNREACHABLE`
+(robots.txt answered 5xx or the connection failed: assumed disallowed, D139, and asked again next run)
 
 An unrecognised class counts as terminal: a typo must cost a retry, not an unbounded loop
 against a publisher. `DOMAIN_BUDGET_EXHAUSTED` is transient on purpose — a source dropped

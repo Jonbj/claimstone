@@ -365,3 +365,59 @@ def test_only_dated_failures_count_towards_a_host_budget(tmp_path):
     store.append('requests.jsonl', _transport_failure(
         (now - dt.timedelta(days=30)).isoformat()))
     assert net.recorded_host_failures(store, 'slow.example') == 1
+
+
+def _fetcher_with_robots(status, *, body=b"", raises=None, ctype="text/plain"):
+    """A fetcher whose only reachable thing is the host's robots.txt; the paper itself answers 200."""
+    calls = []
+
+    class Response:
+        def __init__(self, url, code, content, content_type):
+            self.status_code, self.url, self.content = code, url, content
+            self.headers = {"Content-Type": content_type}
+
+    def get(url, **_kwargs):
+        calls.append(url)
+        if url.endswith("/robots.txt"):
+            if raises:
+                raise raises
+            return Response(url, status, body, ctype)
+        return Response(url, 200, b"%PDF-1.4 " + b"x" * 50, "application/pdf")
+
+    fetcher = net.Fetcher(pause_s=0)
+    fetcher._session = type("Session", (), {"get": staticmethod(get)})()
+    return fetcher, calls
+
+
+def test_a_robots_server_error_is_not_permission_d139():
+    """RFC 9309 §2.3.1.4: when robots.txt is unreachable because the server failed, assume disallow."""
+    fetcher, calls = _fetcher_with_robots(503)
+    outcome = fetcher.get("https://repo.example.org/paper.pdf")
+    assert outcome.failure_class == net.ROBOTS_UNREACHABLE
+    assert outcome.status is None
+    assert not [c for c in calls if not c.endswith("/robots.txt")], "the paper was requested anyway"
+    assert net.ROBOTS_UNREACHABLE in net.TRANSIENT and net.is_terminal(net.ROBOTS_UNREACHABLE) is False
+
+
+def test_a_robots_network_failure_is_not_permission_d139():
+    import requests
+
+    fetcher, calls = _fetcher_with_robots(200, raises=requests.ConnectionError("down"))
+    outcome = fetcher.get("https://repo.example.org/paper.pdf")
+    assert outcome.failure_class == net.ROBOTS_UNREACHABLE
+    assert not [c for c in calls if not c.endswith("/robots.txt")]
+
+
+def test_a_missing_or_forbidden_robots_file_still_means_no_stated_rules():
+    for status in (404, 403, 401):
+        fetcher, calls = _fetcher_with_robots(status)
+        outcome = fetcher.get("https://repo.example.org/paper.pdf")
+        assert outcome.failure_class != net.ROBOTS_UNREACHABLE, status
+        assert any(not c.endswith("/robots.txt") for c in calls), status
+
+
+def test_an_unreachable_robots_file_is_asked_once_per_host_per_run():
+    fetcher, calls = _fetcher_with_robots(500)
+    fetcher.get("https://repo.example.org/a.pdf")
+    fetcher.get("https://repo.example.org/b.pdf")
+    assert sum(1 for c in calls if c.endswith("/robots.txt")) == 1
