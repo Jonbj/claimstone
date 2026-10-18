@@ -319,6 +319,7 @@ def test_admin_state_never_leaks_values(tmp_path, monkeypatch):
     """A-T1: presence only — no value, no prefix, no length in the JSON."""
     monkeypatch.setenv("OLLAMA_API_KEY", "secret-value-123")
     monkeypatch.delenv("OPENALEX_API_KEY", raising=False)
+    monkeypatch.delenv("CORE_API_KEY", raising=False)
     (tmp_path / ".env").write_text("CLAIMSTONE_CONTACT_EMAIL=me@example.org\n", encoding="utf-8")
     data = portal_state.admin_state(tmp_path)
     dumped = json.dumps(data)
@@ -333,7 +334,7 @@ def test_admin_state_never_leaks_values(tmp_path, monkeypatch):
     assert "16" not in json.dumps(data["credentials"])
     assert data["credentials"] == {"CLAIMSTONE_CONTACT_EMAIL": True,
                                    "OLLAMA_API_KEY": True,
-                                   "OPENALEX_API_KEY": False}
+                                   "OPENALEX_API_KEY": False, "CORE_API_KEY": False}
 
 
 def test_integrity_names_corruption_and_touches_nothing(workspace):

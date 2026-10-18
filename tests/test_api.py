@@ -287,6 +287,7 @@ def test_admin_never_leaks_a_credential_value(workspace, monkeypatch, tmp_path):
     """A5: `/admin` carries presence booleans only — the A-T1 assertions over the wire."""
     monkeypatch.setenv("OLLAMA_API_KEY", "secret-value-123")
     monkeypatch.delenv("OPENALEX_API_KEY", raising=False)
+    monkeypatch.delenv("CORE_API_KEY", raising=False)
     monkeypatch.delenv("CLAIMSTONE_CONTACT_EMAIL", raising=False)
     (tmp_path / ".env").write_text("CLAIMSTONE_CONTACT_EMAIL=me@example.org\n", encoding="utf-8")
     with _served(workspace) as (_httpd, base, _store):
@@ -301,7 +302,7 @@ def test_admin_never_leaks_a_credential_value(workspace, monkeypatch, tmp_path):
     assert "16" not in json.dumps(payload["credentials"])
     assert payload["credentials"] == {"CLAIMSTONE_CONTACT_EMAIL": True,
                                       "OLLAMA_API_KEY": True,
-                                      "OPENALEX_API_KEY": False}
+                                      "OPENALEX_API_KEY": False, "CORE_API_KEY": False}
 
 
 def test_verb_and_authority_defences(workspace):
