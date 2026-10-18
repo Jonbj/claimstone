@@ -10,7 +10,7 @@
   "admission_version": 3,
   "annotation_version": 2,
   "audit_version": 2,
-  "candidate_key_version": 2,
+  "candidate_key_version": 3,
   "chunk_version": 2,
   "claim_gate_version": 4,
   "decision_version": 1,

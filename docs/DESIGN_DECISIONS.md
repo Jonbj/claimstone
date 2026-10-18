@@ -5075,3 +5075,27 @@ word, now with a symbol; the page structure follows the reference mockups in `do
 behaviour, API, label key or invariant changes (a blocked flow still produces no verdict; an agent still does not
 sign). Done first, by tokens alone: `index.css`, the shell and the hard-coded teal buttons; the pages follow
 one group at a time. The tokens-only pass was verified in the running portal.
+
+## D138 — A title keeps its letters in every script; `candidate_key_version 3` (2026-10-18)
+
+An independent review (GPT-6, 2026-10-18, finding C3) reproduced a defect in the identity rule that D24 calls an
+instrument: `normalize_title` kept only `a-z0-9`, so a title written in Chinese, Cyrillic, Arabic, Hebrew, Japanese or
+Korean lost every letter and kept the digits. `抑郁症 2024` and `运动 2024`, with different URLs and no DOI, both became
+`title:2024`, and `discover` deduplicates by that key: **one of two unrelated sources vanished without a trace**, which is
+the silent denominator error this project exists to prevent, here in the direction that *removes* work from the count. D75
+had already refused title-only scientific merging; this was title-only merging by accident of the alphabet.
+
+The rule now keeps letters and digits of every script. Combining marks are stripped only after an ASCII letter (accents:
+`Résumé` still folds to `resume`) and never after kana, Hangul, Arabic or Indic bases, where they distinguish words; the
+result is recomposed (NFC) so `が` stays `が`. Version 2 → 3.
+
+Measured against the stores on this machine, comparing the old and the new function over every candidate title (596 titles
+in four projects): **one string changed** — a title containing `℠`, which version 2 dropped and version 3 keeps as `sm`.
+That candidate is keyed by its DOI, so **no candidate key moved**. No store contained a non-Latin title, which is why the
+defect had not surfaced: it was found by reading, not by a count. A project that does hold such titles, written under
+version 2, will see those candidates key differently under version 3; the ledgers are not rewritten, and such a store
+should be re-discovered into a new round, not mixed (same instruction as D24).
+
+What supersedes what: any candidate count taken under `candidate_key_version 2` for a corpus with non-Latin titles is not
+comparable to one taken under 3. The test pins both directions: titles that must stay distinct, and Latin titles whose
+folded form must not move.

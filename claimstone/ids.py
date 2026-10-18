@@ -8,7 +8,7 @@ import urllib.parse
 
 _DOI_RE = re.compile(r"10\.\d{4,9}/[-._;()/:a-z0-9<>\[\]]+", re.IGNORECASE)
 _ARXIV_RE = re.compile(r"(?:arxiv\.org/(?:abs|pdf)/|arXiv:)\s*([0-9]{4}\.[0-9]{4,5})", re.I)
-_PUNCT_RE = re.compile(r"[^a-z0-9 ]+")
+_PUNCT_RE = re.compile(r"[^\w ]+|_+")
 _SPACE_RE = re.compile(r"\s+")
 
 # How a candidate's identity is derived is an instrument, like the content gate's version and the
@@ -16,7 +16,7 @@ _SPACE_RE = re.compile(r"\s+")
 # same work becomes two candidates and a denominator silently grows. Measured, on a store of 39
 # references: 13 ghost rows, each correctly noting the other as a possible duplicate, and a found
 # count of 50. `tools/check_instrument_versions.py` refuses a bump the design record does not name.
-CANDIDATE_KEY_VERSION = 2
+CANDIDATE_KEY_VERSION = 3
 
 
 def normalize_doi(value: str | None) -> str | None:
@@ -43,12 +43,24 @@ def arxiv_id(value: str | None) -> str | None:
 
 
 def normalize_title(value: str | None) -> str:
-    """Fold a title to a comparison key: accents, punctuation and spacing removed."""
+    """Fold a title to a comparison key: case, accents on Latin letters, punctuation and spacing.
+
+    Letters and digits of every script are kept (`candidate_key_version 3`): version 2 dropped
+    everything outside a-z0-9, so two Chinese titles that shared only a year both became `2024` and
+    deduplication silently merged unrelated sources. Combining marks are removed only after an ASCII
+    letter (accents), never after kana, Hangul, Arabic or Indic bases, where they distinguish words.
+    For a title in Latin script the result is the same as version 2 apart from compatibility symbols such as
+    ℠, which version 2 dropped and this keeps as letters (see D138 for the measurement on the stores).
+    """
     if not value:
         return ""
-    folded = unicodedata.normalize("NFKD", str(value).lower())
-    folded = "".join(c for c in folded if not unicodedata.combining(c))
-    folded = _PUNCT_RE.sub(" ", folded)
+    decomposed = unicodedata.normalize("NFKD", str(value)).lower()
+    kept: list[str] = []
+    for char in decomposed:
+        if unicodedata.combining(char) and kept and kept[-1].isascii() and kept[-1].isalpha():
+            continue
+        kept.append(char)
+    folded = _PUNCT_RE.sub(" ", unicodedata.normalize("NFC", "".join(kept)))
     return _SPACE_RE.sub(" ", folded).strip()
 
 
