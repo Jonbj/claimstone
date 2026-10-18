@@ -963,6 +963,72 @@ def _flow_open(args: argparse.Namespace) -> tuple["Project", "Store"]:
     return project, Store(project.name, base=args.store)
 
 
+def _notify(args: argparse.Namespace) -> int:
+    """Derive the outbox from the ledgers; send only when a channel is selected."""
+    import datetime as dt
+
+    from claimstone import notifications, notify
+
+    since = args.since
+    if since is not None:
+        try:
+            moment = dt.datetime.fromisoformat(since)
+        except ValueError:
+            print(f"--since needs an ISO date-time with a time zone: {since!r}", file=sys.stderr)
+            return 2
+        if moment.tzinfo is None:
+            print("--since needs a time zone: a naive time is ambiguous", file=sys.stderr)
+            return 2
+        since = moment.isoformat(timespec="seconds")
+    if args.limit < 1:
+        print("--limit must be positive", file=sys.stderr)
+        return 2
+    if args.channel not in (None, "telegram"):
+        print(f"unknown channel {args.channel!r}: telegram", file=sys.stderr)
+        return 2
+
+    project = load_project(args.project)
+    store = _checked_store(args, project)
+    from claimstone import operations
+    from claimstone.store import LedgerCorrupt
+
+    try:
+        events = notify.derive(project, store, since=since)
+    except (LedgerCorrupt, operations.OperationError) as exc:
+        print(f"error: the outbox was not derived: {exc}", file=sys.stderr)
+        return 1
+    if args.dry_run:
+        for event in events:
+            code = f" ({event['code']})" if event.get("code") else ""
+            print(f"{event['reason']}{code}  {', '.join(event['ids'])}")
+        print(f"{len(events)} event(s) would be recorded; nothing was written")
+        return 0
+
+    notifications.start(store)
+    known = {row["event_key"] for row in notifications.events(store)}
+    fresh = sum(1 for event in events if notifications.key(event) not in known)
+    for event in events:
+        notifications.record(store, event)
+
+    if args.channel is None:
+        print(f"{fresh} new event(s), {len(events) - fresh} already recorded; "
+              f"no channel selected, nothing sent")
+        return 0
+
+    try:
+        channel = notifications.TelegramChannel.from_environment()
+    except notifications.ChannelNotConfigured as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+    summary = notifications.deliver(store, channel, limit=args.limit)
+    print(f"{fresh} new event(s); {summary['sent']} sent, {summary['failed']} failed, "
+          f"{summary['rate_limited']} rate-limited, {summary['timed_out']} timed out, "
+          f"{summary['connection']} connection error(s), {summary['pending_after']} pending")
+    failed = (summary["failed"] + summary["refused"] + summary["rate_limited"]
+              + summary["timed_out"] + summary["connection"])
+    return 1 if failed else 0
+
+
 def _scheduler_preview(args: argparse.Namespace) -> int:
     import json
 
@@ -1472,6 +1538,21 @@ def build_parser() -> argparse.ArgumentParser:
     group.add_argument("--all-projects", action="store_true", help="validate every project")
     validate.add_argument("--projects-dir", default="projects")
     validate.set_defaults(func=_validate)
+
+    notify_cmd = sub.add_parser(
+        "notify", help="derive the notification outbox from the ledgers; send only on request")
+    notify_cmd.add_argument("project", help="path to a project directory")
+    notify_cmd.add_argument("--store", default="store", help="where generated data lives")
+    notify_cmd.add_argument("--channel", default=None, metavar="NAME",
+                            help="send through this channel (telegram); omit to record the "
+                                 "outbox only")
+    notify_cmd.add_argument("--dry-run", action="store_true",
+                            help="print the events and write nothing")
+    notify_cmd.add_argument("--limit", type=int, default=20,
+                            help="most messages this drain may send (per-channel rate limit)")
+    notify_cmd.add_argument("--since", default=None, metavar="ISO",
+                            help="replay occurrences since this time; default the outbox's start")
+    notify_cmd.set_defaults(func=_notify)
 
     for name, handler, help_text in (
         ("import-manifest", _import_manifest, "seed candidates from manifest.tsv"),
@@ -2023,7 +2104,7 @@ def main(argv: list[str] | None = None) -> int:
         # The scheduler uses finer unit boundaries; the legacy CLI remains safely
         # serialized even when two terminals start the same stage concurrently.
         writers = {"import-manifest", "acquire", "discover", "regate", "normalize",
-                   "extract", "review", "synthesize", "adjudicate", "model-run"}
+                   "extract", "review", "synthesize", "adjudicate", "model-run", "notify"}
         writes = args.command in writers or (args.command == "flow" and
                                               args.flow_command in {"create", "title"})
         if args.command == "acquire" and args.dry_run:
