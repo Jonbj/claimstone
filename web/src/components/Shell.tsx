@@ -15,15 +15,15 @@ import { cn } from "@/lib/utils";
 const NAV: Array<{
   id: string; label: string; to: string; active: (pathname: string) => boolean;
 }> = [
-  { id: "today", label: "Today", to: "/", active: (p) => p === "/" },
+  { id: "today", label: "shell.today", to: "/", active: (p) => p === "/" },
   // A project or flow on screen lights Projects: Today is the only other top-level page.
   {
     id: "projects",
-    label: "Projects",
+    label: "shell.projects",
     to: "/projects",
     active: (p) => p.startsWith("/projects") || p.startsWith("/p/") || p.startsWith("/inbox"),
   },
-  { id: "admin", label: "Administration", to: "/admin", active: (p) => p.startsWith("/admin") },
+  { id: "admin", label: "shell.admin", to: "/admin", active: (p) => p.startsWith("/admin") },
 ];
 
 function useRevision(): { text: string; title: string } {
@@ -105,8 +105,11 @@ export default function Shell() {
       navigate("/account", { replace: true });
     }
   }, [session.operator?.must_change_password, pathname, navigate]);
+  // Rail labels are catalog keys; each is spelled out here so t() only sees literal keys.
+  const navLabel = (key: string) =>
+    key === "shell.today" ? t("shell.today") : key === "shell.projects" ? t("shell.projects") : t("shell.admin");
   const items = [
-    ...NAV,
+    ...NAV.map((item) => ({ ...item, label: navLabel(item.label) })),
     ...(session.operator
       ? [{ id: "account", label: t("shell.account"), to: "/account", active: (p: string) => p.startsWith("/account") }]
       : []),

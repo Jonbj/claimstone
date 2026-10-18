@@ -2,6 +2,10 @@
   "shell": {
     "newProject": "+ New project",
     "language": "Language",
+    "today": "Today",
+    "projects": "Projects",
+    "admin": "Administration",
+    "loadingProject": "loading the project…",
     "checking": "checking session…",
     "signIn": "Sign in",
     "signOut": "Sign out",
@@ -317,6 +321,78 @@
       "NAME_TAKEN": "A project with this name already exists. Go back to step 1 and choose another name.",
       "INCOMPLETE": "The draft is not complete yet: steps 1 to 3 must all be saved first.",
       "UNAUTHORIZED": "Your session has ended. Sign in again, then repeat the action."
+    }
+  },
+  "today": {
+    "title": "Today",
+    "lede": "Where to start. What is waiting for you, what Claimstone is doing on its own, and what changed since you last looked.",
+    "checking": "checking session…",
+    "loading": "loading today…",
+    "noProjects": "The server lists no project.",
+    "signedOut": "Today needs a session: what changed is counted per operator.",
+    "signIn": "Sign in",
+    "orRead": "or read the",
+    "projectsLink": "Projects",
+    "orReadEnd": "without one.",
+    "tile": {
+      "waits": "Waiting for you",
+      "waitsHint": "decisions, signatures, plans",
+      "acting": "Working now",
+      "actingHint": "authorised work in progress",
+      "projects": "Projects",
+      "projectsHint": "in this portal"
+    },
+    "waits": {
+      "title": "Waiting for you",
+      "why": "Only a person can do these. Nothing downstream moves until you do.",
+      "none": "Nothing waits for you.",
+      "noneHint": "A plan to authorise, a decision to take or a verdict to sign appears here the moment it needs a person.",
+      "optional": "optional",
+      "open": "Open",
+      "type": {
+        "adjudication": "A verdict to sign",
+        "integrity": "The project is stopped by an integrity problem",
+        "protocol": "The protocol needs your attention",
+        "identity": "Are these the same work?",
+        "optional": "A choice you may take"
+      }
+    },
+    "acting": {
+      "title": "Claimstone is working",
+      "why": "Authorised work running within the limits you set. You can stop it from the flow.",
+      "none": "Claimstone is not working on anything.",
+      "noneHint": "Authorise a plan, or start a local mandate, to set it working.",
+      "spent": "Spent (real)",
+      "last": "last event",
+      "open": "Open the project"
+    },
+    "projects": {
+      "title": "Projects",
+      "why": "What each project holds and what changed in it since you last marked it as seen.",
+      "open": "Open",
+      "firstVisit": "first visit",
+      "since": "since {when}",
+      "waiting": "{n} waiting for you",
+      "working": "{n} working",
+      "quiet": "nothing needs you",
+      "nothing": "No new activity.",
+      "undated": "{n} rows carry no timestamp and are not counted.",
+      "details": "Show the latest rows",
+      "seen": "Mark as seen",
+      "marking": "Marking…",
+      "unreadable": "This project could not be read"
+    },
+    "stage": {
+      "discover": "searches",
+      "acquire": "copies fetched",
+      "normalize": "documents prepared",
+      "extract": "claims extracted",
+      "review": "second readings",
+      "synthesize": "profiles",
+      "adjudicate": "verdicts signed",
+      "intake": "material added",
+      "decisions": "decisions",
+      "export": "exports"
     }
   },
   "auth": {

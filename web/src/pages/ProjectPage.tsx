@@ -50,6 +50,16 @@ export default function ProjectPage() {
                 to={`/p/${encodeURIComponent(project)}/f/${encodeURIComponent(target.flow_id)}`} />
     );
   }
+  // Until the project list has answered we do not know whether this page is the destination or a
+  // stop on the way to the flow, so it shows nothing of its own: no "loading…" lines and no
+  // activity dump flashing before the page the person came for.
+  if (!wantsDetails && index.pending) {
+    return (
+      <div role="status" aria-busy="true" className="min-h-[60vh]">
+        <span className="sr-only">{t("shell.loadingProject")}</span>
+      </div>
+    );
+  }
   const refreshing =
     integrity.refreshing || index.refreshing || activity.refreshing;
 

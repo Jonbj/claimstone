@@ -65,10 +65,10 @@ describe("F2: Today", () => {
   it("shows first visit, counts, links, and a failed project beside a good one", async () => {
     mount(true);
     expect(await screen.findByText("first visit")).toBeTruthy();
-    expect(screen.getByText("extract")).toBeTruthy();
-    expect(screen.getByRole("link", { name: "cand-1" }).getAttribute("href"))
+    expect(screen.getByText("claims extracted")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Open: cand-1" }).getAttribute("href"))
       .toBe("/p/alpha/f/f1/decisions");
-    expect(screen.getByRole("link", { name: "Q01" }).getAttribute("href"))
+    expect(screen.getByRole("link", { name: "Open: Q01" }).getAttribute("href"))
       .toBe("/p/alpha/f/f1/q/Q01");
     expect(screen.getByTestId("project-error").textContent).toContain("bad line 4");
   });
@@ -89,6 +89,14 @@ describe("F2: Today", () => {
     mount(false);
     expect(await screen.findByText(/Today needs a session/)).toBeTruthy();
     expect(screen.getByRole("link", { name: "Projects" }).getAttribute("href")).toBe("/projects");
+  });
+
+  it("says what each section is for and counts what waits and acts", async () => {
+    mount(true);
+    expect(await screen.findByRole("heading", { name: /Waiting for you/ })).toBeTruthy();
+    expect(screen.getByText(/Only a person can do these/)).toBeTruthy();
+    expect(screen.getByText(/A verdict to sign/)).toBeTruthy();
+    expect(screen.getByText(/Claimstone is not working on anything/)).toBeTruthy();
   });
 
   it("renders the newest rows as labelled fields, never as JSON", async () => {

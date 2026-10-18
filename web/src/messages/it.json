@@ -2,6 +2,10 @@
   "shell": {
     "newProject": "+ Nuovo progetto",
     "language": "Lingua",
+    "today": "Oggi",
+    "projects": "Progetti",
+    "admin": "Amministrazione",
+    "loadingProject": "carico il progetto…",
     "checking": "controllo la sessione…",
     "signIn": "Accedi",
     "signOut": "Esci",
@@ -317,6 +321,78 @@
       "NAME_TAKEN": "Esiste già un progetto con questo nome. Torna al passo 1 e scegli un altro nome.",
       "INCOMPLETE": "La bozza non è ancora completa: prima vanno salvati i passi da 1 a 3.",
       "UNAUTHORIZED": "La sessione è terminata. Accedi di nuovo, poi ripeti l'azione."
+    }
+  },
+  "today": {
+    "title": "Oggi",
+    "lede": "Da dove iniziare. Cosa aspetta te, cosa sta facendo Claimstone da solo e cosa è cambiato dall'ultima volta che hai guardato.",
+    "checking": "controllo la sessione…",
+    "loading": "carico la pagina Oggi…",
+    "noProjects": "Il server non elenca nessun progetto.",
+    "signedOut": "Oggi richiede una sessione: le novità sono contate per operatore.",
+    "signIn": "Accedi",
+    "orRead": "oppure leggi i",
+    "projectsLink": "Progetti",
+    "orReadEnd": "senza accedere.",
+    "tile": {
+      "waits": "Aspettano te",
+      "waitsHint": "decisioni, firme, piani",
+      "acting": "In corso ora",
+      "actingHint": "lavoro autorizzato in esecuzione",
+      "projects": "Progetti",
+      "projectsHint": "in questo portale"
+    },
+    "waits": {
+      "title": "Aspettano te",
+      "why": "Le può fare solo una persona. Finché non le fai, il resto non va avanti.",
+      "none": "Niente aspetta te.",
+      "noneHint": "Un piano da autorizzare, una decisione da prendere o un verdetto da firmare compare qui appena serve una persona.",
+      "optional": "facoltativo",
+      "open": "Apri",
+      "type": {
+        "adjudication": "Un verdetto da firmare",
+        "integrity": "Il progetto è fermo per un problema di integrità",
+        "protocol": "Il protocollo richiede la tua attenzione",
+        "identity": "Sono la stessa opera?",
+        "optional": "Una scelta che puoi fare"
+      }
+    },
+    "acting": {
+      "title": "Claimstone sta lavorando",
+      "why": "Lavoro autorizzato che procede entro i limiti che hai fissato. Lo puoi fermare dal flusso.",
+      "none": "Claimstone non sta lavorando a niente.",
+      "noneHint": "Autorizza un piano, o avvia un mandato locale, per metterlo al lavoro.",
+      "spent": "Speso (reale)",
+      "last": "ultimo evento",
+      "open": "Apri il progetto"
+    },
+    "projects": {
+      "title": "Progetti",
+      "why": "Cosa contiene ogni progetto e cosa è cambiato dall'ultima volta che l'hai segnato come visto.",
+      "open": "Apri",
+      "firstVisit": "prima visita",
+      "since": "dal {when}",
+      "waiting": "{n} aspettano te",
+      "working": "{n} in corso",
+      "quiet": "nulla richiede te",
+      "nothing": "Nessuna attività nuova.",
+      "undated": "{n} righe non hanno data e non sono contate.",
+      "details": "Mostra le ultime righe",
+      "seen": "Segna come visto",
+      "marking": "Segno…",
+      "unreadable": "Questo progetto non si è potuto leggere"
+    },
+    "stage": {
+      "discover": "ricerche",
+      "acquire": "copie ottenute",
+      "normalize": "documenti preparati",
+      "extract": "affermazioni estratte",
+      "review": "seconde letture",
+      "synthesize": "profili",
+      "adjudicate": "verdetti firmati",
+      "intake": "materiale aggiunto",
+      "decisions": "decisioni",
+      "export": "esportazioni"
     }
   },
   "auth": {
