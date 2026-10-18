@@ -139,7 +139,7 @@ export default function InboxPage() {
 
   return (
     <section>
-      <h1 className="text-[22px] font-semibold">Inbox</h1>
+      <h1 className="text-[28px] leading-tight">Inbox</h1>
       <p className="mt-2 flex flex-wrap items-center gap-2 text-sm">
         <span>category:</span>
         <Select
@@ -174,8 +174,8 @@ export default function InboxPage() {
         ) : (
           visible.map((group) => (
             <section key={`${group.project}|${group.category}`} className="mt-4">
-              <h2 className="mb-2 text-sm font-semibold">
-                {group.project} — {group.category}
+              <h2 className="section-label mb-2">
+                {group.project} · {group.category}
               </h2>
               <InboxCards cards={group.cards} />
             </section>
