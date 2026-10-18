@@ -52,7 +52,7 @@ const STATE_COLORS: AvailableChartColorsKeys[] = [
 
 function KpiCard({ children }: { children: ReactNode }) {
   return (
-    <div className="rounded-lg bg-card p-5 shadow-sm ring-1 ring-gray-200 dark:ring-gray-800">
+    <div className="rounded-xl border border-border bg-card p-5">
       {children}
     </div>
   );
@@ -87,8 +87,8 @@ export default function OverviewKpis({ overview }: { overview: Overview }) {
             <span
               className={`rounded-md px-2 py-px text-xs font-medium ${
                 floor.status === "OK"
-                  ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200"
-                  : "bg-amber-50 text-amber-700 ring-1 ring-amber-200"
+                  ? "bg-done/15 text-done"
+                  : "bg-waits-soft text-waits-ink"
               }`}
             >
               {floor.status}

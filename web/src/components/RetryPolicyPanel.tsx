@@ -41,7 +41,7 @@ export default function RetryPolicyPanel({ project, flowId }: { project: string;
 
   // The plan form (only while no AUTHORIZED policy exists for the flow).
   const [hostsText, setHostsText] = useState("");
-  const [hostsTouched, setHostsTouched] = useState(false);
+  const hostsTouched = useRef(false);
   const [maxRetries, setMaxRetries] = useState(20);
   const [maxAttemptsEach, setMaxAttemptsEach] = useState(3);
   const [maxRequestsEach, setMaxRequestsEach] = useState(10);
@@ -63,9 +63,9 @@ export default function RetryPolicyPanel({ project, flowId }: { project: string;
   // the person edits, never a grant.
   const suggestions = useApi(() => control.acquireHosts(project, flowId), [project, flowId]);
   useEffect(() => {
-    if (hostsTouched || !suggestions.data) return;
+    if (hostsTouched.current || !suggestions.data) return;
     setHostsText(suggestions.data.candidate_hosts.map((item) => item.host).join("\n"));
-  }, [suggestions.data, hostsTouched]);
+  }, [suggestions.data]);
 
   const hosts = [...new Set([
     ...hostsText.split(/\r?\n/).map((host) => host.trim()).filter(Boolean),
@@ -155,23 +155,26 @@ export default function RetryPolicyPanel({ project, flowId }: { project: string;
     }
   }
 
-  return <section aria-label={t("retryPolicy.heading")} className="mb-5 rounded-md border border-border p-4">
+  return <section aria-label={t("retryPolicy.heading")} className="mb-5 rounded-xl border border-border bg-card p-4">
     <h2 className="font-semibold">{t("retryPolicy.heading")}</h2>
     {rows.error ? <ErrorState error={rows.error} context="retry policies" /> : null}
     {rows.pending || rows.refreshing ? <Pending label={t("retryPolicy.loading")} /> : null}
     {rows.data && !rows.refreshing ? policies.length > 0 ? policies.map((policy) =>
       <div key={policy.policy_id} className="mt-3 text-sm">
-        <p>{t("retryPolicy.state")}: {policy.state} · {policy.policy_id}</p>
+        <p>{t("retryPolicy.state")}: {policy.state}</p>
         <p>{t("retryPolicy.hosts")}: {policy.policy.allowed_hosts.join(", ")}</p>
         <p>{t("retryPolicy.retries", { remaining: policy.remaining_retries, max: policy.policy.max_retries })}</p>
         <p>{t("retryPolicy.requests", { reserved: policy.reserved_requests, max: policy.policy.max_total_requests })}</p>
         <p>{t("retryPolicy.expires")}: {policy.policy.expires_at}</p>
-        <p>{t("retryPolicy.baseDelay")}: {policy.policy.base_delay_hours} h</p>
-        <p>{t("retryPolicy.maxDelay")}: {policy.policy.max_delay_hours} h</p>
-        <p>{t("retryPolicy.attempts")}: {policy.policy.max_attempts_each}</p>
+        <details className="mt-2 text-xs text-muted-foreground"><summary className="min-h-11 cursor-pointer py-3">{t("flowAssay.details")}</summary>
+          <p className="max-w-full truncate font-mono" title={policy.policy_id}>{t("retryPolicy.state")}: {policy.state} · {policy.policy_id}</p>
+          <p>{t("retryPolicy.baseDelay")}: {policy.policy.base_delay_hours} h</p>
+          <p>{t("retryPolicy.maxDelay")}: {policy.policy.max_delay_hours} h</p>
+          <p>{t("retryPolicy.attempts")}: {policy.policy.max_attempts_each}</p>
+        </details>
         {policy.state === "PLANNED" ? (
           <button type="button" disabled={busy} onClick={() => { setConfirming({ policy, kind: "authorize" }); setError(null); setPlanChanged(false); }}
-            className="min-h-11 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-50">
+            className="min-h-11 rounded-lg border border-border bg-card px-4 text-sm font-medium disabled:opacity-50">
             {t("retryPolicy.authorize")}</button>
         ) : policy.state === "AUTHORIZED" ? (
           <button type="button" disabled={busy} onClick={() => { setConfirming({ policy, kind: "revoke" }); setError(null); setPlanChanged(false); }}
@@ -183,7 +186,7 @@ export default function RetryPolicyPanel({ project, flowId }: { project: string;
     {rows.data && !authorized ? (
       <form onSubmit={submit} noValidate className="mt-4 flex flex-col gap-3">
         <label className="flex flex-col gap-1 text-sm">{t("retryPolicy.exactHosts")}
-          <textarea value={hostsText} disabled={busy} onChange={(event) => { setHostsTouched(true); setHostsText(event.target.value); }}
+          <textarea value={hostsText} disabled={busy} onChange={(event) => { hostsTouched.current = true; setHostsText(event.target.value); }}
             rows={4} className="rounded-md border bg-background px-3 py-2" />
         </label>
         <NumberField label={t("retryPolicy.maxRetries")} value={maxRetries} setValue={setMaxRetries} busy={busy} min={1} max={200} />
@@ -213,7 +216,7 @@ export default function RetryPolicyPanel({ project, flowId }: { project: string;
         <p className="text-sm">{t("retryPolicy.planningNothing")}</p>
         {validation ? <p role="alert" className="text-sm text-not-obtained">{validation}</p> : null}
         <button type="submit" disabled={busy}
-          className="min-h-11 self-start rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-50">
+          className="min-h-11 self-start rounded-lg border border-border bg-card px-4 text-sm font-medium disabled:opacity-50">
           {busy ? t("retryPolicy.planning") : t("retryPolicy.plan")}
         </button>
       </form>

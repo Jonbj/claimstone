@@ -27,7 +27,7 @@ export function TheTopic({ topics }: { topics: Journey["topics"] }) {
   const shown = all ? topics : topics.slice(0, TOPICS_SHOWN);
   const hidden = topics.length - TOPICS_SHOWN;
   return (
-    <section aria-label="The topic" className="rounded-lg bg-card p-5 shadow-sm ring-1 ring-gray-200 dark:ring-gray-800">
+    <section aria-label="The topic" className="rounded-xl border border-border bg-card p-5">
       <h2 className="mb-2 text-base font-semibold">The topic</h2>
       {topics.length === 0 ? (
         <p className="text-sm text-muted-foreground">no topics declared</p>
@@ -45,7 +45,7 @@ export function TheTopic({ topics }: { topics: Journey["topics"] }) {
       )}
       {hidden > 0 ? (
         <button type="button" aria-expanded={all} onClick={() => setAll((v) => !v)}
-                className="mt-2 inline-flex min-h-11 items-center rounded-md px-3 text-sm ring-1 ring-gray-300 hover:bg-gray-50 dark:ring-gray-700 dark:hover:bg-gray-900">
+                className="mt-2 inline-flex min-h-11 items-center rounded-lg border border-border px-3 text-sm hover:bg-muted">
           {all ? "Show fewer topics" : `Show all ${topics.length} topics`}
         </button>
       ) : null}
@@ -61,13 +61,13 @@ function stateWord(row: MatrixRow): string {
 
 export function TheQuestions({ rows, base }: { rows: MatrixRow[]; base: string }) {
   return (
-    <section aria-label="The questions" className="rounded-lg bg-card p-5 shadow-sm ring-1 ring-gray-200 dark:ring-gray-800">
+    <section aria-label="The questions" className="rounded-xl border border-border bg-card p-5">
       <h2 className="mb-2 text-base font-semibold">The questions</h2>
       <ul className="flex flex-col gap-2">
         {rows.map((row) => (
           <li key={row.id} data-question-id={row.id} className="flex items-baseline gap-2 text-sm">
             <Link to={`${base}/q/${encodeURIComponent(row.id)}`}
-                  className="font-mono text-[13px] text-blue-600 hover:underline dark:text-blue-400">
+                  className="font-mono text-[13px] text-provisional hover:underline">
               {row.id}
             </Link>
             <span className="min-w-0 flex-1 text-muted-foreground">{row.text}</span>
@@ -83,7 +83,7 @@ export function NeedsYou({ needs, base, writable }: {
   needs: Journey["needs_you"]; base: string; writable: boolean;
 }) {
   return (
-    <section aria-label="Needs you" className="rounded-lg bg-card p-5 shadow-sm ring-1 ring-gray-200 dark:ring-gray-800">
+    <section aria-label="Needs you" className="rounded-xl border border-border bg-card p-5">
       <h2 className="mb-2 text-base font-semibold">Needs you</h2>
       {needs.required === null && needs.optional === null ? (
         <p className="text-sm text-muted-foreground" data-needs-note>
@@ -100,7 +100,7 @@ export function NeedsYou({ needs, base, writable }: {
       </p>
       {writable ? (
         <Link to={`${base}/decisions`}
-              className="mt-3 inline-flex min-h-11 items-center rounded-md px-4 text-sm font-medium ring-1 ring-gray-300 hover:bg-gray-50 dark:ring-gray-700 dark:hover:bg-gray-900">
+              className="mt-3 inline-flex min-h-11 items-center rounded-lg border border-border px-4 text-sm font-medium hover:bg-muted">
           Open decisions
         </Link>
       ) : null}

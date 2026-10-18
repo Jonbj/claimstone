@@ -59,7 +59,7 @@ export default function ProjectPage() {
         <nav aria-label="Breadcrumb" className="text-sm text-muted-foreground">
           <Link to="/projects" className="hover:underline">Projects</Link> / {project}
         </nav>
-        <h1 className="font-serif text-5xl leading-tight font-normal">
+        <h1 className="text-3xl leading-tight font-semibold">
           {project}
           {refreshing ? (
             <span className="pending ml-3 font-sans text-sm" role="status">
@@ -67,24 +67,19 @@ export default function ProjectPage() {
             </span>
           ) : null}
         </h1>
-        {card && card.config === "OK" ? (
-          <p className="font-mono text-xs text-muted-foreground">
-            registry v{card.registry_version} · {card.registry_sha256}
-          </p>
-        ) : null}
       </header>
       <ProjectTabs project={project} />
 
       <section aria-label="Research" className="flex flex-col gap-3">
-        <h2 className="text-sm font-semibold">Research</h2>
+        <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Research</h2>
         {index.pending ? (
           <Pending label="loading selectors…" />
         ) : index.error ? (
           <ErrorState error={index.error} context="projects" />
         ) : card ? (
-          <ul className="flex flex-wrap gap-3">
+          <ul className="flex flex-col gap-2">
             {(card.flows ?? []).map((flow) => (
-              <li key={flow.flow_id} className="rounded-xl border border-border bg-card px-4 py-2">
+              <li key={flow.flow_id} className="rounded-xl border border-border bg-card px-4 py-3">
                 <Link
                   to={`/p/${encodeURIComponent(project)}/f/${encodeURIComponent(flow.flow_id)}`}
                   className="flex min-h-11 flex-col justify-center hover:underline"
@@ -137,7 +132,7 @@ export default function ProjectPage() {
       </section>
 
       <details id="technical-details" open={wantsDetails ? true : undefined}
-               className="rounded-lg bg-card p-5 shadow-sm ring-1 ring-gray-200 dark:ring-gray-800">
+               className="rounded-xl border border-border bg-card p-5">
         <summary className="cursor-pointer text-base font-semibold">
           Technical details
           {integrity.error ? (
@@ -146,6 +141,11 @@ export default function ProjectPage() {
             </span>
           ) : null}
         </summary>
+        {card && card.config === "OK" ? (
+          <p className="mt-3 max-w-full truncate font-mono text-xs text-muted-foreground" title={card.registry_sha256}>
+            registry v{card.registry_version} · {card.registry_sha256}
+          </p>
+        ) : null}
         <section aria-label="Integrity" className="mt-4">
           {integrity.pending ? (
             <Pending label="loading integrity…" />

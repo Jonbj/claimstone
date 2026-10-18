@@ -55,7 +55,7 @@ function Labeled({ label, help, error, children }: {
       <label htmlFor={id} className="text-sm font-medium">{label}</label>
       {children({ id, ...(describedBy ? { "aria-describedby": describedBy } : {}), ...(error ? { "aria-invalid": true as const } : {}) })}
       {help ? <p id={`${id}-help`} className="text-xs text-muted-foreground">{help}</p> : null}
-      {error ? <p id={`${id}-err`} className="text-xs text-red-700 dark:text-red-400">{error}</p> : null}
+      {error ? <p id={`${id}-err`} className="text-xs text-not-obtained">{error}</p> : null}
     </div>
   );
 }
@@ -265,7 +265,7 @@ function Body({ project }: { project: string }) {
           </label>
         ))}
         <p className="text-xs text-muted-foreground">{t("sched.new.sources.help")}</p>
-        {problemsOf.fields.sources ? <p id="ns-sources-err" className="text-xs text-red-700 dark:text-red-400">{problemsOf.fields.sources}</p> : null}
+        {problemsOf.fields.sources ? <p id="ns-sources-err" className="text-xs text-not-obtained">{problemsOf.fields.sources}</p> : null}
       </fieldset>
 
       <details ref={advanced} className="rounded-xl border border-border bg-card px-4 py-3">
@@ -306,7 +306,7 @@ function Body({ project }: { project: string }) {
 
       {overview.error ? <p role="alert" className="text-sm">{t("sched.new.topicsFailed", { message: overview.error.message })}</p> : null}
       {refusal ? (
-        <div role="alert" className="text-sm text-red-700 dark:text-red-400">
+        <div role="alert" className="text-sm text-not-obtained">
           <p>{refusal.message}</p>
           {problemsOf.rest.length ? <ul className="list-disc pl-5">{problemsOf.rest.map((d, i) => <li key={i}>{d}</li>)}</ul> : null}
         </div>
@@ -333,7 +333,7 @@ export default function NewSeriesPage() {
       <nav aria-label="Breadcrumb" className="text-sm text-muted-foreground">
         <Link to={`/p/${encodeURIComponent(project)}/scheduler`} className="inline-flex min-h-11 items-center hover:underline">{t("sched.series.back")}</Link>
       </nav>
-      <h1 className="font-serif text-4xl leading-tight font-normal">{t("sched.new.title")}</h1>
+      <h1 className="text-3xl leading-tight font-semibold">{t("sched.new.title")}</h1>
       {!session.ready ? (
         <Pending label={t("shell.checking")} />
       ) : !session.operator ? (

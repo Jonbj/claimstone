@@ -789,5 +789,20 @@
     },
     "flowChip": "Series · round {round}",
     "flowChipNoRound": "Series"
+  },
+  "flowAssay": {
+    "noVerdict": "■ No verdict produced",
+    "belowFloor": "The acquisition floor has not been met",
+    "reason": "Claimstone cannot produce evidence profiles or verdicts from a corpus below its declared acquisition floor.",
+    "rate": "{confirmed} confirmed copies of {found} found · rate {rate}",
+    "floor": "floor {floor}",
+    "recover": "Recover more copies",
+    "supply": "Offer or upload a copy",
+    "budgetUsed": "Budget used",
+    "budgetStatus": "Spent {spent} of {limit} USD; {unknown} units have an unreported cost",
+    "reservedUnknown": "Cost reserved for {unknown} unit(s) without a reported cost; amount not available.",
+    "batchId": "Batch ID",
+    "details": "Technical details",
+    "figures": "Figures"
   }
 }

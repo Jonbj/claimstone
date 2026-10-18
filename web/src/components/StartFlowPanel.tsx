@@ -37,12 +37,12 @@ export default function StartFlowPanel({ project }: { project: string }) {
   }
 
   return (
-    <section aria-label={t("startFlow.heading")} className="rounded-lg bg-card p-5 shadow-sm ring-1 ring-gray-200 dark:ring-gray-800">
+    <section aria-label={t("startFlow.heading")} className="rounded-xl border border-border bg-card p-5">
       <h3 className="text-base font-semibold">{t("startFlow.heading")}</h3>
       <p className="mt-1 text-sm text-muted-foreground">{t("startFlow.noRequest")}</p>
       {!session.ready ? <p>{t("shell.checking")}</p> : session.operator === null ? (
         <Link to={`/login?next=${encodeURIComponent(`/p/${encodeURIComponent(project)}`)}`}
-              className="text-blue-600 hover:underline dark:text-blue-400">{t("startFlow.signIn")}</Link>
+              className="text-provisional hover:underline">{t("startFlow.signIn")}</Link>
       ) : (
         <form onSubmit={submit} noValidate className="mt-4 flex flex-col gap-3">
           <label className="flex flex-col gap-1 text-sm">{t("startFlow.title")}

@@ -41,7 +41,7 @@ export default function SourceTracker({ entries }: { entries: TrackerEntry[] }) 
   const counts = new Map<TrackerEntry["state"], number>();
   for (const entry of entries) counts.set(entry.state, (counts.get(entry.state) ?? 0) + 1);
   return (
-    <div>
+    <div className="assay-tracker">
       <Tracker
         data={entries.map((entry) => ({
           key: entry.candidate_key,

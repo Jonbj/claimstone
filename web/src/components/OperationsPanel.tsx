@@ -9,6 +9,7 @@ import { useApi } from "@/hooks/useApi";
 import { control } from "@/lib/control";
 import type { OperationSummary } from "@/lib/control";
 import { useSession } from "@/lib/session";
+import { useLocale } from "@/lib/i18n";
 
 // "Right now" (spec v2.1 F3): the flow's scheduler operations, from GET …/operations. Signed in
 // only. Everything shown is the API's: the state word and its note verbatim, the limits, the
@@ -24,18 +25,27 @@ function limit(value: number | null, unit = ""): string {
   return value === null ? "— (none set)" : `${value}${unit}`;
 }
 
+function stateSymbol(state: string): string {
+  if (state === "PLANNED") return "●";
+  if (state === "AUTHORIZED" || state === "RUNNING_OR_LOCK_HELD") return "◐";
+  if (state === "COMPLETED") return "✓";
+  if (state === "FAILED") return "■";
+  if (state === "INTERRUPTED") return "▲";
+  return "○";
+}
+
 export default function OperationsPanel({ project, flowId, namedRound = false, hasCandidates = false }: {
   project: string; flowId: string; namedRound?: boolean; hasCandidates?: boolean;
 }) {
   const session = useSession();
   return (
-    <section aria-label="Right now" className="rounded-lg bg-card p-5 shadow-sm ring-1 ring-gray-200 dark:ring-gray-800">
+    <section aria-label="Right now" className="rounded-xl border border-border bg-card p-4 sm:p-5">
       <h2 className="mb-2 text-base font-semibold">Right now</h2>
       {!session.ready ? (
         <Pending label="checking session…" />
       ) : session.operator === null ? (
         <p className="text-sm text-muted-foreground">
-          <Link to="/login" className="text-blue-600 hover:underline dark:text-blue-400">
+          <Link to="/login" className="text-provisional hover:underline">
             Sign in to see and authorize operations
           </Link>
         </p>
@@ -49,17 +59,19 @@ export default function OperationsPanel({ project, flowId, namedRound = false, h
 function OperationsList({ project, flowId, namedRound, hasCandidates }: {
   project: string; flowId: string; namedRound: boolean; hasCandidates: boolean;
 }) {
+  const { t } = useLocale();
   const list = useApi(() => control.operations(project, flowId), [project, flowId]);
   const [confirming, setConfirming] = useState<OperationSummary | null>(null);
   const [batchRefreshToken, setBatchRefreshToken] = useState(0);
   const operations = list.data?.operations ?? [];
+  const firstPlannedIndex = operations.findIndex((op) => op.state === "PLANNED");
   function refreshAfterPlanning() {
     list.reload();
     setBatchRefreshToken((token) => token + 1);
   }
   return (
     <>
-      {namedRound ? <PlanBatchForm project={project} flowId={flowId} hasCandidates={hasCandidates}
+      {namedRound ? <PlanBatchForm project={project} flowId={flowId} hasCandidates={hasCandidates} primary={!operations.some((op) => op.state === "PLANNED")}
                                    onPlanned={refreshAfterPlanning} /> : null}
       <BatchesAwaitingAuthorization project={project} flowId={flowId} refreshToken={batchRefreshToken}
                                     onAuthorized={list.reload} />
@@ -67,15 +79,24 @@ function OperationsList({ project, flowId, namedRound, hasCandidates }: {
       {list.pending || !list.data ? <Pending label="loading operations…" /> : null}
       {list.data && operations.length === 0 ? <p className="text-sm text-muted-foreground">No operation is planned for this flow.</p> : null}
       <ul className="flex flex-col gap-4">
-        {operations.map((op) => (
-          <li key={op.operation_id} className="border-b pb-3 text-sm last:border-b-0 last:pb-0">
+        {operations.map((op, index) => (
+          <li key={op.operation_id} className="border-t border-border py-4 text-sm first:border-t-0">
             <div className="flex flex-wrap items-baseline gap-2">
-              <Chip text={op.state} />
+              <span className="inline-flex items-center gap-1"><span aria-hidden="true">{stateSymbol(op.state)}</span><Chip text={op.state} /></span>
               <span className="font-medium">{op.stage ?? "—"}</span>
-              <span className="font-mono text-xs text-muted-foreground">{op.operation_id}</span>
             </div>
             <p className="mt-1 text-muted-foreground">{op.state_note}</p>
-            <dl className="mt-2 grid grid-cols-[10rem_minmax(0,1fr)] gap-x-3 gap-y-0.5 text-[13px]">
+            {op.limits.spend_usd !== null && op.limits.spend_usd > 0 ? (
+              <div className="mt-3 max-w-md" aria-label={t("flowAssay.budgetStatus", { spent: op.spent_usd, limit: op.limits.spend_usd, unknown: op.units_with_unknown_cost })}>
+                <div className="flex justify-between gap-2 text-xs text-muted-foreground"><span>Spent, as reported</span><span className="font-mono">{op.spent_usd} / {op.limits.spend_usd} USD</span></div>
+                <svg className="mt-1 h-3 w-full" viewBox="0 0 100 10" preserveAspectRatio="none" role="img" aria-label={t("flowAssay.budgetUsed")}>
+                  <rect x="0" y="0" width="100" height="10" rx="5" fill="var(--muted)" />
+                  <rect x="0" y="0" width={Math.min(100, Math.max(0, op.spent_usd / op.limits.spend_usd * 100))} height="10" rx="5" fill="var(--primary)" />
+                </svg>
+                <p className="text-xs text-muted-foreground">{t("flowAssay.reservedUnknown", { unknown: op.units_with_unknown_cost })}</p>
+              </div>
+            ) : null}
+            <dl className="mt-2 grid grid-cols-[minmax(0,8rem)_minmax(0,1fr)] gap-x-3 gap-y-1 text-[13px]">
               <dt className="text-muted-foreground">Limits</dt>
               <dd>
                 network requests {limit(op.limits.network_requests)} · model calls{" "}
@@ -92,30 +113,36 @@ function OperationsList({ project, flowId, namedRound, hasCandidates }: {
               </dd>
               <dt className="text-muted-foreground">Units completed</dt>
               <dd className="font-mono">{op.units_completed}</dd>
-              <dt className="text-muted-foreground">Last event</dt>
+            </dl>
+            <details className="mt-3 text-xs text-muted-foreground">
+              <summary className="min-h-11 cursor-pointer py-3">{t("flowAssay.details")}</summary>
+              <p className="max-w-full truncate font-mono" title={op.operation_id}>{op.operation_id}</p>
+              <dl className="mt-2 grid grid-cols-[minmax(0,8rem)_minmax(0,1fr)] gap-x-3 gap-y-1">
+              <dt>Last event</dt>
               <dd>
                 {op.last_event}
                 {op.last_event_at ? ` · ${op.last_event_at}` : " · — (no time recorded)"}
               </dd>
-              <dt className="text-muted-foreground">Worker</dt>
+              <dt>Worker</dt>
               <dd>{op.worker_note}</dd>
-            </dl>
+              </dl>
+            </details>
             <div className="mt-2 flex flex-wrap gap-2">
               {op.state === "PLANNED" ? (
                 <button
                   type="button"
-                  className="min-h-11 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:brightness-95"
+                  className={`min-h-11 rounded-lg px-4 text-sm font-medium hover:brightness-95 ${index === firstPlannedIndex ? "bg-primary text-primary-foreground" : "border border-border bg-card"}`}
                   onClick={() => setConfirming(op)}
                 >
                   Authorize
                 </button>
               ) : null}
               <button type="button" disabled title={NO_STOP_EVENT}
-                      className="min-h-11 rounded-md px-4 text-sm opacity-50 ring-1 ring-gray-300">
+                      className="min-h-11 rounded-lg border border-border px-4 text-sm opacity-50">
                 Pause
               </button>
               <button type="button" disabled title={NO_STOP_EVENT}
-                      className="min-h-11 rounded-md px-4 text-sm opacity-50 ring-1 ring-gray-300">
+                      className="min-h-11 rounded-lg border border-border px-4 text-sm opacity-50">
                 Resume
               </button>
             </div>
@@ -176,7 +203,7 @@ function AuthorizeDialog({ project, flowId, op, onClose, onDone }: {
           {running ? "Authorizing…" : "Confirm authorization"}
         </button>
         <button type="button" disabled={running} onClick={onClose}
-                className="min-h-11 rounded-md px-4 text-sm ring-1 ring-gray-300">
+                className="min-h-11 rounded-lg border border-border px-4 text-sm">
           Cancel
         </button>
       </div>

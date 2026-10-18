@@ -2,6 +2,8 @@ import { CategoryBar } from "@/components/tremor/CategoryBar/CategoryBar";
 import Chip from "@/components/Chip";
 import Fraction from "@/components/Fraction";
 import type { Overview } from "@/lib/api-types";
+import { Link, useSearchParams } from "react-router";
+import { useLocale } from "@/lib/i18n";
 
 // §8.3 item 5: the floor panel per class — a CategoryBar with a marker at each
 // class's floor, then the deficit `sentences` and the `disclosure` verbatim (rule 5).
@@ -35,12 +37,44 @@ type FloorPanelData = {
   disclosure: string;
 };
 
+export function BlockedFloorPanel({ panel, base, writable }: { panel: Overview["floor_panel"]; base: string; writable: boolean }) {
+  const { t } = useLocale();
+  const [params] = useSearchParams();
+  if (!panel || panel.overall.status !== "INSUFFICIENT_ACQUISITION") return null;
+  const { basis_count, found, rate, floor } = (panel as unknown as FloorPanelData).overall;
+  const actual = rate === null ? 0 : Math.min(Math.max(rate, 0), 1) * 100;
+  const threshold = Math.min(Math.max(floor, 0), 1) * 100;
+  return (
+    <section aria-label={t("flowAssay.noVerdict")} className="flex flex-wrap items-center gap-6 rounded-xl bg-rail p-5 text-rail-foreground sm:p-7">
+      <div className="min-w-0 flex-[2_1_360px]">
+        <span className="inline-flex rounded-full bg-not-obtained/20 px-3 py-1 text-xs font-semibold text-rail-foreground">{t("flowAssay.noVerdict")}</span>
+        <h2 className="mt-3 text-xl font-semibold">{t("flowAssay.belowFloor")}</h2>
+        <p className="mt-2 text-sm leading-relaxed text-rail-muted">{t("flowAssay.reason")}</p>
+      </div>
+      <div className="min-w-0 flex-[1_1_220px]">
+        <p className="font-mono text-3xl font-semibold text-primary">{rate === null ? "—" : rate.toFixed(2)}</p>
+        <p className="mt-1 text-xs text-rail-muted">{t("flowAssay.rate", { confirmed: basis_count ?? "—", found: found ?? "—", rate: rate === null ? "—" : rate.toFixed(2) })}</p>
+        <svg className="mt-3 h-5 w-full" viewBox="0 0 100 20" preserveAspectRatio="none" role="img" aria-label={t("flowAssay.floor", { floor: floor.toFixed(2) })}>
+          <rect x="0" y="5" width="100" height="10" rx="5" fill="var(--rail-active)" />
+          <rect x="0" y="5" width={actual} height="10" rx="5" fill="var(--primary)" />
+          <path d={`M ${threshold} 1 V 19`} stroke="var(--rail-foreground)" strokeWidth="1" />
+        </svg>
+        <p className="text-xs text-rail-muted">{t("flowAssay.floor", { floor: floor.toFixed(2) })}</p>
+      </div>
+      {writable ? <div className="flex flex-[1_1_100%] flex-wrap gap-2">
+        <Link to={`${base}?block=execution`} className={`inline-flex min-h-11 items-center rounded-lg px-4 text-sm font-semibold ${params.get("block") === "execution" ? "border border-rail-muted text-rail-foreground" : "bg-primary text-primary-foreground"}`}>{t("flowAssay.recover")}</Link>
+        <Link to={`${base}/material`} className="inline-flex min-h-11 items-center rounded-lg border border-rail-muted px-4 text-sm font-semibold text-rail-foreground">{t("flowAssay.supply")}</Link>
+      </div> : null}
+    </section>
+  );
+}
+
 export default function FloorPanel({ panel }: { panel: Overview["floor_panel"] }) {
   if (panel === null) return null;
   const data = panel as unknown as FloorPanelData;
   const classes = Object.entries(data.by_class);
   return (
-    <section className="rounded-lg bg-card p-5 shadow-sm ring-1 ring-gray-200 dark:ring-gray-800">
+    <section className="rounded-xl border border-border bg-card p-5">
       <h2 className="text-base font-semibold">Floor and deficit</h2>
       <p className="mt-1 flex flex-wrap items-baseline gap-2 text-sm">
         <span>

@@ -77,13 +77,13 @@ export default function WorkLocallyPanel({ project, flowId }: { project: string;
     }
   }
 
-  return <section aria-label={t("workLocally.heading")} className="mb-5 rounded-md border border-border p-4">
+  return <section aria-label={t("workLocally.heading")} className="mb-5 rounded-xl border border-border bg-card p-4">
     <h2 className="font-semibold">{t("workLocally.heading")}</h2>
     {mandates.error ? <ErrorState error={mandates.error} context="local mandates" /> : null}
     {mandates.pending || mandates.refreshing ? <Pending label={t("workLocally.loading")} /> : null}
     {mandates.data && !mandates.refreshing ? active.length > 0 ? active.map((mandate) =>
       <div key={mandate.mandate_id} className="mt-3 text-sm">
-        <p>{t("workLocally.state")}: {mandate.state} · {mandate.mandate_id}</p>
+        <p>{t("workLocally.state")}: {mandate.state}</p>
         <p>{t("workLocally.extract")}: {mandate.mandate.extract_model}</p>
         <p>{t("workLocally.review")}: {mandate.mandate.review_model}</p>
         <p>{t("workLocally.calls")}: {mandate.mandate.max_total_local_calls}</p>
@@ -94,11 +94,14 @@ export default function WorkLocallyPanel({ project, flowId }: { project: string;
         })}</p> : null}
         <p>{t("workLocally.reserved")}: {mandate.reserved_local_calls}</p>
         <p>{t("workLocally.remaining")}: {mandate.remaining_local_calls}</p>
-        <p>{t("workLocally.flows")}: {mandate.flow_ids.join(", ")}</p>
         <p>{t("workLocally.pending")}: {mandate.pending_batches.length}</p>
-        {mandate.pending_batches.map((batch) => <p key={batch.batch_id}>
-          {batch.batch_id} · {batch.stage} · {t("workLocally.awaiting")}: {batch.awaiting_approval}
-        </p>)}
+        <details className="mt-2 text-xs text-muted-foreground"><summary className="min-h-11 cursor-pointer py-3">{t("flowAssay.details")}</summary>
+          <p className="max-w-full truncate font-mono" title={mandate.mandate_id}>{t("workLocally.state")}: {mandate.state} · {mandate.mandate_id}</p>
+          <p>{t("workLocally.flows")}: {mandate.flow_ids.join(", ")}</p>
+          {mandate.pending_batches.map((batch) => <p key={batch.batch_id}>
+            <span className="font-mono" title={batch.batch_id}>{batch.batch_id.slice(0, 12)}…</span> · {batch.stage} · {t("workLocally.awaiting")}: {batch.awaiting_approval}
+          </p>)}
+        </details>
         <button type="button" disabled={busy} onClick={() => setConfirming(mandate.mandate_id)}
           className="min-h-11 rounded-md border px-3">{t("workLocally.disable")}</button>
       </div>) : <div className="mt-3 flex flex-col gap-3 text-sm">
@@ -131,13 +134,14 @@ export default function WorkLocallyPanel({ project, flowId }: { project: string;
           <p>{t("workLocally.explainMetered", { count: callsText || "—", budget: budgetText || "—" })}</p>
         </> : <p>{t("workLocally.explain", { count: callsText || "—" })}</p>}
         <button type="button" disabled={!valid || busy} onClick={() => setConfirming("enable")}
-          className="min-h-11 self-start rounded-md bg-primary px-4 text-primary-foreground disabled:opacity-50">
+          className="min-h-11 self-start rounded-lg border border-border bg-card px-4 disabled:opacity-50">
           {t("workLocally.enable")}</button>
       </div> : null}
     {mandates.data && !mandates.refreshing && active.length === 0 ?
-      mandates.data.map((mandate) => <p key={mandate.mandate_id} className="mt-2 text-sm">
-        {t("workLocally.state")}: {mandate.state} · {mandate.mandate_id}
-      </p>) : null}
+      mandates.data.map((mandate) => <div key={mandate.mandate_id} className="mt-2 text-sm">
+        <p>{t("workLocally.state")}: {mandate.state}</p>
+        <details className="text-xs text-muted-foreground"><summary className="min-h-11 cursor-pointer py-3">{t("flowAssay.details")}</summary><span className="block max-w-full truncate font-mono" title={mandate.mandate_id}>{mandate.mandate_id}</span></details>
+      </div>) : null}
     {confirming ? <div role="dialog" aria-modal="true" aria-label={t("workLocally.confirm")}
       className="mt-4 rounded-lg bg-card p-5 ring-2 ring-primary">
       <h3 className="font-semibold">{confirming === "enable" ? t("workLocally.confirmEnable") : t("workLocally.confirmDisable")}</h3>

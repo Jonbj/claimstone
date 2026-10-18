@@ -66,10 +66,10 @@ function Body({ project, id }: { project: string; id: string }) {
       <AcquisitionPanel audit={d.audit} />
       <SaveStatus dossier={d} />
       <QuestionRows profiles={d.profiles} decisions={d.human_decisions} readerBase={readerBase} />
-      <section aria-label={t("sched.res.download.title")} className="flex flex-col items-start gap-1">
+      <section aria-label={t("sched.res.download.title")} className="flex flex-col items-start gap-1 rounded-xl border border-border bg-card p-4 sm:p-5">
         <h2 className="text-base font-semibold">{t("sched.res.download.title")}</h2>
         <button type="button" onClick={() => download(d, `periodic-dossier-${id.slice(0, 12)}.json`)}
-                className="inline-flex min-h-11 items-center rounded-lg px-4 text-sm font-medium ring-1 ring-gray-300 hover:bg-gray-50 dark:ring-gray-700 dark:hover:bg-gray-900">
+                className="inline-flex min-h-11 items-center rounded-lg border border-border px-4 text-sm font-medium hover:bg-muted">
           {saved ? t("sched.res.download.saved") : t("sched.res.download.live")}
         </button>
         <p className="text-xs text-muted-foreground">{t("sched.res.download.note")}</p>
@@ -94,7 +94,7 @@ export default function CumulativeResultPage() {
       <nav aria-label="Breadcrumb" className="text-sm text-muted-foreground">
         <Link to={series} className="inline-flex min-h-11 items-center hover:underline">{t("sched.res.back")}</Link>
       </nav>
-      <h1 className="font-serif text-4xl leading-tight font-normal">{t("sched.result.title")}</h1>
+      <h1 className="text-3xl leading-tight font-semibold">{t("sched.result.title")}</h1>
       {!session.ready ? (
         <Pending label={t("shell.checking")} />
       ) : !session.operator ? (

@@ -62,13 +62,13 @@ export default function BatchesAwaitingAuthorization({ project, flowId, refreshT
       {planChanged ? <p role="alert" className="mb-3 text-sm">{t("authorizeBatch.planChanged")}</p> : null}
       {list.error ? <div className="mb-3"><ErrorState error={list.error} context="batches" /></div> : null}
       {awaiting.length > 0 ? (
-        <section aria-label={t("authorizeBatch.heading")} className="mb-5 rounded-md border border-border p-4">
+        <section aria-label={t("authorizeBatch.heading")} className="mb-5 rounded-xl border border-border bg-card p-4">
           <h3 className="font-semibold">{t("authorizeBatch.heading")}</h3>
           <ul className="mt-3 flex flex-col gap-4">
             {awaiting.map((batch) => {
               const hosts = hostsOf(batch);
               return <li key={batch.batch_id} className="border-b pb-4 text-sm last:border-b-0 last:pb-0">
-                <p className="font-medium">{batch.stage} · {batch.batch_id}</p>
+                <p className="font-medium">{batch.stage}</p>
                 <p>{t("authorizeBatch.awaiting", { awaiting: batch.awaiting_approval, selected: batch.selected })}</p>
                 <p>{t("authorizeBatch.ceiling", { count: batch.max_total_requests })}</p>
                 <p>{t("authorizeBatch.hosts", { hosts: hosts.join(", ") || "—" })}</p>
@@ -80,9 +80,10 @@ export default function BatchesAwaitingAuthorization({ project, flowId, refreshT
                       <li key={index}>{item.subject}: {item.reason}</li>)}
                   </ul>
                 </details>
+                <details className="mt-1 text-xs text-muted-foreground"><summary className="min-h-11 cursor-pointer py-3">{t("flowAssay.batchId")}</summary><span className="block max-w-full truncate font-mono" title={batch.batch_id}>{batch.batch_id}</span></details>
                 <button type="button" disabled={running}
                         onClick={() => { setConfirming(batch); setError(null); setPlanChanged(false); }}
-                        className="mt-3 min-h-11 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:brightness-95 disabled:opacity-50">
+                        className="mt-3 min-h-11 rounded-lg border border-border bg-card px-4 text-sm font-medium hover:bg-muted disabled:opacity-50">
                   {t("authorizeBatch.open")}
                 </button>
               </li>;
@@ -107,7 +108,7 @@ export default function BatchesAwaitingAuthorization({ project, flowId, refreshT
               {running ? t("authorizeBatch.authorizing") : t("authorizeBatch.confirm")}
             </button>
             <button type="button" disabled={running} onClick={() => { setConfirming(null); setError(null); }}
-                    className="min-h-11 rounded-md px-4 text-sm ring-1 ring-gray-300">
+                    className="min-h-11 rounded-lg border border-border px-4 text-sm">
               {t("authorizeBatch.cancel")}
             </button>
           </div>

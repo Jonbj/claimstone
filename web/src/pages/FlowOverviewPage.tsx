@@ -3,7 +3,7 @@ import BlockMap from "@/components/BlockMap";
 import Chip from "@/components/Chip";
 import ErrorState from "@/components/ErrorState";
 import RowFields from "@/components/RowFields";
-import FloorPanel from "@/components/FloorPanel";
+import FloorPanel, { BlockedFloorPanel } from "@/components/FloorPanel";
 import InboxCards from "@/components/InboxCards";
 import JourneySteps from "@/components/JourneySteps";
 import { NeedsYou, RunningNote, TheQuestions, TheTopic } from "@/components/JourneySide";
@@ -65,68 +65,39 @@ export default function FlowOverviewPage({ kind }: { kind: "f" | "u" }) {
 
   return (
     <section className="flex flex-col gap-5">
-      <header className="flex flex-col gap-2">
+      <header className="flex flex-col gap-3">
         <nav aria-label="Breadcrumb" className="text-sm text-muted-foreground">
           <Link to="/projects" className="hover:underline">Projects</Link> /{" "}
           <Link to={`/p/${encodeURIComponent(project)}`} className="hover:underline">{data.project}</Link>
         </nav>
         <ProjectTabs project={project} />
-        <h1 className="font-serif text-4xl leading-tight font-normal">
-          {flowTitle || data.selector_label}
-          {data.legacy ? " — legacy" : ""}
-          {overview.refreshing ? (
-            <span className="pending ml-3 font-sans text-sm" role="status">
-              refreshing…
-            </span>
-          ) : null}
-        </h1>
-        <p className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-          <span>scope</span>
-          <Chip text={data.selector_label} />
-          {flowId ? (
-            <>
-              <span>protocol</span>
-              <span className="font-mono text-xs">{flowId.slice(0, 12)}</span>
-            </>
-          ) : null}
-          {data.binding_state ? <Chip text={data.binding_state.state} /> : null}
-          {kind === "f" && flowId && seriesOf.has(flowId) ? (
-            <SeriesChip project={project} scheduleId={seriesOf.get(flowId)!}
-                        round={card?.flows?.find((f) => f.flow_id === flowId)?.selector?.round ?? null} />
-          ) : null}
-          {compactBinding ? (
-            <span data-binding-compact
-                  title="The binding is compared against the live project; it never supplies a value.">
-              binding: no differences{boundAfterData ? " · bound after data existed" : ""}
-            </span>
-          ) : null}
-          {data.legacy ? <Chip text="legacy: protocol not verified" /> : null}
-        </p>
-        {card && ((card.flows ?? []).length + (card.unbound_selectors ?? []).length) > 0 ? (
-          <nav aria-label="Research flows" className="flex flex-wrap items-center gap-2 text-sm">
-            <span className="text-muted-foreground">research</span>
-            {(card.flows ?? []).map((flow) => (
-              <Link key={flow.flow_id}
-                    to={`/p/${encodeURIComponent(project)}/f/${encodeURIComponent(flow.flow_id)}`}
-                    aria-current={kind === "f" && flow.flow_id === flowId ? "page" : undefined}
-                    className="rounded-md px-3 py-1 ring-1 ring-gray-300 hover:bg-gray-50 aria-[current=page]:bg-gray-100 aria-[current=page]:font-semibold dark:ring-gray-700 dark:hover:bg-gray-900 dark:aria-[current=page]:bg-gray-800">
-                {flow.title ?? `flow ${flow.flow_id.slice(0, 12)}`}
-              </Link>
-            ))}
-            {(card.unbound_selectors ?? []).length > 0 ? (
-              <span className="ml-2 text-muted-foreground">History</span>
-            ) : null}
-            {(card.unbound_selectors ?? []).map((entry) => (
-              <Link key={entry.slug}
-                    to={`/p/${encodeURIComponent(project)}/u/${encodeURIComponent(entry.slug)}`}
-                    aria-current={kind === "u" && entry.slug === sel ? "page" : undefined}
-                    className="rounded-md border border-dashed px-3 py-1 hover:bg-gray-50 aria-[current=page]:font-semibold dark:hover:bg-gray-900">
-                {entry.label} <span className="text-xs text-muted-foreground">protocol not verified</span>
-              </Link>
-            ))}
-          </nav>
-        ) : null}
-        <nav aria-label="Flow actions" className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div className="min-w-0">
+            <h1 className="text-3xl leading-tight font-semibold">
+              {flowTitle || data.selector_label}
+              {data.legacy ? " — legacy" : ""}
+              {overview.refreshing ? (
+                <span className="pending ml-3 font-sans text-sm" role="status">refreshing…</span>
+              ) : null}
+            </h1>
+            <p className="flex flex-wrap items-center gap-2 font-mono text-xs text-muted-foreground">
+              <span>scope</span>
+              <Chip text={data.selector_label} />
+              {flowId ? <><span>protocol</span><span className="max-w-40 truncate" title={flowId}>{flowId.slice(0, 12)}</span></> : null}
+              {data.binding_state ? <Chip text={data.binding_state.state} /> : null}
+              {kind === "f" && flowId && seriesOf.has(flowId) ? (
+                <SeriesChip project={project} scheduleId={seriesOf.get(flowId)!}
+                            round={card?.flows?.find((f) => f.flow_id === flowId)?.selector?.round ?? null} />
+              ) : null}
+              {compactBinding ? (
+                <span data-binding-compact title="The binding is compared against the live project; it never supplies a value.">
+                  binding: no differences{boundAfterData ? " · bound after data existed" : ""}
+                </span>
+              ) : null}
+              {data.legacy ? <Chip text="legacy: protocol not verified" /> : null}
+            </p>
+          </div>
+          <nav aria-label="Flow actions" className="flex flex-wrap gap-2">
           {[
             ...(kind === "f"
               ? [
@@ -139,15 +110,40 @@ export default function FlowOverviewPage({ kind }: { kind: "f" | "u" }) {
             ["Project details", `/p/${encodeURIComponent(project)}?details=1`],
           ].map(([label, to]) => (
             <Link key={label} to={to}
-                  className="inline-flex min-h-11 items-center rounded-md px-4 text-sm font-medium ring-1 ring-gray-300 hover:bg-gray-50 dark:ring-gray-700 dark:hover:bg-gray-900">
+                  className="inline-flex min-h-11 items-center rounded-lg border border-border bg-card px-4 text-sm font-medium hover:bg-muted">
               {label}
             </Link>
           ))}
-        </nav>
+          </nav>
+        </div>
+        {card && ((card.flows ?? []).length + (card.unbound_selectors ?? []).length) > 0 ? (
+          <nav aria-label="Research flows" className="flex flex-wrap items-center gap-2 text-sm">
+            <span className="text-muted-foreground">research</span>
+            {(card.flows ?? []).map((flow) => (
+              <Link key={flow.flow_id}
+                    to={`/p/${encodeURIComponent(project)}/f/${encodeURIComponent(flow.flow_id)}`}
+                    aria-current={kind === "f" && flow.flow_id === flowId ? "page" : undefined}
+                    className="inline-flex min-h-11 items-center rounded-lg border border-border px-3 text-sm hover:bg-muted aria-[current=page]:bg-muted aria-[current=page]:font-semibold">
+                {flow.title ?? `flow ${flow.flow_id.slice(0, 12)}`}
+              </Link>
+            ))}
+            {(card.unbound_selectors ?? []).length > 0 ? (
+              <span className="ml-2 text-muted-foreground">History</span>
+            ) : null}
+            {(card.unbound_selectors ?? []).map((entry) => (
+              <Link key={entry.slug}
+                    to={`/p/${encodeURIComponent(project)}/u/${encodeURIComponent(entry.slug)}`}
+                    aria-current={kind === "u" && entry.slug === sel ? "page" : undefined}
+                    className="inline-flex min-h-11 items-center rounded-lg border border-dashed border-border px-3 text-sm hover:bg-muted aria-[current=page]:font-semibold">
+                {entry.label} <span className="text-xs text-muted-foreground">protocol not verified</span>
+              </Link>
+            ))}
+          </nav>
+        ) : null}
       </header>
 
       {data.legacy ? (
-        <section className="rounded-lg bg-card p-5 shadow-sm ring-1 ring-gray-200 dark:ring-gray-800">
+        <section className="rounded-xl border border-border bg-card p-5">
           <h2 className="mb-1 text-sm font-semibold">binding</h2>
           <p>
             <Chip text="legacy: protocol not verified" />
@@ -159,7 +155,7 @@ export default function FlowOverviewPage({ kind }: { kind: "f" | "u" }) {
           </p>
         </section>
       ) : data.binding_state && !compactBinding ? (
-        <section className="rounded-lg bg-card p-5 shadow-sm ring-1 ring-gray-200 dark:ring-gray-800">
+        <section className="rounded-xl border border-border bg-card p-5">
           <h2 className="mb-1 text-sm font-semibold">binding</h2>
           <p className="flex flex-wrap items-baseline gap-2 text-sm">
             <Chip text={data.binding_state.state} />
@@ -184,7 +180,7 @@ export default function FlowOverviewPage({ kind }: { kind: "f" | "u" }) {
       {data.errors.map((err) => (
         <section
           key={err}
-          className="rounded-lg bg-card p-5 shadow-sm ring-1 ring-gray-200 dark:ring-gray-800"
+          className="rounded-xl border border-border bg-card p-5"
         >
           <h2 className="mb-1 text-sm font-semibold">ledger integrity</h2>
           <p>
@@ -197,13 +193,15 @@ export default function FlowOverviewPage({ kind }: { kind: "f" | "u" }) {
       ))}
 
       {data.unavailable ? (
-        <section className="rounded-lg bg-card p-5 shadow-sm ring-1 ring-gray-200 dark:ring-gray-800">
+        <section className="rounded-xl border border-border bg-card p-5">
           <h2 className="mb-1 text-sm font-semibold">corpus</h2>
           <p>
             <Chip text={data.unavailable} />
           </p>
         </section>
       ) : null}
+
+      <BlockedFloorPanel panel={data.floor_panel} base={base} writable={kind === "f"} />
 
       <BlockMap
         blocks={data.journey.blocks}
@@ -238,14 +236,14 @@ export default function FlowOverviewPage({ kind }: { kind: "f" | "u" }) {
         }}
       />
 
-      <details className="rounded-lg bg-card p-5 shadow-sm ring-1 ring-gray-200 dark:ring-gray-800">
+      <details className="rounded-xl border border-border bg-card p-5">
         <summary className="cursor-pointer text-base font-semibold">
           Evidence path and technical details
         </summary>
         <div className="mt-4 flex flex-col gap-5">
       <OverviewKpis overview={data} />
 
-      <section className="rounded-lg bg-card p-5 shadow-sm ring-1 ring-gray-200 dark:ring-gray-800">
+      <section className="rounded-xl border border-border bg-card p-5">
         <div className="flex flex-wrap justify-between gap-2">
           <h2 className="text-base font-semibold">Sources in this scope</h2>
           <span className="text-xs text-muted-foreground">
@@ -258,11 +256,11 @@ export default function FlowOverviewPage({ kind }: { kind: "f" | "u" }) {
       </section>
 
       <div className="flex flex-wrap gap-5">
-        <section className="min-w-0 flex-[3_1_560px] overflow-x-auto rounded-lg bg-card p-5 shadow-sm ring-1 ring-gray-200 dark:ring-gray-800">
+        <section className="min-w-0 flex-[3_1_560px] overflow-x-auto rounded-xl border border-border bg-card p-5">
           <h2 className="mb-3 text-base font-semibold">Questions</h2>
           <QuestionMatrix rows={data.questions.rows} base={base} />
         </section>
-        <section className="flex-[2_1_360px] rounded-lg bg-card p-5 shadow-sm ring-1 ring-gray-200 dark:ring-gray-800">
+        <section className="flex-[2_1_360px] rounded-xl border border-border bg-card p-5">
           <h2 className="text-base font-semibold">Rejected by the gate</h2>
           <p className="mb-3 mt-0.5 text-[13px] text-muted-foreground">
             current, by reason — the denominator
