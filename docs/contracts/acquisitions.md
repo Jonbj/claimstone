@@ -24,12 +24,13 @@ whether a round may produce verdicts at all.
 | `url` | the location that succeeded, or the candidate URL when nothing did |
 | `provenance` | who named that location: `unpaywall`, `openalex`, `arxiv`, `candidate`, `wayback`, `europe-pmc` |
 | `version` | `publishedVersion`, `acceptedVersion`, `submittedVersion`, or empty |
+| `artifact_version` | which arXiv artifact the bytes came from, parsed from the final redirected `vN` URL; `null` for every other host and for rows written before the field existed. The candidate's own `arxiv_version` is what the API *returned*; this is what was *downloaded* — the PDF URL is unversioned by design (D114), so the two can differ |
 | `licence` | as reported by the resolver; `"unknown"` for archived web sources |
 | `oa_status` | `gold`, `green`, `hybrid`, `bronze`, `closed`, or `null` where not applicable |
 | `host_type` | `publisher` or `repository`, when the resolver said |
 | `content_type`, `bytes` | what came back |
 | `failure_class` | the class of the **last** attempt: what stopped us. `null` when acquired |
-| `attempts` | every step of the cascade, in order, each with its own `failure_class`, `gate_kind`, `gate_reason` and `stored_path` |
+| `attempts` | every step of the cascade, in order, each with its own `failure_class`, `gate_kind`, `gate_reason`, `stored_path` and `artifact_version` |
 | `attempts[].retry_after_s` | on a parseable `Retry-After` from HTTP 429 or 503, integer seconds clamped to 0–604800; absent otherwise |
 | `fetched_at` | UTC, ISO 8601, seconds |
 

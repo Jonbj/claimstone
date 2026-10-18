@@ -4,9 +4,9 @@ Split out of `discover` because this is the part that ages: an API renames a fie
 envelope and nothing else in the pipeline moves. A saved payload exercises all three without a store,
 a ledger or a socket.
 
-Every row records the query that found it and the channel it came through, because completeness is
-later estimated by comparing two *independent* channels — keyword search here, and citations
-extracted from acquired texts in stage 3.
+Every row records the query that found it and the channel it came through, because the two independent
+channels — keyword search here, citations extracted from acquired texts in stage 3 — expose works one
+channel missed. They do not estimate completeness: D10 rejected the percentage.
 """
 
 from __future__ import annotations

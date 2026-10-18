@@ -1040,9 +1040,9 @@ start next.
 D53 implements the local JATS parser and stage-3 routing, with 22 synthetic correctness cases.
 It preserves table geometry, notes and explicit references and records `jats_parser_version 1`.
 Unsupported tables leave sources awaiting. Existing production ledgers and Q04's hash are unchanged.
-The acquisition gate and Europe PMC resolver route are still pending, followed by an explicitly
-approved bounded pilot: no acquisition gain or real-article parser accuracy has yet been measured.
-See the implemented boundary.
+The acquisition gate, the Europe PMC resolver route and the bounded six-article pilot named as pending
+here were later done by D77/D78 (gate v4→v5, resolver ahead of the PMC HTML location, two HTTP 200 and
+four HTTP 500 pilot responses). See the implemented boundary.
 
 **Over-attachment in stage 4.** Every chunk is asked about every question of its kind and the model answers
 rather than declining. 23 of 41 and 36 of 42 claims do not speak to the question they cite. Nothing

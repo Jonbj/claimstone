@@ -5302,3 +5302,21 @@ signing a partial verdict is told the figure as it is.
 keys only when partial, so `profile_version` and `adjudication_version` are unchanged.
 
 First use: `projects/prova-esercizio-depressione-2` declares `floor_mode: partial`.
+## D147 — The arXiv artifact that was downloaded is recorded, not inferred (2026-10-18)
+
+Closes the third item of #16. D114 made candidate rows keep the base id and the version the arXiv API
+*returned*, while keeping the PDF URL unversioned so two versions never became two works. The consequence
+was that nothing on an acquisition row said which artifact the bytes actually came from: the candidate said
+`arxiv_version 1`, arXiv served whatever the unversioned URL redirected to, and the only trace was the final
+URL inside `attempts[]` — recoverable by hand, by nobody, ever.
+
+**The change.** Acquisition rows and every attempt row carry `artifact_version`: for `arxiv.org` hosts and
+`/pdf/` paths, the trailing `vN` of the final redirected URL (a legacy `.pdf` suffix tolerated), `null`
+everywhere else. `null` is the honest value for non-arXiv hosts and for every row written before the field:
+a trailing `vN` on a publisher URL is a guess, not an observation. Local reuse (`reuse_cached`) transfers
+the origin's value verbatim or not at all.
+
+**What it does not do.** It does not version the artifact into identity: `candidate_key_version` is
+untouched, two downloads of two versions of one work remain one candidate, and the field exists precisely
+so that fact stays visible instead of being enforced by silence. No instrument version governs acquisition
+row shape, so none is bumped; the field is documented in `docs/contracts/acquisitions.md`.

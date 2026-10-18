@@ -59,6 +59,46 @@ def test_a_real_pdf_is_stored_under_its_hash(tmp_path):
     assert (tmp_path / "t" / "raw" / f"{row['sha256']}.pdf").exists()
 
 
+def test_the_arxiv_artifact_version_is_recorded_from_the_final_redirected_url(tmp_path):
+    # D114 keeps the PDF URL unversioned, so the only honest record of what was downloaded is
+    # the URL arXiv redirected to — recorded beside, never instead of, the candidate's own
+    # `arxiv_version` (which is what the API returned, issue #16).
+    store = Store("t", base=tmp_path)
+    requested = "https://arxiv.org/pdf/1309.6202"
+    fetcher = FakeFetcher(pages={requested: net.Outcome(
+        "https://arxiv.org/pdf/1309.6202v2", True, 200, None, "", "application/pdf", pdf(), 0.1,
+        request_url=requested, redirect_chain=[requested])})
+    row = acquire.acquire_one(fetcher, store, candidate(
+        candidate_key="doi:10.48550/arxiv.1309.6202", doi=None, url=requested,
+        arxiv_base_id="1309.6202", arxiv_version=1), use_apis=False)
+    assert row["acquired"] is True
+    assert row["url"] == requested, "the row's url stays the location we asked for"
+    assert row["artifact_version"] == 2
+    assert row["attempts"][0]["artifact_version"] == 2
+
+
+def test_a_non_arxiv_host_records_no_artifact_version(tmp_path):
+    store = Store("t", base=tmp_path)
+    url = "https://repo.example/paper.v2.pdf"
+    fetcher = FakeFetcher(pages={url: ok(url, pdf(), "application/pdf")})
+    row = acquire.acquire_one(fetcher, store, candidate(url=url, doi=None), use_apis=False)
+    assert row["acquired"] is True
+    assert row["artifact_version"] is None
+
+
+@pytest.mark.parametrize("url,expected", [
+    ("https://arxiv.org/pdf/1309.6202v12", 12),
+    ("https://arxiv.org/pdf/1309.6202v2.pdf", 2),   # legacy .pdf suffix
+    ("https://arxiv.org/pdf/1309.6202", None),       # unversioned redirect stays unrecorded
+    ("https://arxiv.org/pdf/1309.6202v3extra", None),
+    ("https://export.arxiv.org/pdf/10.1v2?download=1", 2),
+    ("https://arxiv.org/abs/1309.6202v2", None),     # only a /pdf path is an artifact download
+    ("https://repo.example/anythingv9", None),       # other hosts are not guessed
+])
+def test_artifact_version_parsing(url, expected):
+    assert acquire._artifact_version(url) == expected
+
+
 def test_the_cascade_continues_past_a_403(tmp_path):
     store = Store("t", base=tmp_path)
     wall = "https://www.sciencedirect.com/science/article/pii/S03"

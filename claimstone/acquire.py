@@ -14,6 +14,8 @@ from __future__ import annotations
 
 import datetime as _dt
 import hashlib
+import re
+import urllib.parse
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any, Iterable, Iterator
@@ -70,6 +72,7 @@ def reuse_cached(store, candidate, origin, *, origin_store, expected_sha256,
         "version": origin.get("version", ""), "licence": origin.get("licence"),
         "oa_status": origin.get("oa_status"), "host_type": origin.get("host_type"),
         "content_type": origin.get("content_type", ""), "bytes": len(payload),
+        "artifact_version": origin.get("artifact_version"),
         "gate": judged.as_row(th, policy), "failure_class": None if judged.accepted else judged.kind,
         "attempts": [], "fetched_at": origin.get("fetched_at"), "reused_at": _now(),
         "reuse_version": REUSE_VERSION, "reuse_origin": {
@@ -176,6 +179,7 @@ def acquire_one(
         attempt = outcome.as_row() | {
             "provenance": location.provenance,
             "version": location.version,
+            "artifact_version": _artifact_version(outcome.url),
             "licence": location.licence,
             "oa_status": location.oa_status or oa_status,
             "host_type": location.host_type,
@@ -235,6 +239,7 @@ def acquire_one(
             "url": location.url,
             "provenance": location.provenance,
             "version": location.version,
+            "artifact_version": _artifact_version(outcome.url),
             "licence": licence,
             "oa_status": location.oa_status or oa_status,
             "host_type": location.host_type,
@@ -256,6 +261,25 @@ def acquire_one(
         # The class of the last attempt is the honest headline: it says what stopped us.
         "failure_class": attempts[-1]["failure_class"] if attempts else net.NO_LOCATIONS,
     }
+
+
+def _artifact_version(url: str) -> int | None:
+    """Which arXiv artifact the bytes actually came from, or None.
+
+    The candidate row keeps the base id and the version the API returned (D114), but the PDF
+    URL is deliberately unversioned so versions do not become separate works — which means the
+    only honest record of what was downloaded is the final URL arXiv redirected to. Parsed for
+    arxiv.org hosts and `/pdf/` paths only: a trailing `vN` elsewhere would be a guess, not an
+    observation.
+    """
+    if net.host_of(url) not in ("arxiv.org", "www.arxiv.org", "export.arxiv.org"):
+        return None
+    parts = [p for p in urllib.parse.urlparse(url).path.split("/") if p]
+    if len(parts) < 2 or parts[-2] != "pdf":
+        return None
+    segment = parts[-1][:-4] if parts[-1].endswith(".pdf") else parts[-1]
+    match = re.fullmatch(r"(.+)v([1-9][0-9]*)", segment)
+    return int(match.group(2)) if match else None
 
 
 def _age_seconds(row: dict[str, Any]) -> float:
