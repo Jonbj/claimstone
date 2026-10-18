@@ -5302,3 +5302,31 @@ signing a partial verdict is told the figure as it is.
 keys only when partial, so `profile_version` and `adjudication_version` are unchanged.
 
 First use: `projects/prova-esercizio-depressione-2` declares `floor_mode: partial`.
+
+## D149 — OpenAlex pacing reads the key and the query class; paging is an explicit, bounded budget (2026-10-18)
+
+Issue #10: D112 assumed OpenAlex allowed 100 requests/s and reserved starts at 50/s. No quota breach was
+demonstrated; the number was simply stale. Read on 2026-10-18 at
+https://help.openalex.org/api/authentication/: 10 requests/s without a key, 30/s with a free key or prepaid
+usage, 50/s on an annual plan; a search with more than five OR/AND/NOT operators is limited to 1, 5 or 25/s
+respectively, and semantic search to 1/s. A key does not say which plan it belongs to, so the keyed figure
+used here is the free/prepaid 30/s, never the annual 50/s.
+
+`provider_limits.openalex_query_class` reads the URL (`search.semantic` and the operator count) and
+`openalex_requests_per_second` reads `OPENALEX_API_KEY` unless a caller passes `keyed`. `provider_slot` uses
+their interval; every other host keeps its static `INTERVALS`. D112's shared ledger, one-connection rule and
+credit ceiling are unchanged.
+
+Pagination is opt-in and bounded. `discover --max-pages N` (default 1) follows OpenAlex pages with `page=`,
+the continuation D118 measured on saved bytes. Page 1 keeps the frozen discovery-v4 request, so every
+pre-existing caller sends the same bytes. The stopping rules, in order: empty page, short page
+(`returned < per_query`), provider count reached (`meta.count`), page budget; a failed page stops wherever it
+occurs. The query row records `page_budget`, `pages_requested`, `stop_reason` and `page_failures`; `returned`
+is the sum across pages and ranks continue across pages, so a query hit still names one provider position. A
+later page failure keeps the rows already admitted and marks the query not final (`ok: false`), never a
+swallowed failure. `DISCOVERY_VERSION` is 5; discovery-v4 rows remain readable.
+
+Unchanged: scheduler operations still plan one page per query, and no cursor is followed automatically. The
+budget is a CLI argument, not a project input, so it does not change a protocol digest. Unmeasured: how many
+additional candidates a second page returns on the trial's topics. D118 measured one identity on one query,
+not a rate, so the budget enables a measurement rather than asserting a gain.

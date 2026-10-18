@@ -71,8 +71,18 @@ def run(
     round_name: str = ROUTINE,
     terms: Iterable[str] | None = None,
     campaign: str | None = None,
+    max_pages: int = 1,
 ) -> dict[str, Any]:
-    """Search every term of every selected topic; append only candidates not already seen."""
+    """Search every term of every selected topic; append only candidates not already seen.
+
+    `max_pages` is the explicit page budget for an OpenAlex query (default 1, which keeps the
+    discovery-v4 request and every pre-existing caller unchanged). A page is followed only while
+    the previous one was full, the provider's own count is not yet reached, and the budget is not
+    spent. Every stop writes `pages_requested` and a `stop_reason` to `queries.jsonl`, so a depth
+    that was capped is never read as a saturated search (D113, D148).
+    """
+    if type(max_pages) is not int or max_pages < 1:
+        raise ValueError('max_pages must be a positive integer')
     wanted = set(topics) if topics else None
     wanted_terms = set(terms) if terms else None
     policy = getattr(project, "population", {})
@@ -102,35 +112,76 @@ def run(
                 if campaign is not None:
                     context['campaign'] = campaign
                 logged = RecordingFetcher(fetcher, store, **context)
-                returned = 0
+                rows: list[dict[str, Any]] = []
                 failure = None
                 detail = ''
-                rows = []
-                try:
-                    rows = list(searcher(logged, term, topic.id, **{_limit_kw(api): per_query}))
-                except (searchers.SearchError, AttributeError, IndexError, KeyError, TypeError, ValueError) as exc:
-                    from .store import LedgerCorrupt
-                    if isinstance(exc, LedgerCorrupt):
-                        raise
-                    failure = getattr(exc, 'failure', 'INVALID_SEARCH_RESPONSE')
-                    detail = str(exc)[:400]
-                    failures[failure] = failures.get(failure, 0) + 1
-                else:
-                    completed += 1
-                returned = len(rows)
-                query_id = sha256_text(f'{round_name}|{api}|{topic.id}|{term}')
+                page_failures: list[dict[str, Any]] = []
+                pages_requested = 0
                 total_available = None
                 next_cursor = None
-                if api == 'openalex' and failure is None:
-                    payload = logged.last_json_payload
-                    meta = payload.get('meta') if isinstance(payload, dict) else None
-                    if isinstance(meta, dict):
-                        count = meta.get('count')
-                        if type(count) is int and count >= returned:
-                            total_available = count
-                        cursor = meta.get('next_cursor')
-                        if isinstance(cursor, str) and cursor:
-                            next_cursor = cursor
+                if api == 'openalex':
+                    page_budget = max_pages
+                    rank_offset = 0
+                    for page_no in range(1, max_pages + 1):
+                        pages_requested += 1
+                        try:
+                            page = searchers.openalex_page(
+                                logged, term, topic.id, per_page=per_query,
+                                page=None if page_no == 1 else page_no,
+                                rank_offset=rank_offset)
+                        except (searchers.SearchError, AttributeError, IndexError,
+                                KeyError, TypeError, ValueError) as exc:
+                            from .store import LedgerCorrupt
+                            if isinstance(exc, LedgerCorrupt):
+                                raise
+                            failure = getattr(exc, 'failure', 'INVALID_SEARCH_RESPONSE')
+                            detail = str(exc)[:400]
+                            failures[failure] = failures.get(failure, 0) + 1
+                            page_failures.append({'page': page_no,
+                                                  'failure_class': failure,
+                                                  'detail': detail})
+                            stop_reason = 'PAGE_FAILED'
+                            break
+                        rows.extend(page['rows'])
+                        rank_offset += len(page['rows'])
+                        if page['total_available'] is not None:
+                            total_available = page['total_available']
+                        if page['next_cursor'] is not None:
+                            next_cursor = page['next_cursor']
+                        if not page['rows']:
+                            stop_reason = 'EMPTY_PAGE'
+                            break
+                        if len(page['rows']) < per_query:
+                            stop_reason = 'SHORT_PAGE'
+                            break
+                        if total_available is not None and rank_offset >= total_available:
+                            stop_reason = 'COUNT_REACHED'
+                            break
+                        stop_reason = ('PAGE_BUDGET' if page_no == max_pages else None)
+                    if page_failures:
+                        # The headline is the last page that failed; earlier pages' rows stay.
+                        stop_reason = 'PAGE_FAILED'
+                    else:
+                        completed += 1
+                else:
+                    page_budget = 1
+                    pages_requested = 1
+                    stop_reason = 'SINGLE_PAGE'
+                    try:
+                        rows = list(searcher(logged, term, topic.id,
+                                             **{_limit_kw(api): per_query}))
+                    except (searchers.SearchError, AttributeError, IndexError,
+                            KeyError, TypeError, ValueError) as exc:
+                        from .store import LedgerCorrupt
+                        if isinstance(exc, LedgerCorrupt):
+                            raise
+                        failure = getattr(exc, 'failure', 'INVALID_SEARCH_RESPONSE')
+                        detail = str(exc)[:400]
+                        failures[failure] = failures.get(failure, 0) + 1
+                    else:
+                        completed += 1
+                returned = len(rows)
+                query_id = sha256_text(f'{round_name}|{api}|{topic.id}|{term}')
                 for rank, row in enumerate(rows, start=1):
                     if not row["title"] and not row["url"]:
                         continue
@@ -172,6 +223,8 @@ def run(
                 store.append('queries.jsonl', context | {
                     'query_id': query_id,
                     'discovery_version': searchers.DISCOVERY_VERSION, 'per_query': per_query,
+                    'page_budget': page_budget, 'pages_requested': pages_requested,
+                    'stop_reason': stop_reason, 'page_failures': page_failures,
                     'ok': failure is None, 'failure_class': failure, 'detail': detail,
                     'returned': returned, 'total_available': total_available,
                     'depth_capped': (total_available > returned

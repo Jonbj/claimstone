@@ -451,7 +451,8 @@ def _discover(args: argparse.Namespace) -> int:
         fetcher = net.Fetcher(excluded_hosts=frozenset(project.excluded_hosts))
         result = discover.run(project, store, fetcher,
                               apis=tuple(args.api) if args.api else APIS,
-                              topics=topics, per_query=args.per_query, round_name=args.round)
+                              topics=topics, per_query=args.per_query, round_name=args.round,
+                              max_pages=args.max_pages)
         print(f"keyword channel: {result['new']} new of {result['returned']} returned, "
               f"{result['queries']} queries")
         if result.get("failures"):
@@ -1544,6 +1545,9 @@ def build_parser() -> argparse.ArgumentParser:
             command.add_argument("--api", action="append",
                                  help=f"repeatable; one of {', '.join(KNOWN_APIS)}. Default: {', '.join(APIS)}")
             command.add_argument("--per-query", type=int, default=25)
+            command.add_argument("--max-pages", type=int, default=1,
+                                 help="OpenAlex page budget per query (default 1; stops on a "
+                                      "short page, the provider count, or a failed page)")
             command.add_argument("--channel", choices=("keyword", "citation", "both"),
                                  default="both")
             command.add_argument("--promote-contested", action="store_true",

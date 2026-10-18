@@ -40,7 +40,13 @@ the scheduler refuses to repeat the request automatically.
 
 `store/.provider_limits/starts.jsonl` is a separate append-only, machine-shared
 transport-start reservation ledger. Its lock spaces requests across projects
-using the same store root and holds one provider connection at a time. It is
+using the same store root and holds one provider connection at a time. OpenAlex
+spacing reads both the key (`OPENALEX_API_KEY`) and the query class: 10/s
+keyless and 30/s keyed for a standard search, 1/s and 5/s for a search with more
+than five `OR`/`AND`/`NOT` operators, and 1/s for semantic search, all from the
+provider's authentication page read on 2026-10-18 (D149). A key is paced as the
+free/prepaid class, never the annual plan's 50/s, because it does not say which
+plan it belongs to. It is
 not a scientific search or acquisition ledger. It cannot coordinate another
 machine that does not share the mounted store. A recorded OpenAlex 429 with
 `daily_remaining: 0` is labelled as daily-credit exhaustion; without that
@@ -61,9 +67,10 @@ spending cap.
 |---|---|
 | `query_id` | hash of round, API, topic and term; latest outcome determines completion |
 | `round`, `source_api`, `topic_id`, `query`, `per_query` | query and requested result cap |
-| `discovery_version` | search-row instrument; currently 4 |
+| `discovery_version` | search-row instrument; currently 5 |
 | `ok`, `failure_class`, `detail` | valid completed search versus explicit failure |
-| `returned` | records returned by a valid search, including zero |
+| `returned` | records returned by a valid search, including zero; summed across pages when paging |
+| `page_budget`, `pages_requested`, `stop_reason`, `page_failures` | the page budget requested for the query (1 without `--max-pages`), pages actually requested, the rule that stopped paging (`PAGE_BUDGET`, `EMPTY_PAGE`, `SHORT_PAGE`, `COUNT_REACHED`, `PAGE_FAILED` or `SINGLE_PAGE`), and each failed page with its class and detail |
 | `total_available`, `depth_capped`, `next_cursor` | OpenAlex `meta.count`, whether the returned page omitted further hits, and its opaque cursor when present; null if unavailable or for another API |
 | `completed_at` | UTC attempt completion time |
 
@@ -75,5 +82,7 @@ Discovery CLI failure returns 3. Old missing logs remain unknown; this does not 
 queries for already recorded curated historical corpora.
 `depth_capped: false` means the OpenAlex API reported no further hits for that
 exact query. It does not establish that the protocol found the literature.
-The cursor is retained for a separately approved paging operation; no current
-scheduler operation follows it automatically.
+The cursor is retained. `discover --max-pages` follows pages with `page=`, the
+continuation D118 measured; page 1 keeps the frozen discovery-v4 request bytes,
+and query ranks continue across pages. No scheduler operation follows a cursor
+automatically, and the scheduler still plans one page per query.
