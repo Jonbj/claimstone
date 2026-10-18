@@ -2,6 +2,7 @@ import { Link } from "react-router";
 import { formatUtc, isIsoTimestamp } from "@/lib/datetime";
 import type { Overview } from "@/lib/api-types";
 import type { MatrixRow } from "@/components/QuestionMatrix";
+import { useLocale } from "@/lib/i18n";
 
 // The guided journey (spec J2). The steps arrive from the server with their status, actor and
 // summary; this file maps a status to a colour and a shape and prints the status word beside it
@@ -9,19 +10,14 @@ import type { MatrixRow } from "@/components/QuestionMatrix";
 export type Journey = Overview["journey"];
 export type JourneyStep = Journey["steps"][number];
 
-const STATUS: Record<JourneyStep["status"], { word: string; bar: string; mark: string; ink: string }> = {
-  done: { word: "done", bar: "bg-done", mark: "bg-done text-white", ink: "text-done" },
-  running: { word: "running", bar: "bg-acting", mark: "bg-acting text-white", ink: "text-acting-ink" },
-  waits_for_you: { word: "waits for you", bar: "bg-waits", mark: "bg-waits text-white", ink: "text-waits-ink" },
-  blocked: { word: "blocked", bar: "bg-not-obtained", mark: "bg-not-obtained text-white", ink: "text-not-obtained" },
-  partial: {
-    word: "partial",
-    bar: "bg-gradient-to-r from-done from-50% to-gray-300 to-50%",
-    mark: "bg-gradient-to-r from-done from-50% to-gray-300 to-50% text-foreground",
-    ink: "text-foreground",
-  },
-  not_started: { word: "not started", bar: "bg-gray-300", mark: "bg-gray-200 text-gray-700", ink: "text-muted-foreground" },
-  not_applicable: { word: "not applicable", bar: "bg-slate-400", mark: "bg-slate-300 text-slate-800", ink: "text-muted-foreground" },
+const STATUS: Record<JourneyStep["status"], { word: string; symbol: string; bar: string; mark: string; ink: string; chip: string }> = {
+  done: { word: "done", symbol: "✓", bar: "bg-done", mark: "bg-done/15 text-done", ink: "text-done", chip: "bg-done/15 text-done" },
+  running: { word: "running", symbol: "◐", bar: "bg-acting", mark: "bg-acting-soft text-acting-ink", ink: "text-acting-ink", chip: "bg-acting-soft text-acting-ink" },
+  waits_for_you: { word: "waits for you", symbol: "●", bar: "bg-waits", mark: "bg-waits-soft text-waits-ink", ink: "text-waits-ink", chip: "bg-waits-soft text-waits-ink" },
+  blocked: { word: "blocked", symbol: "■", bar: "bg-not-obtained", mark: "bg-not-obtained/15 text-not-obtained", ink: "text-not-obtained", chip: "bg-not-obtained/15 text-not-obtained" },
+  partial: { word: "partial", symbol: "▲", bar: "bg-provisional", mark: "bg-waits-soft text-waits-ink", ink: "text-provisional", chip: "bg-waits-soft text-waits-ink" },
+  not_started: { word: "not started", symbol: "○", bar: "bg-neutral-soft", mark: "bg-neutral-soft text-neutral-ink", ink: "text-muted-foreground", chip: "bg-neutral-soft text-neutral-ink" },
+  not_applicable: { word: "not applicable", symbol: "○", bar: "bg-neutral-soft", mark: "bg-neutral-soft text-neutral-ink", ink: "text-muted-foreground", chip: "bg-neutral-soft text-neutral-ink" },
 };
 
 const ACTOR: Record<JourneyStep["actor"], { word: string; cls: string }> = {
@@ -123,38 +119,39 @@ export default function JourneySteps({
   heading?: string | null;
   bar?: boolean;
 }) {
+  const { t } = useLocale();
   const ready = readyToSign(rows);
   const steps = keys ? journey.steps.filter((step) => keys.includes(step.key)) : journey.steps;
   return (
     <section aria-label={heading ?? "Journey steps"} className="flex flex-col gap-4">
       {heading === null ? null : <h2 className="text-base font-semibold">{heading}</h2>}
       {bar ? <SegmentBar steps={steps} /> : null}
-      <ol className="flex flex-col gap-3">
+      <ol className="overflow-hidden rounded-xl border border-border bg-card">
         {steps.map((step) => {
           const s = STATUS[step.status];
           const a = ACTOR[step.actor];
           return (
             <li key={step.n} data-step={step.key} data-status={step.status}
-                className="flex gap-3 rounded-lg bg-card p-4 shadow-sm ring-1 ring-gray-200 dark:ring-gray-800">
+                className={`flex gap-4 border-t border-border p-4 first:border-t-0 sm:px-5 ${step.status === "blocked" ? "bg-not-obtained/5" : ""}`}>
               <span aria-hidden="true"
                     className={`flex size-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${s.mark}`}>
-                {step.status === "done" ? "✓" : step.n}
+                {s.symbol}
               </span>
               <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-baseline gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <h3 className="text-sm font-semibold">{step.n}. {step.title}</h3>
                   <span className={`rounded-md px-1.5 text-xs ${a.cls}`} data-actor={step.actor}>{a.word}</span>
-                  <span className={`text-xs font-medium ${s.ink}`} data-status-word>{s.word}</span>
+                  <span className={`ml-auto rounded-full px-2.5 py-1 text-xs font-semibold ${s.chip}`}><span aria-hidden="true">{s.symbol} </span><span data-status-word>{s.word}</span></span>
                 </div>
-                <p className="mt-1 text-sm">{step.summary}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{step.summary}</p>
                 {step.key === "copies" && showsFloor(step) ? <FloorLine figures={step.figures} /> : null}
-                <Figures figures={step.figures} />
+                {Object.keys(step.figures).length > 0 ? <details className="mt-1 text-xs text-muted-foreground"><summary className="min-h-11 cursor-pointer py-3">{t("flowAssay.figures")}</summary><Figures figures={step.figures} /></details> : null}
                 {step.key === "sign" ? (
                   writable && ready.length > 0 ? (
                     <div className="mt-2 flex flex-wrap gap-2">
                       {ready.map((row) => (
                         <Link key={row.id} to={`${base}/q/${encodeURIComponent(row.id)}`}
-                              className="inline-flex min-h-11 items-center rounded-md bg-waits px-4 text-sm font-medium text-white hover:opacity-90">
+                              className="inline-flex min-h-11 items-center rounded-lg border border-border bg-card px-4 text-sm font-medium hover:bg-muted">
                           Read and sign {row.id}
                         </Link>
                       ))}

@@ -303,4 +303,12 @@
     font-size: 0.8rem;
     margin: 0 0 0.25rem;
   }
+
+  /* Tracker keeps its existing class names for the state-order contract; Assay colours use tokens. */
+  .assay-tracker .bg-emerald-500 { background-color: var(--done) !important; }
+  .assay-tracker .bg-blue-500 { background-color: var(--acting) !important; }
+  .assay-tracker .bg-amber-400 { background-color: var(--provisional) !important; }
+  .assay-tracker .bg-rose-500 { background-color: var(--not-obtained) !important; }
+  .assay-tracker .bg-gray-300, .assay-tracker .bg-gray-200 { background-color: var(--neutral-soft) !important; }
+  .assay-tracker .bg-slate-400 { background-color: var(--neutral-ink) !important; }
 }

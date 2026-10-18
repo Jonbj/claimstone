@@ -789,5 +789,20 @@
     },
     "flowChip": "Serie · round {round}",
     "flowChipNoRound": "Serie"
+  },
+  "flowAssay": {
+    "noVerdict": "■ Nessun verdetto prodotto",
+    "belowFloor": "La soglia di acquisizione non è raggiunta",
+    "reason": "Claimstone non può produrre profili di evidenza o verdetti da un corpus sotto la soglia di acquisizione dichiarata.",
+    "rate": "{confirmed} copie confermate su {found} trovate · tasso {rate}",
+    "floor": "soglia {floor}",
+    "recover": "Recupera altre copie",
+    "supply": "Offri o carica una copia",
+    "budgetUsed": "Budget utilizzato",
+    "budgetStatus": "Spesi {spent} su {limit} USD; {unknown} unità hanno un costo non dichiarato",
+    "reservedUnknown": "Costo riservato per {unknown} unità senza costo dichiarato; importo non disponibile.",
+    "batchId": "ID del lotto",
+    "details": "Dettagli tecnici",
+    "figures": "Dati"
   }
 }

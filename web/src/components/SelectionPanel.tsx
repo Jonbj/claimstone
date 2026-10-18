@@ -30,7 +30,7 @@ function ScopeBlock({ scope }: { scope: Scope }) {
     <div className="mt-3 border-t pt-3" data-scope={scope.scope_id}>
       <p className="text-sm">
         <b>{scope.question_id}</b>{" "}
-        <span className="font-mono text-xs text-muted-foreground">{scope.scope_id}</span>
+        <span className="font-mono text-xs text-muted-foreground" title={scope.scope_id}>{scope.scope_id.length > 12 ? `${scope.scope_id.slice(0, 12)}…` : scope.scope_id}</span>
       </p>
       {figures === null ? (
         <p className="mt-1 text-sm">
