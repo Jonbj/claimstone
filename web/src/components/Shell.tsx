@@ -114,6 +114,8 @@ export default function Shell() {
       ? [{ id: "people", label: t("shell.people"), to: "/people", active: (p: string) => p.startsWith("/people") }]
       : []),
   ];
+  // The sign-in page is a door, not a room: no rail, no navigation, the page owns the whole window.
+  if (pathname === "/login") return <Outlet />;
   return (
     <div className="min-h-screen bg-background text-foreground min-[900px]:flex">
       <nav

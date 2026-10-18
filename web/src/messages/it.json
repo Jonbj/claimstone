@@ -327,7 +327,11 @@
       "password": "Password",
       "submit": "Accedi",
       "busy": "Accesso in corso…",
-      "checking": "controllo la sessione…"
+      "checking": "controllo la sessione…",
+      "tagline": "Una macchina di lettura che si rifiuta di dire più di quanto ha letto.",
+      "p1": "Ogni affermazione è legata a una citazione testuale.",
+      "p2": "Se si è letto troppo poco, nessun verdetto.",
+      "p3": "Un agente non firma mai. Firmi tu."
     },
     "account": {
       "title": "Il mio account",

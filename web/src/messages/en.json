@@ -327,7 +327,11 @@
       "password": "Password",
       "submit": "Sign in",
       "busy": "Signing in…",
-      "checking": "checking the session…"
+      "checking": "checking the session…",
+      "tagline": "A reading machine that refuses to overstate what it read.",
+      "p1": "Every claim is bound to a verbatim quote.",
+      "p2": "Too little read means no verdict at all.",
+      "p3": "An agent never signs. You do."
     },
     "account": {
       "title": "My account",
