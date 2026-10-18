@@ -47,7 +47,7 @@ WORKSPACE_TOKEN = "<workspace>"
 # Names the collection must not see: credentials decide `admin`'s presence booleans,
 # `CLAIMSTONE_CODE_REVISION` would decide `meta`'s code identity, and `CLAIMSTONE_ROOT`
 # would move the instrument checker.
-SCRUBBED_ENV = ("CLAIMSTONE_CONTACT_EMAIL", "OLLAMA_API_KEY", "OPENALEX_API_KEY", "CORE_API_KEY",
+SCRUBBED_ENV = ("CLAIMSTONE_CONTACT_EMAIL", "OLLAMA_API_KEY", "OPENALEX_API_KEY", "CORE_API_KEY", "BRAVE_API_KEY",
                 "CLAIMSTONE_CODE_REVISION", "CLAIMSTONE_ROOT")
 
 

@@ -129,6 +129,7 @@ def acquire_one(
     thresholds: dict[str, int] | None = None,
     policy: dict[str, Any] | None = None,
     classes: Any = None,
+    web_locator: bool = False,
 ) -> dict[str, Any]:
     """Try the cascade for one candidate. Returns the ledger row; never raises on a fetch."""
     if not candidate.get("source_class"):
@@ -147,6 +148,12 @@ def acquire_one(
     fetcher = RecordingFetcher(fetcher, store, purpose='acquisition', campaign=campaign,
                                candidate_key=candidate['candidate_key'], source_class=candidate['source_class'])
     locations, oa_status = resolve.plan(fetcher, candidate, use_apis=use_apis)
+    if web_locator:
+        # Last, and only for hosts the plan named: leads the open-web search recorded for this candidate (D145).
+        from claimstone import web_locator as locator
+
+        locations = [*locations, *locator.fetch_locations(
+            store, str(candidate["candidate_key"]), getattr(fetcher, "allowed_hosts", None))]
     attempts: list[dict[str, Any]] = []
     common = {
         "candidate_key": candidate["candidate_key"],
@@ -327,6 +334,7 @@ def run(
     thresholds: dict[str, int] | None = None,
     policy: dict[str, Any] | None = None,
     classes: Any = None,
+    web_locator: bool = False,
     limit: int | None = None,
     round_name: str | None = None,
     manifest_only: bool = False,
@@ -358,7 +366,7 @@ def run(
         try:
             row = acquire_one(
                 fetcher, store, candidate, campaign=campaign, use_apis=use_apis,
-                thresholds=thresholds, policy=policy, classes=classes,
+                thresholds=thresholds, policy=policy, classes=classes, web_locator=web_locator,
             )
         except MissingSourceClass as exc:
             # The refusal is right and ending the sweep is not — the same defect shape as an unreadable

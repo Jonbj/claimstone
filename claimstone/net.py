@@ -480,6 +480,9 @@ class Fetcher:
                     if (parsed.scheme == 'https' and parsed.netloc == 'api.openalex.org'
                             and (key := os.environ.get('OPENALEX_API_KEY', '').strip())):
                         headers['Authorization'] = f'Bearer {key}'
+                    if (parsed.scheme == 'https' and parsed.netloc == 'api.search.brave.com'
+                            and (brave_key := os.environ.get('BRAVE_API_KEY', '').strip())):
+                        headers['X-Subscription-Token'] = brave_key
                     if (parsed.scheme == 'https' and parsed.netloc == 'api.core.ac.uk'
                             and (core_key := os.environ.get('CORE_API_KEY', '').strip())):
                         headers['Authorization'] = f'Bearer {core_key}'

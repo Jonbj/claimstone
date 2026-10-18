@@ -133,6 +133,10 @@ class Project:
     # declared: supplied copies are read and reported on their own line, outside the numerator.
     supplied_copies: str = "separate"
     supplied_copies_declared: bool = False
+    # The open-web locator's host policy (D145). Empty unless the project declares `web_locator`; a declared
+    # block is protocol, because it changes which copies can be obtained and so the rate.
+    web_locator: dict[str, Any] = field(default_factory=dict)
+    web_locator_declared: bool = False
 
     @property
     def question_ids(self) -> frozenset[str]:
@@ -272,6 +276,16 @@ def load_supplied_copies(root: pathlib.Path) -> tuple[str, bool]:
             "sources.yaml: 'supplied_copies' must be 'count' or 'separate' — whether copies an "
             "operator supplies count toward the floor is declared, never decided per copy")
     return str(raw), True
+
+
+def load_web_locator(root: pathlib.Path) -> tuple[dict[str, Any], bool]:
+    """(policy, declared). Absent means not declared and the locator never fetches for this project."""
+    from claimstone import web_locator
+
+    raw = _read_yaml(root / "sources.yaml").get("web_locator")
+    if raw is None:
+        return {}, False
+    return web_locator.validate_policy(raw), True
 
 
 def load_topics(root: pathlib.Path) -> tuple[Topic, ...]:
@@ -736,6 +750,7 @@ def load_project(root: str | pathlib.Path) -> Project:
     citation_channel = load_citation_channel(path)
     floor_version, floor_set_at, floor_rationale = load_floor_provenance(path)
     supplied_copies, supplied_declared = load_supplied_copies(path)
+    web_policy, web_declared = load_web_locator(path)
 
     project = Project(
         name=path.name,
@@ -759,6 +774,8 @@ def load_project(root: str | pathlib.Path) -> Project:
         floor_rationale=floor_rationale,
         supplied_copies=supplied_copies,
         supplied_copies_declared=supplied_declared,
+        web_locator=web_policy,
+        web_locator_declared=web_declared,
     )
     project.population  # Validate the optional metadata selector before any requests.
     return project

@@ -1045,6 +1045,7 @@
    "title": "Study three",
    "tooltip": "no acquisition attempt recorded",
    "venue": null,
+   "web_leads": [],
    "year": null
   },
   {
@@ -1058,6 +1059,7 @@
    "title": "Refused work",
    "tooltip": "HTTP 403 — access refused (stored as PAYWALL_403; not proof of a paywall or of a purchasable copy)",
    "venue": null,
+   "web_leads": [],
    "year": null
   }
  ],

@@ -89,6 +89,8 @@ def run(
     th = {**chunking.DEFAULT_THRESHOLDS, **CONFIRM_DEFAULTS, **(thresholds or {})}
     done = store.latest_by("documents.jsonl", "source_id")
     references = _reference_rows(store)
+    candidate_titles = {key: row.get("title")
+                        for key, row in store.latest_by("candidates.jsonl", "candidate_key").items()}
     attempted = 0
 
     allowed = scope.source_ids(store, selector) if selector is not None else None
@@ -167,6 +169,16 @@ def run(
             continue
 
         confirmed, reason = confirm(doc, th)
+        # A copy located on the open web carries no warrant that it is the work (D145): the document's own title
+        # is checked against the candidate's, and a file that is not that work is not a confirmed document.
+        identity = None
+        if source.get("provenance") == "web_locator":
+            from claimstone import web_locator
+
+            identity = web_locator.identity_check(
+                doc.title, candidate_titles.get(str(source.get("candidate_key"))))
+            if not identity["passed"]:
+                confirmed, reason = False, f"{identity['failure_class']}: {identity['reason']}"
         result = chunking.chunk_document(doc, source_id=source_id, thresholds=th) if confirmed \
             else chunking.ChunkResult(chunks=[])
 
@@ -214,7 +226,9 @@ def run(
             # read by `grobid.LEGACY_IMAGE`, and a re-read under another image is a new generation.
             "pdf_parser": pdf_image if is_pdf else None,
             "fulltext_confirmed": confirmed,
-            "failure_class": None if confirmed else NOT_A_DOCUMENT,
+            "failure_class": (None if confirmed else
+                              (identity["failure_class"] if identity and not identity["passed"] else NOT_A_DOCUMENT)),
+            "identity_check": identity,
             "reason": reason,
             "title": doc.title,
             "body_chars": doc.body_chars,

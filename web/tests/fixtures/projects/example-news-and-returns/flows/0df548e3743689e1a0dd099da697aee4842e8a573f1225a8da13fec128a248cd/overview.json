@@ -1599,6 +1599,7 @@
    "title": "Study one",
    "tooltip": "obtained and confirmed as a document by normalize",
    "venue": null,
+   "web_leads": [],
    "year": null
   },
   {
@@ -1612,6 +1613,7 @@
    "title": "Study two",
    "tooltip": "obtained and confirmed as a document by normalize",
    "venue": null,
+   "web_leads": [],
    "year": null
   }
  ],

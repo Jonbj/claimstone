@@ -88,6 +88,10 @@ def protocol_digest(project: Project) -> str:
     # existed, so no flow bound earlier drifts. Declaring it, or changing it, is drift (B7b).
     if project.supplied_copies_declared:
         semantic["supplied_copies"] = project.supplied_copies
+    # Same rule for the open-web locator (D145): undeclared keeps every earlier digest; declaring or changing
+    # the host policy is drift, because it changes which copies can be obtained.
+    if project.web_locator_declared:
+        semantic["web_locator"] = project.web_locator
     return hashlib.sha256(_canonical(semantic).encode("utf-8")).hexdigest()
 
 

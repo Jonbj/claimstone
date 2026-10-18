@@ -490,7 +490,7 @@ OVERVIEW = _payload("overview", {
         "items": {
             "type": "object",
             "required": ["candidate_key", "source_id", "source_class", "state", "tooltip",
-                         "title", "year", "venue", "doi", "failure_display", "status"],
+                         "title", "year", "venue", "doi", "failure_display", "status", "web_leads"],
             "properties": {
                 "candidate_key": _STR,
                 "source_id": _STR_OR_NULL,
@@ -502,6 +502,12 @@ OVERVIEW = _payload("overview", {
                 "venue": _STR_OR_NULL,
                 "doi": _STR_OR_NULL,
                 "failure_display": _STR_OR_NULL,
+                # Open-web leads for a document not read: addresses to open, never fetched by the portal (D145).
+                "web_leads": {"type": "array", "items": {
+                    "type": "object", "required": ["url", "host", "title", "decision"],
+                    "properties": {"url": _STR, "host": _STR, "title": _STR_OR_NULL,
+                                   "decision": {"type": "string", "enum": ["ALLOWED", "UNCLASSIFIED"]}},
+                    "additionalProperties": False}},
                 # What Crossref reported about the work, or null when never asked (D142).
                 "status": {
                     "type": ["object", "null"],

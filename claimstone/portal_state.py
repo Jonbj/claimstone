@@ -25,6 +25,7 @@ from typing import Any, Iterable, Mapping
 
 from claimstone import ids
 from claimstone import snowball
+from claimstone import web_locator
 from claimstone import status as status_module
 from claimstone import admissibility, claim_records, chunk_sets, flows, journey, net, review, round_state, scope, synthesize
 from claimstone.config import (ConfigError, Project, RegistryDrift, check_registry_drift,
@@ -549,7 +550,7 @@ def instrument_versions() -> dict[str, Any]:
 
 
 # The credentials the portal reports by presence and the control server may replace (B11).
-CREDENTIAL_NAMES = ("CLAIMSTONE_CONTACT_EMAIL", "OLLAMA_API_KEY", "OPENALEX_API_KEY", "CORE_API_KEY")
+CREDENTIAL_NAMES = ("CLAIMSTONE_CONTACT_EMAIL", "OLLAMA_API_KEY", "OPENALEX_API_KEY", "CORE_API_KEY", "BRAVE_API_KEY")
 
 
 def admin_state(root: pathlib.Path | str) -> dict[str, Any]:
@@ -703,6 +704,14 @@ def _tracker_tooltip(state: str, row: Mapping[str, Any] | None) -> str:
     return f"not obtained: {failure_display((row or {}).get('failure_class'))}"
 
 
+def _web_leads(store: Store, key: str) -> list[dict[str, Any]]:
+    """At most three leads a person may open: allowed or unclassified hosts only, denied ones never offered."""
+    keep = (web_locator.ALLOWED, web_locator.UNCLASSIFIED)
+    return [{"url": lead["url"], "host": str(lead.get("host") or ""), "title": lead.get("title") or None,
+             "decision": str(lead["decision"])}
+            for lead in web_locator.leads(store, key) if lead["decision"] in keep][:3]
+
+
 def _status_view(row: dict[str, Any] | None) -> dict[str, Any] | None:
     """What Crossref reported about a work (D142), as the portal shows it; `None` when never asked.
     `NO_NOTICE_RECORDED` is carried as itself: the page must not turn silence into 'not retracted'."""
@@ -738,6 +747,7 @@ def source_tracker(project: Project, store: Store, selector: scope.Selector,
     candidates = scope.candidates(store, selector)
     confirmed_rows = admissibility.confirmations(store)
     observed = status_module.latest(store)
+    located = web_locator.latest_by_candidate(store)
     entries: list[dict[str, Any]] = []
     for key, candidate in candidates.items():
         row = computed.collapsed.get(key)
@@ -775,6 +785,8 @@ def source_tracker(project: Project, store: Store, selector: scope.Selector,
             "doi": ids.normalize_doi(candidate.get("doi") or str(key)),
             "failure_display": failure_display((row or {}).get("failure_class")) or None,
             "status": _status_view(observed.get(str(key))),
+            # Open-web leads for a document not read (D145): shown to a person, never fetched by being shown.
+            "web_leads": _web_leads(store, str(key)) if state in ("not_obtained", "not_attempted") and located.get(str(key)) else [],
         })
     return entries
 

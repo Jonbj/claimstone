@@ -56,9 +56,11 @@ const OVERVIEW_BODY = {
   citation_suggestions: [],
   source_tracker: [
     { candidate_key: "s23", source_id: "S23", source_class: "journal", state: "not_obtained",
-      tooltip: "not obtained: paywall refused" },
+      tooltip: "not obtained: paywall refused", title: "S23", year: null, venue: null, doi: null,
+      failure_display: null, status: null, web_leads: [] },
     { candidate_key: "s31", source_id: "S31", source_class: "working_paper", state: "confirmed",
-      tooltip: "obtained and confirmed as a document by normalize" },
+      tooltip: "obtained and confirmed as a document by normalize", title: "S31", year: null, venue: null,
+      doi: null, failure_display: null, status: null, web_leads: [] },
   ],
   state: { errors: [], floor: null, project: "demo", questions: [], rejections_by_reason: {},
     round: "r1", stages: [], unavailable: "", verdicts_recorded: 0, verdicts_stale: 0 },

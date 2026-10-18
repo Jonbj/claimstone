@@ -405,6 +405,12 @@
     "replace": "Carica un altro",
     "offered": "La tua copia:",
     "policy": "Una copia che fornisci passa gli stessi controlli di tutto ciò che trova Claimstone. Se conta per la soglia di acquisizione lo decide la regola supplied_copies del progetto; per impostazione predefinita è elencata a parte.",
+    "web": {
+      "title": "Possibili copie sul web aperto",
+      "allowed": "host consentito dalla regola del progetto",
+      "unclassified": "host non classificato dal progetto — aprilo tu",
+      "caveat": "Una ricerca sul web ha trovato questi indirizzi; nessuno ha verificato che siano questa opera. Un PDF che carichi viene verificato sul titolo."
+    },
     "cause": {
       "paywall": "Dietro un paywall (accesso rifiutato).",
       "excluded": "La pagina dell'editore è fuori da ciò che era autorizzato — di solito un paywall.",

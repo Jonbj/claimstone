@@ -53,6 +53,8 @@ INSTRUMENTS = (
     ("claimstone/acquire.py", "REUSE_VERSION", "reuse_version"),
     ("claimstone/ids.py", "CANDIDATE_KEY_VERSION", "candidate_key_version"),
     ("claimstone/status.py", "STATUS_VERSION", "status_version"),
+    ("claimstone/web_locator.py", "LOCATOR_VERSION", "locator_version"),
+    ("claimstone/web_locator.py", "IDENTITY_CHECK_VERSION", "identity_check_version"),
     ("claimstone/snowball.py", "SNOWBALL_VERSION", "snowball_version"),
     # The portal's own instruments: the selector predicate every scoped read shares, the flow
     # ledger's shape, and the export's. Each is registered so a bump is recorded, not silent.

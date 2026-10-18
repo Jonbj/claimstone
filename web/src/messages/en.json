@@ -405,6 +405,12 @@
     "replace": "Upload another",
     "offered": "Your copy:",
     "policy": "A copy you supply is checked by the same gates as anything Claimstone finds. Whether it counts toward the acquisition floor is set by the project's supplied_copies policy; it is listed separately by default.",
+    "web": {
+      "title": "Possible copies on the open web",
+      "allowed": "host allowed by the project's policy",
+      "unclassified": "host not classified by the project — open it yourself",
+      "caveat": "A web search found these addresses; nobody has checked that they are this work. A PDF you upload is checked against its title."
+    },
     "cause": {
       "paywall": "Behind a paywall (access refused).",
       "excluded": "The publisher page is outside what was authorised — usually a paywall.",

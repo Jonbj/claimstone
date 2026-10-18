@@ -5232,3 +5232,37 @@ against a live answer**. The parsers are defensive, and the first approved reque
 
 Unmeasured: whether CORE adds copies beyond Unpaywall and OpenAlex. On the trial's eight missing sources (paywalled publisher
 papers) it is expected to add little; the measurement belongs to issue #14.
+
+## D145 — An open-web locator for works already found: leads first, files only through an authorised plan (2026-10-18)
+
+Issue #4 proposed a web-search locator in acquisition and pre-registered a measurement. The operator supplied a Brave Search API
+key and asked for the connector to be built and used. It is built as #4 specified in its guards, with two deliberate differences.
+
+**Leads before files.** `tools/locate_web_copies.py` runs one exact-title search per unread candidate (a second, bare-title query only
+if the first returned nothing) and records *every* result with the host policy's decision on it (`web_locator.jsonl`,
+`docs/contracts/web_locator.md`). Nothing is downloaded. The portal shows, beside each document in *Copies still needed*, up to three
+addresses a person may open and the project's word on the host; a person who finds the PDF uploads it, which is the path that
+already exists. Claimstone fetches a lead itself only if the project **declared** `web_locator.enabled`, the lead's host is
+`ALLOWED`, and an authorised plan named that exact host — the same gate every acquisition passes.
+
+**Identity is checked on what was read, not on the search result.** #4 asked for a first-page text check at acquisition; the PDF text
+does not exist until GROBID runs, so the check lives in `normalize`: the parsed document's own title against the candidate's
+(`identity_check_version 1`, similarity ≥ 0.88, with a subtitle allowed on one side). A clear mismatch is `WRONG_DOCUMENT`; a file with
+no readable title is `IDENTITY_UNVERIFIED`; neither confirms the document, so neither counts toward the floor and the bytes stay.
+#4's author-surname check is not possible yet: candidate rows carry no authors. It is a known weakness — a different edition or a
+review with the same title would pass — recorded here, not hidden.
+
+**Host policy is project data** (`sources.yaml: web_locator`, validated; a misspelt key is an error). `excluded_hosts` wins over
+everything; a host neither allowed nor denied is `UNCLASSIFIED` and is never fetched. There is no "author site" heuristic (#4's open
+question 2 is answered conservatively: a person adds the host once).
+
+**Protocol.** A declared block is in the protocol digest, like `supplied_copies` (D-B7b): declaring or changing it is drift, because
+it changes which copies can be obtained and so the rate. An undeclared project keeps every digest it had. The first project to use
+it needs a new flow.
+
+**What is not known.** Brave's response shape comes from its documentation as read; its plan limits and terms on storing or reusing
+results were *not stated* where they were read, so the pacing (1.2 s) is a conservative guess and the terms are unverified. The
+pre-registered measurement of #4 (recall on 13 positives, denied-host and unclassified-host rates) is **not run**: the leads are
+advisory and a person judges them, which makes the measurement a refinement and not a precondition. Instruments registered:
+`locator_version 1`, `identity_check_version 1`. The key is `BRAVE_API_KEY` in `.env`, sent as `X-Subscription-Token` to
+`api.search.brave.com` only, never in a URL and never recorded.

@@ -8,7 +8,7 @@ import { LocaleProvider } from "@/lib/i18n";
 const entry = (over: Record<string, unknown>) => ({
   candidate_key: "doi:10.1/a", source_id: null, source_class: "PEER_REVIEWED", state: "not_obtained",
   tooltip: "x", title: "Exercise for depression", year: 2013, venue: "J Sports Med", doi: "10.1/a",
-  failure_display: "HTTP 403 (access refused) [PAYWALL_403]", ...over,
+  failure_display: "HTTP 403 (access refused) [PAYWALL_403]", status: null, web_leads: [], ...over,
 });
 
 function mount(entries: unknown[], intake: unknown[] = [], onChoose = vi.fn()) {
@@ -51,6 +51,18 @@ describe("D140: copies still needed", () => {
     expect(screen.getByText(/Your copy:/)).toBeTruthy();
     expect(screen.getByRole("button", { name: "Upload another" })).toBeTruthy();
     expect(screen.getByText(/buys nothing/)).toBeTruthy();
+  });
+
+  it("shows open-web leads as addresses to open, with the project's word on the host and a caveat", () => {
+    mount([entry({ web_leads: [
+      { url: "https://cs.example.edu/a.pdf", host: "cs.example.edu", title: "x", decision: "ALLOWED" },
+      { url: "https://mysite.example/a.pdf", host: "mysite.example", title: null, decision: "UNCLASSIFIED" }] })]);
+    const first = screen.getByRole("link", { name: /cs\.example\.edu/ });
+    expect(first.getAttribute("href")).toBe("https://cs.example.edu/a.pdf");
+    expect(first.getAttribute("rel")).toContain("noopener");
+    expect(screen.getByText(/host allowed by the project's policy/)).toBeTruthy();
+    expect(screen.getByText(/host not classified by the project — open it yourself/)).toBeTruthy();
+    expect(screen.getByText(/nobody has checked that they are this work/)).toBeTruthy();
   });
 
   it("says so when nothing needs a copy", () => {

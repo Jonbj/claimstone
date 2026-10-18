@@ -62,6 +62,23 @@ export default function CopiesNeeded({ entries, intake, onChoose }: {
                   {entry.doi ? (
                     <p className="mt-1 break-all font-mono text-xs text-muted-foreground">doi:{entry.doi}</p>
                   ) : null}
+                  {entry.web_leads.length > 0 ? (
+                    <div className="mt-2 rounded-lg bg-muted/50 p-2.5 text-xs">
+                      <p className="font-medium">{t("copies.web.title")}</p>
+                      <ul className="mt-1 flex flex-col gap-1">
+                        {entry.web_leads.map((lead) => (
+                          <li key={lead.url} className="flex flex-wrap items-baseline gap-x-2">
+                            <a href={lead.url} target="_blank" rel="noreferrer noopener"
+                               className="break-all text-link hover:underline">{lead.host} ↗</a>
+                            <span className="text-muted-foreground">
+                              {lead.decision === "ALLOWED" ? t("copies.web.allowed") : t("copies.web.unclassified")}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                      <p className="mt-1 text-muted-foreground">{t("copies.web.caveat")}</p>
+                    </div>
+                  ) : null}
                   {entry.status && entry.status.state !== "LOOKUP_FAILED" ? (
                     <div className="mt-1.5 flex flex-wrap items-center gap-2"><NoticeBadge status={entry.status} /></div>
                   ) : null}

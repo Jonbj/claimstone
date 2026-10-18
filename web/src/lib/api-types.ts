@@ -476,6 +476,12 @@ export interface Overview {
     title: string | null;
     tooltip: string;
     venue: string | null;
+    web_leads: {
+      decision: "ALLOWED" | "UNCLASSIFIED";
+      host: string;
+      title: string | null;
+      url: string;
+    }[];
     year: number | null;
   }[];
   state: {

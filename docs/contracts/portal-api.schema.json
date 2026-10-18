@@ -1916,6 +1916,40 @@
          "null"
         ]
        },
+       "web_leads": {
+        "items": {
+         "additionalProperties": false,
+         "properties": {
+          "decision": {
+           "enum": [
+            "ALLOWED",
+            "UNCLASSIFIED"
+           ],
+           "type": "string"
+          },
+          "host": {
+           "type": "string"
+          },
+          "title": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "url": {
+           "type": "string"
+          }
+         },
+         "required": [
+          "url",
+          "host",
+          "title",
+          "decision"
+         ],
+         "type": "object"
+        },
+        "type": "array"
+       },
        "year": {
         "type": [
          "integer",
@@ -1934,7 +1968,8 @@
        "venue",
        "doi",
        "failure_display",
-       "status"
+       "status",
+       "web_leads"
       ],
       "type": "object"
      },

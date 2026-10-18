@@ -731,6 +731,7 @@ def execute(project: Project, store: Store, operation_id: str,
                         retry_after_s=0 if retry_policy_id else acquire.DEFAULT_RETRY_AFTER_S,
                         use_apis=plan_row['use_apis'], thresholds=project.gate_thresholds,
                         policy=project.gate_policy, classes=project.classes,
+                        web_locator=bool(project.web_locator.get('enabled')),
                         round_name=selector.round,
                         manifest_only=selector.manifest_only, limit=1))
                     if len(rows_done) != 1:

@@ -28,6 +28,8 @@ INTERVALS = {
     'www.ebi.ac.uk': 0.5,
     # CORE's free key is published as 5 single requests per 10 s (D144): one every 2 s.
     'api.core.ac.uk': 2.0,
+    # Brave's plan limit was not stated where it was read (D145); one request per 1.2 s is the conservative figure.
+    'api.search.brave.com': 1.2,
 }
 
 # OpenAlex's October 2026 free-key allowance is 10,000 credits/day. This
