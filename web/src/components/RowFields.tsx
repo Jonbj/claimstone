@@ -45,7 +45,9 @@ export default function RowFields({ row }: { row: Record<string, unknown> }) {
         <span key={label}>
           {i > 0 ? " · " : ""}
           <span className="text-muted-foreground">{label}</span>{" "}
-          <span className="font-mono">{value.length > 80 ? `${value.slice(0, 80)}…` : value}</span>
+          <span className="font-mono" title={value}>
+            {value.length > 80 ? `${value.slice(0, 80)}…` : value}
+          </span>
         </span>
       ))}
     </span>

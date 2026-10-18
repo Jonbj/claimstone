@@ -19,7 +19,7 @@ export default function InboxCards({ cards }: { cards: InboxCard[] }) {
         <div
           key={index}
           data-card-index={index}
-          className="grid items-baseline gap-3 rounded-lg border border-border bg-card px-3 py-2 md:grid-cols-[8rem_12rem_1fr]"
+          className="grid items-baseline gap-3 rounded-xl border border-border bg-card px-3 py-2 md:grid-cols-[8rem_12rem_1fr]"
         >
           <span className="text-sm font-semibold">{card.category}</span>
           <span className="font-mono text-xs text-muted-foreground">

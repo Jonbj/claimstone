@@ -42,8 +42,7 @@ function FloorBadge({ status }: { status: string }) {
       variant="outline"
       className={cn(
         "text-[11px]",
-        below &&
-          "border-amber-500 text-amber-700 dark:border-amber-400 dark:text-amber-300",
+        below && "border-waits text-waits-ink",
       )}
     >
       floor {status}
@@ -92,7 +91,7 @@ function SelectorRow({
           <span className="text-muted-foreground">flow</span>
           <Link
             to={to}
-            className="font-mono text-[13px] text-blue-600 hover:underline dark:text-blue-400"
+            className="font-mono text-[13px] text-primary hover:underline"
           >
             {sel.slice(0, 12)}
           </Link>
@@ -110,7 +109,7 @@ function SelectorRow({
           <span className="text-muted-foreground">legacy</span>
           <Link
             to={to}
-            className="font-mono text-[13px] text-blue-600 hover:underline dark:text-blue-400"
+            className="font-mono text-[13px] text-primary hover:underline"
           >
             {label}
           </Link>
@@ -235,7 +234,7 @@ export default function IndexPage() {
   return (
     <section className="flex flex-col gap-5">
       <header>
-        <h1 className="font-serif text-5xl leading-tight font-normal">Projects</h1>
+        <h1 className="text-[28px] leading-tight">Projects</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           A round with candidates and no flow is legacy: protocol not verified.
         </p>
@@ -259,7 +258,7 @@ export default function IndexPage() {
           {needle ? `No project name contains "${query.trim()}".` : "The server lists no project."}
         </p>
       ) : (
-        <div className="overflow-x-auto rounded-2xl bg-card shadow-sm">
+        <div className="overflow-x-auto rounded-xl border border-border bg-card">
           <table className="w-full min-w-[560px] text-sm">
             <thead>
               <tr className="text-left text-xs uppercase text-muted-foreground">

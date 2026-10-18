@@ -17,7 +17,7 @@ export default function NewProjectsPage() {
   if (!session.operator) {
     return (
       <section className="flex flex-col gap-3 pt-6">
-        <h1 className="text-[44px] leading-tight">{t("wizard.title")}</h1>
+        <h1 className="text-[28px] leading-tight">{t("wizard.title")}</h1>
         <p className="text-sm text-muted-foreground">
           {t("wizard.signIn")}{" "}
           <Link className="underline" to={`/login?next=${encodeURIComponent("/new")}`}>{t("wizard.signInLink")}</Link>
@@ -77,7 +77,7 @@ function Drafts() {
   return (
     <section className="flex flex-col gap-5">
       <header>
-        <h1 className="text-[44px] leading-tight">{t("wizard.title")}</h1>
+        <h1 className="text-[28px] leading-tight">{t("wizard.title")}</h1>
         <p className="mt-1 max-w-[70ch] text-sm text-muted-foreground">{t("wizard.lede")}</p>
       </header>
       <div>
@@ -85,13 +85,13 @@ function Drafts() {
           type="button"
           onClick={() => void start()}
           disabled={busy}
-          className="min-h-11 rounded-lg bg-rail px-4 text-sm font-semibold text-rail-foreground disabled:opacity-50"
+          className="min-h-11 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground hover:brightness-95 disabled:opacity-50"
         >
           {t("wizard.drafts.start")}
         </button>
       </div>
       {error ? <ErrorState error={error} context="drafts" /> : null}
-      <section className="rounded-xl bg-card p-5 shadow-sm ring-1 ring-gray-200 dark:ring-gray-800">
+      <section className="rounded-xl border border-border bg-card p-5">
         <h2 className="text-base font-semibold">{t("wizard.drafts.title")}</h2>
         {list.error ? (
           <ErrorState error={list.error} context="drafts" />

@@ -29,7 +29,7 @@ export default function WizardPage() {
   if (!session.operator && !wasSignedIn.current) {
     return (
       <section className="flex flex-col gap-3 pt-6">
-        <h1 className="text-[44px] leading-tight">{t("wizard.title")}</h1>
+        <h1 className="text-[28px] leading-tight">{t("wizard.title")}</h1>
         <p className="text-sm text-muted-foreground">
           {t("wizard.signIn")}{" "}
           <Link className="underline" to={`/login?next=${encodeURIComponent(next)}`}>{t("wizard.signInLink")}</Link>
@@ -59,7 +59,7 @@ function Wizard(
 
   const createdScreen = (result: Created | null, project: string) => (
     <section className="flex flex-col gap-3 pt-6">
-      <h1 className="text-[44px] leading-tight">{t("wizard.created.title")}</h1>
+      <h1 className="text-[28px] leading-tight">{t("wizard.created.title")}</h1>
       {/* the creation date is known only from the create response; a resumed created draft has none */}
       <p className="text-sm">
         {result
@@ -123,7 +123,7 @@ function Wizard(
   return (
     <section className="flex flex-col gap-5">
       <header>
-        <h1 className="text-[44px] leading-tight">{t("wizard.title")}</h1>
+        <h1 className="text-[28px] leading-tight">{t("wizard.title")}</h1>
         <p className="mt-1 max-w-[70ch] text-sm text-muted-foreground">{t("wizard.lede")}</p>
       </header>
       {draft.last_failure ? (
@@ -134,7 +134,7 @@ function Wizard(
         </div>
       ) : null}
       {Object.keys(draft.advanced).length ? (
-        <div role="status" className="rounded-lg border border-amber-400 bg-amber-50 p-3 text-sm dark:bg-amber-950/30">
+        <div role="status" className="rounded-lg border border-waits bg-waits-soft p-3 text-sm">
           <p>{t("wizard.advancedActive")}</p>
           <Link className="underline" to={`/new/${encodeURIComponent(draftId)}/4`}>{t("wizard.advancedLink")}</Link>
         </div>

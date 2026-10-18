@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 import { Navigate, useSearchParams } from "react-router";
 import ErrorState from "@/components/ErrorState";
+import LogoMark from "@/components/LogoMark";
 import Pending from "@/components/Pending";
 import { useLocale } from "@/lib/i18n";
 import { useSession, safeNext } from "@/lib/session";
@@ -38,45 +39,51 @@ export default function LoginPage() {
   }
 
   return (
-    <section className="mx-auto flex w-full max-w-sm flex-col gap-4 pt-8">
-      <h1 className="text-[40px] leading-tight">{t("auth.login.title")}</h1>
-      <p className="text-sm text-muted-foreground">
-        {t("auth.login.lede")}
-      </p>
-      {!session.ready ? <Pending label={t("auth.login.checking")} /> : null}
-      <form onSubmit={submit} className="flex flex-col gap-4">
-        <label className="flex flex-col gap-1 text-sm font-medium">
-          {t("auth.login.id")}
-          <input
-            name="id"
-            value={id}
-            onChange={(e) => setId(e.target.value)}
-            autoComplete="username"
-            required
-            className="min-h-11 rounded-lg border border-border bg-card px-3 font-mono text-sm font-normal"
-          />
-        </label>
-        <label className="flex flex-col gap-1 text-sm font-medium">
-          {t("auth.login.password")}
-          <input
-            name="password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoComplete="current-password"
-            required
-            className="min-h-11 rounded-lg border border-border bg-card px-3 text-sm font-normal"
-          />
-        </label>
-        <button
-          type="submit"
-          disabled={busy || !id.trim() || !password}
-          className="min-h-11 rounded-lg bg-rail px-4 text-sm font-semibold text-rail-foreground disabled:opacity-50"
-        >
-          {busy ? t("auth.login.busy") : t("auth.login.submit")}
-        </button>
-      </form>
-      {error ? <ErrorState error={error} context="sign-in" /> : null}
+    <section className="mx-auto flex w-full max-w-sm flex-col gap-5 pt-8">
+      <div className="flex items-center gap-2.5">
+        <LogoMark size={30} />
+        <span className="text-lg font-semibold tracking-tight">Claimstone</span>
+      </div>
+      <div className="rounded-xl border border-border bg-card p-6">
+        <h1 className="text-[28px] leading-tight">{t("auth.login.title")}</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {t("auth.login.lede")}
+        </p>
+        {!session.ready ? <Pending label={t("auth.login.checking")} /> : null}
+        <form onSubmit={submit} className="mt-4 flex flex-col gap-4">
+          <label className="flex flex-col gap-1 text-sm font-medium">
+            {t("auth.login.id")}
+            <input
+              name="id"
+              value={id}
+              onChange={(e) => setId(e.target.value)}
+              autoComplete="username"
+              required
+              className="min-h-11 rounded-lg border border-border bg-background px-3 font-mono text-sm font-normal"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm font-medium">
+            {t("auth.login.password")}
+            <input
+              name="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
+              required
+              className="min-h-11 rounded-lg border border-border bg-background px-3 text-sm font-normal"
+            />
+          </label>
+          <button
+            type="submit"
+            disabled={busy || !id.trim() || !password}
+            className="min-h-11 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground hover:brightness-95 disabled:opacity-50"
+          >
+            {busy ? t("auth.login.busy") : t("auth.login.submit")}
+          </button>
+        </form>
+        {error ? <ErrorState error={error} context="sign-in" /> : null}
+      </div>
     </section>
   );
 }

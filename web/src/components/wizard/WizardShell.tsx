@@ -25,10 +25,10 @@ export default function WizardShell(
                   to={`/new/${encodeURIComponent(draftId)}/${n}`}
                   aria-current={active ? "step" : undefined}
                   className={cn(
-                    "flex min-h-11 flex-col justify-center rounded-lg px-3 py-1.5 text-sm ring-1",
+                    "flex min-h-11 flex-col justify-center rounded-lg border px-3 py-1.5 text-sm",
                     active
-                      ? "bg-rail text-rail-foreground ring-rail"
-                      : "bg-card ring-gray-200 hover:bg-muted dark:ring-gray-800",
+                      ? "bg-rail text-rail-foreground border-rail"
+                      : "bg-card border-border hover:bg-muted",
                   )}
                 >
                   <span className="flex items-baseline gap-2 font-medium">
