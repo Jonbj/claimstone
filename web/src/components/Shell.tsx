@@ -161,7 +161,7 @@ export default function Shell() {
           <ThemeToggle />
         </div>
       </nav>
-      <main className="mx-auto flex min-w-0 max-w-[1360px] flex-1 flex-col gap-6 px-4 pb-12 pt-7 min-[900px]:px-8">
+      <main className="flex min-w-0 flex-1 flex-col gap-6 px-4 pb-12 pt-7 min-[900px]:px-8">
         <Outlet />
       </main>
     </div>
