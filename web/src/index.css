@@ -303,4 +303,15 @@
     font-size: 0.8rem;
     margin: 0 0 0.25rem;
   }
+
+  /* v3 "Assay" (D137): a small uppercase section label, coloured by meaning via a
+     `text-*` utility (waits / acting / muted). Append-only shared addition. */
+  .section-label {
+    font-size: 0.8125rem;
+    line-height: 1.25rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted-foreground);
+  }
 }
