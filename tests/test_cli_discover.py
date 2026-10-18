@@ -25,6 +25,13 @@ def test_an_unknown_api_is_refused_by_name(capsys):
     assert "scholar" in capsys.readouterr().err
 
 
+def test_pubmed_is_a_named_api_but_not_a_default():
+    from claimstone import cli, searchers
+
+    assert "pubmed" in cli.KNOWN_APIS
+    assert cli.APIS == searchers.DEFAULT_APIS
+
+
 def test_discover_report_on_an_empty_store_says_so(tmp_path, capsys):
     code = main(["discover-report", "projects/example-news-and-returns",
                  "--store", str(tmp_path)])

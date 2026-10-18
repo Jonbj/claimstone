@@ -23,6 +23,7 @@ _VENUE_PREDICATES = {
     "openalex_source_type": "openalex",
     "crossref_type": "crossref",
     "europepmc_type": "europepmc",
+    "pubmed_type": "pubmed",
     "core_type": "core",
 }
 
@@ -51,9 +52,10 @@ def _predicate_matches(candidate: dict[str, Any], name: str, values: Sequence[st
     if str(candidate.get("source_api") or "") != required_api:
         return False
     venue_type = str(candidate.get("venue_type") or "")
-    if name == "europepmc_type":
-        # Europe PMC joins several publication types in one string ("journal article; review"): any one of them
-        # may match, whole, so a project names `journal article` and not a combination it cannot predict (D141).
+    if name in ("europepmc_type", "pubmed_type"):
+        # Europe PMC and PubMed join several publication types in one string ("journal article; review"):
+        # any one may match, whole, so a project names `journal article` and not a combination it cannot
+        # predict (D141, D155).
         return any(part.strip() in values for part in venue_type.split(";"))
     return venue_type in values
 

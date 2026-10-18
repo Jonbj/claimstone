@@ -12,6 +12,13 @@ what order.
 
 ## Where the work stands
 
+2026-10-18 keyword channels: Europe PMC (D141), CORE (D144) and PubMed E-utilities (D155) are opt-in
+searchers behind `--api`, never defaults; `DISCOVERY_VERSION` stays 4 and a round already planned sends
+the same requests. PubMed is **two physical requests per query**, so its scheduler plan needs a per-unit
+ceiling of 2. `NCBI_API_KEY` is deliberately not read: E-utilities takes the key in the query string and
+`requests.jsonl` records URLs unredacted, so the adapter stays on the unkeyed 3 req/s pacing. None of the
+three has been run on a project, and the recall measurement in #14 is still unrun.
+
 2026-10-18 live trial `prova-esercizio-depressione` (throwaway, public literature; not in git): three
 acquisition rounds from the portal ended at 2 copies of 10 (rate 0.20 against floor 0.80), so the flow is
 `INSUFFICIENT_ACQUISITION` and has no verdict, as the invariant requires. What the trial closed: D133 (retry

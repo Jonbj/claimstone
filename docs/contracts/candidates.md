@@ -12,7 +12,7 @@ whose `source_class` is null, which is invariant 6 enforced at the boundary rath
 | `title`, `url`, `doi`, `year`, `venue` | the work, as the channel reported it |
 | `venue_type` | what the API called the venue; only meaningful beside `source_api` |
 | `source_class` | assigned by the project's `assign_when` rules. **Null means no rule covered it** |
-| `source_api` | `openalex`, `crossref`, `arxiv`, `citation`, `manifest` |
+| `source_api` | `openalex`, `crossref`, `arxiv`, `europepmc`, `pubmed`, `core`, `citation`, `manifest` |
 | `channel` | `keyword` or `citation` — the two channels D10 keeps independent |
 | `query`, `query_hash`, `topic_id` | which search found it, so a round is reproducible |
 | `cited_by`, `citations_in_corpus` | citation channel only: which corpus documents cite it |
@@ -38,9 +38,11 @@ candidate denominator. Citation discovery and secondhand-claim promotion use the
 These counts describe metadata coverage; they do not certify copy identity or author ownership.
 
 `assign_when` on a source class in `sources.yaml` declares the conditions that assign a candidate to
-it. Six predicates: `source_api`, `openalex_source_type`, `crossref_type`, `europepmc_type`, `core_type`, `host`. A venue type only
+it. Seven predicates: `source_api`, `openalex_source_type`, `crossref_type`, `europepmc_type`, `pubmed_type`, `core_type`, `host`. A venue type only
 counts alongside the API that reported it, because "journal" from OpenAlex and "journal-article" from
-Crossref are different vocabularies, and arXiv speaks neither.
+Crossref are different vocabularies, and arXiv speaks neither. `europepmc_type` and `pubmed_type` match any
+one part of a `"; "`-joined publication-type list, so a project names `journal article` rather than a
+combination it cannot predict.
 
 The **first declared class to match wins**, which needs no priority system: `sources.yaml` declares
 classes most-authoritative-first. That gives the right answer on the case that matters — a refereed

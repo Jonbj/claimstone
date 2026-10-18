@@ -626,6 +626,7 @@
         "crossref": "Crossref",
         "arxiv": "arXiv",
         "europepmc": "Europe PMC (PubMed, PMC)",
+        "pubmed": "PubMed (NCBI E-utilities)",
         "core": "CORE (repository copies)",
         "help": "Ogni fonte esegue tutte le ricerche del flusso."
       },

@@ -28,6 +28,9 @@ INTERVALS = {
     'www.ebi.ac.uk': 0.5,
     # CORE's free key is published as 5 single requests per 10 s (D144): one every 2 s.
     'api.core.ac.uk': 2.0,
+    # E-utilities allows 3 requests/s without a key (10 with one, which this engine does not use;
+    # see D155): 0.34 s is one every 2.94 requests/s, under the unkeyed ceiling.
+    'eutils.ncbi.nlm.nih.gov': 0.34,
     # Brave's plan limit was not stated where it was read (D145); one request per 1.2 s is the conservative figure.
     'api.search.brave.com': 1.2,
 }
