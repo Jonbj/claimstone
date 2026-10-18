@@ -14,7 +14,7 @@ Which file answers which question. *In italiano: [README.it.md](README.it.md).*
 | adapt the frontend to the scheduler | [`design/portal/SCHEDULER_FRONTEND_HANDOFF.md`](design/portal/SCHEDULER_FRONTEND_HANDOFF.md) — UI states, available APIs, missing controls and acceptance walkthrough |
 | serve the read-only portal over every project | `claimstone portal` — the dashboard's multi-project successor (D82); read-only, GET only, loopback by default |
 | run the portal in containers (React frontend + read-only API) | `./portal.sh` (`./portal.sh down` to stop) — D84; API contract [`contracts/portal-api.schema.json`](contracts/portal-api.schema.json) |
-| develop the frontend | `.venv/bin/claimstone api` and `cd web && npm run dev` (http://localhost:5173); checks: `npm run typecheck && npm test && npm run build` |
+| develop the frontend | `.venv/bin/claimstone control --allow-host localhost:5173` and `.venv/bin/claimstone api --session-authority http://127.0.0.1:8790` (two terminals; D152), then `cd web && npm run dev` (http://localhost:5173); checks: `npm run typecheck && npm test && npm run build` |
 | work on the code as an agent | [`../CLAUDE.md`](../CLAUDE.md), then [`../AGENTS.md`](../AGENTS.md) |
 | argue with an architectural choice | [`DESIGN_DECISIONS.md`](DESIGN_DECISIONS.md) — find its entry first |
 | write to a ledger, or read one | [`contracts/`](contracts/) — one file per ledger |

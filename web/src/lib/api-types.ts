@@ -50,6 +50,8 @@ export interface Error {
       | "LEDGER_CORRUPT"
       | "MISDIRECTED"
       | "CROSS_ORIGIN"
+      | "UNAUTHORIZED"
+      | "SESSION_AUTHORITY_UNAVAILABLE"
       | "INTERNAL";
     message: string;
   };

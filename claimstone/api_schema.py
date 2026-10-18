@@ -41,9 +41,11 @@ CATEGORIES = ("INTEGRITY", "PROTOCOL", "ACQUISITION", "CLASSIFICATION", "NORMALI
 # flows.binding_state's states.
 BINDING_STATES = ("CURRENT", "REGISTRY_DRIFTED", "PROTOCOL_DRIFTED", "POPULATION_DRIFTED")
 
-# The §3.3 envelope codes.
+# The §3.3 envelope codes. UNAUTHORIZED is the gate's refusal (401); the authority code is
+# an outage of the control server the gate asks, never a refusal (503) — D152.
 ERROR_CODES = ("BAD_REQUEST", "NOT_FOUND", "CONFIG_ERROR", "REGISTRY_DRIFT", "LEDGER_CORRUPT",
-               "MISDIRECTED", "CROSS_ORIGIN", "INTERNAL")
+               "MISDIRECTED", "CROSS_ORIGIN", "UNAUTHORIZED", "SESSION_AUTHORITY_UNAVAILABLE",
+               "INTERNAL")
 
 # portal_state.QUESTION_STATES, §8.3: the overview's DonutChart counts, decided server-side.
 QUESTION_STATES = ("signed", "stale", "awaiting_a_person", "provisional", "no_verified_claim",

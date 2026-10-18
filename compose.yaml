@@ -218,6 +218,10 @@ services:
   # of succeeding quietly. It sits only on an internal network: no published port, no route to the
   # internet, and it receives no secret, only the word "present" for each configured key so the
   # administration page can show presence (`${VAR:+present}` substitutes the word, never the value).
+  #
+  # Reads need a session (D152). `api` holds none: it forwards the one cookie to `control`, on the same
+  # internal network, and answers 401 only when that server refuses. `--open-reads` names no authority and
+  # is loopback-only, so it must not appear here; `/api/v1/meta` stays anonymous for this healthcheck.
   api:
     build:
       context: .
@@ -226,7 +230,8 @@ services:
         GID: ${GID:-1000}
         CLAIMSTONE_CODE_REVISION: ${CLAIMSTONE_CODE_REVISION:-unknown}
     image: claimstone:local
-    command: ["api", "--host", "0.0.0.0", "--port", "8788", "--allow-host", "api:8788"]
+    command: ["api", "--host", "0.0.0.0", "--port", "8788", "--allow-host", "api:8788",
+              "--session-authority", "http://control:8790"]
     environment:
       CLAIMSTONE_ROOT: /app
       PYTHONDONTWRITEBYTECODE: "1"

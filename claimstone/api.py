@@ -6,15 +6,27 @@ the Host/Origin defences with `--allow-host`, lookup-never-path parameters — a
 `transport.BaseHandler`. Every body, success or error, carries `api_version` (§3.1), and an
 error is the §3.3 envelope, where a 500's message is the exception class name alone: a 500
 never carries a body that could be read as data.
+
+Reads need a session by default (D152). This server holds no sessions: it forwards the one
+cookie to the control server's `GET /control/v1/session` and believes its 200; its 401 is a
+refusal. Every route is gated except `ANONYMOUS_READS` — the health/revision route the
+compose healthcheck needs. `--open-reads` is the explicit local single-user opt-out: off by
+default, loopback-only, and announced at start-up. A control server that cannot answer is
+503, never a false 401.
 """
 
 from __future__ import annotations
 
 import dataclasses
+import ipaddress
 import json
 import os
 import pathlib
+import sys
+import urllib.error
+import urllib.request
 from datetime import datetime, timezone
+from http.cookies import CookieError, SimpleCookie
 from http.server import ThreadingHTTPServer
 from typing import Any
 from urllib.parse import parse_qs, unquote, urlparse
@@ -36,6 +48,101 @@ CROSS_ORIGIN_TEXT = "the Origin header does not name this server"
 
 DEFAULT_ACTIVITY_LIMIT = 50
 
+# The control server's cookie and session probe (D152). The name is control.py's; restated
+# here rather than imported, because the read API must not load the write boundary's module.
+SESSION_COOKIE = "claimstone_control"
+SESSION_AUTHORITY_PATH = "/control/v1/session"
+SESSION_AUTHORITY_TIMEOUT = 4.0
+
+# The only routes served without a session. `/meta` is the compose healthcheck's probe and
+# carries the code revision and instrument versions, never a project. The gate is deny by
+# default: a route added to the API is gated the moment it exists, and the sweep in
+# `tests/test_api_session_gate.py` enumerates `api_schema.ROUTES` so an unclassified route
+# cannot be served to a stranger.
+ANONYMOUS_READS = frozenset({"/api/v1/meta"})
+
+UNAUTHORIZED_TEXT = "no session"
+
+
+class SessionAuthorityUnavailable(RuntimeError):
+    """The control server did not answer, or answered neither 200 nor 401. This is an
+    outage, not a refusal: it must never be rendered as "nobody is signed in"."""
+
+
+def _loopback(host: str) -> bool:
+    if host in LOOPBACK_HOSTS:
+        return True
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return False
+
+
+def check_read_configuration(host: str, *, open_reads: bool,
+                             session_authority: str | None) -> None:
+    """Exactly one read mode, and open reads never leave loopback. Raised by
+    `make_server`, so a library caller and the CLI refuse the same configurations."""
+    if open_reads and session_authority:
+        raise ValueError("--open-reads and --session-authority are mutually exclusive: choose exactly one")
+    if not open_reads and not session_authority:
+        raise ValueError("reads need a session: choose exactly one of --session-authority URL "
+                         "or --open-reads (local single-user)")
+    if open_reads and not _loopback(host):
+        raise ValueError(f"--open-reads is loopback-only; refusing the non-loopback bind {host!r}")
+    if session_authority:
+        parsed = urlparse(session_authority)
+        if parsed.scheme not in ("http", "https") or not parsed.netloc:
+            raise ValueError("--session-authority must be an http(s) URL, e.g. http://control:8790")
+        if parsed.path not in ("", "/") or parsed.query or parsed.fragment:
+            raise ValueError("--session-authority is the control server's base URL, "
+                             "not a path: e.g. http://control:8790")
+
+
+def _session_token(cookie_header: str) -> str | None:
+    """The one cookie the authority is asked about. A malformed header is anonymous,
+    never a 500: a stranger's bad cookie must not become this server's error."""
+    cookie = SimpleCookie()
+    try:
+        cookie.load(cookie_header)
+    except CookieError:
+        return None
+    morsel = cookie.get(SESSION_COOKIE)
+    return morsel.value if morsel else None
+
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    """A redirect would forward the Cookie header to whatever host it names. The session
+    probe never follows one; a 3xx is an unavailable authority."""
+
+    def redirect_request(self, *_args, **_kwargs):
+        return None
+
+
+_OPENER = urllib.request.build_opener(_NoRedirect())
+
+
+def _session_is_live(authority: str, token: str, *,
+                     timeout: float = SESSION_AUTHORITY_TIMEOUT) -> bool:
+    """Ask the control server whether this token names a live session.
+
+    True only for its 200; its 401 is a refusal. Everything else raises
+    `SessionAuthorityUnavailable`.
+    """
+    request = urllib.request.Request(
+        authority.rstrip("/") + SESSION_AUTHORITY_PATH,
+        headers={"Cookie": f"{SESSION_COOKIE}={token}", "Accept": "application/json"},
+        method="GET")
+    try:
+        with _OPENER.open(request, timeout=timeout) as response:
+            return response.status == 200
+    except urllib.error.HTTPError as exc:
+        exc.close()
+        if exc.code == 401:
+            return False
+        raise SessionAuthorityUnavailable(f"the session authority answered {exc.code}") from exc
+    except (urllib.error.URLError, OSError, ValueError) as exc:
+        raise SessionAuthorityUnavailable("the session authority is unreachable") from exc
+
 
 def _one_query(query: dict[str, list[str]], name: str) -> str:
     """The single value of a required query parameter, or 400. A missing end of the diff
@@ -55,6 +162,9 @@ class _Handler(BaseHandler):
 
     csp = CSP
     started_at: str  # set by make_server; the meta route reports when the server began
+    open_reads: bool
+    session_authority: str | None
+    anonymous_reads: frozenset[str]
 
     # --- payloads ---------------------------------------------------------------
 
@@ -78,10 +188,15 @@ class _Handler(BaseHandler):
             if not self._origin_ok():
                 self._error(403, "CROSS_ORIGIN", CROSS_ORIGIN_TEXT)
                 return
+            if not self._read_authorised(route.path):
+                self._error(401, "UNAUTHORIZED", UNAUTHORIZED_TEXT)
+                return
             segments = [unquote(part) for part in route.path.split("/") if part]
             self._route(segments, query)
         except BrokenPipeError:
             pass
+        except SessionAuthorityUnavailable as exc:
+            self._error(503, "SESSION_AUTHORITY_UNAVAILABLE", str(exc))
         except RegistryDrift as exc:  # a ConfigError subclass: the named state first
             self._error(409, "REGISTRY_DRIFT", str(exc))
         except ConfigError as exc:
@@ -95,6 +210,20 @@ class _Handler(BaseHandler):
             self._error(500, "LEDGER_CORRUPT", str(exc))
         except Exception as exc:  # noqa: BLE001 - the class name alone, never the payload
             self._error(500, "INTERNAL", type(exc).__name__)
+
+    def _read_authorised(self, path: str) -> bool:
+        """The gate, before any route is resolved: an unknown path is 401 for a stranger,
+        never a 404 that confirms which routes exist."""
+        if self.open_reads:
+            return True
+        if path.rstrip("/") in self.anonymous_reads:
+            return True
+        token = _session_token(self.headers.get("Cookie", ""))
+        if token is None:
+            return False
+        if self.session_authority is None:  # check_read_configuration forbids this
+            raise SessionAuthorityUnavailable("no session authority is configured")
+        return _session_is_live(self.session_authority, token)
 
     def _route(self, segments: list[str], query: dict[str, list[str]]) -> None:
         if len(segments) < 2 or tuple(segments[:2]) != PREFIX:
@@ -280,7 +409,11 @@ class _Handler(BaseHandler):
 
 def make_server(projects_dir: str | pathlib.Path = "projects",
                 store_dir: str | pathlib.Path = "store", *, host: str = "127.0.0.1",
-                port: int = 8788, allow_hosts: tuple[str, ...] = ()) -> ThreadingHTTPServer:
+                port: int = 8788, allow_hosts: tuple[str, ...] = (),
+                open_reads: bool = False,
+                session_authority: str | None = None) -> ThreadingHTTPServer:
+    check_read_configuration(host, open_reads=open_reads,
+                             session_authority=session_authority)
     revision, dirty = flows._code_identity(pathlib.Path(projects_dir))
     # Inside a container git is absent; the image may carry the revision it was built from.
     if revision is None and os.environ.get("CLAIMSTONE_CODE_REVISION"):
@@ -298,6 +431,9 @@ def make_server(projects_dir: str | pathlib.Path = "projects",
         "code_revision": revision,
         "code_dirty": dirty,
         "started_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "open_reads": bool(open_reads),
+        "session_authority": session_authority.rstrip("/") if session_authority else None,
+        "anonymous_reads": frozenset(path.rstrip("/") for path in ANONYMOUS_READS),
     })
     httpd = ThreadingHTTPServer((host, port), handler)
     # With port 0 the real port exists only after the bind; the Host allowlist must know it.
@@ -307,10 +443,19 @@ def make_server(projects_dir: str | pathlib.Path = "projects",
 
 def serve(projects_dir: str | pathlib.Path = "projects", store_dir: str | pathlib.Path = "store",
           *, host: str = "127.0.0.1", port: int = 8788,
-          allow_hosts: tuple[str, ...] = ()) -> None:
+          allow_hosts: tuple[str, ...] = (),
+          open_reads: bool = False, session_authority: str | None = None) -> None:
     """Block and serve the JSON API, read-only."""
-    print(f"claimstone api — http://{host}:{port}/api/v1/meta  (read-only JSON; Ctrl-C to stop)")
-    httpd = make_server(projects_dir, store_dir, host=host, port=port, allow_hosts=allow_hosts)
+    httpd = make_server(projects_dir, store_dir, host=host, port=port, allow_hosts=allow_hosts,
+                        open_reads=open_reads, session_authority=session_authority)
+    if open_reads:
+        print("WARNING: --open-reads — every read is served without a session; anyone who "
+              f"can reach {host}:{port} can read every project. Loopback only.", file=sys.stderr)
+        print(f"claimstone api — http://{host}:{port}/api/v1/meta  "
+              "(read-only JSON, NO SESSION; Ctrl-C to stop)")
+    else:
+        print(f"claimstone api — http://{host}:{port}/api/v1/meta  "
+              f"(read-only JSON; sessions checked by {session_authority}; Ctrl-C to stop)")
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:

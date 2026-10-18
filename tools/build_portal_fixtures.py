@@ -117,7 +117,8 @@ def snapshot() -> dict[str, str]:
         projects_dir, store_dir, _project, store = build_workspace(pathlib.Path(tmp))
         _sanitize(store)
         with _scrubbed_env():
-            httpd = api.make_server(projects_dir, store_dir, host="127.0.0.1", port=0)
+            httpd = api.make_server(projects_dir, store_dir, host="127.0.0.1", port=0,
+                                    open_reads=True)
             httpd.RequestHandlerClass.started_at = FIXED_STAMP
             thread = threading.Thread(target=httpd.serve_forever, daemon=True)
             thread.start()

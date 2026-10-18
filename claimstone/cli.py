@@ -1351,8 +1351,15 @@ def _api(args: argparse.Namespace) -> int:
     if warning:
         # §10, as with portal and serve: an explicit non-loopback bind proceeds with the warning.
         print(f"warning: {warning}", file=sys.stderr)
-    api.serve(args.projects_dir, args.store, host=args.host, port=args.port,
-              allow_hosts=tuple(args.allow_host))
+    try:
+        api.serve(args.projects_dir, args.store, host=args.host, port=args.port,
+                  allow_hosts=tuple(args.allow_host), open_reads=args.open_reads,
+                  session_authority=args.session_authority)
+    except ValueError as exc:
+        # The read mode is a configuration, not a guess: exactly one, and open reads never
+        # leave loopback (D152).
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
     return 0
 
 
@@ -1905,6 +1912,14 @@ def build_parser() -> argparse.ArgumentParser:
                          help="an extra Host/Origin authority to answer for, e.g. the name a "
                               "reverse proxy in front forwards; repeatable. Loopback names on "
                               "the bound port are always allowed")
+    api_cmd.add_argument("--session-authority", default=None, metavar="URL",
+                         help="the control server whose GET /control/v1/session decides "
+                              "whether a cookie is a live session, e.g. http://control:8790. "
+                              "Every read needs a session unless --open-reads is given")
+    api_cmd.add_argument("--open-reads", action="store_true",
+                         help="serve every read WITHOUT a session: the local single-user "
+                              "case. Off by default, loopback binds only, and announced "
+                              "loudly at start-up")
     api_cmd.set_defaults(func=_api)
 
     control_cmd = sub.add_parser(

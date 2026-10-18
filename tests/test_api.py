@@ -36,7 +36,10 @@ def workspace(tmp_path):
 
 @contextmanager
 def _served(workspace, **kwargs):
+    """The payload tests read anonymously, which is the local single-user mode: the gate
+    itself is `tests/test_api_session_gate.py`'s subject."""
     projects_dir, store_dir, _project, store = workspace
+    kwargs.setdefault("open_reads", True)
     httpd = api.make_server(projects_dir, store_dir, host="127.0.0.1", port=0, **kwargs)
     thread = threading.Thread(target=httpd.serve_forever, daemon=True)
     thread.start()
@@ -330,7 +333,7 @@ def test_allow_host_admits_exactly_that_authority(workspace):
     other port on the same name."""
     projects_dir, store_dir, _project, _store = workspace
     httpd = api.make_server(projects_dir, store_dir, host="127.0.0.1", port=0,
-                            allow_hosts=("api:8788",))
+                            allow_hosts=("api:8788",), open_reads=True)
     thread = threading.Thread(target=httpd.serve_forever, daemon=True)
     thread.start()
     try:
