@@ -1,10 +1,13 @@
+import { useState } from "react";
 import { Link, useParams } from "react-router";
+import CopiesNeeded from "@/components/material/CopiesNeeded";
 import IntakeList from "@/components/material/IntakeList";
 import ProposeForm from "@/components/material/ProposeForm";
 import UploadForm from "@/components/material/UploadForm";
 import ErrorState from "@/components/ErrorState";
 import Pending from "@/components/Pending";
 import { useApi } from "@/hooks/useApi";
+import { api } from "@/lib/api";
 import { control } from "@/lib/control";
 import { useSession } from "@/lib/session";
 
@@ -40,7 +43,13 @@ export default function MaterialPage() {
 function MaterialSignedIn({ project, flowId }: { project: string; flowId: string }) {
   const base = `/p/${encodeURIComponent(project)}/f/${encodeURIComponent(flowId)}`;
   const list = useApi(() => control.intake(project, flowId), [project, flowId]);
-  const onDone = () => list.reload();
+  const overview = useApi(() => api.overview(project, "f", flowId), [project, flowId]);
+  const [target, setTarget] = useState("");
+  const onDone = () => { list.reload(); overview.reload(); };
+  const choose = (key: string) => {
+    setTarget(key);
+    document.getElementById("upload")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   return (
     <section className="flex flex-col gap-5">
@@ -57,8 +66,14 @@ function MaterialSignedIn({ project, flowId }: { project: string; flowId: string
 
       {list.refreshing ? <Pending label="refreshing…" /> : null}
 
+      {overview.data ? (
+        <CopiesNeeded entries={overview.data.source_tracker} intake={list.data?.items ?? []} onChoose={choose} />
+      ) : overview.error ? (
+        <ErrorState error={overview.error} context="the candidate list" />
+      ) : null}
+
       <ProposeForm project={project} flowId={flowId} onDone={onDone} />
-      <UploadForm project={project} flowId={flowId} onDone={onDone} />
+      <UploadForm project={project} flowId={flowId} onDone={onDone} target={target} onTarget={setTarget} />
 
       <section className="rounded-xl border border-border bg-card p-5">
         <h2 className="text-base font-semibold">Proposed material</h2>

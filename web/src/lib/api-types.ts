@@ -449,10 +449,15 @@ export interface Overview {
   selector_label: string;
   source_tracker: {
     candidate_key: string;
+    doi: string | null;
+    failure_display: string | null;
     source_class: string;
     source_id: string | null;
     state: "confirmed" | "awaiting_normalize" | "not_a_document" | "not_obtained" | "not_attempted" | "unclassified";
+    title: string | null;
     tooltip: string;
+    venue: string | null;
+    year: number | null;
   }[];
   state: {
     errors: string[];

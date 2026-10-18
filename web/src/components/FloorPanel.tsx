@@ -63,7 +63,7 @@ export function BlockedFloorPanel({ panel, base, writable }: { panel: Overview["
       </div>
       {writable ? <div className="flex flex-[1_1_100%] flex-wrap gap-2">
         <Link to={`${base}?block=execution`} className={`inline-flex min-h-11 items-center rounded-lg px-4 text-sm font-semibold ${params.get("block") === "execution" ? "border border-rail-muted text-rail-foreground" : "bg-primary text-primary-foreground"}`}>{t("flowAssay.recover")}</Link>
-        <Link to={`${base}/material`} className="inline-flex min-h-11 items-center rounded-lg border border-rail-muted px-4 text-sm font-semibold text-rail-foreground">{t("flowAssay.supply")}</Link>
+        <Link to={`${base}/material#copies`} className="inline-flex min-h-11 items-center rounded-lg border border-rail-muted px-4 text-sm font-semibold text-rail-foreground">{t("flowAssay.supply")}</Link>
       </div> : null}
     </section>
   );

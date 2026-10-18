@@ -16,10 +16,16 @@ import { has, str } from "../decisions/rows";
 const MAX_MIB = Math.round(MAX_UPLOAD_BYTES / (1024 * 1024));
 
 export default function UploadForm(
-  { project, flowId, onDone }: { project: string; flowId: string; onDone: () => void },
+  { project, flowId, onDone, target: chosen, onTarget }: {
+    project: string; flowId: string; onDone: () => void;
+    /** Controlled target, so the "copies needed" list can aim the upload at one candidate. */
+    target?: string; onTarget?: (key: string) => void;
+  },
 ) {
   const overview = useApi(() => api.overview(project, "f", flowId), [project, flowId]);
-  const [target, setTarget] = useState("");
+  const [ownTarget, setOwnTarget] = useState("");
+  const target = chosen ?? ownTarget;
+  const setTarget = (key: string) => { setOwnTarget(key); onTarget?.(key); };
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [percent, setPercent] = useState<number | null>(null);
@@ -70,6 +76,7 @@ export default function UploadForm(
 
   return (
     <section
+      id="upload"
       aria-label="Upload a file"
       className="rounded-xl bg-card p-5 shadow-sm ring-1 ring-gray-200 dark:ring-gray-800"
     >

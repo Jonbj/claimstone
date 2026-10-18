@@ -395,6 +395,25 @@
       "export": "exports"
     }
   },
+  "copies": {
+    "title": "Copies still needed",
+    "lede": "Documents Claimstone found but could not read. If you can get one — through a library, by buying it or from the author — upload the PDF against that exact document. Claimstone buys nothing and never signs in for you.",
+    "none": "Every document found has been read, or none needs a copy.",
+    "why": "Why not read:",
+    "publisher": "Publisher page",
+    "upload": "Upload the PDF",
+    "replace": "Upload another",
+    "offered": "Your copy:",
+    "policy": "A copy you supply is checked by the same gates as anything Claimstone finds. Whether it counts toward the acquisition floor is set by the project's supplied_copies policy; it is listed separately by default.",
+    "cause": {
+      "paywall": "Behind a paywall (access refused).",
+      "excluded": "The publisher page is outside what was authorised — usually a paywall.",
+      "redirect": "The publisher redirected somewhere outside the plan.",
+      "notFound": "The address no longer exists (404).",
+      "robots": "The site's robots.txt does not allow automated retrieval.",
+      "notTried": "Not attempted yet."
+    }
+  },
   "auth": {
     "login": {
       "title": "Sign in",

@@ -23,6 +23,7 @@ import pathlib
 from dataclasses import dataclass
 from typing import Any, Iterable, Mapping
 
+from claimstone import ids
 from claimstone import admissibility, claim_records, chunk_sets, flows, journey, net, review, round_state, scope, synthesize
 from claimstone.config import (ConfigError, Project, RegistryDrift, check_registry_drift,
                                discover_projects, load_project)
@@ -751,6 +752,13 @@ def source_tracker(project: Project, store: Store, selector: scope.Selector,
             "source_class": str(candidate.get("source_class") or "UNCLASSIFIED"),
             "state": state,
             "tooltip": _tracker_tooltip(state, row),
+            # What a person needs to decide whether to get the document themselves (D140): which
+            # work it is, where its publisher page is, and why Claimstone could not read it.
+            "title": candidate.get("title") if isinstance(candidate.get("title"), str) else None,
+            "year": candidate.get("year") if isinstance(candidate.get("year"), int) else None,
+            "venue": candidate.get("venue") if isinstance(candidate.get("venue"), str) else None,
+            "doi": ids.normalize_doi(candidate.get("doi") or str(key)),
+            "failure_display": failure_display((row or {}).get("failure_class")) or None,
         })
     return entries
 

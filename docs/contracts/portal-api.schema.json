@@ -1757,6 +1757,18 @@
        "candidate_key": {
         "type": "string"
        },
+       "doi": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "failure_display": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
        "source_class": {
         "type": "string"
        },
@@ -1777,8 +1789,26 @@
         ],
         "type": "string"
        },
+       "title": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
        "tooltip": {
         "type": "string"
+       },
+       "venue": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "year": {
+        "type": [
+         "integer",
+         "null"
+        ]
        }
       },
       "required": [
@@ -1786,7 +1816,12 @@
        "source_id",
        "source_class",
        "state",
-       "tooltip"
+       "tooltip",
+       "title",
+       "year",
+       "venue",
+       "doi",
+       "failure_display"
       ],
       "type": "object"
      },

@@ -565,7 +565,7 @@ def test_overview_carries_the_react_fields_on_both_selectors(workspace):
         assert overview["source_tracker"] is not None
         for entry in overview["source_tracker"]:
             assert set(entry) == {"candidate_key", "source_id", "source_class", "state",
-                                  "tooltip"}
+                                  "tooltip", "title", "year", "venue", "doi", "failure_display"}
             assert entry["state"] in portal_state.TRACKER_STATES
 
 

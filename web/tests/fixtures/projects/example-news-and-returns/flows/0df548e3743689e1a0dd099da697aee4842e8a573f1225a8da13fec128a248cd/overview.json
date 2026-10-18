@@ -1589,17 +1589,27 @@
  "source_tracker": [
   {
    "candidate_key": "r1-a",
+   "doi": null,
+   "failure_display": null,
    "source_class": "ACA",
    "source_id": "S01",
    "state": "confirmed",
-   "tooltip": "obtained and confirmed as a document by normalize"
+   "title": "Study one",
+   "tooltip": "obtained and confirmed as a document by normalize",
+   "venue": null,
+   "year": null
   },
   {
    "candidate_key": "r1-b",
+   "doi": null,
+   "failure_display": null,
    "source_class": "ACA",
    "source_id": "S02",
    "state": "confirmed",
-   "tooltip": "obtained and confirmed as a document by normalize"
+   "title": "Study two",
+   "tooltip": "obtained and confirmed as a document by normalize",
+   "venue": null,
+   "year": null
   }
  ],
  "state": {

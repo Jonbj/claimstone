@@ -1331,31 +1331,51 @@
  "source_tracker": [
   {
    "candidate_key": "r1-a",
+   "doi": null,
+   "failure_display": null,
    "source_class": "ACA",
    "source_id": "S01",
    "state": "confirmed",
-   "tooltip": "obtained and confirmed as a document by normalize"
+   "title": "Study one",
+   "tooltip": "obtained and confirmed as a document by normalize",
+   "venue": null,
+   "year": null
   },
   {
    "candidate_key": "r1-b",
+   "doi": null,
+   "failure_display": null,
    "source_class": "ACA",
    "source_id": "S02",
    "state": "confirmed",
-   "tooltip": "obtained and confirmed as a document by normalize"
+   "title": "Study two",
+   "tooltip": "obtained and confirmed as a document by normalize",
+   "venue": null,
+   "year": null
   },
   {
    "candidate_key": "r2-a",
+   "doi": null,
+   "failure_display": null,
    "source_class": "ACA",
    "source_id": "S03",
    "state": "not_attempted",
-   "tooltip": "no acquisition attempt recorded"
+   "title": "Study three",
+   "tooltip": "no acquisition attempt recorded",
+   "venue": null,
+   "year": null
   },
   {
    "candidate_key": "r2-w",
+   "doi": null,
+   "failure_display": "HTTP 403 (access refused) [PAYWALL_403]",
    "source_class": "ACA",
    "source_id": null,
    "state": "not_obtained",
-   "tooltip": "HTTP 403 — access refused (stored as PAYWALL_403; not proof of a paywall or of a purchasable copy)"
+   "title": "Refused work",
+   "tooltip": "HTTP 403 — access refused (stored as PAYWALL_403; not proof of a paywall or of a purchasable copy)",
+   "venue": null,
+   "year": null
   }
  ],
  "state": {

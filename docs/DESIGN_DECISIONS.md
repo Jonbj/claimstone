@@ -5122,3 +5122,24 @@ Cost, stated: during a host outage the acquisition rate can be lower than before
 deferred now. That is the intended direction of the error — a rate that rises because we ignored a host's silence is the
 unsafe kind. `FETCH_VERSION` 7 → 8; figures taken before and after are not comparable for hosts that were failing on
 robots.txt at the time (none has been identified in the stores on this machine).
+
+## D140 — The portal lists the documents it could not read, so a person can get one and upload it (2026-10-18)
+
+The first live trial stopped at `INSUFFICIENT_ACQUISITION` with 2 of 10 sources read, and a route probe (issue #14) showed
+that 7 of the 8 missing ones are closed everywhere: they are publisher papers behind a paywall, and no alternative open
+route exists. The lever left to a person is to obtain a document themselves (a library, a purchase, the author) and supply
+it. The portal had the *upload* but not the *decision*: the only list of candidates was a drop-down of `candidate_key ·
+class · state`, with no title, no venue, no link to the publisher and no cause. A person could not tell what they were being
+asked to find.
+
+`source_tracker` entries now also carry `title`, `year`, `venue`, `doi` and `failure_display` — all read off the candidate and
+the collapsed acquisition row, the client deriving nothing (F11). `API_VERSION` stays 1: the fields are additive and the
+schema lists them as required, so a server that omits one fails the schema test. The Add-material page opens with **Copies
+still needed**: one line per document not read, with its title, venue, year, source class, the cause in a plain sentence, a link
+to the publisher's own page (`https://doi.org/<doi>`, opened in a new tab), and an *Upload the PDF* button that aims the
+upload form at that exact candidate. A copy already offered shows its intake state. The floor panel's "Offer or upload a copy"
+now lands on that list.
+
+What it does not do, deliberately: it buys nothing, signs in nowhere, and does not scrape or proxy the publisher page. A
+supplied copy goes through the same gates as any other and counts toward the floor only as the project's declared
+`supplied_copies` policy says (`separate` by default) — the denominator never changes.

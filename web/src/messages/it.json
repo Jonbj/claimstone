@@ -395,6 +395,25 @@
       "export": "esportazioni"
     }
   },
+  "copies": {
+    "title": "Copie che mancano",
+    "lede": "Documenti che Claimstone ha trovato ma non ha potuto leggere. Se riesci a procurartene uno — da una biblioteca, comprandolo o chiedendolo all'autore — carica il PDF proprio su quel documento. Claimstone non compra niente e non accede mai al posto tuo.",
+    "none": "Ogni documento trovato è stato letto, oppure nessuno richiede una copia.",
+    "why": "Perché non è stato letto:",
+    "publisher": "Pagina dell'editore",
+    "upload": "Carica il PDF",
+    "replace": "Carica un altro",
+    "offered": "La tua copia:",
+    "policy": "Una copia che fornisci passa gli stessi controlli di tutto ciò che trova Claimstone. Se conta per la soglia di acquisizione lo decide la regola supplied_copies del progetto; per impostazione predefinita è elencata a parte.",
+    "cause": {
+      "paywall": "Dietro un paywall (accesso rifiutato).",
+      "excluded": "La pagina dell'editore è fuori da ciò che era autorizzato — di solito un paywall.",
+      "redirect": "L'editore ha rimandato altrove, fuori dal piano.",
+      "notFound": "L'indirizzo non esiste più (404).",
+      "robots": "Il robots.txt del sito non consente il recupero automatico.",
+      "notTried": "Non ancora tentato."
+    }
+  },
   "auth": {
     "login": {
       "title": "Accedi",
