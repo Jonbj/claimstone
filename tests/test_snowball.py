@@ -60,10 +60,14 @@ class Fetcher:
     def __init__(self):
         self.urls = []
 
+    def get(self, url, **kwargs):
+        import json as _json
+        self.urls.append(url)
+        data = oc("citing" if "/citations/" in url else "cited", "10.7000/hot", "10.8000/cold")
+        return net.Outcome(url, True, 200, content_type="application/json", body=_json.dumps(data).encode())
+
     def get_json(self, url):
         self.urls.append(url)
-        if "opencitations" in url:
-            return oc("citing" if "/citations/" in url else "cited", "10.7000/hot", "10.8000/cold"), net.Outcome(url, True, 200)
         return {"results": [{"doi": "https://doi.org/10.7000/hot", "title": "A hot paper", "publication_year": 2020,
                              "primary_location": {"source": {"display_name": "J Hot"}}}]}, net.Outcome(url, True, 200)
 
@@ -87,3 +91,18 @@ def test_the_tool_previews_then_runs_within_its_ceiling_and_never_writes_candida
     later = dt.datetime.now(dt.timezone.utc) + dt.timedelta(days=15)
     with pytest.raises(ValueError, match="exceed the approved"):
         tool.run("p", execute=True, store_base=tmp_path, fetcher=Fetcher(), now=later, max_seeds=2)
+
+
+def test_a_failed_first_run_is_rebuilt_from_the_stored_bytes_with_no_request(tmp_path):
+    store = make_store(tmp_path, 1)
+    raw = tmp_path / "raw.json"
+    import json as _json
+    raw.write_bytes(_json.dumps(oc("citing", "10.7000/hot")).encode())
+    store.append(snowball.EDGES, snowball.edge_row("doi:10.1000/s0", "10.1000/s0", snowball.CITED_BY, [], ok=False, truncated=False))
+    store.append("requests.jsonl", {"campaign": tool.CAMPAIGN, "event": "validated_response", "candidate_key": "doi:10.1000/s0",
+                                    "url": "https://api.opencitations.net/index/v2/citations/doi:10.1000/s0",
+                                    "raw_path": str(raw), "raw_sha256": "abc"})
+    assert tool.reparse_from_raw("p", store_base=tmp_path) == 1
+    row = snowball.latest_edges(store)[("doi:10.1000/s0", snowball.CITED_BY)]
+    assert row["ok"] is True and [e["other_doi"] for e in row["edges"]] == ["10.7000/hot"] and row["reparsed_from_raw"] == "abc"
+    assert tool.reparse_from_raw("p", store_base=tmp_path) == 0, "a row that is already good is left alone"

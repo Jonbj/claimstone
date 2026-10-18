@@ -23,7 +23,54 @@ from tools.complete_question_round import load_environment  # noqa: E402
 
 HOSTS = frozenset({"api.opencitations.net", "api.openalex.org"})
 CAMPAIGN = "citation-edges-v1"
+# Its own campaign: the recording fetcher counts physical requests per campaign, so the titles must not inherit the
+# edge requests already spent.
+TITLES_CAMPAIGN = "citation-titles-v1"
 TITLE_BATCH = 50
+
+
+def get_list(recorded, url: str):
+    """OpenCitations answers a JSON **array**, which `get_json` refuses (it wants an object): found on the first
+    live run (D143). Fetch the bytes and read the array here; anything that is not a list is a failed answer."""
+    outcome = recorded.get(url, as_json=True)
+    if not outcome.ok or not outcome.body:
+        return None, outcome
+    try:
+        payload = json.loads(outcome.body.decode("utf-8", "replace"))
+    except ValueError:
+        return None, outcome
+    return (payload if isinstance(payload, list) else None), outcome
+
+
+def reparse_from_raw(project: str, *, store_base: str = "store") -> int:
+    """Rebuild edge rows from the bytes a first run already stored, with no request. Append-only: the corrected
+    row supersedes the failed one. Returns how many rows were written."""
+    store = Store(project, base=store_base)
+    latest = snowball.latest_edges(store)
+    written = 0
+    for row in store.read("requests.jsonl"):
+        if row.get("campaign") != CAMPAIGN or row.get("event") != "validated_response" or not row.get("raw_path"):
+            continue
+        url = str(row.get("url") or "")
+        direction = snowball.CITED_BY if "/citations/" in url else snowball.CITES if "/references/" in url else None
+        key = row.get("candidate_key")
+        if direction is None or not key:
+            continue
+        held = latest.get((key, direction))
+        if held and held.get("ok"):
+            continue
+        try:
+            payload = json.loads(Path(row["raw_path"]).read_bytes().decode("utf-8", "replace"))
+        except (OSError, ValueError):
+            continue
+        if not isinstance(payload, list):
+            continue
+        doi = key[4:] if str(key).startswith("doi:") else ""
+        edges, truncated = snowball.parse_edges(payload, doi, direction)
+        store.append(snowball.EDGES, snowball.edge_row(key, doi, direction, edges, ok=True, truncated=truncated,
+                                                        campaign=CAMPAIGN) | {"reparsed_from_raw": row["raw_sha256"]})
+        written += 1
+    return written
 
 
 def seeds(store: Store) -> list[dict]:
@@ -76,9 +123,9 @@ def run(project: str, *, execute: bool = False, max_seeds: int = 10, min_links: 
     for seed, direction in todo:
         recorded = RecordingFetcher(fetcher, store, purpose="citation_edges", campaign=CAMPAIGN,
                                     candidate_key=seed["candidate_key"])
-        payload, outcome = recorded.get_json(snowball.edges_url(seed["doi"], direction))
+        payload, outcome = get_list(recorded, snowball.edges_url(seed["doi"], direction))
         # OpenCitations answers an unknown DOI with an empty list: that is "no edges known", not a failure.
-        ok = outcome.ok
+        ok = payload is not None
         edges, truncated = snowball.parse_edges(payload, seed["doi"], direction) if ok else ([], False)
         store.append(snowball.EDGES, snowball.edge_row(seed["candidate_key"], seed["doi"], direction, edges,
                                                         ok=ok, truncated=truncated, campaign=CAMPAIGN))
@@ -94,7 +141,7 @@ def run(project: str, *, execute: bool = False, max_seeds: int = 10, min_links: 
     wanted = [s["doi"] for s in snowball.suggestions(store, min_links=min_links, limit=TITLE_BATCH)
               if not s.get("title")]
     if wanted:
-        recorded = RecordingFetcher(fetcher, store, purpose="citation_titles", campaign=CAMPAIGN)
+        recorded = RecordingFetcher(fetcher, store, purpose="citation_titles", campaign=TITLES_CAMPAIGN)
         payload, outcome = recorded.get_json(titles_url(wanted))
         for work in ((payload or {}).get("results") or []) if outcome.ok and isinstance(payload, dict) else []:
             from claimstone import ids
@@ -118,9 +165,13 @@ def main() -> None:
     parser.add_argument("--min-links", type=int, default=2)
     parser.add_argument("--min-age-days", type=int, default=14)
     parser.add_argument("--report", action="store_true", help="print the suggestions; no request")
+    parser.add_argument("--reparse", action="store_true", help="rebuild edge rows from stored bytes; no request")
     args = parser.parse_args()
     if args.report:
         print(json.dumps(snowball.suggestions(Store(args.project), min_links=args.min_links), indent=1, ensure_ascii=False))
+        return
+    if args.reparse:
+        print(json.dumps({"rows_rebuilt": reparse_from_raw(args.project)}))
         return
     load_environment(Path(".env"))
     print(json.dumps(run(args.project, execute=args.execute, max_seeds=args.max_seeds,

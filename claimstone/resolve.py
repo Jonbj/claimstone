@@ -172,8 +172,10 @@ def core_locations(fetcher: net.FetcherLike, doi: str) -> list[Location]:
     payload, _ = fetcher.get_json(f"https://api.core.ac.uk/v3/search/works?{query}")
     results = (payload or {}).get("results") if isinstance(payload, dict) else None
     out: list[Location] = []
+    wanted = ids.normalize_doi(doi)
     for work in results or []:
-        if not isinstance(work, dict) or ids.normalize_doi(work.get("doi")) != ids.normalize_doi(doi):
+        # An unparseable DOI on either side never matches: two `None`s are not the same work.
+        if not wanted or not isinstance(work, dict) or ids.normalize_doi(work.get("doi")) != wanted:
             continue
         url = work.get("downloadUrl")
         if not (isinstance(url, str) and url.startswith(("http://", "https://"))):

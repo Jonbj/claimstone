@@ -121,6 +121,66 @@ def run(project: str, *, execute: bool = False, store_base: str = "store", fetch
     return summary
 
 
+CORE_HOST = "api.core.ac.uk"
+CORE_CAMPAIGN = "fulltext-route-probe-v1-core"
+
+
+def core_url(doi: str) -> str:
+    return "https://api.core.ac.uk/v3/search/works?" + urllib.parse.urlencode({"q": f'doi:"{doi}"', "limit": 3})
+
+
+def summarize_core(payload: dict | None, doi: str) -> dict:
+    """Only a result whose own DOI equals the one asked about counts: never the wrong work."""
+    from claimstone import ids
+
+    results = (payload or {}).get("results") if isinstance(payload, dict) else None
+    wanted = ids.normalize_doi(doi)
+    # An unparseable DOI on either side never matches: two `None`s are not the same work.
+    exact = [w for w in results or [] if wanted and isinstance(w, dict) and ids.normalize_doi(w.get("doi")) == wanted]
+    return {"results": len(results or []), "exact": len(exact),
+            "copies": [{"downloadUrl": w.get("downloadUrl"), "id": w.get("id"),
+                        "publisher": w.get("publisher"), "yearPublished": w.get("yearPublished")} for w in exact][:3]}
+
+
+def run_core(project: str, *, execute: bool = False, max_candidates: int = 10, store_base: str = "store",
+             fetcher=None) -> dict:
+    """One CORE lookup per DOI candidate not yet obtained, one host, USD 0 (needs CORE_API_KEY)."""
+    from claimstone import admissibility
+
+    store = Store(project, base=store_base)
+    held = {k for k, r in admissibility.collapse(store).items() if r.get("acquired")}
+    done = {r["candidate_key"] for r in store.read(LEDGER) if r.get("service") == "core"} \
+        if store.path(LEDGER).exists() else set()
+    todo = [t for t in candidates_with_doi(store) if t["candidate_key"] not in held and t["candidate_key"] not in done]
+    summary = {"campaign": CORE_CAMPAIGN, "host": CORE_HOST, "lookups_pending": len(todo),
+               "max_candidates": max_candidates, "usd": 0}
+    if len(todo) > max_candidates:
+        summary["note"] = f"{len(todo)} pending exceed the approved {max_candidates}"
+        if execute:
+            raise ValueError(summary["note"])
+    if not execute or not todo:
+        return summary
+    fetcher = fetcher or net.Fetcher(allowed_hosts=frozenset({CORE_HOST}), enforce_global_addresses=True,
+                                     max_physical_requests=max_candidates + 2)
+    made = 0
+    for target in todo:
+        recorded = RecordingFetcher(fetcher, store, purpose="fulltext_route_probe", campaign=CORE_CAMPAIGN,
+                                    candidate_key=target["candidate_key"])
+        payload, outcome = recorded.get_json(core_url(target["doi"]))
+        store.append(LEDGER, {"candidate_key": target["candidate_key"], "doi": target["doi"], "service": "core",
+                              "campaign": CORE_CAMPAIGN, "url": core_url(target["doi"]), "http_status": outcome.status,
+                              "failure_class": outcome.failure_class,
+                              "recorded_at": dt.datetime.now(dt.timezone.utc).isoformat(),
+                              "summary": summarize_core(payload, target["doi"]) if outcome.ok else None})
+        made += 1
+        if outcome.status in (401, 403, 429) or outcome.failure_class in (
+                "ROBOTS_DISALLOWED", "ROBOTS_UNREACHABLE", "DOMAIN_BUDGET_EXHAUSTED", "REQUEST_LIMIT_REACHED"):
+            summary["stopped_on_refusal"] = {"status": outcome.status, "failure_class": outcome.failure_class}
+            break
+    summary["lookups_made"] = made
+    return summary
+
+
 def report(project: str, store_base: str = "store") -> list[dict]:
     store = Store(project, base=store_base)
     by: dict[str, dict] = {}
@@ -143,11 +203,15 @@ def main() -> None:
     parser.add_argument("project")
     parser.add_argument("--execute", action="store_true", help="make the requests (only after approval)")
     parser.add_argument("--report", action="store_true", help="print the recorded outcomes; no request")
+    parser.add_argument("--core", action="store_true", help="the CORE lookup (one request per unread DOI), not the first probe")
     args = parser.parse_args()
     if args.report:
         print(json.dumps(report(args.project), indent=1, ensure_ascii=False))
         return
     load_environment(Path(".env"))
+    if args.core:
+        print(json.dumps(run_core(args.project, execute=args.execute), indent=1))
+        return
     print(json.dumps(run(args.project, execute=args.execute), indent=1))
 
 

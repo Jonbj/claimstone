@@ -26,7 +26,7 @@ class FakeFetcher:
 def make_store(tmp_path, n=3):
     store = Store("p", base=tmp_path)
     for i in range(n):
-        store.append("candidates.jsonl", {"candidate_key": f"doi:10.1/x{i}", "title": f"t{i}"})
+        store.append("candidates.jsonl", {"candidate_key": f"doi:10.1000/x{i}", "title": f"t{i}"})
     store.append("candidates.jsonl", {"candidate_key": "title:no doi", "title": "no doi"})
     return store
 
@@ -65,4 +65,33 @@ def test_more_candidates_than_the_approved_ceiling_refuses_to_run(tmp_path):
 
 def test_urls_encode_the_doi():
     assert "DOI%3A%2210.1016/j.x%28y%29%22" in probe.europe_pmc_url("10.1016/j.x(y)")
-    assert probe.openalex_url("10.1/x").startswith("https://api.openalex.org/works/doi:10.1/x?select=")
+    assert probe.openalex_url("10.1000/x").startswith("https://api.openalex.org/works/doi:10.1000/x?select=")
+
+
+def test_the_core_lookup_counts_only_an_exact_doi_and_is_bounded(tmp_path):
+    store = make_store(tmp_path, 3)
+    store.append("acquisitions.jsonl", {"candidate_key": "doi:10.1000/x0", "acquired": True})
+
+    class Core:
+        def __init__(self):
+            self.urls = []
+
+        def get_json(self, url):
+            self.urls.append(url)
+            return {"results": [{"doi": "10.1000/X1", "downloadUrl": "https://r.edu/a.pdf", "id": 1},
+                                {"doi": "10.9000/other", "downloadUrl": "https://r.edu/b.pdf"}]}, net.Outcome(url, True, 200)
+
+    preview = probe.run_core("p", store_base=tmp_path)
+    assert preview["lookups_pending"] == 2, "an obtained candidate is not looked up"
+    fetcher = Core()
+    probe.run_core("p", execute=True, store_base=tmp_path, fetcher=fetcher)
+    assert len(fetcher.urls) == 2 and all(u.startswith("https://api.core.ac.uk/") for u in fetcher.urls)
+    rows = [r for r in store.read(probe.LEDGER) if r["service"] == "core"]
+    first = next(r for r in rows if r["candidate_key"] == "doi:10.1000/x1")
+    assert first["summary"]["exact"] == 1 and first["summary"]["copies"][0]["downloadUrl"] == "https://r.edu/a.pdf"
+    probe.run_core("p", execute=True, store_base=tmp_path, fetcher=fetcher)
+    assert len(fetcher.urls) == 2, "a recorded lookup is not asked again"
+
+
+def test_two_unparseable_dois_are_not_the_same_work():
+    assert probe.summarize_core({"results": [{"doi": "garbage", "downloadUrl": "https://r.edu/a.pdf"}]}, "also garbage")["exact"] == 0
