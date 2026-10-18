@@ -75,7 +75,7 @@ function PasswordSection({ onChanged }: { onChanged: () => void }) {
           />
         </label>
           {reauth ? (
-            <span id="account-reauth" role="alert" className="text-[13px] text-red-700 dark:text-red-400">
+            <span id="account-reauth" role="alert" className="text-[13px] text-not-obtained">
               {t("auth.account.reauth")}
             </span>
           ) : null}
@@ -99,7 +99,7 @@ function PasswordSection({ onChanged }: { onChanged: () => void }) {
           />
         </label>
           {mismatch ? (
-            <span id="account-mismatch" role="alert" className="text-[13px] text-red-700 dark:text-red-400">
+            <span id="account-mismatch" role="alert" className="text-[13px] text-not-obtained">
               {t("auth.account.mismatch")}
             </span>
           ) : null}
@@ -192,9 +192,9 @@ function Account({ id, forced }: { id: string; forced: boolean }) {
 
   return (
     <div className="flex min-w-0 max-w-2xl flex-col gap-6">
-      <h1 className="text-[40px] leading-tight">{t("auth.account.title")}</h1>
+      <h1 className="text-[28px] leading-tight">{t("auth.account.title")}</h1>
       {forced ? (
-        <p role="alert" className="rounded-lg border border-amber-400 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:bg-amber-950/40 dark:text-amber-100">
+        <p role="alert" className="rounded-lg border border-waits bg-waits-soft px-4 py-3 text-sm text-waits-ink">
           {t("auth.account.mustChange")}
         </p>
       ) : null}

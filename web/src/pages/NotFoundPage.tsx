@@ -8,7 +8,7 @@ export default function NotFoundPage() {
       <h1 className="text-[22px] font-semibold">Not found</h1>
       <p className="mt-1 text-sm text-muted-foreground">
         no page at this address —{" "}
-        <Link to="/" className="text-blue-600 hover:underline dark:text-blue-400">
+        <Link to="/" className="text-primary hover:underline">
           back to the index
         </Link>
       </p>

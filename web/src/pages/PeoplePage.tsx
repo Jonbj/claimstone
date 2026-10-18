@@ -26,7 +26,7 @@ function isReauth(error: Error | null): boolean {
 function Failure({ error, describedId }: { error: Error; describedId: string }) {
   const { t } = useLocale();
   if (isReauth(error)) {
-    return <p id={describedId} role="alert" className="text-sm text-red-700 dark:text-red-400">{t("auth.people.reauth")}</p>;
+    return <p id={describedId} role="alert" className="text-sm text-not-obtained">{t("auth.people.reauth")}</p>;
   }
   return <ErrorState error={error} context="people" />;
 }
@@ -353,7 +353,7 @@ export default function PeoplePage() {
   const session = useSession();
   return (
     <div className="flex min-w-0 max-w-4xl flex-col gap-6">
-      <h1 className="text-[40px] leading-tight">{t("auth.people.title")}</h1>
+      <h1 className="text-[28px] leading-tight">{t("auth.people.title")}</h1>
       {!session.ready ? <Pending label={t("auth.people.loading")} /> : null}
       {session.ready && session.operator?.role !== "admin" ? (
         <p className="text-sm text-muted-foreground">{t("auth.people.adminOnly")}</p>

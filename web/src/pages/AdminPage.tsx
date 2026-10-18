@@ -17,7 +17,7 @@ import { useSession } from "@/lib/session";
 // Opening this page contacts no service: every check is a button. A credential value is typed
 // into a password field, sent once, and the field is cleared after every submit, success or
 // failure; it is never rendered back and never kept in storage. The password is asked again.
-const card = "rounded-lg bg-card p-5 shadow-sm ring-1 ring-gray-200 dark:ring-gray-800";
+const card = "rounded-xl border border-border bg-card p-5";
 const primary = "min-h-11 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-50";
 const input = "min-h-11 w-full rounded-md border border-border bg-background px-3 text-sm";
 
@@ -99,7 +99,7 @@ function ControlAdminBlock({ data, reload }: { data: ControlAdmin; reload: () =>
               <span className="w-28 font-mono text-xs">{target}</span>
               <span className="flex-1"><CheckLine row={data.checks[target]} /></span>
               <button type="button" disabled={checking !== null} onClick={() => void check(target)}
-                      className="min-h-11 rounded-md px-4 text-sm ring-1 ring-gray-300 disabled:opacity-50">
+                      className="min-h-11 rounded-lg border border-border px-4 text-sm disabled:opacity-50">
                 {checking === target ? "Checking…" : `Check ${target}`}
               </button>
             </li>
@@ -108,7 +108,7 @@ function ControlAdminBlock({ data, reload }: { data: ControlAdmin; reload: () =>
         {checkError ? <div className="mt-2"><ErrorState error={checkError} context="check" /></div> : null}
         <div className="mt-3">
           <button type="button" disabled title={PAID_TEST_REASON}
-                  className="min-h-11 rounded-md px-4 text-sm ring-1 ring-gray-300 opacity-50">
+                  className="min-h-11 rounded-lg border border-border px-4 text-sm opacity-50">
             Paid test call
           </button>
           <p className="mt-1 text-xs text-muted-foreground">Not available: {PAID_TEST_REASON}.</p>
@@ -162,7 +162,7 @@ export default function AdminPage() {
   const control_ = useApi<ControlAdmin | null>(
     () => (signedIn ? control.admin() : Promise.resolve(null)), [signedIn]);
 
-  const title = <h1 className="text-[26px]">Administration</h1>;
+  const title = <h1 className="text-[28px] leading-tight">Administration</h1>;
   const intro = (
     <p className="mt-0.5 text-sm text-muted-foreground">
       What this installation can use. Opening this page sends no request to any service; every check
@@ -212,7 +212,7 @@ export default function AdminPage() {
           <h2 className="text-base font-semibold">Checks and credentials</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Sign in to run a reachability check or replace a credential.{" "}
-            <Link to="/login?next=%2Fadmin" className="text-blue-600 hover:underline dark:text-blue-400">
+            <Link to="/login?next=%2Fadmin" className="text-primary hover:underline">
               Sign in
             </Link>
           </p>
