@@ -1,5 +1,7 @@
 import { Tracker } from "@/components/tremor/Tracker/Tracker";
+import NoticeBadge from "@/components/NoticeBadge";
 import type { Overview } from "@/lib/api-types";
+import { useLocale } from "@/lib/i18n";
 
 // §8.3: one block per scoped candidate, in server order, with the server-provided
 // state and its tooltip text — the client derives nothing (F11). Rose marks an
@@ -35,9 +37,11 @@ const STATE_WORD: Record<TrackerEntry["state"], string> = {
 };
 
 export default function SourceTracker({ entries }: { entries: TrackerEntry[] }) {
+  const { t } = useLocale();
   if (entries.length === 0) {
     return <p className="text-sm text-muted-foreground">no candidates in this scope</p>;
   }
+  const noticed = entries.filter((entry) => entry.status?.state === "NOTICE_RECORDED");
   const counts = new Map<TrackerEntry["state"], number>();
   for (const entry of entries) counts.set(entry.state, (counts.get(entry.state) ?? 0) + 1);
   return (
@@ -60,6 +64,19 @@ export default function SourceTracker({ entries }: { entries: TrackerEntry[] }) 
           </span>
         ))}
       </div>
+      {noticed.length > 0 ? (
+        <div role="note" className="mt-3 rounded-lg border border-border bg-muted/50 p-3 text-sm">
+          <p className="font-medium">{t("status.summary", { n: noticed.length })}</p>
+          <ul className="mt-2 flex flex-col gap-1.5">
+            {noticed.map((entry) => (
+              <li key={entry.candidate_key} className="flex flex-wrap items-center gap-2 text-xs">
+                <span className="max-w-prose truncate font-medium">{entry.title ?? entry.candidate_key}</span>
+                <NoticeBadge status={entry.status} />
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
     </div>
   );
 }

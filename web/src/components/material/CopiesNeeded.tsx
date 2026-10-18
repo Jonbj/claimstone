@@ -1,3 +1,4 @@
+import NoticeBadge from "@/components/NoticeBadge";
 import StateChip from "./StateChip";
 import { linksOf, str } from "../decisions/rows";
 import type { Row } from "../decisions/rows";
@@ -60,6 +61,9 @@ export default function CopiesNeeded({ entries, intake, onChoose }: {
                   </p>
                   {entry.doi ? (
                     <p className="mt-1 break-all font-mono text-xs text-muted-foreground">doi:{entry.doi}</p>
+                  ) : null}
+                  {entry.status && entry.status.state !== "LOOKUP_FAILED" ? (
+                    <div className="mt-1.5 flex flex-wrap items-center gap-2"><NoticeBadge status={entry.status} /></div>
                   ) : null}
                 </div>
                 <div className="flex flex-wrap items-center gap-2">

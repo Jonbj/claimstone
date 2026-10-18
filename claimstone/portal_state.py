@@ -24,6 +24,7 @@ from dataclasses import dataclass
 from typing import Any, Iterable, Mapping
 
 from claimstone import ids
+from claimstone import status as status_module
 from claimstone import admissibility, claim_records, chunk_sets, flows, journey, net, review, round_state, scope, synthesize
 from claimstone.config import (ConfigError, Project, RegistryDrift, check_registry_drift,
                                discover_projects, load_project)
@@ -701,6 +702,18 @@ def _tracker_tooltip(state: str, row: Mapping[str, Any] | None) -> str:
     return f"not obtained: {failure_display((row or {}).get('failure_class'))}"
 
 
+def _status_view(row: dict[str, Any] | None) -> dict[str, Any] | None:
+    """What Crossref reported about a work (D142), as the portal shows it; `None` when never asked.
+    `NO_NOTICE_RECORDED` is carried as itself: the page must not turn silence into 'not retracted'."""
+    if row is None:
+        return None
+    return {"state": row.get("state"), "withdrawing": bool(row.get("withdrawing")),
+            "observed_at": row.get("observed_at"),
+            "notices": [{"type": str(n.get("type") or ""), "kind": str(n.get("kind") or "other"),
+                         "label": n.get("label") if isinstance(n.get("label"), str) else None}
+                        for n in row.get("notices") or [] if isinstance(n, dict)]}
+
+
 def source_tracker(project: Project, store: Store, selector: scope.Selector,
                    computed: Computed | None = None) -> list[dict[str, Any]]:
     """§8.3: one Tracker entry per scoped candidate, in scoped candidate order, each with its
@@ -723,6 +736,7 @@ def source_tracker(project: Project, store: Store, selector: scope.Selector,
         raise LedgerCorrupt("acquisitions ledger unreadable: the tracker cannot be built")
     candidates = scope.candidates(store, selector)
     confirmed_rows = admissibility.confirmations(store)
+    observed = status_module.latest(store)
     entries: list[dict[str, Any]] = []
     for key, candidate in candidates.items():
         row = computed.collapsed.get(key)
@@ -759,6 +773,7 @@ def source_tracker(project: Project, store: Store, selector: scope.Selector,
             "venue": candidate.get("venue") if isinstance(candidate.get("venue"), str) else None,
             "doi": ids.normalize_doi(candidate.get("doi") or str(key)),
             "failure_display": failure_display((row or {}).get("failure_class")) or None,
+            "status": _status_view(observed.get(str(key))),
         })
     return entries
 

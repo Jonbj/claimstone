@@ -5166,3 +5166,26 @@ already planned moves. The portal's plan form and the series form list Europe PM
 reaches the same records in one request. E-utilities needs two (`esearch`, then `esummary`), which breaks the one-request
 unit the scheduler plans and caps by; what it would add is boolean MeSH syntax. That is #8's remaining scope and it waits for a
 project that needs controlled-vocabulary queries. Metadata access is still not a full-text grant.
+
+## D142 — Crossref notices are recorded and shown beside the evidence, never acted on (2026-10-18)
+
+An unchanged quote can come from a paper that was later retracted or corrected, and the quote gate cannot know: the quote is
+still an exact substring of the text we read. The review (GPT-6, finding in Part B) and issue #12 asked for status
+observations. This is the first, smallest honest version.
+
+`claimstone/status.py` and `tools/observe_status.py` record, append-only in `status_observations.jsonl`
+(`docs/contracts/status_observations.md`), what Crossref reported for a DOI at a moment: any notice of an update (retraction,
+withdrawal, expression of concern, correction…), the licences and the text-mining links. Two requests per DOI to one host. The
+portal's overview carries the newest row per candidate as `source_tracker[].status`; the source tracker lists sources that
+carry a notice and says to read it, and the *Copies still needed* list shows it beside each document.
+
+Three states and they do not collapse: `NOTICE_RECORDED`, `NO_NOTICE_RECORDED` — silence when asked, shown as "not proof there
+is none", never as a clean mark — and `LOOKUP_FAILED`. A source nobody asked about shows nothing at all.
+
+**Deliberately not done:** no claim is rejected, hidden or down-weighted; `profile_inputs` is not changed, so a notice does not
+yet mark a signature STALE. That binding is the remaining half of #12 and needs its own decision about what a recorded notice
+does to a signed verdict. It is not guessed here.
+
+Instrument: `status_version 1`. No earlier figure exists to supersede.
+
+First run needs the operator's approval of the exact plan (host, ceiling, USD 0). Not yet run on any project.

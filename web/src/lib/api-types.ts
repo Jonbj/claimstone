@@ -454,6 +454,16 @@ export interface Overview {
     source_class: string;
     source_id: string | null;
     state: "confirmed" | "awaiting_normalize" | "not_a_document" | "not_obtained" | "not_attempted" | "unclassified";
+    status: {
+      notices: {
+        kind: string;
+        label: string | null;
+        type: string;
+      }[];
+      observed_at: string | null;
+      state: "NOTICE_RECORDED" | "NO_NOTICE_RECORDED" | "LOOKUP_FAILED";
+      withdrawing: boolean;
+    } | null;
     title: string | null;
     tooltip: string;
     venue: string | null;

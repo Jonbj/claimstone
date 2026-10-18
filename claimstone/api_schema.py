@@ -490,7 +490,7 @@ OVERVIEW = _payload("overview", {
         "items": {
             "type": "object",
             "required": ["candidate_key", "source_id", "source_class", "state", "tooltip",
-                         "title", "year", "venue", "doi", "failure_display"],
+                         "title", "year", "venue", "doi", "failure_display", "status"],
             "properties": {
                 "candidate_key": _STR,
                 "source_id": _STR_OR_NULL,
@@ -502,6 +502,21 @@ OVERVIEW = _payload("overview", {
                 "venue": _STR_OR_NULL,
                 "doi": _STR_OR_NULL,
                 "failure_display": _STR_OR_NULL,
+                # What Crossref reported about the work, or null when never asked (D142).
+                "status": {
+                    "type": ["object", "null"],
+                    "required": ["state", "withdrawing", "observed_at", "notices"],
+                    "properties": {
+                        "state": {"type": "string", "enum": ["NOTICE_RECORDED", "NO_NOTICE_RECORDED", "LOOKUP_FAILED"]},
+                        "withdrawing": {"type": "boolean"},
+                        "observed_at": _STR_OR_NULL,
+                        "notices": {"type": "array", "items": {
+                            "type": "object", "required": ["type", "kind", "label"],
+                            "properties": {"type": _STR, "kind": _STR, "label": _STR_OR_NULL},
+                            "additionalProperties": False}},
+                    },
+                    "additionalProperties": False,
+                },
             },
             "additionalProperties": False,
         },

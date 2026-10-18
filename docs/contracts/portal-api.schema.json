@@ -1789,6 +1789,64 @@
         ],
         "type": "string"
        },
+       "status": {
+        "additionalProperties": false,
+        "properties": {
+         "notices": {
+          "items": {
+           "additionalProperties": false,
+           "properties": {
+            "kind": {
+             "type": "string"
+            },
+            "label": {
+             "type": [
+              "string",
+              "null"
+             ]
+            },
+            "type": {
+             "type": "string"
+            }
+           },
+           "required": [
+            "type",
+            "kind",
+            "label"
+           ],
+           "type": "object"
+          },
+          "type": "array"
+         },
+         "observed_at": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "state": {
+          "enum": [
+           "NOTICE_RECORDED",
+           "NO_NOTICE_RECORDED",
+           "LOOKUP_FAILED"
+          ],
+          "type": "string"
+         },
+         "withdrawing": {
+          "type": "boolean"
+         }
+        },
+        "required": [
+         "state",
+         "withdrawing",
+         "observed_at",
+         "notices"
+        ],
+        "type": [
+         "object",
+         "null"
+        ]
+       },
        "title": {
         "type": [
          "string",
@@ -1821,7 +1879,8 @@
        "year",
        "venue",
        "doi",
-       "failure_display"
+       "failure_display",
+       "status"
       ],
       "type": "object"
      },

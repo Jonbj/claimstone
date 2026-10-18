@@ -58,7 +58,8 @@
   "screening_version": 3,
   "seen_version": 1,
   "source_selection_import_version": 3,
-  "source_selection_version": 1
+  "source_selection_version": 1,
+  "status_version": 1
  },
  "key_rotation_note": "Key rotation is done by editing `.env` outside the portal. Containers read `.env` when `./claimstone.sh` starts them."
 }

@@ -414,6 +414,15 @@
       "notTried": "Non ancora tentato."
     }
   },
+  "status": {
+    "withdrawing": "Avviso di ritrattazione o di dubbio",
+    "correcting": "Avviso di correzione",
+    "other": "Avviso di aggiornamento",
+    "failed": "Verifica degli avvisi non riuscita",
+    "silent": "Nessun avviso registrato da Crossref al momento della richiesta (non prova che non ne esistano)",
+    "summary": "{n} fonti in questo ambito hanno un avviso registrato da Crossref. Leggilo prima di fidarti di ciò che la fonte dice.",
+    "source": "Crossref, {when}"
+  },
   "auth": {
     "login": {
       "title": "Accedi",

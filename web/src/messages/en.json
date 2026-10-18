@@ -414,6 +414,15 @@
       "notTried": "Not attempted yet."
     }
   },
+  "status": {
+    "withdrawing": "Retraction or concern notice",
+    "correcting": "Correction notice",
+    "other": "Update notice",
+    "failed": "Notice lookup failed",
+    "silent": "No notice recorded by Crossref when asked (not proof there is none)",
+    "summary": "{n} of the sources in this scope carry a notice recorded by Crossref. Read it before relying on what the source says.",
+    "source": "Crossref, {when}"
+  },
   "auth": {
     "login": {
       "title": "Sign in",
