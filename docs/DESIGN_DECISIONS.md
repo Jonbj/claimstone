@@ -5189,3 +5189,23 @@ does to a signed verdict. It is not guessed here.
 Instrument: `status_version 1`. No earlier figure exists to supersede.
 
 First run needs the operator's approval of the exact plan (host, ceiling, USD 0). Not yet run on any project.
+
+## D143 — Citation edges propose leads; a person proposes them on, and nothing counts until then (2026-10-18)
+
+The review asked for bounded forward and backward citation search with the seed, the edge, the depth and the stopping rule
+retained, and warned that existing citation discovery depends on acquired bibliographies and so inherits acquisition losses.
+`claimstone/snowball.py` and `tools/observe_citation_edges.py` read the open OpenCitations index (180 requests/minute/IP; the
+documentation states no licence for the data itself, only for the documentation — recorded, not assumed) for the candidates we
+already hold: who cites each, and what each cites.
+
+Rules chosen on purpose. **Depth one**, **two requests per seed**, **at most 200 edges per direction, a truncated answer says
+so**, a seed is not re-asked inside `--min-age-days` unless its last answer failed. **Nothing is added to `candidates.jsonl`.**
+The portal's Add-material page shows *Leads from citations*: works linked to by at least two of this flow's sources and not
+candidates yet, with the number labelled a count of sources, not relevance (invariant 7 applied to a graph). A person proposes a
+lead through the existing intake (`kind: doi`), where it is routed like any proposal; the intake does not yet feed a stage, and
+this decision does not change that.
+
+Titles are fetched from OpenAlex in batches of 50 DOIs so a lead reads as a work; OpenCitations carries no titles.
+
+`snowball_version 1`. The first run on any project needs the operator's approval of the exact plan (hosts, ceilings, USD 0).
+Not yet run.

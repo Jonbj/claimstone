@@ -423,6 +423,16 @@
     "summary": "{n} fonti in questo ambito hanno un avviso registrato da Crossref. Leggilo prima di fidarti di ciò che la fonte dice.",
     "source": "Crossref, {when}"
   },
+  "leads": {
+    "title": "Piste dalle citazioni",
+    "lede": "Opere che diverse fonti di questo flusso citano, o da cui sono citate, e che non sono ancora candidati. Una pista è un suggerimento: nulla viene scaricato e nulla conta finché non la proponi, e poi passa gli stessi controlli di ogni proposta.",
+    "links": "Collegata a {n} fonti di questo flusso — un conteggio di fonti, non una misura di rilevanza.",
+    "open": "Pagina dell'editore",
+    "propose": "Proponi",
+    "sending": "Invio…",
+    "proposed": "Proposta:",
+    "note": "Suggerita dalle citazioni: collegata a {n} fonti di questo flusso (OpenCitations)."
+  },
   "auth": {
     "login": {
       "title": "Accedi",

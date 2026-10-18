@@ -423,6 +423,16 @@
     "summary": "{n} of the sources in this scope carry a notice recorded by Crossref. Read it before relying on what the source says.",
     "source": "Crossref, {when}"
   },
+  "leads": {
+    "title": "Leads from citations",
+    "lede": "Works that several of this flow's sources cite, or are cited by, and that are not candidates yet. A lead is a suggestion: nothing is fetched and nothing counts until you propose it, and then it goes through the same checks as any proposal.",
+    "links": "Linked to by {n} of this flow's sources — a count of sources, not a measure of relevance.",
+    "open": "Publisher page",
+    "propose": "Propose",
+    "sending": "Sending…",
+    "proposed": "Proposed:",
+    "note": "Suggested by citations: linked to by {n} of this flow's sources (OpenCitations)."
+  },
   "auth": {
     "login": {
       "title": "Sign in",

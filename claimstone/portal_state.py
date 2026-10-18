@@ -24,6 +24,7 @@ from dataclasses import dataclass
 from typing import Any, Iterable, Mapping
 
 from claimstone import ids
+from claimstone import snowball
 from claimstone import status as status_module
 from claimstone import admissibility, claim_records, chunk_sets, flows, journey, net, review, round_state, scope, synthesize
 from claimstone.config import (ConfigError, Project, RegistryDrift, check_registry_drift,
@@ -799,6 +800,9 @@ def flow_overview(project: Project, store: Store, selector: scope.Selector,
         "questions": matrix,
         "question_state_counts": question_state_counts(matrix),
         "source_tracker": source_tracker(project, store, selector, computed),
+        # Leads from citation edges around this scope's candidates (D143): suggestions, never candidates.
+        "citation_suggestions": snowball.suggestions(
+            store, seeds_in={str(key) for key in scope.candidates(store, selector)}),
         "inbox": [dataclasses.asdict(card) for card in cards],
         "activity": round_state.activity(store, 50, selector),
         "unavailable": rs.unavailable,

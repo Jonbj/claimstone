@@ -1072,6 +1072,60 @@
       "null"
      ]
     },
+    "citation_suggestions": {
+     "items": {
+      "additionalProperties": false,
+      "properties": {
+       "directions": {
+        "items": {
+         "type": "string"
+        },
+        "type": "array"
+       },
+       "doi": {
+        "type": "string"
+       },
+       "links": {
+        "type": "integer"
+       },
+       "seeds": {
+        "items": {
+         "type": "string"
+        },
+        "type": "array"
+       },
+       "title": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "venue": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "year": {
+        "type": [
+         "integer",
+         "null"
+        ]
+       }
+      },
+      "required": [
+       "doi",
+       "links",
+       "seeds",
+       "directions",
+       "title",
+       "year",
+       "venue"
+      ],
+      "type": "object"
+     },
+     "type": "array"
+    },
     "errors": {
      "items": {
       "type": "string"
@@ -1966,6 +2020,7 @@
     "questions",
     "question_state_counts",
     "source_tracker",
+    "citation_suggestions",
     "inbox",
     "activity",
     "unavailable",

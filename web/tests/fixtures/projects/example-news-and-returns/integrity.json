@@ -9,9 +9,7 @@
   "error": null,
   "state": "OK"
  },
- "instruments": [
-  "claimstone/status.py declares STATUS_VERSION = 1, and docs/DESIGN_DECISIONS.md never mentions status_version 1. A figure measured under a different instrument is not comparable to one measured under this; record what changed and which figures it supersedes."
- ],
+ "instruments": [],
  "invalid_flows": [],
  "ledger_repairs": 0,
  "ledgers": {

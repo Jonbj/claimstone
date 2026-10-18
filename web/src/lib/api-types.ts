@@ -266,6 +266,15 @@ export interface Overview {
     differences: string[];
     state: "CURRENT" | "REGISTRY_DRIFTED" | "PROTOCOL_DRIFTED" | "POPULATION_DRIFTED";
   } | null;
+  citation_suggestions: {
+    directions: string[];
+    doi: string;
+    links: number;
+    seeds: string[];
+    title: string | null;
+    venue: string | null;
+    year: number | null;
+  }[];
   errors: string[];
   floor_panel: {
     by_class: {

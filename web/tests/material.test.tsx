@@ -53,6 +53,7 @@ const OVERVIEW_BODY = {
     awaiting_a_person: 0, historical: 0, no_profile: 0, no_verified_claim: 0,
     not_applicable: 0, provisional: 0, signed: 0, stale: 0,
   },
+  citation_suggestions: [],
   source_tracker: [
     { candidate_key: "s23", source_id: "S23", source_class: "journal", state: "not_obtained",
       tooltip: "not obtained: paywall refused" },

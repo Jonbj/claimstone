@@ -521,13 +521,26 @@ OVERVIEW = _payload("overview", {
             "additionalProperties": False,
         },
     },
+    "citation_suggestions": {
+        "type": "array",
+        "items": {
+            "type": "object",
+            "required": ["doi", "links", "seeds", "directions", "title", "year", "venue"],
+            "properties": {
+                "doi": _STR, "links": _INT, "seeds": {"type": "array", "items": _STR},
+                "directions": {"type": "array", "items": _STR},
+                "title": _STR_OR_NULL, "year": {"type": ["integer", "null"]}, "venue": _STR_OR_NULL,
+            },
+            "additionalProperties": False,
+        },
+    },
     "inbox": {"type": "array", "items": _CARD},
     "activity": {"type": "array", "items": _ACTIVITY_ROW},
     "unavailable": _STR,
     "errors": {"type": "array", "items": _STR},
     "journey": _JOURNEY,
 }, ["project", "selector", "selector_label", "flow", "legacy", "binding_state", "state",
-    "floor_panel", "questions", "question_state_counts", "source_tracker", "inbox", "activity",
+    "floor_panel", "questions", "question_state_counts", "source_tracker", "citation_suggestions", "inbox", "activity",
     "unavailable", "errors", "journey"])
 
 INBOX = _payload("inbox", {

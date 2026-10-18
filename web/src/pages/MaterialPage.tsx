@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router";
+import CitationLeads from "@/components/material/CitationLeads";
 import CopiesNeeded from "@/components/material/CopiesNeeded";
 import IntakeList from "@/components/material/IntakeList";
 import ProposeForm from "@/components/material/ProposeForm";
@@ -70,6 +71,10 @@ function MaterialSignedIn({ project, flowId }: { project: string; flowId: string
         <CopiesNeeded entries={overview.data.source_tracker} intake={list.data?.items ?? []} onChoose={choose} />
       ) : overview.error ? (
         <ErrorState error={overview.error} context="the candidate list" />
+      ) : null}
+
+      {overview.data ? (
+        <CitationLeads project={project} flowId={flowId} leads={overview.data.citation_suggestions} onDone={onDone} />
       ) : null}
 
       <ProposeForm project={project} flowId={flowId} onDone={onDone} />
