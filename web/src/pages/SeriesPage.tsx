@@ -95,8 +95,8 @@ export default function SeriesPage() {
       <nav aria-label="Breadcrumb" className="text-sm text-muted-foreground">
         <Link to={`/p/${encodeURIComponent(project)}/scheduler`} className="inline-flex min-h-11 items-center hover:underline">{t("sched.series.back")}</Link>
       </nav>
-      <h1 className="font-serif text-4xl leading-tight font-normal">
-        {t("sched.series.title")} <span className="font-mono text-2xl">{id.slice(0, 12)}</span>
+      <h1 className="text-3xl leading-tight font-semibold">
+        {t("sched.series.title")} <span className="font-mono text-xl text-muted-foreground" title={id}>{id.slice(0, 12)}</span>
       </h1>
       {!session.ready ? (
         <Pending label={t("shell.checking")} />

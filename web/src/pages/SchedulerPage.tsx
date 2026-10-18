@@ -15,7 +15,7 @@ import { overviewOfSeries } from "@/lib/scheduler";
 import type { SeriesOverview } from "@/lib/scheduler";
 import { useSession } from "@/lib/session";
 
-const buttonClass = "inline-flex min-h-11 items-center rounded-lg px-4 text-sm font-medium ring-1 ring-gray-300 hover:bg-gray-50 dark:ring-gray-700 dark:hover:bg-gray-900";
+const buttonClass = "inline-flex min-h-11 items-center rounded-lg border border-border bg-card px-4 text-sm font-medium hover:bg-muted";
 
 function Grant({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -34,7 +34,7 @@ function SeriesRow({ view, project, more }: { view: SeriesOverview; project: str
   const id = view.schedule.schedule_id;
   return (
     <li aria-label={t("sched.index.rowLabel", { id: id.slice(0, 12) })}
-        className="flex flex-col gap-2 rounded-xl border border-border bg-card px-4 py-3">
+        className="flex flex-col gap-2 rounded-xl border border-border bg-card px-4 py-4">
       <div className="flex flex-wrap items-center gap-3">
         <StateWord word={view.state} />
         <span className="text-sm"><Rounds n={view.rounds} /></span>
@@ -96,7 +96,7 @@ function Body({ project }: { project: string }) {
       <WorkersStrip supervisor={first.workers.supervisor} operations={first.workers.operations} />
       <section aria-label={t("sched.index.series")} className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-sm font-semibold">{t("sched.index.series")}</h2>
+          <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{t("sched.index.series")}</h2>
           <Link to={`/p/${encodeURIComponent(project)}/scheduler/new`} className={buttonClass}>
             {t("sched.index.new")}
           </Link>
@@ -119,7 +119,7 @@ function Body({ project }: { project: string }) {
       </section>
       {single.length ? (
         <section aria-label={t("sched.index.singleMandates")} className="flex flex-col gap-2">
-          <h2 className="text-sm font-semibold">{t("sched.index.singleMandates")}</h2>
+          <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{t("sched.index.singleMandates")}</h2>
           <ul className="flex flex-col gap-2">
             {single.map((m) => (
               <li key={m.mandate_id} className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-card px-4 py-2 text-sm">
@@ -145,7 +145,7 @@ export default function SchedulerPage() {
   return (
     <section className="flex flex-col gap-5">
       <ProjectTabs project={project} />
-      <h1 className="font-serif text-4xl leading-tight font-normal">{t("sched.title")}</h1>
+      <h1 className="text-3xl leading-tight font-semibold">{t("sched.title")}</h1>
       {!session.ready ? (
         <Pending label={t("shell.checking")} />
       ) : !session.operator ? (

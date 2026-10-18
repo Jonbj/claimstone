@@ -15,8 +15,8 @@ type Api = keyof typeof API_HOSTS;
 const RESOLVER_HOSTS = ["api.unpaywall.org", "api.openalex.org"] as const;
 const EXACT_HOST = /^(?=.{1,253}$)[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?)*$/;
 
-export default function PlanBatchForm({ project, flowId, hasCandidates, onPlanned }: {
-  project: string; flowId: string; hasCandidates: boolean; onPlanned: () => void;
+export default function PlanBatchForm({ project, flowId, hasCandidates, onPlanned, primary = true }: {
+  project: string; flowId: string; hasCandidates: boolean; onPlanned: () => void; primary?: boolean;
 }) {
   const { t } = useLocale();
   const [stage, setStage] = useState<"discover" | "acquire">("discover");
@@ -89,7 +89,7 @@ export default function PlanBatchForm({ project, flowId, hasCandidates, onPlanne
   }
 
   return (
-    <form onSubmit={submit} noValidate className="mb-5 flex flex-col gap-3 rounded-md border border-border p-4">
+    <form onSubmit={submit} noValidate className="mb-5 flex flex-col gap-3 rounded-xl border border-border bg-card p-4 sm:p-5">
       <h3 className="font-semibold">{t("planBatch.heading")}</h3>
       <label className="flex flex-col gap-1 text-sm">{t("planBatch.stage")}
         <select value={stage} disabled={busy} onChange={(e) => {
@@ -186,7 +186,7 @@ export default function PlanBatchForm({ project, flowId, hasCandidates, onPlanne
       <p className="text-sm text-muted-foreground">{t("planBatch.noRequest")}</p>
       {validation ? <p role="alert" className="text-sm text-not-obtained">{validation}</p> : null}
       {error ? <ErrorState error={error} context="batch" /> : null}
-      <button type="submit" disabled={busy} className="min-h-11 self-start rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-50">
+      <button type="submit" disabled={busy} className={`min-h-11 self-start rounded-lg px-4 text-sm font-semibold disabled:opacity-50 ${primary ? "bg-primary text-primary-foreground" : "border border-border bg-card"}`}>
         {busy ? t("planBatch.planning") : t("planBatch.plan")}
       </button>
     </form>

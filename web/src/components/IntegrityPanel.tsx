@@ -40,7 +40,7 @@ export default function IntegrityPanel({ integrity }: { integrity: Integrity }) 
         <p key={fid} className="mt-1 flex flex-wrap items-baseline gap-2 text-sm">
           <b>invalid flow row</b>
           <Chip text="id is not the hash of its binding" />
-          <span className="font-mono text-xs">{fid.slice(0, 16)}</span>
+          <span className="font-mono text-xs" title={fid}>{fid.slice(0, 16)}…</span>
         </p>
       ))}
       <p className="mt-1 text-sm">
