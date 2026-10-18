@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import ErrorState from "@/components/ErrorState";
+import PartialBanner from "@/components/PartialBanner";
 import { ControlError, VERDICTS, control } from "@/lib/control";
 import type { Row, Verdict } from "@/lib/control";
 
@@ -51,6 +52,7 @@ export default function SignaturePanel({
   onReload,
   onCompare,
   onSigned,
+  partial = null,
 }: {
   project: string;
   flowId: string;
@@ -64,6 +66,8 @@ export default function SignaturePanel({
   onCompare: (from: string, to: string) => void;
   /** Called once a signature is stored. */
   onSigned: (row: Row) => void;
+  /** The coverage the profile rests on when the round is below its floor (D146); null for a complete round. */
+  partial?: { found?: number | null; confirmed?: number | null; rate?: number | null; floor?: number | null } | null;
 }) {
   const [shownHash, setShownHash] = useState(latestHash);
   const [verdict, setVerdict] = useState<Verdict | null>(null);
@@ -243,7 +247,8 @@ export default function SignaturePanel({
         <legend className="mb-1 text-sm font-semibold">
           Verdict · {verdict ? DEFINITIONS[verdict].name : "none selected"}
         </legend>
-        {VERDICTS.map((v) => (
+        {partial ? <PartialBanner coverage={partial} /> : null}
+        {VERDICTS.filter((v) => !(partial && v === "UNANSWERED_IN_LITERATURE")).map((v) => (
           <label key={v} className="flex gap-3 rounded-lg border border-border bg-card p-3 has-[:checked]:border-foreground has-[:checked]:ring-1 has-[:checked]:ring-foreground">
             <input
               type="radio"

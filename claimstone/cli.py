@@ -905,6 +905,10 @@ def _verdicts(args: argparse.Namespace) -> int:
         elif recorded:
             print(f"    VERDICT          {recorded['verdict']} — {recorded.get('adjudicated_by')}, "
                   f"{recorded.get('adjudicated_at')}")
+            if recorded.get("partial"):
+                cov = recorded.get("partial_coverage") or {}
+                print(f"    PARTIAL          signed below the acquisition floor: {cov.get('confirmed')} of "
+                      f"{cov.get('found')} found were read (floor {cov.get('floor')})")
 
     print(f"\n{result['adjudicated']} adjudicated, {result['stale']} stale, "
           f"{result['awaiting_adjudication']} awaiting a person")
@@ -930,7 +934,7 @@ def _adjudicate(args: argparse.Namespace) -> int:
     except (synthesize.NotAdmissible, synthesize.Provisional, synthesize.StaleProfile, ValueError, KeyError) as exc:
         print(str(exc).strip("'"), file=sys.stderr)
         return 2
-    print(f"{row['question_id']}: {row['verdict']} against profile "
+    print(f"{row['question_id']}: {row['verdict']}{' (PARTIAL)' if row.get('partial') else ''} against profile "
           f"{row['profile_sha256'][:12]}, by {row['adjudicated_by']}")
     return 0
 

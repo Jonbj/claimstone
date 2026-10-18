@@ -69,3 +69,11 @@ harvest completion by the whole original record, call, reader and chunk. It cann
 successful claim/review through an invalidating replay, or collapse two readers into one annotation.
 Version 5 uses the committed chunk generation and accepts only full-annotation v2 reviews (D48).
 QUALIFIES remains a displayed direction count and belongs to neither directional class bucket.
+
+## Partial profiles and verdicts (D146)
+
+When a project declared `floor_mode: partial` and the round is below its floor (or a class below its own), a literature profile
+carries two extra keys, **only then**: `partial: true` and `partial_coverage` (`found`, `confirmed`, `rate`, `floor`,
+`classes_below_floor`). They are part of the profile digest, so a signature binds the coverage it was made on. A verdict signed on
+such a profile carries the same two keys; `UNANSWERED_IN_LITERATURE` is refused on it. With the default `gate` mode, or above the
+floor, neither key exists and no digest changes.

@@ -439,6 +439,12 @@
     "proposed": "Proposta:",
     "note": "Suggerita dalle citazioni: collegata a {n} fonti di questo flusso (OpenCitations)."
   },
+  "partial": {
+    "title": "Parziale: letti {read} su {found} trovati (soglia {floor})",
+    "body": "Questa lettura è sotto la soglia di acquisizione del progetto. Ogni verdetto firmato su di essa viene registrato come parziale, con questa copertura, e vale solo per le fonti lette. «Senza risposta in letteratura» non si può firmare: non aver trovato una risposta tra fonti in gran parte non lette non è un risultato.",
+    "chip": "parziale · {read} su {found} lette",
+    "barred": "Non offerto su un profilo parziale"
+  },
   "auth": {
     "login": {
       "title": "Accedi",
@@ -918,6 +924,8 @@
   },
   "flowAssay": {
     "noVerdict": "■ Nessun verdetto prodotto",
+    "partialTag": "▲ Lettura parziale",
+    "partialReason": "Questo progetto ha dichiarato che un round sotto la soglia può produrre profili e verdetti etichettati come parziali. Dicono quanto è stato letto e valgono solo per quelle fonti; «senza risposta in letteratura» non si può firmare su di essi.",
     "belowFloor": "La soglia di acquisizione non è raggiunta",
     "reason": "Claimstone non può produrre profili di evidenza o verdetti da un corpus sotto la soglia di acquisizione dichiarata.",
     "rate": "{confirmed} copie confermate su {found} trovate · tasso {rate}",

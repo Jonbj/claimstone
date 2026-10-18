@@ -383,6 +383,14 @@ def adjudication_card(project: Project, selector: scope.Selector, row: dict[str,
     return Card("ADJUDICATION", scope_label, question_id, reason, command, note)
 
 
+def _with_floor_mode(panel: dict[str, Any] | None, project: Project) -> dict[str, Any] | None:
+    """The project's declared floor mode travels with the panel so the page can say what a round below the
+    floor produces (D146); the client does not guess it."""
+    if panel is not None:
+        panel["overall"]["floor_mode"] = getattr(project, "floor_mode", "gate")
+    return panel
+
+
 def floor_panel(admitted: dict[str, Any] | None) -> dict[str, Any] | None:
     """The floor and the deficit arithmetic, from `admit()` only (spec §4.6).
 
@@ -623,6 +631,8 @@ def question_matrix(project: Project, store: Store, selector: scope.Selector,
             "extraction": question.extraction,
             "unavailable": (row or {}).get("unavailable", ""),
             "stored_profile_stale": bool((row or {}).get("stored_profile_stale")),
+            # The profile (and any verdict on it) rests on a round below its floor (D146).
+            "partial": bool(profile.get("partial")),
             "operational_not_applicable": question.kind == "operational",
             "note": (None if question.state != evidence.NOT_APPLICABLE else
                      "kind operational: no verdict, never a sixth state"),
@@ -808,7 +818,7 @@ def flow_overview(project: Project, store: Store, selector: scope.Selector,
         "legacy": flow_row is None,
         "binding_state": binding,
         "state": rs.as_dict(),
-        "floor_panel": floor_panel(computed.admitted),
+        "floor_panel": _with_floor_mode(floor_panel(computed.admitted), project),
         "questions": matrix,
         "question_state_counts": question_state_counts(matrix),
         "source_tracker": source_tracker(project, store, selector, computed),
@@ -860,6 +870,9 @@ def question_detail(project: Project, store: Store, selector: scope.Selector,
             "profile_sha256": profile.get("profile_sha256"),
             "stored_profile_stale": bool((row or {}).get("stored_profile_stale")),
             "unavailable": (row or {}).get("unavailable", ""),
+            # Below the floor in a project that declared `floor_mode: partial` (D146); false and null otherwise.
+            "partial": bool(profile.get("partial")),
+            "partial_coverage": profile.get("partial_coverage"),
         },
         "results": profile.get("results") or [],
         "verdict": (row or {}).get("verdict"),

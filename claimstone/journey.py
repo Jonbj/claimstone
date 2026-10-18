@@ -164,7 +164,8 @@ def _search(rs: Any, admitted: dict[str, Any] | None, running: set[str]) -> dict
     return _step(2, "search", "Search the declared scope", "claimstone", status, text, figures)
 
 
-def _copies(rs: Any, admitted: dict[str, Any] | None, running: set[str]) -> dict[str, Any]:
+def _copies(rs: Any, admitted: dict[str, Any] | None, running: set[str],
+            partial_mode: bool = False) -> dict[str, Any]:
     a = admitted or {}
     found, obtained = a.get("found"), a.get("obtained")
     figures = {
@@ -184,6 +185,11 @@ def _copies(rs: Any, admitted: dict[str, Any] | None, running: set[str]) -> dict
     elif a.get("final") and a.get("status") == admissibility.OK:
         status, text = "done", ("{confirmed} of {found} found sources are confirmed documents "
                                 "(rate {rate}, floor {floor}): the floor is met.")
+    elif a.get("final") and a.get("status") == admissibility.INSUFFICIENT and partial_mode:
+        # The project declared `floor_mode: partial` (D146): what is below the floor is a partial reading.
+        status, text = "partial", ("Below the acquisition floor: {confirmed} of {found} found "
+                                   "sources are confirmed documents (rate {rate}, floor "
+                                   "{floor}); profiles and verdicts are produced as partial and say so.")
     elif a.get("final") and a.get("status") == admissibility.INSUFFICIENT:
         status, text = "blocked", ("Below the acquisition floor: {confirmed} of {found} found "
                                    "sources are confirmed documents (rate {rate}, floor "
@@ -477,7 +483,7 @@ def build(project: Project, store: Store, selector: Any, flow_row: dict[str, Any
     steps = [
         _protocol(project, flow_row, binding),
         _search(rs, admitted, active),
-        _copies(rs, admitted, active),
+        _copies(rs, admitted, active, getattr(project, "floor_mode", "gate") == "partial"),
         _documents(rs, admitted, active),
         _annotate(rs, active),
         _review(rs, active),

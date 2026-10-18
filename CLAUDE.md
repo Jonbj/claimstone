@@ -33,6 +33,11 @@ style preferences.
    `acquisition_floor` of what it found is `INSUFFICIENT_ACQUISITION` and produces no
    verdicts. Do not add a flag to override this. A corpus read at 42% that certifies itself
    complete is worse than no corpus, and that is the real state that motivated the project.
+   One exception, and it is not a flag: a project may declare `floor_mode: partial` in its
+   protocol **before** the round (D146). Below the floor it then gets profiles and verdicts that
+   are labelled partial, carry the coverage they rest on, and can never be
+   `UNANSWERED_IN_LITERATURE`. The default is `gate`, and nothing is certified as complete
+   below the floor either way.
 4. **The engine holds no domain knowledge.** Topics, questions and source classes are input
    data under `projects/`. If something finance-specific or biology-specific is appearing in
    `claimstone/`, it is in the wrong place. Test: a project in an unrelated field must be

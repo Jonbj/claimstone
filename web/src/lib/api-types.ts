@@ -440,6 +440,7 @@ export interface Overview {
       kind: string;
       note: string | null;
       operational_not_applicable: boolean;
+      partial: boolean;
       profile_sha256: string | null;
       provisional: boolean;
       state: string | null;
@@ -549,6 +550,10 @@ export interface QuestionDetail {
       [k: string]: unknown;
     };
     linkage: unknown;
+    partial: boolean;
+    partial_coverage: {
+      [k: string]: unknown;
+    } | null;
     profile_sha256: string | null;
     provisional: boolean | null;
     reviewed_not_usable: {
@@ -574,6 +579,10 @@ export interface QuestionDetail {
     adjudication_version: number;
     decision_contract_version: number | null;
     manifest_only: boolean;
+    partial?: boolean;
+    partial_coverage?: {
+      [k: string]: unknown;
+    } | null;
     profile_sha256: string;
     question_id: string;
     rationale: string;

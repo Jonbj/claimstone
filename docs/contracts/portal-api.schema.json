@@ -1707,6 +1707,9 @@
          "operational_not_applicable": {
           "type": "boolean"
          },
+         "partial": {
+          "type": "boolean"
+         },
          "profile_sha256": {
           "type": [
            "string",
@@ -1768,7 +1771,8 @@
          "stored_profile_stale",
          "operational_not_applicable",
          "note",
-         "display_state"
+         "display_state",
+         "partial"
         ],
         "type": "object"
        },
@@ -2173,6 +2177,15 @@
        "type": "object"
       },
       "linkage": {},
+      "partial": {
+       "type": "boolean"
+      },
+      "partial_coverage": {
+       "type": [
+        "object",
+        "null"
+       ]
+      },
       "profile_sha256": {
        "type": [
         "string",
@@ -2215,7 +2228,9 @@
       "extraction",
       "profile_sha256",
       "stored_profile_stale",
-      "unavailable"
+      "unavailable",
+      "partial",
+      "partial_coverage"
      ],
      "type": "object"
     },
@@ -2276,6 +2291,15 @@
       },
       "manifest_only": {
        "type": "boolean"
+      },
+      "partial": {
+       "type": "boolean"
+      },
+      "partial_coverage": {
+       "type": [
+        "object",
+        "null"
+       ]
       },
       "profile_sha256": {
        "type": "string"

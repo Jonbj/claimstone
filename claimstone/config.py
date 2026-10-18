@@ -137,6 +137,11 @@ class Project:
     # block is protocol, because it changes which copies can be obtained and so the rate.
     web_locator: dict[str, Any] = field(default_factory=dict)
     web_locator_declared: bool = False
+    # What a round below its acquisition floor may produce (D146). `gate` (the default, and invariant 3 as it
+    # always read): nothing. `partial`: profiles and signable verdicts, each labelled partial with its coverage,
+    # and never `UNANSWERED_IN_LITERATURE`. Declared in the protocol before the round, never chosen after it.
+    floor_mode: str = "gate"
+    floor_mode_declared: bool = False
 
     @property
     def question_ids(self) -> frozenset[str]:
@@ -275,6 +280,21 @@ def load_supplied_copies(root: pathlib.Path) -> tuple[str, bool]:
         raise ConfigError(
             "sources.yaml: 'supplied_copies' must be 'count' or 'separate' — whether copies an "
             "operator supplies count toward the floor is declared, never decided per copy")
+    return str(raw), True
+
+
+FLOOR_MODES = ("gate", "partial")
+
+
+def load_floor_mode(root: pathlib.Path) -> tuple[str, bool]:
+    """(mode, declared). Absent means `gate`, and `declared` False keeps every earlier protocol digest."""
+    raw = _read_yaml(root / "sources.yaml").get("floor_mode")
+    if raw is None:
+        return "gate", False
+    if raw not in FLOOR_MODES:
+        raise ConfigError(
+            "sources.yaml: 'floor_mode' must be 'gate' or 'partial' — what a round below its floor may produce is "
+            "declared before the round, never decided after seeing the result")
     return str(raw), True
 
 
@@ -751,6 +771,7 @@ def load_project(root: str | pathlib.Path) -> Project:
     floor_version, floor_set_at, floor_rationale = load_floor_provenance(path)
     supplied_copies, supplied_declared = load_supplied_copies(path)
     web_policy, web_declared = load_web_locator(path)
+    floor_mode, floor_mode_declared = load_floor_mode(path)
 
     project = Project(
         name=path.name,
@@ -776,6 +797,8 @@ def load_project(root: str | pathlib.Path) -> Project:
         supplied_copies_declared=supplied_declared,
         web_locator=web_policy,
         web_locator_declared=web_declared,
+        floor_mode=floor_mode,
+        floor_mode_declared=floor_mode_declared,
     )
     project.population  # Validate the optional metadata selector before any requests.
     return project

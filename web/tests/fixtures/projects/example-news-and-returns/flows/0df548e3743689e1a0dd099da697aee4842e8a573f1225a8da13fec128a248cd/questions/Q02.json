@@ -82,6 +82,8 @@
   },
   "gate_rejected": {},
   "linkage": "unestablished",
+  "partial": false,
+  "partial_coverage": null,
   "profile_sha256": "7056ff48a8e45f615aadc993d51035ac4add9a7686d5190f3fee1703f759f9c5",
   "provisional": true,
   "reviewed_not_usable": {},

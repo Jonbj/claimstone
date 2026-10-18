@@ -439,6 +439,12 @@
     "proposed": "Proposed:",
     "note": "Suggested by citations: linked to by {n} of this flow's sources (OpenCitations)."
   },
+  "partial": {
+    "title": "Partial: {read} of {found} found were read (floor {floor})",
+    "body": "This reading is below the project's acquisition floor. Any verdict signed on it is recorded as partial, with this coverage, and speaks only for the sources read. 'Unanswered in literature' cannot be signed: not having found an answer among sources mostly unread is not a finding.",
+    "chip": "partial · {read} of {found} read",
+    "barred": "Not offered on a partial profile"
+  },
   "auth": {
     "login": {
       "title": "Sign in",
@@ -918,6 +924,8 @@
   },
   "flowAssay": {
     "noVerdict": "■ No verdict produced",
+    "partialTag": "▲ Partial reading",
+    "partialReason": "This project declared that a round below its floor may produce profiles and verdicts labelled partial. They state how much was read and speak only for those sources; \"unanswered in literature\" cannot be signed on them.",
     "belowFloor": "The acquisition floor has not been met",
     "reason": "Claimstone cannot produce evidence profiles or verdicts from a corpus below its declared acquisition floor.",
     "rate": "{confirmed} confirmed copies of {found} found · rate {rate}",

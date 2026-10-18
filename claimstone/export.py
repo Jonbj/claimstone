@@ -32,7 +32,7 @@ from claimstone import (admissibility, chunk_sets, claim_records, drafts, flows,
 from claimstone.config import Project, discover_projects, load_project
 from claimstone.store import Store
 
-EXPORT_VERSION = 1
+EXPORT_VERSION = 2
 
 EXPORTS_LEDGER = "exports.jsonl"
 
@@ -116,13 +116,13 @@ def _compute_outputs(project: Project, store: Store, selector: scope.Selector,
     outputs["questions.csv"] = _csv(
         ["id", "kind", "text", "claims_by_class", "claims", "coverage_sources",
          "coverage_examined", "direction_count", "gate_rejected_total", "awaiting_review",
-         "state", "provisional", "verdict", "verdict_stale"],
+         "state", "provisional", "verdict", "verdict_stale", "partial"],
         [[row["id"], row["kind"], row["text"],
           " ".join(f"{name}:{count}" for name, count in row["claims_by_class"].items()),
           row["claims"], row["coverage"].get("sources"), row["coverage"].get("examined"),
           " ".join(f"{name}:{count}" for name, count in row["direction_count"].items()),
           row["gate_rejected_total"], row["awaiting_review"], row["state"] or "",
-          row["provisional"], row["verdict"] or "", row["verdict_stale"]]
+          row["provisional"], row["verdict"] or "", row["verdict_stale"], row["partial"]]
          for row in matrix])
 
     sources = scope.source_ids(store, selector)
@@ -220,6 +220,9 @@ def _report(project: Project, selector: scope.Selector, flow_row: dict[str, Any]
         coverage = (f"{row['coverage'].get('sources')}/{row['coverage'].get('examined')}"
                     if row["coverage"].get("sources") is not None else "—")
         verdict = row["verdict"] or ("(stale)" if row["verdict_stale"] else "")
+        if row.get("partial"):
+            # A partial profile and any verdict on it say so wherever they appear (D146).
+            verdict = f"{verdict} (PARTIAL: below the acquisition floor)".strip()
         lines.append(f"| {row['id']} | {row['kind']} | {row['claims']} | {coverage} "
                      f"| {row['state'] or ''} | {verdict} |")
     lines.append("")

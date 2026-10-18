@@ -84,7 +84,10 @@ def preview(
     check_registry_drift(project, store, record=False)
     verdict = admissibility.admit(project, store, round_name=round_name,
                                   manifest_only=manifest_only)
-    if verdict["status"] == admissibility.INSUFFICIENT:
+    # D146: below the floor a project that declared `floor_mode: partial` gets profiles labelled partial; every
+    # other project gets exactly what invariant 3 always gave it, a refusal.
+    partial = verdict["status"] == admissibility.INSUFFICIENT and project.floor_mode == "partial"
+    if verdict["status"] == admissibility.INSUFFICIENT and not partial:
         raise NotAdmissible(
             f"{verdict['status']}: {verdict['rate']} against floor {verdict['floor']}"
             + (f", classes below their own floor: {', '.join(verdict['classes_below_floor'])}"
@@ -113,6 +116,11 @@ def preview(
                 registry_version=project.registry_version, registry_sha256=project.registry_sha256,
                 provisional=bool(blocking), blocking=blocking)
             row["extraction"] = completion
+        if partial and row.get("state") != evidence.NOT_APPLICABLE:
+            # Only when true, so no profile of a complete round changes a byte and no signature goes stale (D146).
+            row["partial"] = True
+            row["partial_coverage"] = {key: verdict[key] for key in ("found", "confirmed", "rate", "floor")} | {
+                "classes_below_floor": list(verdict.get("classes_below_floor") or [])}
         row.update({"profile_version": PROFILE_VERSION, "claim_gate_version": claimgate.CLAIM_GATE_VERSION,
                     "round": round_name,
                     "manifest_only": manifest_only, "registry_version": project.registry_version,
@@ -255,6 +263,14 @@ def adjudicate(
             raise StaleProfile("stored profile differs from current evidence; run synthesize and read it again")
         if not profile_sha256:
             raise ValueError("the profile hash shown to the adjudicator is required")
+        if profile.get("partial") and verdict == "UNANSWERED_IN_LITERATURE":
+            # "There is no answer" while most of what was found is unread is the error invariant 2 forbids
+            # (D146). It can be said of a corpus that was read, not of one that was found and left closed.
+            raise ValueError(
+                "UNANSWERED_IN_LITERATURE cannot be signed on a partial profile: the round is below its "
+                f"acquisition floor ({profile.get('partial_coverage', {}).get('confirmed')} of "
+                f"{profile.get('partial_coverage', {}).get('found')} found were read), and not having found an answer "
+                "among sources mostly unread is not a finding")
         text = (rationale or "").strip()
         if len(text) < MIN_RATIONALE_CHARS:
             raise ValueError(
@@ -282,6 +298,10 @@ def adjudicate(
             "adjudicated_by": by,
             "adjudicated_at": _now(),
         }
+        if profile.get("partial"):
+            # The verdict carries the coverage it was signed on (D146), wherever it is displayed or exported.
+            row["partial"] = True
+            row["partial_coverage"] = profile.get("partial_coverage")
         store.append(ADJUDICATIONS, row)
     return row
 

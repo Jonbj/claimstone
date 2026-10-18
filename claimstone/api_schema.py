@@ -119,8 +119,9 @@ _QUESTION_ROW = {
                  "direction_count", "direction_count_note", "gate_rejected_total",
                  "gate_rejected", "awaiting_review", "state", "provisional", "blocking",
                  "verdict", "verdict_stale", "profile_sha256", "extraction", "unavailable",
-                 "stored_profile_stale", "operational_not_applicable", "note", "display_state"],
+                 "stored_profile_stale", "operational_not_applicable", "note", "display_state", "partial"],
     "properties": {
+        "partial": _BOOL,
         # The row's one displayed state, the same word the overview's donut counts (§8.3).
         "display_state": {"type": "string", "enum": list(QUESTION_STATES)},
         "id": _STR,
@@ -565,8 +566,10 @@ QUESTION_DETAIL = _payload("question detail", {
         "required": ["state", "provisional", "blocking", "coverage", "direction_count",
                      "direction_count_note", "gate_rejected", "reviewed_not_usable",
                      "awaiting_review", "linkage", "extraction", "profile_sha256",
-                     "stored_profile_stale", "unavailable"],
+                     "stored_profile_stale", "unavailable", "partial", "partial_coverage"],
         "properties": {
+            "partial": _BOOL,
+            "partial_coverage": {"type": ["object", "null"]},
             "state": _STR_OR_NULL,
             "provisional": {"type": ["boolean", "null"]},
             "blocking": {"type": "array", "items": _STR},
@@ -613,6 +616,9 @@ QUESTION_DETAIL = _payload("question detail", {
             "registry_sha256": _STR_OR_NULL,
             "adjudicated_by": _STR,
             "adjudicated_at": _STR,
+            # Present only on a verdict signed on a partial profile (D146): the coverage it rests on.
+            "partial": _BOOL,
+            "partial_coverage": {"type": ["object", "null"]},
         },
         "additionalProperties": False,
     },

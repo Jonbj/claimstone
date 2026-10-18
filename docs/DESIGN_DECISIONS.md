@@ -5266,3 +5266,39 @@ pre-registered measurement of #4 (recall on 13 positives, denied-host and unclas
 advisory and a person judges them, which makes the measurement a refinement and not a precondition. Instruments registered:
 `locator_version 1`, `identity_check_version 1`. The key is `BRAVE_API_KEY` in `.env`, sent as `X-Subscription-Token` to
 `api.search.brave.com` only, never in a URL and never recorded.
+
+## D146 — A project may declare, before the round, that a reading below its floor is partial rather than refused (2026-10-18)
+
+The operator objected that the acquisition floor "did not work" and risked being too restrictive (issue #18). The trial showed why:
+2 of 10 found works were readable, the other eight sat behind paywalls, 21 verified and second-read claims existed, and the only
+thing the portal could say was "no profile to sign". The floor was written to stop one error — a corpus read at 42% certifying
+itself complete — and it does, but with an instrument that also forbids describing what *was* read.
+
+**What changed.** `sources.yaml: floor_mode` is `gate` or `partial`. `gate` is the default and is invariant 3 exactly as it read:
+below the floor `synthesize` stops and writes nothing. `partial`, declared in the protocol **before** the round, lets a round
+below its floor (or a class below its own) produce profiles that carry `partial: true` and `partial_coverage` (found, confirmed,
+rate, floor, classes below floor), and lets a person sign `SUPPORTED`, `CONTRADICTED` or `CONTESTED_IN_LITERATURE` on them. A verdict so
+signed carries `partial: true` and the coverage it rests on, and says so in the portal (banner on the question, chip on the
+verdict), in the CLI (`PARTIAL` line), in the Markdown export ("PARTIAL: below the acquisition floor") and in the CSV (`partial`
+column; `export_version 2`). **`UNANSWERED_IN_LITERATURE` cannot be signed on a partial profile**: saying "there is no answer" while
+most of what was found is unread is the error invariant 2 names, and it is refused in code with the reason.
+
+**What did not change.** The default for every existing project, the floor value, the denominator, the five verdict states, the
+rule that a person signs and an agent never does. Above the floor the mode changes **no byte** of any profile (the partial keys
+exist only when true), so no signature goes stale; a test pins this. A declared mode is part of the protocol digest, like
+`supplied_copies`: declaring or changing it is drift, so it cannot be switched on after a result is seen without opening a new flow.
+An operational question still receives no verdict.
+
+**Why a declaration and not a global change.** B.6 of issue #18 proposed rewriting invariant 3 for every project. This keeps the
+protection by default and makes the relaxation an explicit, dated, pre-registered choice of the project that needs it, which is how
+the floor value itself, the supplied-copies policy and the population predicate are already handled. `CLAUDE.md` says so.
+
+**Known weakness.** The coverage is measured against the same denominator as the floor, which includes tangential works; a partial
+verdict reads "2 of 10 read" even when some of the ten do not bear on the question. Deciding relevance before acquisition, so the
+denominator is defensible, is a separate decision (issue #18, lever 4; proposed as D147) and is not made here. Until then a person
+signing a partial verdict is told the figure as it is.
+
+**Instruments touched.** `export_version 2` (the `partial` column and the PARTIAL suffix). The profile and adjudication rows gain
+keys only when partial, so `profile_version` and `adjudication_version` are unchanged.
+
+First use: `projects/prova-esercizio-depressione-2` declares `floor_mode: partial`.

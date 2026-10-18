@@ -92,6 +92,9 @@ def protocol_digest(project: Project) -> str:
     # the host policy is drift, because it changes which copies can be obtained.
     if project.web_locator_declared:
         semantic["web_locator"] = project.web_locator
+    # And for the floor mode (D146): undeclared is `gate` and moves nothing; declaring `partial` is protocol.
+    if project.floor_mode_declared:
+        semantic["floor_mode"] = project.floor_mode
     return hashlib.sha256(_canonical(semantic).encode("utf-8")).hexdigest()
 
 

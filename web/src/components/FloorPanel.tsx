@@ -31,6 +31,7 @@ type FloorPanelData = {
     status: string;
     final: boolean;
     blocking: string[];
+    floor_mode?: string;
   };
   by_class: Record<string, Bucket>;
   sentences: string[];
@@ -41,15 +42,16 @@ export function BlockedFloorPanel({ panel, base, writable }: { panel: Overview["
   const { t } = useLocale();
   const [params] = useSearchParams();
   if (!panel || panel.overall.status !== "INSUFFICIENT_ACQUISITION") return null;
-  const { basis_count, found, rate, floor } = (panel as unknown as FloorPanelData).overall;
+  const { basis_count, found, rate, floor, floor_mode } = (panel as unknown as FloorPanelData).overall;
+  const partial = floor_mode === "partial";
   const actual = rate === null ? 0 : Math.min(Math.max(rate, 0), 1) * 100;
   const threshold = Math.min(Math.max(floor, 0), 1) * 100;
   return (
-    <section aria-label={t("flowAssay.noVerdict")} className="flex flex-wrap items-center gap-6 rounded-xl bg-rail p-5 text-rail-foreground sm:p-7">
+    <section aria-label={partial ? t("flowAssay.partialTag") : t("flowAssay.noVerdict")} className="flex flex-wrap items-center gap-6 rounded-xl bg-rail p-5 text-rail-foreground sm:p-7">
       <div className="min-w-0 flex-[2_1_360px]">
-        <span className="inline-flex rounded-full bg-not-obtained/20 px-3 py-1 text-xs font-semibold text-rail-foreground">{t("flowAssay.noVerdict")}</span>
+        <span className="inline-flex rounded-full bg-not-obtained/20 px-3 py-1 text-xs font-semibold text-rail-foreground">{partial ? t("flowAssay.partialTag") : t("flowAssay.noVerdict")}</span>
         <h2 className="mt-3 text-xl font-semibold">{t("flowAssay.belowFloor")}</h2>
-        <p className="mt-2 text-sm leading-relaxed text-rail-muted">{t("flowAssay.reason")}</p>
+        <p className="mt-2 text-sm leading-relaxed text-rail-muted">{partial ? t("flowAssay.partialReason") : t("flowAssay.reason")}</p>
       </div>
       <div className="min-w-0 flex-[1_1_220px]">
         <p className="font-mono text-3xl font-semibold text-primary">{rate === null ? "—" : rate.toFixed(2)}</p>

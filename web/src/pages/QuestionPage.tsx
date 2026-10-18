@@ -6,6 +6,7 @@ import ErrorState from "@/components/ErrorState";
 import Pending from "@/components/Pending";
 import ProfileDiffPanel from "@/components/ProfileDiffPanel";
 import type { DiffRequest } from "@/components/ProfileDiffPanel";
+import PartialBanner from "@/components/PartialBanner";
 import SignaturePanel from "@/components/SignaturePanel";
 import { useApi } from "@/hooks/useApi";
 import { usePoll } from "@/hooks/usePoll";
@@ -118,6 +119,7 @@ export default function QuestionPage({ kind }: { kind: "f" | "u" }) {
         qid={qid}
         operatorName={session.operator.name}
         latestHash={profileHash}
+        partial={fields.partial ? (fields.partial_coverage as never) : null}
         onReload={() => {
           detail.reload();
           profiles.reload();
@@ -162,6 +164,7 @@ export default function QuestionPage({ kind }: { kind: "f" | "u" }) {
 
       <section className={card}>
         <h2 className="mb-1 text-base font-semibold">profile</h2>
+        {fields.partial ? <div className="mb-2"><PartialBanner coverage={fields.partial_coverage as never} /></div> : null}
         <Field label="state">
           {fields.state ?? <span title="not knowable">—</span>}
           {fields.provisional ? " · provisional" : ""}
@@ -271,6 +274,7 @@ export default function QuestionPage({ kind }: { kind: "f" | "u" }) {
             <Chip text={data.verdict.verdict} />
             <span>· by {data.verdict.adjudicated_by}</span>
             <span>· {data.verdict.adjudicated_at}</span>
+            {data.verdict.partial ? <Chip text={`partial · ${(data.verdict.partial_coverage as { confirmed?: number; found?: number } | null)?.confirmed ?? "—"} of ${(data.verdict.partial_coverage as { confirmed?: number; found?: number } | null)?.found ?? "—"} read`} /> : null}
             {data.verdict_stale ? <Chip text="stale" /> : null}
           </p>
         ) : (
