@@ -160,6 +160,28 @@ def openalex_locations(fetcher: net.FetcherLike, doi: str) -> list[Location]:
             )
     return locations
 
+def core_locations(fetcher: net.FetcherLike, doi: str) -> list[Location]:
+    """Repository copies CORE holds for this exact DOI (D144). A hit whose DOI differs is not used:
+    never the wrong work. Needs `CORE_API_KEY`; without one nothing is asked."""
+    import os
+    import urllib.parse as _u
+
+    if not os.environ.get("CORE_API_KEY", "").strip():
+        return []
+    query = _u.urlencode({"q": f'doi:"{doi}"', "limit": 3})
+    payload, _ = fetcher.get_json(f"https://api.core.ac.uk/v3/search/works?{query}")
+    results = (payload or {}).get("results") if isinstance(payload, dict) else None
+    out: list[Location] = []
+    for work in results or []:
+        if not isinstance(work, dict) or ids.normalize_doi(work.get("doi")) != ids.normalize_doi(doi):
+            continue
+        url = work.get("downloadUrl")
+        if not (isinstance(url, str) and url.startswith(("http://", "https://"))):
+            continue
+        out.append(Location(url=url, provenance="core", host_type="repository"))
+    return out
+
+
 def resolve_doi_by_title(fetcher: net.FetcherLike, title: str) -> str | None:
     """Find a DOI from a title via OpenAlex, when the URL does not carry one.
 
@@ -251,6 +273,11 @@ def plan(
         upw, oa_status = unpaywall_locations(fetcher, doi)
         locations.extend(upw)
         locations.extend(openalex_locations(fetcher, doi))
+        # CORE only when the plan named its host: an authorised plan that predates it never reaches it,
+        # and a blocked call would only add a refusal to the record (D144).
+        allowed = getattr(fetcher, "allowed_hosts", None)
+        if allowed is not None and "api.core.ac.uk" in allowed:
+            locations.extend(core_locations(fetcher, doi))
 
     # Rewritten before ordering, and the forbidden address is dropped rather than demoted: asking a host
     # that says no spends a request on a certain refusal.

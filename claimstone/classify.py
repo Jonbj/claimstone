@@ -23,6 +23,7 @@ _VENUE_PREDICATES = {
     "openalex_source_type": "openalex",
     "crossref_type": "crossref",
     "europepmc_type": "europepmc",
+    "core_type": "core",
 }
 
 # Reported when a candidate carries nothing any predicate can read. Measured: the citation channel

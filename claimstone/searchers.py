@@ -267,8 +267,58 @@ def search_europepmc(
         )
 
 
+def _core_download(work: dict[str, Any]) -> str | None:
+    """The address CORE says holds the file, from the fields it is known to use; None when it names none."""
+    direct = work.get("downloadUrl")
+    if isinstance(direct, str) and direct.startswith(("http://", "https://")):
+        return direct
+    for link in work.get("links") or []:
+        if isinstance(link, dict) and link.get("type") == "download" and isinstance(link.get("url"), str):
+            return link["url"]
+    return None
+
+
+def search_core(
+    fetcher: net.FetcherLike, term: str, topic_id: str, *, limit: int = 25
+) -> Iterator[dict[str, Any]]:
+    """CORE: repository copies — the green route that Unpaywall and OpenAlex sometimes miss (D144).
+
+    Needs `CORE_API_KEY` (a Bearer header added by the fetcher for this host only). The response shape
+    is parsed defensively and was not verified against a live answer when written: a missing field
+    gives an empty value, a missing list is `INVALID_SEARCH_RESPONSE`.
+    """
+    url = "https://api.core.ac.uk/v3/search/works?" + urllib.parse.urlencode({"q": term, "limit": limit})
+    payload, outcome = fetcher.get_json(url)
+    for work in records(payload, outcome, ("results",)):
+        download = _core_download(work)
+        core_id = work.get("id")
+        types = work.get("documentType")
+        if isinstance(types, list):
+            types = types[0] if types else ""
+        venue = ""
+        for journal in work.get("journals") or []:
+            if isinstance(journal, dict) and journal.get("title"):
+                venue = str(journal["title"])
+                break
+        yield _row(
+            title=str(work.get("title") or "").strip(),
+            url=download or (f"https://core.ac.uk/works/{core_id}" if core_id else ""),
+            doi=work.get("doi"),
+            year=work.get("yearPublished") if isinstance(work.get("yearPublished"), int) else None,
+            venue=venue or str(work.get("publisher") or ""),
+            venue_type=str(types or ""),
+            source_api="core",
+            query=term,
+            topic_id=topic_id,
+            channel=CHANNEL_KEYWORD,
+            # CORE indexes repository deposits; the flag is set only when it names a file to download.
+            is_oa=True if download else None,
+            extra={"core_id": str(core_id) if core_id is not None else None},
+        )
+
+
 SEARCHERS = {"openalex": search_openalex, "crossref": search_crossref, "arxiv": search_arxiv,
-             "europepmc": search_europepmc}
+             "europepmc": search_europepmc, "core": search_core}
 # What a run searches when nobody names an API: the three of discovery version 4. A newer adapter is
 # opt-in, so adding one never changes the request set of a round already planned (D141).
 DEFAULT_APIS = ("openalex", "crossref", "arxiv")
@@ -276,7 +326,7 @@ DEFAULT_APIS = ("openalex", "crossref", "arxiv")
 
 def _limit_kw(api: str) -> str:
     return {"openalex": "per_page", "crossref": "rows", "arxiv": "max_results",
-            "europepmc": "page_size"}[api]
+            "europepmc": "page_size", "core": "limit"}[api]
 
 
 # --- Resolving a reference into something fetchable ----------------------------------------------

@@ -19,6 +19,7 @@
  "backends_note": "configured names; not health-checked. A health probe would be a request and is never a side effect of GET.",
  "credentials": {
   "CLAIMSTONE_CONTACT_EMAIL": false,
+  "CORE_API_KEY": false,
   "OLLAMA_API_KEY": false,
   "OPENALEX_API_KEY": false
  },

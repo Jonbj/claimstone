@@ -109,12 +109,12 @@ describe("network batch planning", () => {
     fireEvent.change(screen.getByLabelText("Stage"), { target: { value: "acquire" } });
     fireEvent.change(screen.getByLabelText("Exact hosts, one per line"), { target: { value: "example.org" } });
     fireEvent.click(screen.getByRole("checkbox", { name: /Unpaywall and OpenAlex/ }));
-    expect(screen.getByText("At most 15 requests, to: example.org, api.unpaywall.org, api.openalex.org"))
+    expect(screen.getByText("At most 15 requests, to: example.org, api.unpaywall.org, api.openalex.org, api.core.ac.uk"))
       .toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Plan batch" }));
     await waitFor(() => expect(writes).toHaveLength(1));
     expect(writes[0]).toEqual({ stage: "acquire", apis: [], use_apis: true,
-      allowed_hosts: ["example.org", "api.unpaywall.org", "api.openalex.org"],
+      allowed_hosts: ["example.org", "api.unpaywall.org", "api.openalex.org", "api.core.ac.uk"],
       max_units: 5, max_requests_each: 3, per_query: 25 });
   });
   it("fills the acquire hosts from the record, lets the person add a refused host, and sends only that", async () => {

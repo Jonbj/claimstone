@@ -396,7 +396,7 @@ def _normalize(args: argparse.Namespace) -> int:
 
 
 APIS = ("openalex", "crossref", "arxiv")  # what a bare `discover` searches (searchers.DEFAULT_APIS)
-KNOWN_APIS = APIS + ("europepmc",)  # every adapter; a newer one is named explicitly with --api
+KNOWN_APIS = APIS + ("europepmc", "core")  # every adapter; a newer one is named explicitly with --api
 
 
 def _discover(args: argparse.Namespace) -> int:

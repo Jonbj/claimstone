@@ -9,7 +9,7 @@ import { useLocale } from "@/lib/i18n";
 
 // The two resolver hosts a `use_apis` plan adds, as PlanBatchForm does; they are listed and sent,
 // never invented by the client.
-const RESOLVER_HOSTS = ["api.unpaywall.org", "api.openalex.org"] as const;
+const RESOLVER_HOSTS = ["api.unpaywall.org", "api.openalex.org", "api.core.ac.uk"] as const;
 const EXACT_HOST = /^(?=.{1,253}$)[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?)*$/;
 const YEAR_MS = 366 * 24 * 3600 * 1000;
 

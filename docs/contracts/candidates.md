@@ -38,7 +38,7 @@ candidate denominator. Citation discovery and secondhand-claim promotion use the
 These counts describe metadata coverage; they do not certify copy identity or author ownership.
 
 `assign_when` on a source class in `sources.yaml` declares the conditions that assign a candidate to
-it. Five predicates: `source_api`, `openalex_source_type`, `crossref_type`, `europepmc_type`, `host`. A venue type only
+it. Six predicates: `source_api`, `openalex_source_type`, `crossref_type`, `europepmc_type`, `core_type`, `host`. A venue type only
 counts alongside the API that reported it, because "journal" from OpenAlex and "journal-article" from
 Crossref are different vocabularies, and arXiv speaks neither.
 

@@ -5209,3 +5209,26 @@ Titles are fetched from OpenAlex in batches of 50 DOIs so a lead reads as a work
 
 `snowball_version 1`. The first run on any project needs the operator's approval of the exact plan (hosts, ceilings, USD 0).
 Not yet run.
+
+## D144 — CORE is an opt-in channel and a source of repository copies, behind its own key (2026-10-18)
+
+The operator registered a free CORE key and asked for it to be used (review recommendation, adopted without a prior measurement,
+as in D141). CORE indexes repository deposits, which is exactly the green route that Unpaywall and OpenAlex sometimes miss.
+
+**Two uses, both opt-in.** `searchers.search_core` is a fifth keyword channel (`--api core`, unticked in the portal), and
+`resolve.core_locations` adds repository copies to the acquisition cascade for a DOI. The cascade asks CORE **only when the
+plan's allowed hosts name `api.core.ac.uk`** and `CORE_API_KEY` is set; an authorised plan that predates this never reaches it,
+and the portal's resolver-host list now includes it, so a new plan with API lookups ticked shows it in the list of hosts the person
+authorises. A lookup accepts a hit only when its DOI equals the one asked about: never the wrong work.
+
+**The key.** `CORE_API_KEY` lives in `.env`, is forwarded by `compose.yaml` like the OpenAlex key (the read API receives only
+the word "present"), and is sent as a `Bearer` header by the fetcher to `https://api.core.ac.uk` only — never in a URL, never to
+another host, never recorded. The administration page lists it as a credential that is present or absent.
+
+**Pacing.** Two seconds between requests to `api.core.ac.uk`, from the published free-key figure of 5 single requests per
+10 seconds. That figure and the whole response shape (`results[].doi/downloadUrl/links/journals/documentType/yearPublished`) come
+from third-party descriptions: CORE's own documentation answered 403 to the tool that fetched it, so **nothing here is verified
+against a live answer**. The parsers are defensive, and the first approved request will show where they are wrong.
+
+Unmeasured: whether CORE adds copies beyond Unpaywall and OpenAlex. On the trial's eight missing sources (paywalled publisher
+papers) it is expected to add little; the measurement belongs to issue #14.

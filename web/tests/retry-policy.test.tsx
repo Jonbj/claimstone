@@ -109,7 +109,7 @@ describe("retry policy plan form", () => {
     fireEvent.click(screen.getByRole("button", { name: "Plan retries" }));
     await waitFor(() => expect(writes).toHaveLength(1));
     expect(writes[0]).toMatchObject({
-      allowed_hosts: ["example.org", "api.unpaywall.org", "api.openalex.org"],
+      allowed_hosts: ["example.org", "api.unpaywall.org", "api.openalex.org", "api.core.ac.uk"],
       use_apis: true, max_retries: 20, max_attempts_each: 3, max_requests_each: 10,
       base_delay_hours: 6, max_delay_hours: 48,
     });

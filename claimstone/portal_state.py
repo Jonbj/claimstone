@@ -549,7 +549,7 @@ def instrument_versions() -> dict[str, Any]:
 
 
 # The credentials the portal reports by presence and the control server may replace (B11).
-CREDENTIAL_NAMES = ("CLAIMSTONE_CONTACT_EMAIL", "OLLAMA_API_KEY", "OPENALEX_API_KEY")
+CREDENTIAL_NAMES = ("CLAIMSTONE_CONTACT_EMAIL", "OLLAMA_API_KEY", "OPENALEX_API_KEY", "CORE_API_KEY")
 
 
 def admin_state(root: pathlib.Path | str) -> dict[str, Any]:

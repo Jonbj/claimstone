@@ -458,7 +458,7 @@ def load_citation_channel(root: pathlib.Path) -> dict[str, int]:
     return {**CITATION_CHANNEL_DEFAULTS, **{str(k): int(v) for k, v in raw.items()}}
 
 
-ASSIGN_PREDICATES = ("source_api", "openalex_source_type", "crossref_type", "europepmc_type", "host")
+ASSIGN_PREDICATES = ("source_api", "openalex_source_type", "crossref_type", "europepmc_type", "core_type", "host")
 
 GATE_THRESHOLD_NAMES = ("min_pdf_bytes", "min_text_chars", "paywall_doubt_chars", "fulltext_chars")
 NORMALIZE_THRESHOLD_NAMES = (

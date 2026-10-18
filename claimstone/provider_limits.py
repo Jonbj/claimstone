@@ -26,6 +26,8 @@ INTERVALS = {
     'api.openalex.org': 0.02,
     # Europe PMC publishes no numeric limit that was verified (D141): half a second keeps well under any.
     'www.ebi.ac.uk': 0.5,
+    # CORE's free key is published as 5 single requests per 10 s (D144): one every 2 s.
+    'api.core.ac.uk': 2.0,
 }
 
 # OpenAlex's October 2026 free-key allowance is 10,000 credits/day. This

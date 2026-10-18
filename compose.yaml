@@ -98,6 +98,7 @@ services:
       CLAIMSTONE_GROBID_URL: http://grobid:8070
       OLLAMA_API_KEY: ${OLLAMA_API_KEY:-}
       OPENALEX_API_KEY: ${OPENALEX_API_KEY:-}
+      CORE_API_KEY: ${CORE_API_KEY:-}
     volumes:
       # The two directories that must not live in an image. `store/` holds the fetched bytes of copyrighted
       # papers; `projects/` holds instances that encode a consuming system's internal design, which is why
@@ -135,6 +136,7 @@ services:
       CLAIMSTONE_GROBID_URL: http://grobid:8070
       OLLAMA_API_KEY: ${OLLAMA_API_KEY:-}
       OPENALEX_API_KEY: ${OPENALEX_API_KEY:-}
+      CORE_API_KEY: ${CORE_API_KEY:-}
       PYTHONDONTWRITEBYTECODE: "1"
     volumes:
       - ./store:/app/store
@@ -164,6 +166,7 @@ services:
       CLAIMSTONE_GROBID_URL: http://grobid:8070
       OLLAMA_API_KEY: ${OLLAMA_API_KEY:-}
       OPENALEX_API_KEY: ${OPENALEX_API_KEY:-}
+      CORE_API_KEY: ${CORE_API_KEY:-}
       PYTHONDONTWRITEBYTECODE: "1"
     volumes:
       - ./store:/app/store
@@ -193,6 +196,7 @@ services:
       CLAIMSTONE_GROBID_URL: http://grobid:8070
       OLLAMA_API_KEY: ${OLLAMA_API_KEY:-}
       OPENALEX_API_KEY: ${OPENALEX_API_KEY:-}
+      CORE_API_KEY: ${CORE_API_KEY:-}
       PYTHONDONTWRITEBYTECODE: "1"
     volumes:
       - ./store:/app/store
@@ -225,6 +229,7 @@ services:
       CLAIMSTONE_CONTACT_EMAIL: ${CLAIMSTONE_CONTACT_EMAIL:+present}
       OLLAMA_API_KEY: ${OLLAMA_API_KEY:+present}
       OPENALEX_API_KEY: ${OPENALEX_API_KEY:+present}
+      CORE_API_KEY: ${CORE_API_KEY:+present}
     volumes:
       - ./store:/app/store:ro
       - ./projects:/app/projects:ro
@@ -284,6 +289,7 @@ services:
       CLAIMSTONE_CONTACT_EMAIL: ${CLAIMSTONE_CONTACT_EMAIL:-}
       OLLAMA_API_KEY: ${OLLAMA_API_KEY:-}
       OPENALEX_API_KEY: ${OPENALEX_API_KEY:+present}
+      CORE_API_KEY: ${CORE_API_KEY:+present}
     volumes:
       - ./store:/app/store
       # Writable, for one reason: `claimstone/project_builder.py` creates a NEW directory here when an

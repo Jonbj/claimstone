@@ -54,7 +54,7 @@ def load_environment(path):
     for line in path.read_text().splitlines():
         key, sep, value = line.removeprefix('export ').partition('=')
         key = key.strip()
-        if sep and key in ('OLLAMA_API_KEY', 'OPENALEX_API_KEY', 'CLAIMSTONE_CONTACT_EMAIL') and not os.environ.get(key):
+        if sep and key in ('OLLAMA_API_KEY', 'OPENALEX_API_KEY', 'CORE_API_KEY', 'CLAIMSTONE_CONTACT_EMAIL') and not os.environ.get(key):
             parts = shlex.split(value, comments=True)
             if len(parts) != 1:
                 raise ValueError(f'invalid .env value for {key}')

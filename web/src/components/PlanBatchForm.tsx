@@ -11,9 +11,10 @@ const API_HOSTS = {
   crossref: "api.crossref.org",
   arxiv: "export.arxiv.org",
   europepmc: "www.ebi.ac.uk",
+  core: "api.core.ac.uk",
 } as const;
 type Api = keyof typeof API_HOSTS;
-const RESOLVER_HOSTS = ["api.unpaywall.org", "api.openalex.org"] as const;
+const RESOLVER_HOSTS = ["api.unpaywall.org", "api.openalex.org", "api.core.ac.uk"] as const;
 const EXACT_HOST = /^(?=.{1,253}$)[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?)*$/;
 
 export default function PlanBatchForm({ project, flowId, hasCandidates, onPlanned, primary = true }: {

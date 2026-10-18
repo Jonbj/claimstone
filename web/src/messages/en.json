@@ -614,6 +614,7 @@
         "crossref": "Crossref",
         "arxiv": "arXiv",
         "europepmc": "Europe PMC (PubMed, PMC)",
+        "core": "CORE (repository copies)",
         "help": "Each source runs every search of the flow."
       },
       "advanced": {
