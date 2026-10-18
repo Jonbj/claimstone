@@ -42,7 +42,10 @@ That is what makes `claimstone gate-audit` able to re-run the gate at other thre
 re-fetching, and what gives the by-hand rejection check something to look at.
 
 Gate version 4 adds `JATS_FULLTEXT`. Europe PMC XML is offered only for an explicit PMC
-article identity; an unavailable XML copy falls through to the existing HTML location.
+article identity. **Superseded on the route (D151, 2026-10-18):** gate version 4's unavailable-XML
+fallback to PMC article HTML is removed. From `fetch_version` 9 a PMC article identity is
+rewritten to the Europe PMC JATS endpoint and nothing else; a missing XML copy is a recorded
+failure, and no PMC article page is requested. Historical HTML acquisitions remain historical.
 The JATS gate checks article structure and body text, while stage 3 separately checks parser
 support and document confirmation. The XML article's declared licence URL is retained when
 present; endpoint availability alone is not a licence. Each attempt now carries the location's

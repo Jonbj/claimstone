@@ -16,11 +16,12 @@ def candidate():
             'doi': None, 'title': 'A synthetic study', 'url': PMC}
 
 
-def test_xml_route_is_before_html_and_retains_article_licence(tmp_path):
+def test_xml_route_replaces_the_pmc_article_host_and_retains_the_licence(tmp_path):
     assert resolve.europe_pmc_route('https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7196181') == XML
     assert resolve.europe_pmc_route('https://elsewhere.example/PMC7196181') is None
     locations, _ = resolve.plan(FakeFetcher(), candidate(), use_apis=False)
-    assert [loc.url for loc in locations] == [XML, PMC]
+    # Only the designated service: the article host is not a permitted routine route (D151).
+    assert [loc.url for loc in locations] == [XML]
     article = ARTICLE.replace(b'<abstract>',
         b'<permissions><license xmlns:xlink="http://www.w3.org/1999/xlink" '
         b'xlink:href="https://creativecommons.org/licenses/by/4.0/"/></permissions><abstract>')
@@ -33,13 +34,15 @@ def test_xml_route_is_before_html_and_retains_article_licence(tmp_path):
     assert row['stored_path'].endswith('.xml')
 
 
-def test_missing_or_invalid_xml_falls_through_to_confirmable_html(tmp_path):
+def test_missing_xml_does_not_fall_through_to_the_pmc_article_host(tmp_path):
+    """A 404 from the service is a failure for this candidate, not a licence to fetch the page."""
     html = cited(100)
     fetcher = FakeFetcher(pages={XML: fail(XML, 404, net.NOT_FOUND),
                                  PMC: ok(PMC, html, 'text/html')})
     row = acquire.acquire_one(fetcher, Store('t', base=tmp_path), candidate(), use_apis=False)
-    assert row['acquired'] and row['gate']['kind'] == fulltext.HTML_FULLTEXT
-    assert [a['http_status'] for a in row['attempts']] == [404, 200]
+    assert not row['acquired']
+    assert [a['http_status'] for a in row['attempts']] == [404]
+    assert PMC not in [a['url'] for a in row['attempts']]
 
     bad = b'<response>' + b'not an article ' * 400 + b'</response>'
     verdict = fulltext.classify(bad, 'application/xml', XML)

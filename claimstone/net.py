@@ -27,7 +27,7 @@ from typing import Protocol
 
 from .provider_limits import ProviderCreditLimit, ProviderRouteUnpriced, provider_slot
 
-FETCH_VERSION = 8
+FETCH_VERSION = 9
 
 REDIRECT = "REDIRECT_ERROR"
 

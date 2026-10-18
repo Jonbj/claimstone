@@ -25,27 +25,18 @@ KNOWN_WALLS = (
 
 WAYBACK_API = "https://archive.org/wayback/available?url="
 
-# PubMed Central, and the one host that will serve it to us.
+# PubMed Central: only the designated service, never the article host.
 #
-# `www.ncbi.nlm.nih.gov/robots.txt` disallows `/pmc/articles/` for `*`, so every open copy Unpaywall offered
-# there was correctly refused — measured, three of eighteen pilot failures, on a field where PMC is most of
-# the full text there is. `pmc.ncbi.nlm.nih.gov` is a different host whose robots says `Allow: /articles/` in
-# as many words, and it serves the article as 211 KB of HTML, which the content gate judges and `html_doc`
-# normalises. Honouring robots.txt is not negotiable; reading which host it belongs to is our job.
-_PMC_ARTICLE = re.compile(
-    r"^https?://(?:www\.)?ncbi\.nlm\.nih\.gov/pmc/articles/(PMC)?(\d+)/?$", re.I
-)
+# `pmc.ncbi.nlm.nih.gov/robots.txt` allows `/articles/`, and D35 read that as a sanction to fetch the
+# article HTML. It is not: PMC's text-mining terms (read 2026-10-18) name only the PMC Cloud Service,
+# OAI-PMH, E-Utilities and BioC API for automated retrieval, and prohibit systematic retrieval through
+# any other automated process. Robots permission is not an authorisation. Europe PMC's RESTful service
+# is the designated route we can parse, so a PMC article identity is rewritten to its JATS endpoint and
+# the article page is never requested (D151). A service failure is a failure, not a fallback.
 _PMC_ANY_ARTICLE = re.compile(
     r"^https?://(?:(?:www\.)?ncbi\.nlm\.nih\.gov/pmc|pmc\.ncbi\.nlm\.nih\.gov)/articles/(PMC)?(\d+)/?$", re.I
 )
-PMC_HOST = "https://pmc.ncbi.nlm.nih.gov/articles"
 EUROPE_PMC_FULLTEXT = "https://www.ebi.ac.uk/europepmc/webservices/rest"
-
-
-def pmc_route(url: str) -> str | None:
-    """The allowed address for a PMC article location, or None when the URL is not one."""
-    found = _PMC_ARTICLE.match(str(url or "").strip())
-    return f"{PMC_HOST}/PMC{found.group(2)}/" if found else None
 
 
 def europe_pmc_route(url: str) -> str | None:
@@ -281,18 +272,17 @@ def plan(
         if allowed is not None and "api.core.ac.uk" in allowed:
             locations.extend(core_locations(fetcher, doi))
 
-    # Rewritten before ordering, and the forbidden address is dropped rather than demoted: asking a host
-    # that says no spends a request on a certain refusal.
+    # Rewritten before ordering. A PMC article identity becomes the designated Europe PMC JATS
+    # endpoint and nothing else: the article host is reachable by robots but is not an authorised
+    # route for systematic retrieval, and a forbidden address is dropped rather than demoted
+    # (D151). The same rewrite covers a candidate whose own URL is a PMC article page.
     rewritten: list[Location] = []
     for location in locations:
-        allowed = pmc_route(location.url)
         xml = europe_pmc_route(location.url)
         if xml:
             rewritten.append(replace(location, url=xml, provenance='europe-pmc'))
-        rewritten.append(
-            replace(location, url=allowed, provenance=f"{location.provenance}+pmc")
-            if allowed and allowed != location.url else location
-        )
+            continue
+        rewritten.append(location)
 
     # Deduped, and an address that is only the DOI resolver is dropped: it adds nothing over the candidate
     # URL, which is already the DOI, and counting it as an attempt is how nine pilot failures looked as

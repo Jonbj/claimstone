@@ -5302,3 +5302,36 @@ signing a partial verdict is told the figure as it is.
 keys only when partial, so `profile_version` and `adjudication_version` are unchanged.
 
 First use: `projects/prova-esercizio-depressione-2` declares `floor_mode: partial`.
+
+## D151 — A PMC article identity is retrieved only through a designated service, never the article host (2026-10-18)
+
+Issue #9. D35 read `pmc.ncbi.nlm.nih.gov/robots.txt`'s `Allow: /articles/` as a sanction to fetch PMC
+article HTML, and D77 kept that HTML as a fallback behind Europe PMC's JATS endpoint. Robots permission is
+not an authorisation to retrieve. PMC's text-mining page, read on 2026-10-18 (last modified 2026-08-19),
+names only the PMC Cloud Service, PMC OAI-PMH Service, E-Utilities and BioC API for automated retrieval of
+PMC content and says: "Systematic retrieval (or bulk retrieval) of articles through any other automated
+process is prohibited." The Open Access Subset page states the same restriction. The article host is
+therefore removed from the routine route, not merely demoted.
+
+Europe PMC's RESTful service is the designated channel whose JATS response this code can already parse.
+Its copyright page, as indexed on the same date, names OAI, RESTful, SOAP and bulk-download services as
+the channels for automated retrieval (the page itself returned HTTP 403 to a direct fetch); EMBL-EBI's
+terms of use require access "through the service interfaces provided" and add no restriction on reuse.
+E-Utilities is named by PMC but its hosts' robots files disallow the path (`eutils.ncbi.nlm.nih.gov`
+disallows `/` for `*`; `www.ncbi.nlm.nih.gov` disallows `/entrez` for `*`), so this code does not use it;
+resolving that conflict is a separate decision, not a robots exception taken here.
+
+**What changed.** `resolve.plan` rewrites every PMC article identity — an Unpaywall location or a
+candidate's own URL — to `https://www.ebi.ac.uk/europepmc/webservices/rest/PMC<id>/fullTextXML` and appends
+nothing else. `pmc_route` and `PMC_HOST` are removed. A 404 or 500 from the service is recorded as that
+candidate's failure; there is no HTML fallback. A PMC article page is never requested by a new attempt.
+
+**What did not change.** Historical acquisitions, documents and confirmed counts stand as measured under the
+route that then applied; D35's 0.32 → 0.46 and D77–D78's pilot outcomes are not recast, and no existing
+document is re-fetched. The gate, the floor and the five verdict states are untouched. Robots, host budgets
+and `excluded_hosts` still apply, and an acquisition plan that does not allow `www.ebi.ac.uk` still refuses
+the route before any socket opens.
+
+**Known cost.** An article whose full text exists only as PMC article HTML and is absent from Europe PMC's
+open-access subset is now unobtainable through this route. That is the policy's consequence, recorded in the
+failure ledger rather than hidden by a fallback. `fetch_version` is 9; `gate_version` is unchanged.
