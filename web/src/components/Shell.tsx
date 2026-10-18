@@ -1,6 +1,6 @@
 import LogoMark from "@/components/LogoMark";
 import { useEffect, useState } from "react";
-import { Link, Outlet, useLocation, useNavigate } from "react-router";
+import { Link, Navigate, Outlet, useLocation, useNavigate } from "react-router";
 import LocaleSwitch from "@/components/LocaleSwitch";
 import ThemeToggle from "@/components/ThemeToggle";
 import { api } from "@/lib/api";
@@ -93,7 +93,7 @@ function Operator() {
 }
 
 export default function Shell() {
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
   const rev = useRevision();
   const session = useSession();
   const { t } = useLocale();
@@ -116,6 +116,11 @@ export default function Shell() {
   ];
   // The sign-in page is a door, not a room: no rail, no navigation, the page owns the whole window.
   if (pathname === "/login") return <Outlet />;
+  // No session, no rooms: every other page sends a visitor to the door and brings them back.
+  // (This is the portal's front; the read-only API on the network is a separate surface.)
+  if (session.ready && !session.operator) {
+    return <Navigate to={`/login?next=${encodeURIComponent(pathname + search)}`} replace />;
+  }
   return (
     <div className="min-h-screen bg-background text-foreground min-[900px]:flex">
       <nav

@@ -1,5 +1,5 @@
-// F1: the shell. Signed out it offers Sign in (with the page to come back to); signed in it
-// shows the operator and Sign out. The rail has no Inbox link, and New project links to the wizard.
+// F1: the shell. Signed out, every page but the door sends the visitor to /login with the page to
+// come back to; signed in it shows the operator and Sign out. The rail has no Inbox link, and New project links to the wizard.
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -41,6 +41,7 @@ function mount(who: boolean | Who, at = "/p/demo", mustChange = false) {
           <Where />
           <Routes>
             <Route element={<Shell />}>
+              <Route path="/login" element={<div>door</div>} />
               <Route path="*" element={<div>page</div>} />
             </Route>
           </Routes>
@@ -60,11 +61,12 @@ describe("F1: Shell v2", () => {
     localStorage.clear();
   });
 
-  it("shows Sign in when signed out, returning to the current page", async () => {
+  it("sends a signed-out visitor to the door, remembering the page", async () => {
     mount(false);
-    const link = await screen.findByRole("link", { name: "Sign in" });
-    expect(link.getAttribute("href")).toBe("/login?next=%2Fp%2Fdemo");
-    expect(screen.queryByRole("button", { name: "Sign out" })).toBeNull();
+    await screen.findByText("door");
+    expect(where).toBe("/login");
+    expect(screen.queryByRole("link", { name: "Today" })).toBeNull();
+    expect(screen.queryByText("page")).toBeNull();
   });
 
   it("shows the operator's name and Sign out when signed in", async () => {
@@ -75,22 +77,18 @@ describe("F1: Shell v2", () => {
   });
 
   it("lists Today and Projects, and no Inbox", async () => {
-    mount(false, "/");
-    await screen.findByRole("link", { name: "Sign in" });
+    mount("operator", "/");
+    await screen.findByTestId("operator-name");
     const names = linkNames();
     expect(names).toEqual(expect.arrayContaining(["Today", "Projects"]));
     expect(names).not.toContain("Inbox");
     expect(screen.getByRole("link", { name: "Today" }).getAttribute("aria-current")).toBe("page");
   });
 
-  it("links New project to the wizard when signed in, and through the login when signed out", async () => {
+  it("links New project to the wizard when signed in", async () => {
     mount(true);
     const signedIn = await screen.findByRole("link", { name: "+ New project" });
     expect(signedIn.getAttribute("href")).toBe("/new");
-    cleanup();
-    mount(false);
-    const signedOut = await screen.findByRole("link", { name: "+ New project" });
-    expect(signedOut.getAttribute("href")).toBe("/login?next=%2Fnew");
   });
   it("shows an operator My account and Administration but not People", async () => {
     mount("operator", "/");
@@ -109,11 +107,10 @@ describe("F1: Shell v2", () => {
     expect(screen.getByRole("link", { name: "Administration" }).getAttribute("href")).toBe("/admin");
   });
 
-  it("shows none of them when signed out", async () => {
+  it("shows no rail at all when signed out: the door stands alone", async () => {
     mount(null, "/");
-    await screen.findByRole("link", { name: "Sign in" });
-    const names = linkNames();
-    for (const hidden of ["My account", "People"]) expect(names).not.toContain(hidden);
+    await screen.findByText("door");
+    expect(screen.queryByRole("navigation", { name: "Primary" })).toBeNull();
   });
 
   it("sends a person with a temporary password to /account, and leaves /account alone", async () => {
@@ -136,16 +133,9 @@ describe("F1: Shell v2", () => {
   it("lets a person with a temporary password sign out on /account without a redirect or a trap", async () => {
     mount("operator", "/account", true);
     fireEvent.click(await screen.findByRole("button", { name: "Sign out" }));
-    expect(await screen.findByRole("link", { name: "Sign in" })).toBeTruthy();
-    await expect(waitFor(() => expect(where).not.toBe("/account"), { timeout: 200 })).rejects.toThrow();
+    expect(await screen.findByText("door")).toBeTruthy();
+    expect(where).toBe("/login");
     expect(screen.queryByRole("button", { name: "Sign out" })).toBeNull();
-  });
-
-  it("shows the session check from the catalog, in Italian too", async () => {
-    localStorage.setItem(STORAGE_KEY, "it");
-    mount(null, "/");
-    expect(screen.getByText("controllo la sessione…")).toBeTruthy();
-    await screen.findByRole("link", { name: "Accedi" });
   });
 
   it("takes Sign in, Sign out, My account and People from the Italian catalog", async () => {
@@ -154,8 +144,5 @@ describe("F1: Shell v2", () => {
     expect(await screen.findByRole("link", { name: "Il mio account" })).toBeTruthy();
     expect(screen.getByRole("link", { name: "Persone" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Esci" })).toBeTruthy();
-    cleanup();
-    mount(null, "/");
-    expect(await screen.findByRole("link", { name: "Accedi" })).toBeTruthy();
   });
 });

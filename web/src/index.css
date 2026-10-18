@@ -337,15 +337,16 @@
     linear-gradient(to right, rgb(255 255 255 / 0.04) 1px, transparent 1px),
     linear-gradient(to bottom, rgb(255 255 255 / 0.04) 1px, transparent 1px);
   background-size: 48px 48px;
-  mask-image: radial-gradient(ellipse at 30% 40%, black, transparent 75%);
+  mask-image: radial-gradient(ellipse at 50% 35%, black, transparent 75%);
 }
 .login-brand::after {
   content: "";
   position: absolute;
-  right: -10rem;
-  bottom: -10rem;
-  width: 28rem;
-  height: 28rem;
+  left: 50%;
+  top: 22%;
+  margin-left: -20rem;
+  width: 40rem;
+  height: 40rem;
   border-radius: 9999px;
   background: radial-gradient(closest-side, rgb(245 165 36 / 0.16), transparent);
   pointer-events: none;
