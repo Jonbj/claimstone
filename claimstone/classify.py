@@ -50,7 +50,12 @@ def _predicate_matches(candidate: dict[str, Any], name: str, values: Sequence[st
     required_api = _VENUE_PREDICATES[name]
     if str(candidate.get("source_api") or "") != required_api:
         return False
-    return str(candidate.get("venue_type") or "") in values
+    venue_type = str(candidate.get("venue_type") or "")
+    if name == "europepmc_type":
+        # Europe PMC joins several publication types in one string ("journal article; review"): any one of them
+        # may match, whole, so a project names `journal article` and not a combination it cannot predict (D141).
+        return any(part.strip() in values for part in venue_type.split(";"))
+    return venue_type in values
 
 
 def classify(candidate: dict[str, Any], classes: Iterable[SourceClass]) -> str | None:

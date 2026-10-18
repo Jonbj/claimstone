@@ -55,3 +55,11 @@ def test_a_project_classifies_it_by_declared_rules_not_by_the_engine():
     assert classify.classify(row, [klass]) == "REVIEWED"
     other = SourceClass(id="PRE", name="p", weight_hint="", assign_when={"source_api": ["europepmc"]})
     assert classify.classify(row, [other]) == "PRE"
+
+
+def test_a_joined_publication_type_matches_on_any_one_part():
+    klass = SourceClass(id="REVIEWED", name="r", weight_hint="", assign_when={"europepmc_type": ["journal article"]})
+    joined = {"source_api": "europepmc", "venue_type": "review; journal article; research support, non-u.s. gov't"}
+    assert classify.classify(joined, [klass]) == "REVIEWED"
+    assert classify.classify(joined | {"venue_type": "preprint"}, [klass]) is None
+    assert classify.classify(joined | {"source_api": "openalex"}, [klass]) is None, "only for rows from Europe PMC"
