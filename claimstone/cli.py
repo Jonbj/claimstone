@@ -395,15 +395,16 @@ def _normalize(args: argparse.Namespace) -> int:
     return 0
 
 
-APIS = ("openalex", "crossref", "arxiv")
+APIS = ("openalex", "crossref", "arxiv")  # what a bare `discover` searches (searchers.DEFAULT_APIS)
+KNOWN_APIS = APIS + ("europepmc",)  # every adapter; a newer one is named explicitly with --api
 
 
 def _discover(args: argparse.Namespace) -> int:
     from claimstone import discover
 
-    unknown = [api for api in (args.api or ()) if api not in APIS]
+    unknown = [api for api in (args.api or ()) if api not in KNOWN_APIS]
     if unknown:
-        print(f"unknown api: {', '.join(unknown)} (known: {', '.join(APIS)})", file=sys.stderr)
+        print(f"unknown api: {', '.join(unknown)} (known: {', '.join(KNOWN_APIS)})", file=sys.stderr)
         return 2
 
     project = load_project(args.project)
@@ -1537,7 +1538,7 @@ def build_parser() -> argparse.ArgumentParser:
                                  help="name this round; it lands on every candidate")
             command.add_argument("--topics", help="comma-separated topic ids; default all")
             command.add_argument("--api", action="append",
-                                 help=f"repeatable; one of {', '.join(APIS)}. Default all")
+                                 help=f"repeatable; one of {', '.join(KNOWN_APIS)}. Default: {', '.join(APIS)}")
             command.add_argument("--per-query", type=int, default=25)
             command.add_argument("--channel", choices=("keyword", "citation", "both"),
                                  default="both")

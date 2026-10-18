@@ -594,6 +594,7 @@
         "openalex": "OpenAlex",
         "crossref": "Crossref",
         "arxiv": "arXiv",
+        "europepmc": "Europe PMC (PubMed, PMC)",
         "help": "Each source runs every search of the flow."
       },
       "advanced": {

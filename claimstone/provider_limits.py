@@ -24,6 +24,8 @@ INTERVALS = {
     'export.arxiv.org': 3.0,
     'api.crossref.org': 1.0,
     'api.openalex.org': 0.02,
+    # Europe PMC publishes no numeric limit that was verified (D141): half a second keeps well under any.
+    'www.ebi.ac.uk': 0.5,
 }
 
 # OpenAlex's October 2026 free-key allowance is 10,000 credits/day. This

@@ -5143,3 +5143,26 @@ now lands on that list.
 What it does not do, deliberately: it buys nothing, signs in nowhere, and does not scrape or proxy the publisher page. A
 supplied copy goes through the same gates as any other and counts toward the floor only as the project's declared
 `supplied_copies` policy says (`separate` by default) — the denominator never changes.
+
+## D141 — Europe PMC is a fourth, opt-in keyword channel; PubMed E-utilities is not added (2026-10-18)
+
+The independent review (GPT-6, 2026-10-18) listed PubMed/E-utilities and Europe PMC REST as the two adoptions most likely
+to add recall for biomedical questions, and the operator decided to adopt the recommended sources without a prior
+measurement. They are adopted as capabilities, not as defaults: the claim that they find more is still a claim, and the
+issue that tracks the measurement (#14) stays open.
+
+**What was added.** `searchers.search_europepmc`: one request per query to the Europe PMC REST search (`resultType=lite`),
+rows in the same shape as the other adapters, with `pmid`, `pmcid`, the journal, `pubType` as `venue_type`, `isOpenAccess`
+and `citedByCount`. Its host `www.ebi.ac.uk` has a 0.5 s pacing interval in `provider_limits` (no numeric limit was verified;
+half a second is a deliberately conservative guess, recorded as such). A project maps Europe PMC rows to a source class in
+`sources.yaml` with the new `europepmc_type` predicate or on `source_api`; the engine decides nothing about what a
+"journal article" is (invariant 4).
+
+**Opt-in.** `searchers.DEFAULT_APIS` stays `openalex, crossref, arxiv`. A bare `claimstone discover` and a portal plan that
+does not tick Europe PMC send exactly the requests of discovery version 4, so `DISCOVERY_VERSION` is unchanged and no round
+already planned moves. The portal's plan form and the series form list Europe PMC as a source, unticked.
+
+**Why not E-utilities now.** Europe PMC indexes MEDLINE/PubMed records with their PMIDs, so for a keyword channel it
+reaches the same records in one request. E-utilities needs two (`esearch`, then `esummary`), which breaks the one-request
+unit the scheduler plans and caps by; what it would add is boolean MeSH syntax. That is #8's remaining scope and it waits for a
+project that needs controlled-vocabulary queries. Metadata access is still not a full-text grant.

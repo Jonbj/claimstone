@@ -228,11 +228,55 @@ def search_arxiv(
         )
 
 
-SEARCHERS = {"openalex": search_openalex, "crossref": search_crossref, "arxiv": search_arxiv}
+def search_europepmc(
+    fetcher: net.FetcherLike, term: str, topic_id: str, *, page_size: int = 25
+) -> Iterator[dict[str, Any]]:
+    """Europe PMC REST: PubMed/MEDLINE, PMC, preprints and patents in one request per query (D141).
+
+    It carries what the three older adapters do not for biomedical questions — PMID/PMCID, the journal,
+    an open-access flag and a citation count — and MEDLINE records arrive here with PubMed's own
+    identifiers, so a separate E-utilities adapter (two requests per query) would add only boolean MeSH
+    syntax. `pubType` is kept as the venue type; a project maps it to a source class in `sources.yaml`
+    with the `europepmc_type` predicate or on `source_api`, never here (invariant 4).
+    """
+    url = "https://www.ebi.ac.uk/europepmc/webservices/rest/search?" + urllib.parse.urlencode(
+        {"query": term, "format": "json", "resultType": "lite", "pageSize": page_size})
+    payload, outcome = fetcher.get_json(url)
+    for item in records(payload, outcome, ("resultList", "result")):
+        source, ident = str(item.get("source") or ""), str(item.get("id") or "")
+        doi = ids.normalize_doi(item.get("doi"))
+        year = item.get("pubYear")
+        pmcid = item.get("pmcid")
+        landing = (f"https://doi.org/{doi}" if doi else
+                   (f"https://europepmc.org/article/{source}/{ident}" if source and ident else ""))
+        yield _row(
+            title=str(item.get("title") or "").strip().rstrip("."),
+            url=landing,
+            doi=doi,
+            year=int(year) if isinstance(year, str) and year.isdigit() else None,
+            venue=str(item.get("journalTitle") or ""),
+            venue_type=str(item.get("pubType") or ""),
+            source_api="europepmc",
+            query=term,
+            topic_id=topic_id,
+            channel=CHANNEL_KEYWORD,
+            is_oa=(item.get("isOpenAccess") == "Y") if item.get("isOpenAccess") in ("Y", "N") else None,
+            citations=item.get("citedByCount") if isinstance(item.get("citedByCount"), int) else None,
+            extra={"europepmc_id": f"{source}:{ident}" if source and ident else None,
+                   "pmid": item.get("pmid"), "pmcid": pmcid},
+        )
+
+
+SEARCHERS = {"openalex": search_openalex, "crossref": search_crossref, "arxiv": search_arxiv,
+             "europepmc": search_europepmc}
+# What a run searches when nobody names an API: the three of discovery version 4. A newer adapter is
+# opt-in, so adding one never changes the request set of a round already planned (D141).
+DEFAULT_APIS = ("openalex", "crossref", "arxiv")
 
 
 def _limit_kw(api: str) -> str:
-    return {"openalex": "per_page", "crossref": "rows", "arxiv": "max_results"}[api]
+    return {"openalex": "per_page", "crossref": "rows", "arxiv": "max_results",
+            "europepmc": "page_size"}[api]
 
 
 # --- Resolving a reference into something fetchable ----------------------------------------------

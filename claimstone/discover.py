@@ -65,7 +65,7 @@ def run(
     store: Store,
     fetcher: net.FetcherLike,
     *,
-    apis: Iterable[str] = ("openalex", "crossref", "arxiv"),
+    apis: Iterable[str] = searchers.DEFAULT_APIS,
     topics: Iterable[str] | None = None,
     per_query: int = 25,
     round_name: str = ROUTINE,
@@ -149,7 +149,7 @@ def run(
                             'candidate_key': row['candidate_key'],
                             'title': row['title'], 'doi': row['doi'],
                             'url': row['url'], 'source_class': row.get('source_class'),
-                            'provider_id': row.get('openalex_work_id') or row.get('arxiv_base_id'),
+                            'provider_id': row.get('openalex_work_id') or row.get('arxiv_base_id') or row.get('europepmc_id'),
                             'population_in_scope': in_scope,
                             'observed_at': row['found_at'],
                         })

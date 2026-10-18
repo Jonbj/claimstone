@@ -10,6 +10,7 @@ const API_HOSTS = {
   openalex: "api.openalex.org",
   crossref: "api.crossref.org",
   arxiv: "export.arxiv.org",
+  europepmc: "www.ebi.ac.uk",
 } as const;
 type Api = keyof typeof API_HOSTS;
 const RESOLVER_HOSTS = ["api.unpaywall.org", "api.openalex.org"] as const;

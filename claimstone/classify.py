@@ -22,6 +22,7 @@ from claimstone.config import SourceClass
 _VENUE_PREDICATES = {
     "openalex_source_type": "openalex",
     "crossref_type": "crossref",
+    "europepmc_type": "europepmc",
 }
 
 # Reported when a candidate carries nothing any predicate can read. Measured: the citation channel

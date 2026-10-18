@@ -1,8 +1,9 @@
 // Request figures for a series, from the topics and the chosen sources. A preview: the server's
 // `max_total_requests` is the figure that counts.
 export const HOST_FOR: Record<string, string> = {
-  openalex: "api.openalex.org", crossref: "api.crossref.org", arxiv: "export.arxiv.org" };
-export const SOURCES = ["openalex", "crossref", "arxiv"] as const;
+  openalex: "api.openalex.org", crossref: "api.crossref.org", arxiv: "export.arxiv.org",
+  europepmc: "www.ebi.ac.uk" };
+export const SOURCES = ["openalex", "crossref", "arxiv", "europepmc"] as const;
 
 export const queryCount = (topics: Array<{ terms: string[] }>, apis: string[]): number =>
   topics.reduce((n, t) => n + t.terms.length, 0) * new Set(apis).size;
