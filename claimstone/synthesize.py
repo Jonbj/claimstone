@@ -44,7 +44,7 @@ VERDICTS = ("SUPPORTED", "CONTRADICTED", "CONTESTED_IN_LITERATURE",
 # being written down is not one. Short enough to be honest about, long enough to have an argument in it.
 MIN_RATIONALE_CHARS = 120
 
-PROFILE_VERSION = 5
+PROFILE_VERSION = 6
 
 # F16: a verdict's provenance is a recorded fact, not free text. `adjudicated_by` stays the
 # human-readable name; the class of the signature and the operator id are machine-checkable,
@@ -130,6 +130,15 @@ def preview(
                     "acquisition": {key: verdict[key] for key in
                                     ("found", "obtained", "confirmed", "rate", "basis", "floor",
                                      "floor_version", "floor_set_at", "final", "blocking")}})
+        # Present only when a completed status observation touches a source this question's
+        # accepted claims came from (#12): it is part of the hash the adjudicator answers for,
+        # and a reader of the profile should see it beside the counts, not on another page only.
+        question_status = {str(row.get('source_id')): inputs['status_observations'][str(row.get('source_id'))]
+                           for row in inputs['claims']
+                           if str(row.get('question_id')) == str(question.id)
+                           and str(row.get('source_id')) in inputs['status_observations']}
+        if question_status:
+            row["status_observations"] = question_status
         row["profile_sha256"] = evidence._digest(row)
         written.append(row)
     return written, verdict

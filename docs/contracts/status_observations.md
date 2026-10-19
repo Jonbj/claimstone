@@ -28,3 +28,9 @@ recording fetcher so a renamed field can be re-parsed instead of re-fetched. The
 are **unverified against a live response** until the first approved run.
 
 A licence or a text-mining link is the publisher's metadata, not a permission to mine.
+
+**The binding to signatures (D148).** The newest *completed* observation of a source enters the per-question
+evidence hash of every question an accepted claim of that source feeds, as `{state, notices}` — notice type,
+DOI, kind and updated date only; `LOOKUP_FAILED`, timestamps and licence lists do not enter. The profile row
+carries the same projection as `status_observations`. A verdict signed before a notice is therefore displayed
+stale and cannot be re-signed until the profile is rebuilt and read; no verdict ever changes by itself.
