@@ -107,6 +107,11 @@ def rate(
         if excluded and row.get("provenance") == OPERATOR_SUPPLIED and row.get("acquired")
         and not (rows.get(key) or {}).get("acquired"))
 
+    # Copies the open-web locator found (D145). Reported beside the rate and never folded into it silently: a
+    # round acquired with the locator is not comparable to one without, so the figure it would have had is shown.
+    web_located = sorted(key for key, row in rows.items()
+                         if row.get("acquired") and row.get("provenance") == "web_locator")
+
     found = len(candidates)
     classified = sum(1 for row in candidates.values() if row.get("source_class"))
     attempted = len(rows)
@@ -224,6 +229,8 @@ def rate(
         "orphan_acquisitions": orphans,
         "supplied_copies": supplied_copies,
         "supplied_separately": supplied_separately,
+        "web_located": web_located,
+        "obtained_without_web_locator": obtained - len(web_located),
         "blocking": blocking,
         "final": not blocking,
         "basis": "confirmed" if started else "obtained",

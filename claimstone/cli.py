@@ -223,6 +223,16 @@ def _report(args: argparse.Namespace) -> int:
         print(f"  {'attempted':<14} {result['attempted']}/{found}")
         share = "—" if not found else f"{result['obtained'] / found:.2f}"
         print(f"  {'obtained':<14} {result['obtained']}/{found}  {share}")
+        if result.get("web_located"):
+            without = result["obtained_without_web_locator"]
+            print(f"  {'web locator':<14} {len(result['web_located'])} of the obtained came from the open-web "
+                  f"locator; without it {without}/{found}  {without / found:.2f}")
+        from claimstone import web_locator as _locator
+
+        unclassified_hosts = _locator.unclassified_hosts(_checked_store(args, project))
+        if unclassified_hosts:
+            listed = "  ".join(f"{h} {n}" for h, n in list(unclassified_hosts.items())[:12])
+            print(f"  {'web hosts':<14} unclassified, never fetched: {listed}")
         if not found and args.round:
             # A named round matching nothing is a real answer, and a different one from a round that
             # found nothing obtainable. Only when a round was named: without one, no candidates at all

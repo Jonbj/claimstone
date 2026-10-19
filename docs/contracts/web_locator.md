@@ -28,3 +28,7 @@ whose exact host an authorised plan named, and only for a project that declared 
 like any other, and `normalize` then compares the document's own title with the candidate's (`identity_check`,
 `identity_check_version 1`): a clear mismatch is `WRONG_DOCUMENT`, a file with no readable title is `IDENTITY_UNVERIFIED`;
 neither is a confirmed document and neither counts toward the floor. The bytes are kept.
+
+## Reporting the locator's share
+
+`claimstone report` and `admissibility.rate` carry `web_located` (candidate keys whose collapsed, acquired row has `provenance: web_locator`) and `obtained_without_web_locator`, so a round acquired with the locator is read beside the figure it would have had without it; the rate itself is unchanged. `claimstone report` also lists the hosts the policy left `UNCLASSIFIED` (`web_locator.unclassified_hosts`), which are never fetched until a person allows or denies them in `sources.yaml`.

@@ -132,3 +132,14 @@ def test_the_tool_previews_runs_within_ceilings_and_asks_a_second_time_only_afte
         tool.run("p", execute=True, store_base=tmp_path, project=P(), fetcher=Fetcher(), max_candidates=0)
     # nothing but the locator ledger and the request log was written
     assert len(list(store.read("candidates.jsonl"))) == 4
+
+
+def test_unclassified_hosts_are_listed_for_a_person_and_never_offered_for_fetching(tmp_path):
+    store = Store("p", base=tmp_path)
+    for key, urls in (("k1", ["https://a.edu/x.pdf", "https://mysite.example/p.pdf", "https://mysite.example/q.pdf"]),
+                      ("k2", ["https://mysite.example/r.pdf", "https://other.example/z.pdf"])):
+        results = web_locator.parse_results({"web": {"results": [{"url": u, "title": "t"} for u in urls]}})
+        store.append(web_locator.LEDGER, web_locator.observation(
+            {"candidate_key": key}, "q", results, POLICY, [], ok=True, failure_class=None, policy_source="project"))
+    assert web_locator.unclassified_hosts(store) == {"mysite.example": 3, "other.example": 1}
+    assert web_locator.unclassified_hosts(Store("empty", base=tmp_path)) == {}

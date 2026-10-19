@@ -193,6 +193,18 @@ def leads(store, candidate_key: str, *, limit: int | None = None) -> list[dict[s
     return out[:limit] if limit else out
 
 
+def unclassified_hosts(store) -> dict[str, int]:
+    """Hosts the policy neither allowed nor denied, with how many distinct leads point at each.
+
+    They are never fetched; listing them is how a person classifies a host once (invariant: never promoted silently)."""
+    seen: dict[str, set[str]] = {}
+    for candidate_key in latest_by_candidate(store):
+        for lead in leads(store, candidate_key):
+            if lead["decision"] == UNCLASSIFIED and lead.get("host"):
+                seen.setdefault(lead["host"], set()).add(lead["url"])
+    return dict(sorted(((h, len(u)) for h, u in seen.items()), key=lambda kv: (-kv[1], kv[0])))
+
+
 def fetch_locations(store, candidate_key: str, allowed_hosts) -> list[Any]:
     """`resolve.Location`s for ALLOWED leads whose exact host a plan named. Appended last in the cascade."""
     from claimstone.resolve import Location

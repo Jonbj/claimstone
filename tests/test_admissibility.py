@@ -475,3 +475,13 @@ def test_a_filtered_population_reports_no_orphans(tmp_path):
                                         "failure_class": "PAYWALL_403", "source_class": "ACA"})
     assert admissibility.rate(store, manifest_only=True)["orphan_acquisitions"] == []
     assert admissibility.rate(store)["orphan_acquisitions"] == []
+
+
+def test_copies_found_by_the_web_locator_are_shown_beside_the_rate_not_folded_in(tmp_path):
+    store = Store("t", base=tmp_path)
+    located = row("b", acquired=True) | {"provenance": "web_locator"}
+    _ledger(store, [row("a", acquired=True), located, row("c", acquired=False, failure="PAYWALL_403")])
+    result = admissibility.rate(store)
+    assert result["obtained"] == 2, "a located copy counts, as any copy that passed the same gates"
+    assert result["web_located"] == ["b"] and result["obtained_without_web_locator"] == 1
+    assert admissibility.rate(Store("u", base=tmp_path))["web_located"] == []
