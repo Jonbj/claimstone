@@ -984,8 +984,10 @@ def _notify(args: argparse.Namespace) -> int:
     if args.limit < 1:
         print("--limit must be positive", file=sys.stderr)
         return 2
-    if args.channel not in (None, "telegram"):
-        print(f"unknown channel {args.channel!r}: telegram", file=sys.stderr)
+    channels = {"telegram": notifications.TelegramChannel,
+                "email": notifications.EmailChannel}
+    if args.channel is not None and args.channel not in channels:
+        print(f"unknown channel {args.channel!r}: " + ", ".join(channels), file=sys.stderr)
         return 2
 
     project = load_project(args.project)
@@ -1017,7 +1019,7 @@ def _notify(args: argparse.Namespace) -> int:
         return 0
 
     try:
-        channel = notifications.TelegramChannel.from_environment()
+        channel = channels[args.channel].from_environment()
     except notifications.ChannelNotConfigured as exc:
         print(str(exc), file=sys.stderr)
         return 2
@@ -1552,8 +1554,8 @@ def build_parser() -> argparse.ArgumentParser:
     notify_cmd.add_argument("project", help="path to a project directory")
     notify_cmd.add_argument("--store", default="store", help="where generated data lives")
     notify_cmd.add_argument("--channel", default=None, metavar="NAME",
-                            help="send through this channel (telegram); omit to record the "
-                                 "outbox only")
+                            help="send through this channel (telegram, email); omit to record "
+                                 "the outbox only")
     notify_cmd.add_argument("--dry-run", action="store_true",
                             help="print the events and write nothing")
     notify_cmd.add_argument("--limit", type=int, default=20,

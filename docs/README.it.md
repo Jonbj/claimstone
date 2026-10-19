@@ -68,7 +68,7 @@ diversi campi esistono per prevenire un difetto preciso e sembrano opzionali fin
 | [`contracts/intake.md`](contracts/intake.md) | materiale che un operatore propone, prima di ogni amissione |
 | [`contracts/journey.md`](contracts/journey.md) | la pagina di ricerca guidata che il server calcola per il portale |
 | [`contracts/new_project.md`](contracts/new_project.md) | bozze e percorsi della procedura guidata per nuovi progetti |
-| [`contracts/notifications.md`](contracts/notifications.md) | l'outbox degli eventi che richiedono una persona, e il canale Telegram (D153) |
+| [`contracts/notifications.md`](contracts/notifications.md) | l'outbox degli eventi che richiedono una persona, e i canali Telegram ed e-mail (D153, D154) |
 
 ## Materiale rimosso
 

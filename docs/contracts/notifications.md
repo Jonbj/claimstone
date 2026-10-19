@@ -1,7 +1,7 @@
 # Notifications — the outbox of events that need a person
 
-Status: built 2026-10-18 (issue #5). Design: **D153**. Code:
-`claimstone/notifications.py` (the ledger and the channel), `claimstone/notify.py` (the
+Status: built 2026-10-18 (outbox and Telegram: issue #5, D153; e-mail: issue #6, D154). Code:
+`claimstone/notifications.py` (the ledger and both channels), `claimstone/notify.py` (the
 derivation from the other ledgers), `claimstone/cli.py` (`notify`).
 
 The outbox is information only. It never authorizes, signs, retries or changes anything; a
@@ -97,7 +97,7 @@ and redacted by the channel of any credential it handles.
 `pending()` considers an event on a channel until a `SENT` attempt exists. A failed attempt is
 retried only after 15 minutes; an event has at most 3 attempts per channel, after which it stays
 in the ledger with its failures and is no longer pending. A different channel does not consume
-it: issue #6 will add e-mail on this same outbox.
+it: an event sent by Telegram still waits for e-mail, and the reverse.
 
 `deliver()` sends at most `--limit` messages per drain (default 20). That is the per-channel
 rate limit: a hundred events do not become a hundred messages in one burst, and the rest remain
@@ -133,12 +133,43 @@ open the portal: http://127.0.0.1:8788/
 
 Ids, a count and a way in. No claim text, quote, title or source content.
 
+## E-mail
+
+The switch is the presence of `CLAIMSTONE_SMTP_HOST`, `CLAIMSTONE_SMTP_FROM` and
+`CLAIMSTONE_SMTP_TO`, in the same environment file outside this public repository:
+
+| variable | meaning |
+|---|---|
+| `CLAIMSTONE_SMTP_HOST` | the submission server |
+| `CLAIMSTONE_SMTP_FROM` | the envelope sender |
+| `CLAIMSTONE_SMTP_TO` | **one** recipient; a list is a later decision and is refused |
+| `CLAIMSTONE_SMTP_PORT` | optional; 587 for `starttls`, 465 for `tls` |
+| `CLAIMSTONE_SMTP_SECURITY` | `starttls` (default) or `tls`; `none` is refused |
+| `CLAIMSTONE_SMTP_USERNAME` / `CLAIMSTONE_SMTP_PASSWORD` | optional, and only as a pair |
+
+TLS is mandatory: `starttls` negotiates it before `AUTH`, `tls` wraps the connection from the
+first byte, and both verify the certificate and the hostname with
+`ssl.create_default_context()`. The constructor has a plaintext mode for tests against a local
+stub; `from_environment` cannot select it.
+
+The message is plain text, with a plain-text-only body, no HTML alternative, no remote content
+and no tracking pixel. The subject is the reason phrase and the project; the body is the same
+ids, count and portal link as Telegram. `X-Mailer` names Claimstone and the contact from
+`CLAIMSTONE_CONTACT_EMAIL` when set.
+
+Every SMTP failure is an attempt with its class: `AUTH_<code>`, `RECIPIENTS_REFUSED`,
+`SMTP_<code>`, `SMTP_ERROR`, `TLS_ERROR`, `DISCONNECTED`, `CONNECTION`, `TIMEOUT`. The
+password, username, host, sender and recipient are replaced with `<redacted>` in `detail`, and
+none of them is ever written to the ledger or the message. Deliverability (SPF, DKIM, DMARC) is
+the sender account's concern and out of scope for this version.
+
 ## Running
 
 ```
 claimstone notify projects/<name> --store store                 # record the outbox only
 claimstone notify projects/<name> --store store --dry-run       # print; write nothing
 claimstone notify projects/<name> --store store --channel telegram
+claimstone notify projects/<name> --store store --channel email
 ```
 
 A dry run writes neither a `started` row nor an event, so it cannot leave a trace that later
@@ -146,11 +177,13 @@ looks like a sent message. It does not start the outbox: the next real run sets 
 
 ## Not built
 
-- No digest mode. The issue left the default open; immediate, one message per event, is the
-  conservative choice, and the rate limit bounds a burst. A digest would be a new decision.
-- No per-event opt-out in the portal, and no recipient other than the one chat id.
+- No digest mode. The issues left the default open; immediate, one message per event, is the
+  conservative choice, and the rate limit bounds a burst. A digest is a different delivery
+  shape — one message for N events — and would be a new decision, because the outbox records
+  one attempt per event.
+- No per-event opt-out in the portal; one chat id for Telegram and one address for e-mail.
 - Notifications for authorization windows in `network_schedules.jsonl`, `copy_policies.jsonl`
   and `local_mandates.jsonl`, and for model-call batches, are not derived yet. The reasons
   exist for the operation plans; these four ledgers have their own `planned` states and need
   their own occurrence identity.
-- No e-mail. That is issue #6, on the same outbox.
+- No reply handling, no confirmation link and no control surface in either channel.

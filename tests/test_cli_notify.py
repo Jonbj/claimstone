@@ -101,7 +101,41 @@ def test_an_unknown_channel_is_a_usage_error(tmp_path, capsys):
     project, _store = _project(tmp_path)
     assert cli.main(["notify", str(project.root), "--store", str(tmp_path),
                      "--channel", "carrier-pigeon"]) == 2
-    assert "telegram" in capsys.readouterr().err
+    error = capsys.readouterr().err
+    assert "telegram" in error and "email" in error
+
+
+def test_the_email_switch_refuses_to_run_without_credentials(tmp_path, capsys, monkeypatch):
+    project, store = _project(tmp_path)
+    _planned(store)
+    for name in ("CLAIMSTONE_SMTP_HOST", "CLAIMSTONE_SMTP_FROM", "CLAIMSTONE_SMTP_TO"):
+        monkeypatch.delenv(name, raising=False)
+    status = cli.main(["notify", str(project.root), "--store", str(tmp_path),
+                       "--channel", "email"])
+    assert status == 2
+    assert "CLAIMSTONE_SMTP" in capsys.readouterr().err
+
+
+def test_a_drain_through_email_records_a_sent_attempt(tmp_path, capsys, monkeypatch):
+    project, store = _project(tmp_path)
+    _planned(store)
+
+    class Channel:
+        name = "email"
+
+        def send(self, event):
+            return notifications.SendResult("SENT")
+
+    monkeypatch.setattr(notifications.EmailChannel, "from_environment",
+                        classmethod(lambda cls: Channel()))
+    status = cli.main(["notify", str(project.root), "--store", str(tmp_path),
+                       "--channel", "email"])
+    assert status == 0
+    assert "1 sent" in capsys.readouterr().out
+    attempts = [row for row in store.read(notifications.LEDGER)
+                if row["record"] == "attempt"]
+    assert len(attempts) == 1
+    assert attempts[0]["channel"] == "email" and attempts[0]["outcome"] == "SENT"
 
 
 def test_an_invalid_since_is_a_usage_error(tmp_path, capsys):

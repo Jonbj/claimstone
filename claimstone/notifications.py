@@ -18,14 +18,18 @@ a missing message; a failure is never dropped to make a drain look clean.
 from __future__ import annotations
 
 import datetime as _dt
+import email.utils
 import hashlib
 import json
 import os
 import re
+import smtplib
+import ssl
 import urllib.error
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass
+from email.message import EmailMessage
 from typing import Any
 
 from .store import Store
@@ -318,7 +322,7 @@ _OPENER = urllib.request.build_opener(_NoRedirect)
 
 
 def _user_agent() -> str:
-    contact = (os.environ.get("CLAIMSTONE_CONTACT_EMAIL") or "").strip()
+    contact = _clean(os.environ.get("CLAIMSTONE_CONTACT_EMAIL") or "", limit=120)
     suffix = f"; contact: {contact}" if contact else ""
     return f"Claimstone/0.1 (notifications; +https://github.com/Jonbj/claimstone{suffix})"
 
@@ -418,25 +422,193 @@ class TelegramChannel:
         return SendResult("FAILED", status, "TELEGRAM_REFUSED", description)
 
 
+class EmailChannel:
+    """One recipient over SMTP, TLS required. Information only: it never reads a mailbox.
+
+    `security="none"` exists for tests against a local stub and is refused by
+    `from_environment`; a run configured through the environment cannot select it.
+    """
+
+    name = "email"
+    DEFAULT_PORTS = {"starttls": 587, "tls": 465, "none": 25}
+    DEFAULT_PORTAL_URL = TelegramChannel.DEFAULT_PORTAL_URL
+    SECURITY_MODES = frozenset(DEFAULT_PORTS)
+
+    def __init__(self, host: str, sender: str, recipient: str, *, port: int | None = None,
+                 security: str = "starttls", username: str | None = None,
+                 password: str | None = None,
+                 portal_url: str = DEFAULT_PORTAL_URL,
+                 timeout: float = 10.0) -> None:
+        for label, value in (("host", host), ("sender", sender),
+                             ("recipient", recipient)):
+            if not value or "\n" in value or "\r" in value:
+                raise ValueError(f"the SMTP {label} is missing or not one line")
+        if security not in self.SECURITY_MODES:
+            raise ValueError(f"unknown SMTP security: {security!r}")
+        if (username is None) != (password is None):
+            raise ValueError("an SMTP username and password come together or not at all")
+        if port is not None and not 0 < port < 65536:
+            raise ValueError(f"not a TCP port: {port!r}")
+        self.host = host
+        self.sender = sender
+        self.recipient = recipient
+        self.port = port or self.DEFAULT_PORTS[security]
+        self.security = security
+        self.username = username
+        self.password = password
+        self.portal_url = portal_url
+        self.timeout = timeout
+
+    @classmethod
+    def from_environment(cls) -> "EmailChannel":
+        names = ("CLAIMSTONE_SMTP_HOST", "CLAIMSTONE_SMTP_FROM", "CLAIMSTONE_SMTP_TO")
+        values = {name: (os.environ.get(name) or "").strip() for name in names}
+        missing = [name for name in names if not values[name]]
+        if missing:
+            raise ChannelNotConfigured(
+                "E-mail is off: set "
+                + " and ".join(missing)
+                + " in the environment file outside this repository")
+        security = (os.environ.get("CLAIMSTONE_SMTP_SECURITY") or "starttls").strip().lower()
+        if security not in ("starttls", "tls"):
+            raise ChannelNotConfigured(
+                "CLAIMSTONE_SMTP_SECURITY must be starttls or tls: "
+                "plaintext SMTP is not an option")
+        port_text = (os.environ.get("CLAIMSTONE_SMTP_PORT") or "").strip()
+        port = None
+        if port_text:
+            try:
+                port = int(port_text)
+            except ValueError as exc:
+                raise ChannelNotConfigured(
+                    "CLAIMSTONE_SMTP_PORT must be a number") from exc
+            if not 0 < port < 65536:
+                raise ChannelNotConfigured("CLAIMSTONE_SMTP_PORT must be a TCP port")
+        if len(email.utils.getaddresses([values["CLAIMSTONE_SMTP_TO"]])) != 1:
+            raise ChannelNotConfigured(
+                "CLAIMSTONE_SMTP_TO must be one address in this version; "
+                "a recipient list is a later decision")
+        username = (os.environ.get("CLAIMSTONE_SMTP_USERNAME") or "").strip() or None
+        password = os.environ.get("CLAIMSTONE_SMTP_PASSWORD") or None
+        if (username is None) != (password is None):
+            raise ChannelNotConfigured(
+                "SMTP authentication needs both CLAIMSTONE_SMTP_USERNAME and "
+                "CLAIMSTONE_SMTP_PASSWORD, or neither")
+        portal_url = (os.environ.get("CLAIMSTONE_PORTAL_URL") or "").strip() \
+            or cls.DEFAULT_PORTAL_URL
+        return cls(values["CLAIMSTONE_SMTP_HOST"], values["CLAIMSTONE_SMTP_FROM"],
+                   values["CLAIMSTONE_SMTP_TO"], port=port, security=security,
+                   username=username, password=password, portal_url=portal_url)
+
+    def _redact(self, text: Any) -> str:
+        """Nothing that identifies the server, the account or the recipient survives."""
+        if isinstance(text, (bytes, bytearray)):
+            cleaned = bytes(text).decode("utf-8", "replace")
+        else:
+            cleaned = "" if text is None else str(text)
+        secrets = [self.password, self.username, self.recipient, self.sender, self.host]
+        secrets.extend(address for _, address in
+                       email.utils.getaddresses([self.recipient, self.sender]))
+        for secret in secrets:
+            if secret:
+                cleaned = cleaned.replace(secret, "<redacted>")
+        return cleaned
+
+    def compose(self, event: dict[str, Any]):
+        """A plain-text message: ids, a count and the portal link. No HTML, no remote content."""
+        mail = EmailMessage()
+        mail["Subject"] = subject(event)
+        mail["From"] = self.sender
+        mail["To"] = self.recipient
+        mail["Date"] = email.utils.formatdate(localtime=False)
+        mail["Message-ID"] = email.utils.make_msgid()
+        mail["X-Mailer"] = _user_agent()
+        mail.set_content(message(event, portal_url=self.portal_url) + "\n")
+        return mail
+
+    def _connect(self):
+        if self.security == "tls":
+            return smtplib.SMTP_SSL(self.host, self.port, timeout=self.timeout,
+                                    context=ssl.create_default_context())
+        server = smtplib.SMTP(self.host, self.port, timeout=self.timeout)
+        if self.security == "starttls":
+            server.ehlo()
+            server.starttls(context=ssl.create_default_context())
+            server.ehlo()
+        return server
+
+    def send(self, event: dict[str, Any]) -> SendResult:
+        mail = self.compose(event)
+        server = None
+        try:
+            server = self._connect()
+            if self.username is not None:
+                server.login(self.username, self.password)
+            server.send_message(mail)
+            return SendResult("SENT")
+        except TimeoutError as exc:
+            return SendResult("TIMEOUT", None, "TIMEOUT",
+                              self._redact(exc) or "timed out")
+        except ssl.SSLError as exc:
+            return SendResult("CONNECTION", None, "TLS_ERROR", self._redact(exc))
+        except smtplib.SMTPAuthenticationError as exc:
+            return SendResult("FAILED", exc.smtp_code, f"AUTH_{exc.smtp_code}",
+                              self._redact(exc.smtp_error))
+        except smtplib.SMTPRecipientsRefused as exc:
+            return SendResult("FAILED", None, "RECIPIENTS_REFUSED",
+                              "every recipient was refused")
+        except smtplib.SMTPSenderRefused as exc:
+            return SendResult("FAILED", exc.smtp_code, f"SMTP_{exc.smtp_code}",
+                              self._redact(exc.smtp_error))
+        except smtplib.SMTPServerDisconnected as exc:
+            return SendResult("CONNECTION", None, "DISCONNECTED", self._redact(exc))
+        except smtplib.SMTPResponseException as exc:
+            return SendResult("FAILED", exc.smtp_code, f"SMTP_{exc.smtp_code}",
+                              self._redact(exc.smtp_error))
+        except smtplib.SMTPException as exc:
+            return SendResult("FAILED", None, "SMTP_ERROR", self._redact(exc))
+        except OSError as exc:
+            return SendResult("CONNECTION", None, "CONNECTION", self._redact(exc))
+        finally:
+            if server is not None:
+                try:
+                    server.close()
+                except (OSError, smtplib.SMTPException):
+                    # The send outcome is already recorded; closing the socket cannot change
+                    # it. This is cleanup, not a fetch: there is nothing left to report.
+                    pass
+
+
+_PHRASES = {
+    "signature_required": "signature required on {count} question(s)",
+    "plan_awaiting_authorization": "{count} plan(s) awaiting authorization",
+    "integrity_error": "{count} integrity error(s)",
+    "copy_obtained_after_retry": "{count} copy/copies obtained after a retry",
+    "candidate_given_up": "{count} candidate(s) given up",
+    "retry_ceiling_used": "retry ceiling reached on {count} item(s)",
+    "retry_window_expired": "retry window expired on {count} item(s)",
+    "host_breaker_open": "host breaker opened for {count} host(s)",
+    "batch_completed": "batch completed ({count} unit(s))",
+    "round_below_floor": "round below the acquisition floor: {count} admission(s)",
+    "operation_failed": "{count} operation(s) failed",
+}
+
+
+def _phrase(event: dict[str, Any]) -> str:
+    return _PHRASES[event["reason"]].format(count=event["count"])
+
+
+def subject(event: dict[str, Any]) -> str:
+    """The one-line subject: what needs attention, how many, where. Nothing else."""
+    return f"claimstone · {event['project']} · {_phrase(event)}"
+
+
 def message(event: dict[str, Any], *, portal_url: str = "http://127.0.0.1:8788") -> str:
     """The text of one message: ids, a count and a way in. Nothing else."""
-    phrases = {
-        "signature_required": "signature required on {count} question(s)",
-        "plan_awaiting_authorization": "{count} plan(s) awaiting authorization",
-        "integrity_error": "{count} integrity error(s)",
-        "copy_obtained_after_retry": "{count} copy/copies obtained after a retry",
-        "candidate_given_up": "{count} candidate(s) given up",
-        "retry_ceiling_used": "retry ceiling reached on {count} item(s)",
-        "retry_window_expired": "retry window expired on {count} item(s)",
-        "host_breaker_open": "host breaker opened for {count} host(s)",
-        "batch_completed": "batch completed ({count} unit(s))",
-        "round_below_floor": "round below the acquisition floor: {count} admission(s)",
-        "operation_failed": "{count} operation(s) failed",
-    }
     shown = ", ".join(event["ids"][:IDS_SHOWN])
     if len(event["ids"]) > IDS_SHOWN:
         shown += f", +{len(event['ids']) - IDS_SHOWN} more"
     code = f" ({event['code']})" if event.get("code") else ""
     return (f"claimstone · {event['project']}\n"
-            f"{phrases[event['reason']].format(count=event['count'])}{code}: {shown}\n"
+            f"{_phrase(event)}{code}: {shown}\n"
             f"open the portal: {portal_url.rstrip('/')}/")
