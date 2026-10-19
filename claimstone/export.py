@@ -28,11 +28,11 @@ import tempfile
 from typing import Any
 
 from claimstone import (admissibility, chunk_sets, claim_records, drafts, flows, portal_state, review,
-                        scope, synthesize)
+                        scope, search_appendix, synthesize)
 from claimstone.config import Project, discover_projects, load_project
 from claimstone.store import Store
 
-EXPORT_VERSION = 2
+EXPORT_VERSION = 3
 
 EXPORTS_LEDGER = "exports.jsonl"
 
@@ -111,6 +111,8 @@ def _compute_outputs(project: Project, store: Store, selector: scope.Selector,
     admitted = admissibility.admit(project, store, round_name=selector.round,
                                    manifest_only=selector.manifest_only)
     outputs["floor.json"] = _dump(admitted)
+    outputs[search_appendix.OUTPUT] = search_appendix.render(
+        project, store, selector, admitted=admitted)
 
     matrix = portal_state.question_matrix(project, store, selector)["rows"]
     outputs["questions.csv"] = _csv(

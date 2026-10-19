@@ -49,7 +49,7 @@ the store was ever in. A shared writer lock (review F5, phase P3) is what would 
 
 | file | content |
 |---|---|
-| `manifest.json` | `export_version` (1), the flow's created row, `binding_state`, `selector`, `prefixes`, `torn_tails`, `code_revision`, `code_dirty`, `instrument_versions` (as the portal's admin page lists them), `protocol_sha256`, `registry_sha256`, `created_at`, `created_by` |
+| `manifest.json` | `export_version` (3), the flow's created row, `binding_state`, `selector`, `prefixes`, `torn_tails`, `code_revision`, `code_dirty`, `instrument_versions` (as the portal's admin page lists them), `protocol_sha256`, `registry_sha256`, `created_at`, `created_by` |
 | `profiles.json` | `synthesize.verdicts(...)` for the selector, `sort_keys=True, indent=1, default=str` |
 | `floor.json` | `admissibility.admit(...)` for the selector |
 | `questions.csv` | the portal's question matrix rows, one per registry question |
@@ -57,6 +57,7 @@ the store was ever in. A shared writer lock (review F5, phase P3) is what would 
 | `rejections.csv` | scoped current rejections: `claim_id`, `source_id`, `failure`, `detail` |
 | `acquisition.csv` | one row per scoped candidate: key, `source_id`, class, counted acquired, `failure_class` (raw stored code), `failure_display` (F19 display text), `provenance`, `licence` |
 | `report.md` | binding state, floor panel text and deficit sentences, the question matrix as a table, and the fixed disclosures: no verdict unless signed, `NO_VERIFIED_CLAIM` ≠ `NEVER_ASKED`, the F1 project-wide-reads disclosure, and "no controlled family-wise error rate across N questions" |
+| `search_appendix.md` | the search appendix (D150): exact query per provider and topic, cap, pages requested against the page budget, returned records, provider count, stop reason, outcome, completion time, instrument versions, payload `sha256` per stored discovery response, failed queries and pages, the queries whose page omitted further provider hits, and per-stage row counts with the floor |
 
 CSV rules: the `csv` module, `lineterminator="\n"`, UTF-8, rows sorted by the first column then
 the second. No raw bytes, no PDFs, no receipts, nothing from `audits/` ever enters an export.
@@ -94,8 +95,28 @@ copy is listed in `manifest.copies.excluded` with its reason:
   non-commercial is not something this code can know.
 
 The option enters the export identity **only when set**: every export made without it keeps the id
-it always had, and `export_version` stays 1. `verify` checks each included copy against its recorded
-hash (`COPY_DIFFERS`). No filesystem path appears in the manifest's `copies` section.
+it would otherwise have, and `export_version` is unchanged by the option. `verify` checks each
+included copy against its recorded hash (`COPY_DIFFERS`). No filesystem path appears in the
+manifest's `copies` section.
+
+## The search appendix (D150)
+
+`search_appendix.md` is derived from the frozen prefix alone. Queries are the latest outcome per
+`query_id`, filtered as `admissibility.rate` filters them: the flow's round, or every round for the
+whole-store selector; a manifest-only flow claims no query because its population is independently
+declared. Payload hashes are the `raw_sha256` of `purpose: discovery` response rows matched on
+`round`, `source_api`, `topic_id` and `query`, in request order and deduplicated by digest. The
+stage table uses the shared scoped readers (`scope`, `claim_records`, `chunk_sets`, `review`) and
+says in the file that these are row counts, not a synthesis or a vote.
+
+The appendix does not estimate completeness: `returned` is what a page or bounded page run gave,
+and every query with `depth_capped: true` is named as one whose page omitted works the provider
+reports. A failed query is listed as a failure, never as an empty search. No raw bytes and no
+filesystem paths appear in it.
+
+`EXPORT_VERSION` 3 introduced the file. An export made under version 2 has no such output and does
+not verify under this code; its recorded prefixes remain intact, and re-exporting the flow creates
+a new identity.
 
 An export requested through the control server carries `actor` (the operator id) in its manifest and
 in its `exports.jsonl` row. `created_by` keeps its meaning: the OS user of the process.

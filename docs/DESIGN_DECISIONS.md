@@ -5494,3 +5494,33 @@ behaviour.
 **Instruments touched.** The read API's `api_version` stays 1; the error vocabulary gains `UNAUTHORIZED` and
 `SESSION_AUTHORITY_UNAVAILABLE`. `fetch_version`, `discovery_version` and every ledger row are untouched — no ledger is written
 by this change.
+
+
+## D150 — Every export carries a search appendix of what was searched and what was not (2026-10-18)
+
+Issue #11: search provenance was recorded but scattered across `queries.jsonl`, `requests.jsonl`,
+candidate and acquisition rows, so a reader could not see the strategy without reading ledgers. Export
+now derives `search_appendix.md` from the frozen prefix, beside `report.md`, and `export-verify`
+recomputes it byte for byte like every other output.
+
+**What it contains.** The exact query string per provider and topic, its cap (`per_query`), pages
+requested against the page budget (`page_budget`, `pages_requested`), records returned, the provider's
+own `meta.count`, the stop reason, outcome, completion time and `discovery_version`; the `fetch_version`
+and payload `sha256` of each stored discovery response, matched by the query context (`round`,
+`source_api`, `topic_id`, `query`); failed queries and failed pages with their class and detail; and the
+row counts of each stage from the same scoped readers every other figure uses. A provider with no
+recorded query is not invented, and acquisition responses are never listed as search payloads.
+
+**What it refuses to say.** It is not a completeness estimate (D10): `returned` is what one page or a
+bounded page run gave, and a query with `depth_capped` is named as one whose page omits works the
+provider says exist. It is not a synthesis and not a vote count (invariant 7); the stage table is labelled
+row counts. A failed query is listed as a failure, never as an empty search.
+
+**Scope.** Queries are the latest outcome per `query_id`, filtered exactly as `admissibility.rate`
+filters them: round-scoped, or every round for the whole-store selector. A manifest-only flow claims no
+query, because its population is independently declared (`requests.md`). The appendix reads only rows the
+export already freezes; it adds no ledger and never includes raw bytes.
+
+**Instrument.** `EXPORT_VERSION` is 3, because the derived output set changed: an export made under
+version 2 has no `search_appendix.md` and does not verify under this code, while its recorded prefixes
+remain intact and a fresh export is a new identity. No other instrument constant changes.
