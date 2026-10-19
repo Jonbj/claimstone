@@ -108,6 +108,19 @@ def test_the_portal_api_is_read_only_isolated_and_secret_free():
         assert api["environment"][name] == "${%s:+present}" % name, name
 
 
+def test_the_deployed_read_api_is_gated_by_the_control_server():
+    """D152: the compose `api` is reachable by every container on `portal_internal`, so it
+    gates its own reads. It names `control` rather than `--open-reads`, which is
+    loopback-only and must never appear in a container composition."""
+    import yaml
+
+    api = yaml.safe_load(COMPOSE.read_text(encoding="utf-8"))["services"]["api"]
+    command = [str(part) for part in api["command"]]
+    authority = command.index("--session-authority")
+    assert command[authority + 1] == "http://control:8790"
+    assert "--open-reads" not in command
+
+
 def test_the_store_is_never_copied_into_the_image():
     """It holds the fetched bytes of copyrighted papers, which is why it is gitignored."""
     ignore = pathlib.Path(".dockerignore").read_text(encoding="utf-8")

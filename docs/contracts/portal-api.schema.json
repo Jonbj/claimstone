@@ -89,6 +89,8 @@
         "LEDGER_CORRUPT",
         "MISDIRECTED",
         "CROSS_ORIGIN",
+        "UNAUTHORIZED",
+        "SESSION_AUTHORITY_UNAVAILABLE",
         "INTERNAL"
        ],
        "type": "string"

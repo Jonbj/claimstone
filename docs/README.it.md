@@ -14,7 +14,7 @@ Quale file risponde a quale domanda. *In English: [README.md](README.md).*
 | adattare il frontend allo scheduler | [`design/portal/SCHEDULER_FRONTEND_HANDOFF.md`](design/portal/SCHEDULER_FRONTEND_HANDOFF.md) *(inglese)* — stati dell'interfaccia, API disponibili, controlli mancanti e walkthrough di accettazione |
 | servire il portale di sola lettura su tutti i progetti | `claimstone portal` — il successore multi-progetto della dashboard (D82); sola lettura, solo GET, loopback per impostazione predefinita |
 | eseguire il portale nei container (frontend React + API in sola lettura) | `./portal.sh` (`./portal.sh down` per fermarlo) — D84; contratto API [`contracts/portal-api.schema.json`](contracts/portal-api.schema.json) *(inglese)* |
-| sviluppare il frontend | `.venv/bin/claimstone api` e `cd web && npm run dev` (http://localhost:5173); controlli: `npm run typecheck && npm test && npm run build` |
+| sviluppare il frontend | `.venv/bin/claimstone control --allow-host localhost:5173` e `.venv/bin/claimstone api --session-authority http://127.0.0.1:8790` (due terminali; D152), poi `cd web && npm run dev` (http://localhost:5173); controlli: `npm run typecheck && npm test && npm run build` |
 | lavorare sul codice come agente | [`../CLAUDE.md`](../CLAUDE.md), poi [`../AGENTS.md`](../AGENTS.md) *(inglese)* |
 | discutere una scelta architetturale | [`DESIGN_DECISIONS.md`](DESIGN_DECISIONS.md) *(inglese)* — prima trova la voce |
 | scrivere su un registro, o leggerne uno | [`contracts/`](contracts/) *(inglese)* — un file per registro |

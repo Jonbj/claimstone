@@ -16,12 +16,37 @@ document adds a route to `api.py` or `transport.BaseHandler`. The control server
 | prefix | `/api/v1` | `/control/v1` |
 | verbs | GET | GET (authenticated reads) and POST |
 | store mount | `:ro` | read-write |
-| identity | none | operator session |
-| network egress | none | only the explicit admin checks (B11) and the operator URL fetch of intake (B7a) |
+| identity | operator session, validated by this server (D152); `--open-reads` only for a loopback single-user server | operator session |
+| network egress | only the session probe to `control` | only the explicit admin checks (B11) and the operator URL fetch of intake (B7a) |
 
 `claimstone control [--projects DIR] [--store DIR] [--bind 127.0.0.1] [--port 8790]
 [--allow-host H]` refuses a non-loopback bind unless `--allow-host` names the proxy
 authority, as `api` does.
+
+## The read API's gate (D152, issue #7)
+
+`claimstone api --session-authority URL` requires a valid session on every route in
+`api_schema.ROUTES` except `GET /api/v1/meta`, the compose healthcheck's probe. The read
+server holds no sessions: it sends the one `claimstone_control` cookie it received to
+`GET {URL}/control/v1/session` and accepts a 200. The probe carries no other cookie, is
+given an explicit timeout and does not follow redirects. Its answer is:
+
+| answer | read API |
+|---|---|
+| 200 | the read is computed |
+| 401 | `401 UNAUTHORIZED`, the §3.3 envelope |
+| 500, 3xx, time-out, unreachable | `503 SESSION_AUTHORITY_UNAVAILABLE` — an outage is not a refusal |
+
+The gate runs after the Host and Origin defences and before routing: a stranger's request
+for an unknown path is 401, not a 404 that maps the API. A request with no cookie is 401
+without asking the authority. Authentication only: any operator who can sign in may read
+every project; per-project grants are not part of this contract.
+
+Exactly one mode is required. `--open-reads` serves every read without a session, is off by
+default, refuses a non-loopback bind, and prints a loud start-up warning. The compose `api`
+service passes `--session-authority http://control:8790`; `/api/v1/meta` stays anonymous so
+its healthcheck (`200`) does not depend on `control` being up. Exports and downloads are
+`control` routes and already require a session; the read API only lists export metadata.
 
 ## What the control server never does
 

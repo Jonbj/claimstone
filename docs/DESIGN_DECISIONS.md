@@ -5450,3 +5450,47 @@ with new candidates, duplicates and failures against the original denominator �
 operator's approval of the exact plan, and it belongs with #14. Metadata access is not a full-text grant.
 
 First run on any project needs that approval (hosts `eutils.ncbi.nlm.nih.gov`, a per-unit ceiling of 2, USD 0).
+
+
+## D152 — The read API asks the control server whether a cookie is a session (2026-10-18)
+
+D137 moved the sign-in redirect into the portal front end. That is a UI convenience, not a boundary: anyone who could reach the
+port could ask `/api/v1` directly for projects, flows, claims, quotes and the administration summary. The default was deliberate
+("reading needs no session; signing, deciding and exporting do"), reasonable for one person on loopback and wrong for a shared
+host. Issue #7 makes the session a server-side fact.
+
+**The authority is the control server, not a second session store.** Sessions live in `control`'s memory only, by B4: no token
+touches a disk, a restart ends them, and every request re-checks the operator ledger so a disable or password change made by any
+process ends the session on its next use. The read API is a separate process and must not grow a second verifier: a shared signed
+token would need a key on disk or in both containers, and two verifiers can disagree about expiry, revocation and the credential
+stamp. So `api` forwards the one cookie — `claimstone_control`, and nothing else from the header — to
+`GET /control/v1/session` and believes a 200. The probe does not follow redirects: a 3xx would carry the cookie to whatever host
+it named. There is no cache: one cheap internal GET per read is the price of a session ending when the control server says it
+ended, and a cache would extend a revoked session's life by its TTL.
+
+**A refusal and an outage are different states.** The authority's 401 is `401 UNAUTHORIZED`. A 500, a time-out or no server at
+all is `503 SESSION_AUTHORITY_UNAVAILABLE`, because a server that could not check is not a server that can say "nobody is signed
+in". The gate runs after the Host/Origin defences and before routing, so a stranger gets 401 for an unknown path too, never a 404
+that maps the API.
+
+**Deny by default, with one named exception.** `ANONYMOUS_READS` is exactly `GET /api/v1/meta`: the compose healthcheck's probe,
+carrying the code revision and instrument versions, never a project. A route added to the read API is gated the moment it exists;
+the anonymous sweep in `tests/test_api_session_gate.py` enumerates `api_schema.ROUTES`, the registry the contract already walks, so
+a route that reaches the contract without a classification cannot be served to a stranger. The sweep also drives a real control
+server, not only a stub, so the two processes' agreement is tested rather than assumed.
+
+**The local single-user opt-out is explicit.** `--open-reads` is off by default, refuses a non-loopback bind, and prints a loud
+start-up warning; one of `--open-reads` or `--session-authority URL` is required, and both together is an error. The compose `api`
+service passes `--session-authority http://control:8790`, on the internal network it already shares. The alternative — leaving
+reads open and gating only at nginx — would leave every other container on that network, and any future caller, ungated.
+
+**What this is not.** Authentication only: an operator who can sign in can read every project. Per-project grants are a separate
+question and matter before a multi-tenant service; roles remain what they were. Exports and downloads are unchanged: their bytes
+are served by `control`, which already requires a session, and the read API only lists export metadata. The `--allow-host` and
+Origin defences are unchanged and still run first. `claimstone portal` — the older single-process HTML server — is not part of the
+compose path and keeps its loopback default and §10 warning; a deployment that exposes it on a wider bind still has the pre-D152
+behaviour.
+
+**Instruments touched.** The read API's `api_version` stays 1; the error vocabulary gains `UNAUTHORIZED` and
+`SESSION_AUTHORITY_UNAVAILABLE`. `fetch_version`, `discovery_version` and every ledger row are untouched — no ledger is written
+by this change.
