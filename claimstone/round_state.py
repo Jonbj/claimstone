@@ -462,7 +462,8 @@ def _question_spine(project: Project, claims: dict[str, dict[str, Any]],
             provisional=bool(profile.get("provisional")),
             blocking=tuple(profile.get("blocking") or ()),
             # The engine's own categorical outcome, never silently a human verdict: NO_VERIFIED_CLAIM
-            # is not NEVER_ASKED, and only screening by a person can say "never asked".
+            # is not NEVER_ASKED. The engine has no screening record that can say "never asked"; only
+            # a person can, on their recorded attestation (D156).
             state=str(profile.get("state")) if profile.get("state") else (
                 evidence.NOT_APPLICABLE if question.kind == "operational" else None),
             profile_sha256=profile.get("profile_sha256"),

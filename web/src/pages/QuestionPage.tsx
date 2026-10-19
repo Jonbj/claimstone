@@ -274,6 +274,9 @@ export default function QuestionPage({ kind }: { kind: "f" | "u" }) {
             <Chip text={data.verdict.verdict} />
             <span>· by {data.verdict.adjudicated_by}</span>
             <span>· {data.verdict.adjudicated_at}</span>
+            {data.verdict.never_asked_basis ? (
+              <span>· basis: the signer&apos;s attestation (no screening record in the engine)</span>
+            ) : null}
             {data.verdict.partial ? <Chip text={`partial · ${(data.verdict.partial_coverage as { confirmed?: number; found?: number } | null)?.confirmed ?? "—"} of ${(data.verdict.partial_coverage as { confirmed?: number; found?: number } | null)?.found ?? "—"} read`} /> : null}
             {data.verdict_stale ? <Chip text="stale" /> : null}
           </p>

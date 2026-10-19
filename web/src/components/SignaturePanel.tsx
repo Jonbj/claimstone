@@ -33,7 +33,7 @@ const DEFINITIONS: Record<Verdict, { name: string; means: string }> = {
   },
   NEVER_ASKED: {
     name: "Never asked",
-    means: "nobody asked, established by screening rather than inferred from silence",
+    means: "you attest that nobody asked; the engine holds no screening record that can establish it",
   },
 };
 
@@ -73,6 +73,10 @@ export default function SignaturePanel({
   const [verdict, setVerdict] = useState<Verdict | null>(null);
   const [rationale, setRationale] = useState("");
   const [attest, setAttest] = useState(false);
+  // D156: `NEVER_ASKED` asserts that nobody asked, and the engine has no human screening record
+  // that can establish it. That verdict needs a second, explicit attestation and the POST names
+  // the basis; it is not implied by selecting the state.
+  const [neverAskedAttest, setNeverAskedAttest] = useState(false);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<ControlError | Error | null>(null);
   const [staleSeen, setStaleSeen] = useState(false);
@@ -135,13 +139,15 @@ export default function SignaturePanel({
   const changed = shownHash !== latestHash;
   const count = trimmedLength(rationale);
   const blocked = changed || staleSeen || draftChange !== null;
-  const canSign = verdict !== null && count >= MIN_RATIONALE_CHARS && attest && !running && !blocked;
+  const canSign = verdict !== null && count >= MIN_RATIONALE_CHARS && attest
+    && (verdict !== "NEVER_ASKED" || neverAskedAttest) && !running && !blocked;
 
   function adopt() {
     setShownHash(latestHash);
     setDraftChange(null);
     setStaleSeen(false);
     setAttest(false);
+    setNeverAskedAttest(false);
     setError(null);
   }
 
@@ -156,6 +162,9 @@ export default function SignaturePanel({
         rationale,
         profile_sha256: shownHash,
         attest: true,
+        ...(verdict === "NEVER_ASKED"
+          ? { never_asked_basis: "SIGNER_ATTESTATION" as const }
+          : {}),
       });
       setSigned(reply.adjudication);
       onSigned(reply.adjudication);
@@ -255,7 +264,10 @@ export default function SignaturePanel({
               name="verdict"
               value={v}
               checked={verdict === v}
-              onChange={() => setVerdict(v)}
+              onChange={() => {
+                setVerdict(v);
+                if (v !== "NEVER_ASKED") setNeverAskedAttest(false);
+              }}
               className="mt-1"
             />
             <span>
@@ -297,10 +309,29 @@ export default function SignaturePanel({
         </span>
       </label>
 
+      {verdict === "NEVER_ASKED" ? (
+        <label className="flex items-start gap-3 rounded-lg border border-amber-400 bg-amber-50 p-3 text-sm text-amber-950 dark:bg-amber-950/30 dark:text-amber-100">
+          <input
+            type="checkbox"
+            checked={neverAskedAttest}
+            onChange={(e) => setNeverAskedAttest(e.target.checked)}
+            className="mt-1"
+          />
+          <span>
+            I attest that the question was searched for and was never asked. The engine holds no
+            screening record that can establish this, so the verdict records that it rests on my
+            attestation.
+          </span>
+        </label>
+      ) : null}
+
       <ul aria-label="Signing requirements" className="flex flex-col gap-1 rounded-lg bg-muted/40 p-3 text-sm">
         <li>{verdict ? "✓" : "○"} A verdict chosen</li>
         <li>{count >= MIN_RATIONALE_CHARS ? "✓" : "○"} Reasoning of at least {MIN_RATIONALE_CHARS} characters</li>
         <li>{attest ? "✓" : "○"} Your reading attestation</li>
+        {verdict === "NEVER_ASKED" ? (
+          <li>{neverAskedAttest ? "✓" : "○"} Your attestation that the question was never asked</li>
+        ) : null}
         <li>✓ Signed in as {operatorName}</li>
       </ul>
 

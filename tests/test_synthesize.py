@@ -245,6 +245,8 @@ def test_the_cli_verdict_list_matches_the_real_vocabulary():
     from claimstone import cli
 
     assert cli.VERDICT_NAMES == synthesize.VERDICTS
+    # D156: the basis values the CLI offers are the ones the engine can record.
+    assert cli.NEVER_ASKED_BASES == synthesize.NEVER_ASKED_BASES
 
 
 def test_no_model_and_no_network_in_stage_six():

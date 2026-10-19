@@ -171,6 +171,41 @@ def test_a_missing_attestation_key_is_refused_too(workspace):
     assert status == 422 and _rows(ws) == []
 
 
+def test_never_asked_records_the_basis_attested_in_the_portal(workspace):
+    """#13: the portal may not sign `NEVER_ASKED` by implication. The request names the
+    basis, the route refuses one it cannot record, and the row carries it."""
+    ws = workspace
+    with _served(ws) as base:
+        client = _Client(base)
+        status, _h, body = client.post(
+            _q(ws) + "/adjudicate", _signature(ws, verdict="NEVER_ASKED"))
+        assert status == 422 and body["error"]["code"] == "VALIDATION"
+        assert "never_asked_basis" in body["error"]["message"]
+        assert _rows(ws) == []
+        status, _h, body = client.post(
+            _q(ws) + "/adjudicate",
+            _signature(ws, verdict="NEVER_ASKED", never_asked_basis="SCREENING_REFERENCE"))
+        assert status == 422 and body["error"]["code"] == "VALIDATION"
+        assert _rows(ws) == []
+        status, _h, body = client.post(
+            _q(ws) + "/adjudicate",
+            _signature(ws, verdict="NEVER_ASKED", never_asked_basis="SIGNER_ATTESTATION"))
+    assert status == 201, body
+    row = _rows(ws)[-1]
+    assert row["verdict"] == "NEVER_ASKED"
+    assert row["never_asked_basis"] == "SIGNER_ATTESTATION"
+    assert body["adjudication"] == row
+
+
+def test_a_basis_on_another_verdict_is_refused_before_the_engine(workspace):
+    ws = workspace
+    with _served(ws) as base:
+        status, _h, body = _Client(base).post(
+            _q(ws) + "/adjudicate", _signature(ws, never_asked_basis="SIGNER_ATTESTATION"))
+    assert status == 422 and body["error"]["code"] == "VALIDATION"
+    assert _rows(ws) == []
+
+
 def test_unknown_ids_are_404_and_nothing_is_written(workspace):
     ws = workspace
     with _served(ws) as base:

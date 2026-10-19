@@ -2294,6 +2294,12 @@
       "manifest_only": {
        "type": "boolean"
       },
+      "never_asked_basis": {
+       "enum": [
+        "SIGNER_ATTESTATION"
+       ],
+       "type": "string"
+      },
       "partial": {
        "type": "boolean"
       },

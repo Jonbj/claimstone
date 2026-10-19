@@ -175,6 +175,41 @@ describe("F4.3: signature panel", () => {
     expect(posts[1].body.profile_sha256).toBe(HASH_B);
   });
 
+  // D156, issue #13: NEVER_ASKED asserts that nobody asked, which no screening record in the
+  // engine can establish. The signer attests to it explicitly and the POST records the basis.
+  it("NEVER_ASKED requires and posts the basis the signer attests to", async () => {
+    mount();
+    fireEvent.click(screen.getByRole("radio", { name: /Never asked/ }));
+    type(TEXT);
+    // The panel no longer claims screening established it.
+    expect(document.body.textContent).toContain("the engine holds no screening record");
+    expect(document.body.textContent).not.toContain("established by screening");
+    fireEvent.click(screen.getByRole("checkbox", { name: /read the evidence profile/ }));
+    expect(signButton().disabled).toBe(true);
+    fireEvent.click(screen.getByRole("checkbox", { name: /no screening record/i }));
+    expect(signButton().disabled).toBe(false);
+    fireEvent.click(signButton());
+    await waitFor(() => expect(posts.length).toBe(1));
+    expect(posts[0].body).toEqual({
+      verdict: "NEVER_ASKED", rationale: TEXT, profile_sha256: HASH_A, attest: true,
+      never_asked_basis: "SIGNER_ATTESTATION" });
+  });
+
+  it("the basis attestation belongs only to NEVER_ASKED and is dropped when another verdict is chosen", async () => {
+    mount();
+    fireEvent.click(screen.getByRole("radio", { name: /Never asked/ }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /no screening record/i }));
+    expect(screen.getAllByRole("checkbox")).toHaveLength(2);
+    fireEvent.click(screen.getByRole("radio", { name: /Supported/ }));
+    expect(screen.queryByRole("checkbox", { name: /no screening record/i })).toBeNull();
+    expect(screen.getAllByRole("checkbox")).toHaveLength(1);
+    type(TEXT);
+    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(signButton());
+    await waitFor(() => expect(posts.length).toBe(1));
+    expect(posts[0].body).not.toHaveProperty("never_asked_basis");
+  });
+
   it("a hash change under the reader blocks signing without signing anything", () => {
     const view = mount(HASH_A);
     ready();

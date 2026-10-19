@@ -50,8 +50,14 @@ PROFILE_VERSION = 6
 # human-readable name; the class of the signature and the operator id are machine-checkable,
 # and the two travel with the row so the CLI's word about itself can never impersonate a
 # portal session's (D98).
-ADJUDICATION_VERSION = 2
+ADJUDICATION_VERSION = 3
 SIGNER_AUTHS = ("cli-declared", "portal-session")
+
+# `NEVER_ASKED` says nobody asked, and no part of this engine can establish that: the screening
+# ledger is advisory and records AI-provisional observations only, and admission never uses it.
+# The verdict therefore names the basis it rests on. `SIGNER_ATTESTATION` is the only basis that
+# exists today; a screening reference becomes a second value when a human one can be cited (D156).
+NEVER_ASKED_BASES = ("SIGNER_ATTESTATION",)
 
 PROFILES = "profiles.jsonl"
 ADJUDICATIONS = "adjudications.jsonl"
@@ -223,6 +229,7 @@ def adjudicate(
     signer_auth: str,
     actor: str | None,
     profile_sha256: str = "",
+    never_asked_basis: str | None = None,
 ) -> dict[str, Any]:
     """Record one person's judgement about one profile. The only verdict-producing call in the project.
 
@@ -253,6 +260,22 @@ def adjudicate(
     elif not actor:
         raise ValueError(
             "a portal-session signature requires the operator id that held the session")
+    if verdict == "NEVER_ASKED":
+        if never_asked_basis is None:
+            raise ValueError(
+                "a NEVER_ASKED verdict requires never_asked_basis: the engine holds no human "
+                "screening record that can establish that nobody asked, so the row names what "
+                "the signer's assertion rests on")
+        if never_asked_basis not in NEVER_ASKED_BASES:
+            raise ValueError(
+                f"{never_asked_basis!r} is not a basis this engine can record: no human screening "
+                f"reference exists for a question here (the screening ledger is advisory and "
+                f"AI-provisional), so the only basis available is "
+                f"{', '.join(repr(basis) for basis in NEVER_ASKED_BASES)}")
+    elif never_asked_basis is not None:
+        raise ValueError(
+            "never_asked_basis belongs only to NEVER_ASKED: another verdict makes no assertion "
+            "about whether the question was asked")
     with store.writer_lock():
         profiles = latest_profiles(store, round_name=round_name, manifest_only=manifest_only)
         profile = profiles.get(str(question_id))
@@ -307,6 +330,9 @@ def adjudicate(
             "adjudicated_by": by,
             "adjudicated_at": _now(),
         }
+        if never_asked_basis is not None:
+            # Present only on NEVER_ASKED (D156): the assertion's basis travels with the row.
+            row["never_asked_basis"] = never_asked_basis
         if profile.get("partial"):
             # The verdict carries the coverage it was signed on (D146), wherever it is displayed or exported.
             row["partial"] = True

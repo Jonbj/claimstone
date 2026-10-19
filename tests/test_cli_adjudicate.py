@@ -25,7 +25,7 @@ def test_a_cli_signature_declares_itself_and_carries_no_actor(tmp_path):
                      "--store", str(store_dir)])
     assert code == 0
     row = list(store.read(synthesize.ADJUDICATIONS))[-1]
-    assert row["adjudication_version"] == 2
+    assert row["adjudication_version"] == 3
     assert row["signer_auth"] == "cli-declared"
     assert row["actor"] is None
 
@@ -45,3 +45,27 @@ def test_the_cli_refuses_to_sign_a_stale_hash_like_the_engine_does(tmp_path):
                      "--store", str(store_dir)])
     assert code == 2
     assert list(store.read(synthesize.ADJUDICATIONS)) == []
+
+
+def test_never_asked_from_the_cli_names_its_basis(tmp_path):
+    """The terminal cannot assert `NEVER_ASKED` by omission either: the flag is required for
+    that verdict and refused for the other four (D156)."""
+    projects_dir, store_dir, project, store = build_workspace(tmp_path)
+    question = next(q for q in project.questions if q.kind != "operational")
+    stored = synthesize.latest_profiles(store, round_name="r1")[question.id]
+    rationale = tmp_path / "rationale.txt"
+    rationale.write_text(RATIONALE, encoding="utf-8")
+    base = ["adjudicate", str(projects_dir / project.name), question.id,
+            "--round", "r1", "--rationale-file", str(rationale), "--by", "a person",
+            "--profile-sha256", stored["profile_sha256"], "--store", str(store_dir)]
+    assert cli.main([*base, "--verdict", "NEVER_ASKED"]) == 2
+    assert list(store.read(synthesize.ADJUDICATIONS)) == []
+    assert cli.main([*base, "--verdict", "SUPPORTED",
+                     "--never-asked-basis", "SIGNER_ATTESTATION"]) == 2
+    assert list(store.read(synthesize.ADJUDICATIONS)) == []
+    assert cli.main([*base, "--verdict", "NEVER_ASKED",
+                     "--never-asked-basis", "SIGNER_ATTESTATION"]) == 0
+    row = list(store.read(synthesize.ADJUDICATIONS))[-1]
+    assert row["verdict"] == "NEVER_ASKED"
+    assert row["never_asked_basis"] == "SIGNER_ATTESTATION"
+    assert row["adjudication_version"] == 3

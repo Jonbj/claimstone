@@ -130,19 +130,30 @@ describe("F4.2: reading desk", () => {
     expect(screen.getAllByRole("textbox").filter((t) => t.tagName === "INPUT").length).toBe(2);
   });
 
+  it("shows what a NEVER_ASKED verdict rests on, instead of implying screening proved it", async () => {
+    mount({ question: { ...finalQuestion, verdict: {
+      verdict: "NEVER_ASKED", adjudicated_by: "Ada", adjudicated_at: "2026-10-19T00:00:00Z",
+      rationale: "searched and never asked", profile_sha256: HASH,
+      never_asked_basis: "SIGNER_ATTESTATION" } } });
+    const shown = await screen.findByText(/basis: the signer's attestation/);
+    expect(shown.textContent).toContain("no screening record in the engine");
+  });
+
   it("after signing it shows the stored row and stays on the page", async () => {
     mount({});
     await screen.findByRole("form", { name: "Sign the verdict" });
     fireEvent.click(screen.getByRole("radio", { name: /Never asked/ }));
     fireEvent.change(screen.getAllByRole("textbox").find((t) => t.tagName === "TEXTAREA")!,
       { target: { value: "y".repeat(130) } });
-    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(screen.getByRole("checkbox", { name: /read the evidence profile/ }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /never asked/i }));
     fireEvent.click(screen.getByRole("button", { name: "Sign as Ada" }));
     const done = await screen.findByLabelText("Signed verdict");
     expect(done.textContent).toContain("NEVER_ASKED");
     expect(done.textContent).toContain(HASH);
     expect(posts.find((p) => p.url.endsWith("/adjudicate"))!.body).toEqual({
-      verdict: "NEVER_ASKED", rationale: "y".repeat(130), profile_sha256: HASH, attest: true });
+      verdict: "NEVER_ASKED", rationale: "y".repeat(130), profile_sha256: HASH, attest: true,
+      never_asked_basis: "SIGNER_ATTESTATION" });
     expect(screen.getByRole("heading", { level: 1 }).textContent).toContain("Q02");
   });
 });
@@ -157,7 +168,8 @@ describe("F6: a failed poll refresh keeps the reading desk", () => {
     fireEvent.click(screen.getByRole("radio", { name: /Never asked/ }));
     const box = () => screen.getAllByRole("textbox").find((t) => t.tagName === "TEXTAREA") as HTMLTextAreaElement;
     fireEvent.change(box(), { target: { value: "unsaved reasoning ".repeat(10) } });
-    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(screen.getByRole("checkbox", { name: /read the evidence profile/ }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /never asked/i }));
 
     failQuestion = true;
     await vi.advanceTimersByTimeAsync(3000); // baseline poll
@@ -170,7 +182,8 @@ describe("F6: a failed poll refresh keeps the reading desk", () => {
 
     expect(box().value).toBe("unsaved reasoning ".repeat(10));
     expect((screen.getByRole("radio", { name: /Never asked/ }) as HTMLInputElement).checked).toBe(true);
-    expect((screen.getByRole("checkbox") as HTMLInputElement).checked).toBe(true);
+    expect((screen.getByRole("checkbox", { name: /read the evidence profile/ }) as HTMLInputElement).checked).toBe(true);
+    expect((screen.getByRole("checkbox", { name: /never asked/i }) as HTMLInputElement).checked).toBe(true);
     expect(screen.getByRole("heading", { level: 1 }).textContent).toContain("Q02");
 
     // The next change that reads fine clears the banner and still keeps the text.

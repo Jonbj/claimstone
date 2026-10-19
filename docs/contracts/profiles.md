@@ -44,6 +44,13 @@ The row contains `question_id`, `round`, `manifest_only`, `adjudication_version`
 `registry_sha256`, `adjudicated_by`, `adjudicated_at`.
 The five verdicts and minimum rationale length retain their existing meaning.
 
+`adjudication_version 3` (D156) adds `never_asked_basis`, present **only** on a `NEVER_ASKED`
+verdict. Its only value today is `SIGNER_ATTESTATION`: the engine holds no human screening
+reference that could establish that nobody asked, and the screening ledger is advisory and
+AI-provisional, so the row records that the assertion is the signer's. An omitted basis on
+`NEVER_ASKED`, a value other than the allowed one, or the key on any other verdict is refused
+and nothing is written. Rows written under version 2 lack the key and remain valid history.
+
 `adjudication_version 2` (D98) adds the signature's provenance as recorded fact (F16):
 `signer_auth` is `"cli-declared"` from the CLI or `"portal-session"` from the control server, and
 `actor` is the portal operator id, `null` from the CLI. The class and the actor must agree — the

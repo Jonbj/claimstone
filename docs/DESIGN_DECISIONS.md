@@ -5632,3 +5632,38 @@ decision, not an omission.
 
 **Instruments touched.** No new ledger and no changed row shape: `notifications.jsonl` is D153's, and the attempt
 row already carries `channel`. A new channel is a new way to fill the same ledger, so no existing figure moves.
+
+## D156 — A NEVER_ASKED verdict records the basis it rests on, because the engine holds no screening record that can establish it (2026-10-19)
+
+Issue #13 found the portal saying that `NEVER_ASKED` is "established by screening", while the code required only
+identity, admissibility, freshness and a rationale. The screening ledger cannot carry that weight: it is advisory,
+its importer accepts `AI_PROVISIONAL` observations only, `cohort_closed` is always false, and profile inputs exclude
+it by design (D79, D116). An AI observation is not a human screening reference, and a verdict that asserts "nobody
+asked" should not silently borrow one.
+
+**What changed.** `NEVER_ASKED` now requires `never_asked_basis`, and the only value the engine can record today is
+`SIGNER_ATTESTATION`. The requirement is enforced in `synthesize.adjudicate` for every caller, in the control route
+as a request rule, and in the CLI as `--never-asked-basis`. The portal shows the assertion as a second, explicit
+attestation, and posts the basis only for that verdict. The row carries `never_asked_basis` only when it is
+`NEVER_ASKED`; the other four verdicts refuse it. `adjudication_version` moves from 2 to 3, so rows written under
+the old shape remain readable as what they were and are never rewritten.
+
+**What did not change.** The five states, the four required properties, the minimum rationale, the signature itself,
+and the rule that an agent does not sign. A `NEVER_ASKED` verdict is still a person's assertion; what changed is that
+the row now says what the assertion rests on instead of leaving a reader to infer that screening proved it. Old rows
+without a basis stay valid history.
+
+**Why not require a screening reference now.** There is no ledger of *human* screening decisions to cite, and adding
+one is a larger change (source-selection admission, a human writer path, a frozen scope bound to the question) than
+this correction. The issue permits stating the prerequisite plainly; that is what this does. `NEVER_ASKED_BASES` is
+the extension point for a `SCREENING_REFERENCE` value once such a ledger exists; until then the engine refuses that
+value rather than recording a basis it cannot verify.
+
+**Known limit, stated.** The attestation is not evidence that the search was adequate. A reader auditing the verdict
+sees a named signer, a rationale and the fact that the basis was their assertion, not an engine result.
+
+**Not addressed here.** The issue's second gap — grouping preprint, article and supplement versions of one study with
+evidence-backed relationships shown without rewriting keys or denominators — is untouched by this decision.
+
+**Instruments touched.** `adjudication_version 3` (an additive key on one verdict). The portal API schema gains an
+optional `never_asked_basis` property, so the served row remains closed and validated.

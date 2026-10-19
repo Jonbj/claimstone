@@ -581,6 +581,7 @@ export interface QuestionDetail {
     adjudication_version: number;
     decision_contract_version: number | null;
     manifest_only: boolean;
+    never_asked_basis?: "SIGNER_ATTESTATION";
     partial?: boolean;
     partial_coverage?: {
       [k: string]: unknown;

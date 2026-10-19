@@ -201,7 +201,8 @@ establishes that two papers used different datasets.
 
 Its one categorical output is `NO_VERIFIED_CLAIM`, which says nothing survived. That is **not**
 `NEVER_ASKED`: an extraction miss, an all-rejected question and a genuinely unasked one look identical from
-here, and only screening tells them apart.
+here. No human screening record exists in the engine to tell them apart, so only a person can assert it, on
+their own attestation; the verdict records that basis (`SIGNER_ATTESTATION`) and never implies screening proved it.
 
 D45 made completeness explicit: a terminal model failure is not a reading with zero claims, so the profile reports
 `extraction.expected`, `unanswered`, `unharvested` and `unchunked_sources`. When D45 was written, 34 readings of the saved
@@ -224,8 +225,12 @@ readings and independent complete review precede rebuilding and reading a signab
 ```bash
 .venv/bin/claimstone adjudicate projects/<name> <Q> \
     --verdict SUPPORTED|CONTRADICTED|CONTESTED_IN_LITERATURE|UNANSWERED_IN_LITERATURE|NEVER_ASKED \
-    --rationale-file r.md --by "<who>" --profile-sha256 <hash>
+    --rationale-file r.md --by "<who>" --profile-sha256 <hash> \
+    [--never-asked-basis SIGNER_ATTESTATION]
 ```
+
+`--never-asked-basis` is required with `NEVER_ASKED` and refused with the other four: the engine holds no
+human screening reference, so the row names that the assertion rests on the signer.
 
 A person reads the profile and signs. The signature records the hash of what they were shown, so if the
 evidence changes the verdict is displayed as **stale** with both hashes rather than quietly kept — a

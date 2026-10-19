@@ -164,7 +164,7 @@ question id from the registry. Every id is looked up in ledgers, never used as a
 ### B5 — signing and drafts
 
 - `POST /control/v1/p/{p}/flows/{flow_id}/q/{question_id}/adjudicate` with `{verdict,
-  rationale, profile_sha256, attest: true}`: resolves the flow to its selector; calls
+  rationale, profile_sha256, attest: true, never_asked_basis?}`: resolves the flow to its selector; calls
   `synthesize.adjudicate` under the project lock with `by` = operator display name,
   `signer_auth="portal-session"` and `actor` = operator id. `attest` must be the literal
   `true`; `verdict` must be one of `cli.VERDICT_NAMES`, and an operational question → 409
@@ -184,8 +184,10 @@ As built (B5):
 - `adjudicate` answers 201 `{"adjudication": <the stored row>}`. Request-rule refusals are
   422 `VALIDATION` before the engine runs: verdict not one of the five (nothing is
   preselected or defaulted), `attest` not the literal `true`, rationale under 120 trimmed
-  characters, `profile_sha256` not 64 hex. Engine refusals are 409: `NO_PROFILE`,
-  `PROVISIONAL`, `STALE_PROFILE`, and `REFUSED` (an operational question), each with the
+  characters, `profile_sha256` not 64 hex. A `NEVER_ASKED` verdict must name
+  `never_asked_basis` (currently only `SIGNER_ATTESTATION`); the key on any other verdict is
+  refused, both 422. Engine refusals are 409: `NO_PROFILE`, `PROVISIONAL`,
+  `STALE_PROFILE`, and `REFUSED` (an operational question), each with the
   engine's sentence. Unknown project, flow or question → 404.
 - `POST …/draft` answers 201 `{"draft", "current", "current_profile_sha256"}`; `GET …/draft`
   answers the operator's own latest draft or `null`, with `current` null when there is no
