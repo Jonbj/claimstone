@@ -7,9 +7,10 @@ Every candidate carries a **source class**, assigned by rules the project declar
 `classify`). Without one, stage 2 refuses it — that is invariant 6 working, and it is why this
 stage existed for a while producing rows nothing downstream could use.
 
-Completeness is later estimated by comparing two *independent* channels: keyword search here, and
-citations extracted from acquired texts in stage 3. This module reads that bibliography and writes
-candidates; it never writes another stage's ledger.
+The two channels are *independent* — keyword search here, and citations extracted from acquired texts in
+stage 3 — but they never yield a completeness estimate: D10 rejected the percentage, and the report's job
+is to expose works one channel missed, not to certify how much of the literature exists. This module reads
+that bibliography and writes candidates; it never writes another stage's ledger.
 """
 
 from __future__ import annotations

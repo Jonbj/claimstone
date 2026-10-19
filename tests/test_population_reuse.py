@@ -133,9 +133,15 @@ def test_reuse_rechecks_gate_keeps_class_and_records_no_http(tmp_path):
     assert row["provenance"] == "store-reuse" and row["attempts"] == []
     assert row["fetched_at"] == old["fetched_at"] and row["reused_at"]
     assert row["reuse_origin"]["sha256"] == old["sha256"]
+    assert row["artifact_version"] is None, "an origin without one transfers no guess"
     assert Path(old["stored_path"]).read_bytes() == original
     reuse(tmp_path, old)
     assert len(list(Store("new", base=tmp_path).read("acquisitions.jsonl"))) == 1
+
+
+def test_reuse_carries_the_origin_artifact_version(tmp_path):
+    old = origin(tmp_path) | {"artifact_version": 3}
+    assert reuse(tmp_path, old)["artifact_version"] == 3
 
 
 def test_reuse_gate_failure_is_not_obtained_but_bytes_are_retained(tmp_path):
