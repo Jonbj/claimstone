@@ -2,8 +2,9 @@
 
 **Everything known, nothing concluded.** This module emits no verdict. Its one categorical output is
 `NO_VERIFIED_CLAIM`, which says nothing survived to the profile and is deliberately *not*
-`NEVER_ASKED` — that asserts nobody asked, which only screening establishes, and only a person may say
-it (verdict contract §3).
+`NEVER_ASKED` — that asserts nobody asked. The engine holds no human screening record that could
+establish it, so only a person may say it, on their attestation, and the verdict records that basis
+(D156).
 
 It is separate from `synthesize.py` because it is the part with the arithmetic, and arithmetic that
 decides what a reader is shown has to be testable without a corpus.

@@ -30,6 +30,10 @@ BACKENDS = ("claude-cli", "codex-cli", "llamacpp", "ollama-cloud", "opencode-cli
 VERDICT_NAMES = ("SUPPORTED", "CONTRADICTED", "CONTESTED_IN_LITERATURE",
                  "UNANSWERED_IN_LITERATURE", "NEVER_ASKED")
 
+# Same boundary: the parser offers the basis values, and `test_synthesize.py` pins this tuple
+# against `synthesize.NEVER_ASKED_BASES` so a basis added there cannot go unofferable here (D156).
+NEVER_ASKED_BASES = ("SIGNER_ATTESTATION",)
+
 # The boundaries the corpus actually separates at are 1 vs 2 references and 4,377 vs 4,378
 # characters, so both ranges reach below the default: an audit whose lowest value already confirms
 # everything reports "flat" without ever finding the edge. See D21.
@@ -941,7 +945,8 @@ def _adjudicate(args: argparse.Namespace) -> int:
                                     round_name=args.round, manifest_only=args.manifest_only,
                                     rationale=rationale, by=args.by,
                                     signer_auth="cli-declared", actor=None,
-                                    profile_sha256=args.profile_sha256 or "")
+                                    profile_sha256=args.profile_sha256 or "",
+                                    never_asked_basis=args.never_asked_basis)
     except (synthesize.NotAdmissible, synthesize.Provisional, synthesize.StaleProfile, ValueError, KeyError) as exc:
         print(str(exc).strip("'"), file=sys.stderr)
         return 2
@@ -1701,6 +1706,11 @@ def build_parser() -> argparse.ArgumentParser:
             command.add_argument("--by", required=True, help="who is signing this")
             command.add_argument("--profile-sha256", required=True,
                                  help="the profile hash you were shown; refused if it has moved")
+            command.add_argument("--never-asked-basis", default=None,
+                                 choices=NEVER_ASKED_BASES,
+                                 help="required for NEVER_ASKED, refused otherwise: the basis the "
+                                      "signer attests to, because the engine holds no human "
+                                      "screening record that can establish it")
         if name == "review-report":
             command.add_argument("--json", action="store_true")
         if name == "extract-report":

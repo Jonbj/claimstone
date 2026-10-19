@@ -105,6 +105,8 @@ export interface AdjudicateBody {
   rationale: string;
   profile_sha256: string;
   attest: true;
+  /** Required for NEVER_ASKED, refused for the other verdicts (D156). */
+  never_asked_basis?: "SIGNER_ATTESTATION";
 }
 
 export interface Draft {

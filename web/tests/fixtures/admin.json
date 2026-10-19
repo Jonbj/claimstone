@@ -25,7 +25,7 @@
   "OPENALEX_API_KEY": false
  },
  "instruments": {
-  "adjudication_version": 2,
+  "adjudication_version": 3,
   "admin_check_version": 1,
   "admission_version": 3,
   "annotation_version": 2,

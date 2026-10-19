@@ -34,6 +34,10 @@ VERDICTS = ("SUPPORTED", "CONTRADICTED", "CONTESTED_IN_LITERATURE",
 # rather than imported, like every vocabulary above — the schema is the promise.
 SIGNER_AUTHS = ("cli-declared", "portal-session")
 
+# synthesize.NEVER_ASKED_BASES (D156): what a NEVER_ASKED verdict records its assertion rests on.
+# Only the signer's attestation exists; a human screening reference is not implemented.
+NEVER_ASKED_BASES = ("SIGNER_ATTESTATION",)
+
 # portal_state.CATEGORY_ORDER, the inbox card categories.
 CATEGORIES = ("INTEGRITY", "PROTOCOL", "ACQUISITION", "CLASSIFICATION", "NORMALIZE",
               "EXTRACT", "REVIEW", "ADJUDICATION", "ADVISORY")
@@ -618,6 +622,8 @@ QUESTION_DETAIL = _payload("question detail", {
             "registry_sha256": _STR_OR_NULL,
             "adjudicated_by": _STR,
             "adjudicated_at": _STR,
+            # Present only on a NEVER_ASKED verdict (D156): the basis its assertion rests on.
+            "never_asked_basis": {"type": "string", "enum": list(NEVER_ASKED_BASES)},
             # Present only on a verdict signed on a partial profile (D146): the coverage it rests on.
             "partial": _BOOL,
             "partial_coverage": {"type": ["object", "null"]},

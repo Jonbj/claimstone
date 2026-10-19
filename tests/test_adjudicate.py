@@ -88,6 +88,69 @@ def test_a_hash_that_has_moved_since_the_reader_saw_it_is_refused(tmp_path):
     assert "000000000000" in str(raised.value)
 
 
+def test_never_asked_records_the_basis_a_person_attested(tmp_path):
+    """#13: `NEVER_ASKED` asserts that nobody asked. The engine holds no human screening
+    record that can establish it — the screening ledger is advisory and accepts AI
+    observations only — so the verdict records, in the row, that it rests on the signer's
+    attestation rather than leaving the assertion unexplained."""
+    store = _built(tmp_path)
+    row = synthesize.adjudicate(store, "H06", project=_project(tmp_path), verdict="NEVER_ASKED",
+                                never_asked_basis="SIGNER_ATTESTATION",
+                                rationale=RATIONALE, by="an operator", signer_auth="cli-declared",
+                                actor=None, profile_sha256=_hash(store, "H06"))
+    assert row["verdict"] == "NEVER_ASKED"
+    assert row["never_asked_basis"] == "SIGNER_ATTESTATION"
+    assert row["adjudication_version"] == 3
+
+
+def test_never_asked_without_a_basis_is_refused(tmp_path):
+    """The prerequisite is a fact about what was signed, not an implication the reader has
+    to reconstruct. Omitting it is refused, and nothing is written."""
+    store = _built(tmp_path)
+    with pytest.raises(ValueError) as raised:
+        synthesize.adjudicate(store, "H06", project=_project(tmp_path), verdict="NEVER_ASKED",
+                              rationale=RATIONALE, by="x", signer_auth="cli-declared",
+                              actor=None, profile_sha256=_hash(store, "H06"))
+    assert "never_asked_basis" in str(raised.value)
+    assert list(store.read(synthesize.ADJUDICATIONS)) == []
+
+
+def test_a_basis_claiming_a_screening_reference_is_refused_while_none_exists(tmp_path):
+    """A basis is a recorded fact, not a word. No human screening reference exists for this
+    question, so a row may not claim one."""
+    store = _built(tmp_path)
+    with pytest.raises(ValueError) as raised:
+        synthesize.adjudicate(store, "H06", project=_project(tmp_path), verdict="NEVER_ASKED",
+                              never_asked_basis="SCREENING_REFERENCE",
+                              rationale=RATIONALE, by="x", signer_auth="cli-declared",
+                              actor=None, profile_sha256=_hash(store, "H06"))
+    assert "screening" in str(raised.value).lower()
+    assert list(store.read(synthesize.ADJUDICATIONS)) == []
+
+
+def test_only_never_asked_carries_a_never_asked_basis(tmp_path):
+    store = _built(tmp_path)
+    with pytest.raises(ValueError) as raised:
+        synthesize.adjudicate(store, "H02", project=_project(tmp_path), verdict="SUPPORTED",
+                              never_asked_basis="SIGNER_ATTESTATION",
+                              rationale=RATIONALE, by="x", signer_auth="cli-declared",
+                              actor=None, profile_sha256=_hash(store, "H02"))
+    assert "never_asked_basis" in str(raised.value)
+    assert list(store.read(synthesize.ADJUDICATIONS)) == []
+
+
+def test_a_never_asked_row_is_read_with_its_basis(tmp_path):
+    """Old rows stay what they were; the new row names its shape."""
+    store = _built(tmp_path)
+    synthesize.adjudicate(store, "H06", project=_project(tmp_path), verdict="NEVER_ASKED",
+                          never_asked_basis="SIGNER_ATTESTATION", rationale=RATIONALE,
+                          by="x", signer_auth="cli-declared", actor=None,
+                          profile_sha256=_hash(store, "H06"))
+    read = synthesize.adjudications(store)["H06"]
+    assert read["adjudication_version"] == 3
+    assert read["never_asked_basis"] == "SIGNER_ATTESTATION"
+
+
 def test_no_verified_claim_can_still_be_adjudicated_as_unanswered(tmp_path):
     """The whole point of the fourth state: the corpus was read and does not settle it. `NO_VERIFIED_CLAIM`
     is the profile's description; only a person may turn it into a verdict, and never into NEVER_ASKED
@@ -163,7 +226,7 @@ def test_a_row_records_its_signer_class_and_its_actor(tmp_path):
     row = synthesize.adjudicate(store, "H02", project=_project(tmp_path), verdict="SUPPORTED",
                                 rationale=RATIONALE, by="a person", signer_auth="portal-session",
                                 actor="op-1", profile_sha256=_hash(store, "H02"))
-    assert row["adjudication_version"] == 2
+    assert row["adjudication_version"] == 3
     assert row["signer_auth"] == "portal-session"
     assert row["actor"] == "op-1"
     assert list(store.read(synthesize.ADJUDICATIONS))[-1]["signer_auth"] == "portal-session"

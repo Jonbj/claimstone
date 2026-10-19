@@ -210,11 +210,36 @@ def test_a_signed_verdict_keeps_the_contract(workspace):
     # B3: the served verdict names its signer class and its actor, verbatim from the row.
     assert payload["verdict"]["signer_auth"] == "portal-session"
     assert payload["verdict"]["actor"] == "op-1"
-    assert payload["verdict"]["adjudication_version"] == 2
+    assert payload["verdict"]["adjudication_version"] == 3
     schema = ROUTES["/projects/{p}/{sel}/questions/{qid}"]
     assert validate(payload, schema) == []
     # Signed and current: nothing left to sign on this question.
     assert payload["adjudication_card"] is None
+
+
+def test_a_never_asked_verdict_carries_its_basis_in_the_contract(workspace):
+    """D156: the row's `never_asked_basis` is part of the served shape, so the portal can
+    show what the assertion rests on, and an unknown basis is not serveable."""
+    from claimstone import synthesize
+    _projects_dir, _store_dir, project, store = workspace
+    question = next(q for q in project.questions if q.kind != "operational")
+    stored = synthesize.latest_profiles(store, round_name="r1")[question.id]
+    synthesize.adjudicate(store, question.id, project=project, round_name="r1",
+                          verdict="NEVER_ASKED", never_asked_basis="SIGNER_ATTESTATION",
+                          rationale="r" * 130, by="a person",
+                          signer_auth="portal-session", actor="op-1",
+                          profile_sha256=stored["profile_sha256"])
+    with _served(workspace) as (_httpd, base, store_):
+        flow_id = next(iter(flows.flows(store_)))
+        status, _headers, payload = _get_json(
+            base + f"/api/v1/projects/{PROJECT}/flows/{flow_id}/questions/{question.id}")
+    assert status == 200
+    assert payload["verdict"]["never_asked_basis"] == "SIGNER_ATTESTATION"
+    schema = ROUTES["/projects/{p}/{sel}/questions/{qid}"]
+    assert validate(payload, schema) == []
+    broken = json.loads(json.dumps(payload))
+    broken["verdict"]["never_asked_basis"] = "SCREENING_REFERENCE"
+    assert validate(broken, schema) != []
 
 
 def test_journey_block_statuses_match_the_schema():

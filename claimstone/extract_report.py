@@ -90,7 +90,8 @@ def summarise(
         "questions_asked": len(asked) if project is not None else None,
         "coverage": (len(by_question) / len(asked)) if asked else None,
         # Named, because a question with no claim after a complete round is UNANSWERED_IN_LITERATURE and
-        # one whose calls never ran is NEVER_ASKED, and only somebody who can see which is which can tell.
+        # one whose calls never ran is NEVER_ASKED. The engine cannot tell which; only a person can, and
+        # that verdict records their attestation as its basis (D156).
         "questions_without_a_claim": [q for q in asked if q not in by_question],
         "by_question": dict(sorted(by_question.items())),
         "failures": dict(sorted(failures.items(), key=lambda kv: -kv[1])),

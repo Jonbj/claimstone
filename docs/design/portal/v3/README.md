@@ -13,8 +13,9 @@ tests and behaviour; only structure and style change.
 4. **Waits / acts / changed** is the first structure of the home screen and the top of every flow screen.
 5. **A blocked flow is principled, not broken**: a dark panel stating that no verdict was produced and why,
    with the rate against the floor on a bar with the floor marked, and the recovery actions beside it.
-6. **A count is labelled a count.** The signing block says an agent does not sign, lists the four signable
-   verdicts (the fifth, NEVER_ASKED, is not signable), and states the profile hash being signed.
+6. **A count is labelled a count.** The signing block says an agent does not sign, lists the five verdicts
+   (NEVER_ASKED is signable only on a second, explicit attestation and records that basis — D156), and
+   states the profile hash being signed.
 7. **Technical detail is collapsed by default** (hashes, ledgers, operation ids); on first view people read
    sentences, not identifiers. Identifiers are monospace, truncated, with the full value on demand.
 8. **Light and dark are both first class**; phone width works (16 px gutters, no horizontal page scroll).

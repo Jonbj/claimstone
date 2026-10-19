@@ -900,12 +900,26 @@ def _adjudicate(self: _Handler, params: dict[str, str], query: Any,
     """Sign one verdict as the session's operator (spec B5). Every scientific refusal is the
     engine's own: this route adds only the request rules, the attestation and the flow's
     binding check, and never fills in a verdict for anyone."""
-    self._only_keys(body, frozenset({"verdict", "rationale", "profile_sha256", "attest"}))
+    self._only_keys(body, frozenset({"verdict", "rationale", "profile_sha256", "attest",
+                                     "never_asked_basis"}))
     session = self._require_session()
     verdict = body.get("verdict")
     if verdict not in synthesize.VERDICTS:
         raise ControlError(422, "VALIDATION",
                            f"verdict must be one of {', '.join(synthesize.VERDICTS)}")
+    never_asked_basis = body.get("never_asked_basis")
+    if verdict == "NEVER_ASKED":
+        # The engine holds no human screening record that can establish "nobody asked", so the
+        # request names the basis the signer attests to rather than leaving it implicit (D156).
+        if never_asked_basis not in synthesize.NEVER_ASKED_BASES:
+            raise ControlError(
+                422, "VALIDATION",
+                "a NEVER_ASKED verdict requires never_asked_basis, one of "
+                f"{', '.join(synthesize.NEVER_ASKED_BASES)}: no human screening reference exists "
+                "for this question, so the row records that the assertion is the signer's")
+    elif never_asked_basis is not None:
+        raise ControlError(422, "VALIDATION",
+                           "never_asked_basis belongs only to a NEVER_ASKED verdict")
     if body.get("attest") is not True:
         raise ControlError(422, "VALIDATION",
                            "attest must be the literal true: the signer states they read "
@@ -926,7 +940,8 @@ def _adjudicate(self: _Handler, params: dict[str, str], query: Any,
             context.store, context.question_id, project=context.project,
             round_name=context.selector.round, manifest_only=context.selector.manifest_only,
             verdict=verdict, rationale=rationale, by=session.operator_name,
-            signer_auth="portal-session", actor=session.operator_id, profile_sha256=shown)
+            signer_auth="portal-session", actor=session.operator_id, profile_sha256=shown,
+            never_asked_basis=never_asked_basis)
     except KeyError as exc:
         raise ControlError(409, "NO_PROFILE", str(exc.args[0] if exc.args else exc)) from None
     except synthesize.Provisional as exc:

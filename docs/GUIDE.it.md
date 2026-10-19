@@ -211,7 +211,9 @@ diversi.
 
 Il suo unico esito categorico è `NO_VERIFIED_CLAIM`, che dice che nulla è sopravvissuto. **Non** è
 `NEVER_ASKED`: una mancata estrazione, una domanda tutta rifiutata e una domanda davvero mai posta da qui si
-somigliano, e solo uno screening le distingue.
+somigliano. Nel motore non esiste un riferimento di screening umano che le distingua, quindi solo una persona
+può affermarlo, sotto la propria attestazione; il verdetto registra quella base (`SIGNER_ATTESTATION`) e non
+lascia intendere che uno screening lo abbia dimostrato.
 
 D45 ha reso esplicita la completezza: un fallimento terminale del modello non è una lettura con zero claim, quindi il
 profilo riporta `extraction.expected`, `unanswered`, `unharvested` e `unchunked_sources`. Quando D45 è stato scritto, 34 letture
@@ -236,8 +238,12 @@ prima di ricostruire e leggere un profilo v5 firmabile.
 ```bash
 .venv/bin/claimstone adjudicate projects/<nome> <Q> \
     --verdict SUPPORTED|CONTRADICTED|CONTESTED_IN_LITERATURE|UNANSWERED_IN_LITERATURE|NEVER_ASKED \
-    --rationale-file r.md --by "<chi>" --profile-sha256 <hash>
+    --rationale-file r.md --by "<chi>" --profile-sha256 <hash> \
+    [--never-asked-basis SIGNER_ATTESTATION]
 ```
+
+`--never-asked-basis` è obbligatorio con `NEVER_ASKED` e rifiutato con gli altri quattro: il motore non ha un
+riferimento di screening umano, quindi la riga dichiara che l'affermazione poggia sul firmatario.
 
 Una persona legge il profilo e firma. La firma registra l'hash di ciò che le è stato mostrato, così se
 l'evidenza cambia il verdetto viene mostrato come **stale** con entrambi gli hash invece di restare in
