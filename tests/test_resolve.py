@@ -88,35 +88,33 @@ def test_a_source_without_a_doi_falls_back_to_the_wayback_machine():
     assert locations[-1].licence == "unknown"
 
 
-# --- PubMed Central has a sanctioned route, and we were using the forbidden one -------------------
+# --- PubMed Central: only the designated service, not the article host ---------------------------
 
-def test_a_pmc_article_location_is_rewritten_to_the_host_that_allows_it():
-    """Measured on the pilot: three open copies were declined for robots.txt, all on
-    `www.ncbi.nlm.nih.gov/pmc/articles/…`, which that host's robots disallows for `*` — correctly refused.
-
-    `pmc.ncbi.nlm.nih.gov` is a different host whose robots says `Allow: /articles/` in as many words, and it
-    serves 211 KB of article HTML there. So the copy was always reachable and we were asking the one host that
-    says no. Honouring robots.txt is not negotiable; reading which host it belongs to is our job.
+def test_a_pmc_article_identity_is_routed_to_the_europe_pmc_service():
+    """PMC's text-mining terms name only designated services for automated retrieval and prohibit
+    systematic retrieval through any other automated process (read 2026-10-18). Europe PMC's
+    RESTful endpoint is the service we use; the article host's robots.txt permission is not the test
+    (D151).
     """
     old = "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7196181"
-    assert resolve.pmc_route(old) == "https://pmc.ncbi.nlm.nih.gov/articles/PMC7196181/"
-    # With a trailing slash, a version suffix, and http.
-    assert resolve.pmc_route("http://www.ncbi.nlm.nih.gov/pmc/articles/PMC123456/") == \
-        "https://pmc.ncbi.nlm.nih.gov/articles/PMC123456/"
+    xml = "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC7196181/fullTextXML"
+    assert resolve.europe_pmc_route(old) == xml
+    assert resolve.europe_pmc_route("http://www.ncbi.nlm.nih.gov/pmc/articles/PMC123456/") == \
+        "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC123456/fullTextXML"
     # A bare numeric id is how Unpaywall sometimes writes it.
-    assert resolve.pmc_route("https://www.ncbi.nlm.nih.gov/pmc/articles/7196181") == \
-        "https://pmc.ncbi.nlm.nih.gov/articles/PMC7196181/"
+    assert resolve.europe_pmc_route("https://www.ncbi.nlm.nih.gov/pmc/articles/7196181") == \
+        "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC7196181/fullTextXML"
 
 
 def test_a_non_pmc_url_is_left_alone():
     for url in ("https://link.springer.com/content/pdf/10.1007/x.pdf",
-                "https://pmc.ncbi.nlm.nih.gov/articles/PMC1/",
+                "https://elsewhere.example/PMC1/",
                 "https://www.ncbi.nlm.nih.gov/pubmed/12345",
                 ""):
-        assert resolve.pmc_route(url) is None, url
+        assert resolve.europe_pmc_route(url) is None, url
 
 
-def test_the_plan_offers_the_allowed_pmc_host_instead_of_the_forbidden_one():
+def test_the_plan_offers_the_service_and_never_the_pmc_article_host():
     fetcher = FakeFetcher(json_pages={
         "https://api.unpaywall.org/v2/": {
             "oa_status": "green",
@@ -125,9 +123,10 @@ def test_the_plan_offers_the_allowed_pmc_host_instead_of_the_forbidden_one():
                               "version": "publishedVersion", "license": "cc-by"}]}})
     locations, _ = resolve.plan(fetcher, {"doi": "10.1007/s00787-020-01541-4", "url": ""})
     urls = [loc.url for loc in locations]
-    assert "https://pmc.ncbi.nlm.nih.gov/articles/PMC7196181/" in urls
-    # The forbidden one is not merely reordered: asking it at all spends a request on a certain refusal.
-    assert not any("www.ncbi.nlm.nih.gov/pmc/articles" in u for u in urls)
+    assert "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC7196181/fullTextXML" in urls
+    # Robots allows `/articles/` here, but the text-mining terms do not: a robots permission is not
+    # an authorisation to retrieve systematically (D151). No PMC article page is requested.
+    assert not any("pmc/articles" in u for u in urls)
 
 
 # --- One useless location was suppressing a second source -----------------------------------------
