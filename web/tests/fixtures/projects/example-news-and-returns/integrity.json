@@ -9,9 +9,7 @@
   "error": null,
   "state": "OK"
  },
- "instruments": [
-  "claimstone/export.py declares EXPORT_VERSION = 2, and docs/DESIGN_DECISIONS.md never mentions export_version 2. A figure measured under a different instrument is not comparable to one measured under this; record what changed and which figures it supersedes."
- ],
+ "instruments": [],
  "invalid_flows": [],
  "ledger_repairs": 0,
  "ledgers": {
