@@ -15,6 +15,7 @@ const API_HOSTS = {
 } as const;
 type Api = keyof typeof API_HOSTS;
 const RESOLVER_HOSTS = ["api.unpaywall.org", "api.openalex.org", "api.core.ac.uk"] as const;
+const RESOLVER_MIN_REQUESTS_EACH = 12;
 const EXACT_HOST = /^(?=.{1,253}$)[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?)*$/;
 
 export default function PlanBatchForm({ project, flowId, hasCandidates, onPlanned, primary = true }: {
@@ -45,9 +46,13 @@ export default function PlanBatchForm({ project, flowId, hasCandidates, onPlanne
   useEffect(() => {
     if (stage === "acquire" && suggested && !requestsTouched &&
         Number.isSafeInteger(suggested.suggested_max_requests_each)) {
-      setMaxRequestsEach(suggested.suggested_max_requests_each);
+      // The resolver lookups (Unpaywall, OpenAlex, CORE) and the robots.txt read of every host each spend one of a
+      // candidate's requests before the first file is asked for: measured on 18 candidates at 5 each, 17 stopped
+      // at the limit with no download attempted. Below the floor the suggestion would only repeat that.
+      setMaxRequestsEach(useApis ? Math.max(suggested.suggested_max_requests_each, RESOLVER_MIN_REQUESTS_EACH)
+        : suggested.suggested_max_requests_each);
     }
-  }, [stage, suggested, requestsTouched]);
+  }, [stage, suggested, requestsTouched, useApis]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [validation, setValidation] = useState<string | null>(null);
