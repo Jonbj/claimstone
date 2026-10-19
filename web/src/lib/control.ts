@@ -401,6 +401,7 @@ export interface AcquireHosts {
   candidate_hosts: Array<{ host: string; candidates: number }>;
   refused_hosts: Array<{ host: string; candidates: number; sources?: string[]; open_access_candidates?: number }>;
   retryable_classes: Array<{ failure_class: string; candidates: number }>;
+  retry_hosts?: Array<{ failure_class: string; host: string; candidates: number }>;
   plain_http_candidates: number;
   suggested_max_requests_each: number;
 }

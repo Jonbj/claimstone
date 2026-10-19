@@ -184,8 +184,19 @@ export default function PlanBatchForm({ project, flowId, hasCandidates, onPlanne
               {suggested.retryable_classes.map(({ failure_class, candidates }) => (
                 <label key={failure_class} className="flex items-center gap-2">
                   <input type="checkbox" checked={retryClasses.includes(failure_class)}
-                    onChange={(e) => setRetryClasses((old) => e.target.checked
-                      ? [...old, failure_class] : old.filter((item) => item !== failure_class))} />
+                    onChange={(e) => {
+                      setRetryClasses((old) => e.target.checked
+                        ? [...old, failure_class] : old.filter((item) => item !== failure_class));
+                      if (!e.target.checked) return;
+                      // A retry starts at the candidate's own URL: its host has to be in the plan as well.
+                      const own = (suggested.retry_hosts ?? [])
+                        .filter((item) => item.failure_class === failure_class).map((item) => item.host);
+                      setHostsTouched(true);
+                      setHostsText((old) => {
+                        const have = old.split(/\r?\n/).map((h) => h.trim()).filter(Boolean);
+                        return [...have, ...own.filter((h) => !have.includes(h))].join("\n");
+                      });
+                    }} />
                   {failure_class} ({candidates})
                 </label>
               ))}

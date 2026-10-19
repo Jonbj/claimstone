@@ -476,7 +476,8 @@ As built (B12):
   Authorizing stays the separate exact act above.
 - `GET …/flows/{flow_id}/acquire-hosts` (session required, read-only) → `{pending_candidates,
   candidate_hosts: [{host, candidates}], refused_hosts: [{host, candidates, sources, open_access_candidates}],
-  retryable_classes: [{failure_class, candidates}], plain_http_candidates,
+  retryable_classes: [{failure_class, candidates}],
+  retry_hosts: [{failure_class, host, candidates}] (the candidates' own URL hosts, which a retry plan must list), plain_http_candidates,
   suggested_max_requests_each}` (5 when a pending URL is plain `http` or a candidate already hit the
   request ceiling, otherwise 3; a plain-`http` URL spends one request on the redirect to `https`): the hosts an `acquire` plan
   would need, read from the record: the hosts of the URLs of candidates with no attempt yet, and the hosts

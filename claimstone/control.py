@@ -1401,10 +1401,14 @@ def _acquire_hosts(self: _Handler, params: dict[str, str], query: Any,
                         declared.setdefault(host, set()).add(key)
     in_scope = scope.candidates(store, selector)
     retryable: dict[str, int] = {}
+    retry_hosts: dict[tuple[str, str], int] = {}
     for key, acquisition in attempted.items():
         failure = acquisition.get('failure_class')
         if key in in_scope and failure in net.TERMINAL and allowed(net.host_of(str(in_scope[key].get('url') or ''))):
             retryable[failure] = retryable.get(failure, 0) + 1
+            # A retry starts at the candidate's own URL, so that host must be in the plan too.
+            direct = net.host_of(str(in_scope[key].get('url') or ''))
+            retry_hosts[(failure, direct)] = retry_hosts.get((failure, direct), 0) + 1
     # A plain-http URL spends one request on the redirect to https before the document; a
     # candidate that already hit the ceiling says the same. Both are recorded facts.
     plain_http = sum(str(row['url']).startswith('http://') for row in pending)
@@ -1418,6 +1422,8 @@ def _acquire_hosts(self: _Handler, params: dict[str, str], query: Any,
                               for host, keys in sorted(refused.items())],
             'retryable_classes': [{'failure_class': name, 'candidates': n}
                                   for name, n in sorted(retryable.items())],
+            'retry_hosts': [{'failure_class': name, 'host': host, 'candidates': n}
+                            for (name, host), n in sorted(retry_hosts.items())],
             'plain_http_candidates': plain_http,
             'suggested_max_requests_each': 5 if (plain_http or limit_hit) else 3}, 200
 

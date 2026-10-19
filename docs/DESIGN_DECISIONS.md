@@ -5658,3 +5658,8 @@ check now reads only rows with purpose `acquisition` (or none, for rows written 
 
 **Not done.** A project-level, dated approval of hosts that later plans reuse. It needs a ledger and a revoke path
 and is the next step if the per-plan button proves the right shape.
+
+**Second defect found when the proposal was tried (D157).** A retry plan that listed only the proposed hosts planned
+nothing: every candidate was skipped with "direct URL and exact lowercase hosts are required", because a retry
+starts at the candidate's own URL (`doi.org`) and that host was not in the plan. `acquire-hosts` now returns
+`retry_hosts` (the own-URL host per retry class) and the form adds them when a retry class is ticked.

@@ -175,4 +175,22 @@ describe("network batch planning", () => {
     expect((writes[0] as { allowed_hosts: string[] }).allowed_hosts)
       .toEqual(["doi.org", "pmc.ncbi.nlm.nih.gov"]);
   });
+  it("adds the candidates' own host when a retry class is ticked", async () => {
+    vi.stubGlobal("fetch", (url: string) => {
+      if (url === "/control/v1/session") return json(200, { operator: {
+        id: "o", name: "Operator", role: "admin", must_change_password: false }, csrf_token: "tok" });
+      if (url.endsWith("/operations")) return json(200, { flow_id: "f1", operations: [] });
+      if (url.endsWith("/acquire-hosts")) return json(200, { pending_candidates: 0, candidate_hosts: [],
+        refused_hosts: [], retryable_classes: [{ failure_class: "EXCLUDED_HOST", candidates: 3 }],
+        retry_hosts: [{ failure_class: "EXCLUDED_HOST", host: "doi.org", candidates: 3 }],
+        plain_http_candidates: 0, suggested_max_requests_each: 3 });
+      return json(404, { error: { code: "NOT_FOUND", message: "unknown" } });
+    });
+    render(<MemoryRouter><SessionProvider><OperationsPanel project="demo" flowId="f1"
+      namedRound hasCandidates /></SessionProvider></MemoryRouter>);
+    await screen.findByRole("button", { name: "Plan batch" });
+    fireEvent.change(screen.getByLabelText("Stage"), { target: { value: "acquire" } });
+    fireEvent.click(await screen.findByLabelText("EXCLUDED_HOST (3)"));
+    expect((screen.getByLabelText("Exact hosts, one per line") as HTMLTextAreaElement).value).toBe("doi.org");
+  });
 });

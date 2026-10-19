@@ -202,6 +202,8 @@ def test_acquire_hosts_report_retryable_classes_and_a_higher_ceiling_for_plain_h
                        headers={"Cookie": headers["Cookie"]})[2]
     assert got["plain_http_candidates"] == 1 and got["suggested_max_requests_each"] == 5
     assert got["retryable_classes"] == [{"failure_class": "REQUEST_LIMIT_REACHED", "candidates": 1}]
+    assert got["retry_hosts"] == [{"failure_class": "REQUEST_LIMIT_REACHED", "host": "repo.example.org",
+                                   "candidates": 1}]
 
 
 def test_a_retry_needs_a_reason_and_applies_only_to_acquire(ws):
