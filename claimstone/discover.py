@@ -201,7 +201,7 @@ def run(
                             'candidate_key': row['candidate_key'],
                             'title': row['title'], 'doi': row['doi'],
                             'url': row['url'], 'source_class': row.get('source_class'),
-                            'provider_id': row.get('openalex_work_id') or row.get('arxiv_base_id') or row.get('europepmc_id') or row.get('core_id'),
+                            'provider_id': row.get('openalex_work_id') or row.get('arxiv_base_id') or row.get('europepmc_id') or row.get('pubmed_id') or row.get('core_id'),
                             'population_in_scope': in_scope,
                             'observed_at': row['found_at'],
                         })

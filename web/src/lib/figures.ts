@@ -2,8 +2,8 @@
 // `max_total_requests` is the figure that counts.
 export const HOST_FOR: Record<string, string> = {
   openalex: "api.openalex.org", crossref: "api.crossref.org", arxiv: "export.arxiv.org",
-  europepmc: "www.ebi.ac.uk", core: "api.core.ac.uk" };
-export const SOURCES = ["openalex", "crossref", "arxiv", "europepmc", "core"] as const;
+  europepmc: "www.ebi.ac.uk", pubmed: "eutils.ncbi.nlm.nih.gov", core: "api.core.ac.uk" };
+export const SOURCES = ["openalex", "crossref", "arxiv", "europepmc", "pubmed", "core"] as const;
 
 export const queryCount = (topics: Array<{ terms: string[] }>, apis: string[]): number =>
   topics.reduce((n, t) => n + t.terms.length, 0) * new Set(apis).size;

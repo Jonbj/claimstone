@@ -5408,3 +5408,45 @@ bump re-keys every stored profile once (no verdict is signed anywhere today, whi
 Within v6, a project with no observations hashes exactly as one that never observed: the `statuses` key
 exists only when an observation exists, so the first observation *is* the change, not the feature's
 arrival.
+
+
+## D155 — PubMed E-utilities is a sixth opt-in channel, paced unkeyed because its key would enter the ledger (2026-10-18)
+
+D141 added Europe PMC and declined E-utilities, leaving #8's remainder as boolean MeSH syntax "for a project that needs
+controlled-vocabulary queries". The project does not yet have one, but the operator asked for the two channels named in the issue,
+and the reason for declining was a planning cost rather than a doubt about the data. This adds the adapter as an opt-in capability
+and records exactly what the cost is; the claim that it finds more stays unmeasured (#14).
+
+**What was added.** `searchers.search_pubmed`: `esearch` (`db=pubmed`, `retmode=json`, `retmax`, relevance sort) to obtain PMIDs,
+then `esummary` for those PMIDs to obtain title, journal, `pubdate`, `articleids` (DOI, PMC id) and `pubtype`. Rows carry
+`source_api: pubmed`, the DOI when one exists (else the `pubmed.ncbi.nlm.nih.gov` page), `pubmed_id` and `pmcid`, and `pubtype`
+joined with `"; "` as `venue_type`. A project classifies it with the new `pubmed_type` predicate, which matches any one part of the
+joined type like `europepmc_type` (D141); the engine decides nothing about what a "Review" is (invariant 4). `venue_type`,
+`source_api`, `query_hash` and the source class still travel on every row (invariant 6).
+
+**Two physical requests, and the scheduler.** One logical query is two requests to one host. The scheduler's per-unit ceiling is a
+maximum, not an expected count, so a PubMed unit must be planned with `max_requests_each` of at least 2; planning it with 1 fails
+the second request with `REQUEST_LIMIT_REACHED` rather than pretending the query completed. No batch may mix PubMed with
+single-request APIs at a ceiling of 1. This is the whole of D141's objection, made explicit instead of avoided.
+
+**The key is deliberately not read.** E-utilities accepts `api_key` only as a query parameter, while `requests.jsonl` records every
+request URL unredacted and `requests/raw/` is content-addressed by the response. Reading `NCBI_API_KEY` would write a credential
+into an append-only ledger that is meant for audit. The adapter therefore stays on the unkeyed limit: 3 requests/s, enforced by
+`provider_limits.INTERVALS["eutils.ncbi.nlm.nih.gov"] = 0.34` (2.94 req/s, shared across processes). `tool=claimstone` and the
+configured contact address identify the caller on both requests. Supporting the keyed 10 req/s limit would first need a decision
+about redacting URLs in the request ledger, and is not smuggled in here.
+
+**Opt-in and versioning.** `SEARCHERS` gains `pubmed`; `DEFAULT_APIS` stays `openalex, crossref, arxiv`, so a bare `discover` and a
+portal plan that does not tick PubMed send exactly the requests of discovery version 4. This adapter therefore **does not move**
+`DISCOVERY_VERSION` (at the time of writing, 4), as for Europe PMC and CORE: an opt-in adapter that adds no default would relabel
+every planned round without changing what it searches. The
+portal's source list shows PubMed unticked, with `eutils.ncbi.nlm.nih.gov` among the suggested exact hosts.
+
+**What is not known.** The response fields come from NCBI's documented E-utilities JSON shape but were **not verified against a live
+answer** when written; both envelopes are checked, so a renamed field is `INVALID_SEARCH_RESPONSE` rather than a silent empty result.
+An empty `idlist` is a completed search with no matches, never a failure. A PMC id is a copy identity, not a licence: `is_oa` and
+`citations` stay null rather than inferred. The issue's acceptance measurement — a frozen candidate set run through both channels,
+with new candidates, duplicates and failures against the original denominator — has **not been run**: it needs live calls and the
+operator's approval of the exact plan, and it belongs with #14. Metadata access is not a full-text grant.
+
+First run on any project needs that approval (hosts `eutils.ncbi.nlm.nih.gov`, a per-unit ceiling of 2, USD 0).

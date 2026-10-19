@@ -283,6 +283,102 @@ def search_europepmc(
         )
 
 
+PUBMED_TOOL = "claimstone"
+
+
+def _pubmed_params() -> dict[str, Any]:
+    # E-utilities asks callers to identify the tool and a contact address in every request.
+    return {"tool": PUBMED_TOOL, "email": net.contact_email()}
+
+
+def _pubmed_doi(record: dict[str, Any]) -> str | None:
+    for ident in record.get("articleids") or []:
+        if isinstance(ident, dict) and ident.get("idtype") == "doi":
+            doi = ids.normalize_doi(ident.get("id"))
+            if doi:
+                return doi
+    # Older records carry the DOI here and nowhere else ("doi: 10.1000/xyz").
+    location = str(record.get("elocationid") or "")
+    return ids.normalize_doi(location) if location.lower().startswith("doi:") else None
+
+
+def search_pubmed(
+    fetcher: net.FetcherLike, term: str, topic_id: str, *, retmax: int = 25
+) -> Iterator[dict[str, Any]]:
+    """NCBI E-utilities: one esearch for PMIDs, then one esummary for their metadata (D155).
+
+    Two physical requests per logical query, which is why the scheduler must plan a PubMed unit
+    with a per-unit ceiling of two. It is opt-in and never a default.
+
+    **No `NCBI_API_KEY` is read.** E-utilities accepts the key only as a query parameter, and
+    `requests.jsonl` records request URLs unredacted; reading the key would write a credential into
+    an append-only ledger. The unkeyed limit (3 req/s) is the one the provider guard enforces.
+    PMIDs and a PMC id are identifiers, not a licence to read the full text.
+    """
+    search_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?" + urllib.parse.urlencode(
+        {"db": "pubmed", "term": term, "retmode": "json", "retmax": retmax,
+         "sort": "relevance", **_pubmed_params()})
+    payload, outcome = fetcher.get_json(search_url)
+    if not outcome.ok:
+        raise SearchError(outcome.failure_class or 'LOOKUP_FAILED', outcome.detail)
+    result = payload.get("esearchresult") if isinstance(payload, dict) else None
+    if not isinstance(result, dict):
+        raise SearchError('INVALID_SEARCH_RESPONSE', 'missing esearchresult')
+    idlist = result.get("idlist")
+    if not isinstance(idlist, list) or any(not isinstance(uid, str) or not uid for uid in idlist):
+        raise SearchError('INVALID_SEARCH_RESPONSE', 'expected a list of PubMed identifiers')
+    if not idlist:
+        # A query with no matches completed; it is not a failed request.
+        return
+
+    summary_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?" + urllib.parse.urlencode(
+        {"db": "pubmed", "id": ",".join(idlist), "retmode": "json", **_pubmed_params()})
+    payload, outcome = fetcher.get_json(summary_url)
+    if not outcome.ok:
+        raise SearchError(outcome.failure_class or 'LOOKUP_FAILED', outcome.detail)
+    result = payload.get("result") if isinstance(payload, dict) else None
+    if not isinstance(result, dict):
+        raise SearchError('INVALID_SEARCH_RESPONSE', 'missing result')
+    uids = result.get("uids")
+    if not isinstance(uids, list) or any(not isinstance(uid, str) for uid in uids):
+        raise SearchError('INVALID_SEARCH_RESPONSE', 'expected a list of uids')
+    for uid in uids:
+        record = result.get(uid)
+        if not isinstance(record, dict):
+            raise SearchError('INVALID_SEARCH_RESPONSE', f'missing record for {uid}')
+        types = record.get("pubtype")
+        if isinstance(types, list):
+            venue_type = "; ".join(str(value) for value in types if value)
+        else:
+            venue_type = str(types or "")
+        pmcid = None
+        for ident in record.get("articleids") or []:
+            if isinstance(ident, dict) and ident.get("idtype") == "pmc":
+                pmcid = str(ident.get("id") or "") or None
+                break
+        pubdate = str(record.get("pubdate") or "")
+        year = re.search(r'\b(\d{4})\b', pubdate)
+        doi = _pubmed_doi(record)
+        yield _row(
+            title=str(record.get("title") or "").strip().rstrip("."),
+            url=(f"https://doi.org/{doi}" if doi else
+                 f"https://pubmed.ncbi.nlm.nih.gov/{uid}/"),
+            doi=doi,
+            year=int(year.group(1)) if year else None,
+            venue=str(record.get("fulljournalname") or record.get("source") or ""),
+            venue_type=venue_type,
+            source_api="pubmed",
+            query=term,
+            topic_id=topic_id,
+            channel=CHANNEL_KEYWORD,
+            # E-utilities reports a PubMed record, not a licence. A PMC id proves a copy may
+            # exist, not that it is open, so both counts stay unknown rather than inferred.
+            is_oa=None,
+            citations=None,
+            extra={"pubmed_id": uid, "pmcid": pmcid},
+        )
+
+
 def _core_download(work: dict[str, Any]) -> str | None:
     """The address CORE says holds the file, from the fields it is known to use; None when it names none."""
     direct = work.get("downloadUrl")
@@ -334,7 +430,7 @@ def search_core(
 
 
 SEARCHERS = {"openalex": search_openalex, "crossref": search_crossref, "arxiv": search_arxiv,
-             "europepmc": search_europepmc, "core": search_core}
+             "europepmc": search_europepmc, "core": search_core, "pubmed": search_pubmed}
 # What a run searches when nobody names an API: the three of discovery version 4. A newer adapter is
 # opt-in, so adding one never changes the request set of a round already planned (D141).
 DEFAULT_APIS = ("openalex", "crossref", "arxiv")
@@ -342,7 +438,7 @@ DEFAULT_APIS = ("openalex", "crossref", "arxiv")
 
 def _limit_kw(api: str) -> str:
     return {"openalex": "per_page", "crossref": "rows", "arxiv": "max_results",
-            "europepmc": "page_size", "core": "limit"}[api]
+            "europepmc": "page_size", "core": "limit", "pubmed": "retmax"}[api]
 
 
 # --- Resolving a reference into something fetchable ----------------------------------------------
