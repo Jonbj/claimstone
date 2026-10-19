@@ -475,13 +475,15 @@ As built (B12):
   campaign, as on the CLI. `retry_reason` without `retry_classes`, or either on `discover`, is 422.
   Authorizing stays the separate exact act above.
 - `GET …/flows/{flow_id}/acquire-hosts` (session required, read-only) → `{pending_candidates,
-  candidate_hosts: [{host, candidates}], refused_hosts: [{host, candidates}],
+  candidate_hosts: [{host, candidates}], refused_hosts: [{host, candidates, sources, open_access_candidates}],
   retryable_classes: [{failure_class, candidates}], plain_http_candidates,
   suggested_max_requests_each}` (5 when a pending URL is plain `http` or a candidate already hit the
   request ceiling, otherwise 3; a plain-`http` URL spends one request on the redirect to `https`): the hosts an `acquire` plan
   would need, read from the record: the hosts of the URLs of candidates with no attempt yet, and the hosts
   earlier attempts were refused at as "outside this plan". Hosts in the project's `excluded_hosts` are never
-  suggested. A suggestion, not a grant: the portal pre-fills the plan form with it, the person edits the list
+  suggested. `sources` are the `provenance` values of the refused attempts and `open_access_candidates`
+  counts the works for which `unpaywall`, `openalex`, `europe-pmc` or `core` named **this very host** as an
+  open-access location (a host reached only by a redirect from the DOI resolver is never counted). A suggestion, not a grant: the portal pre-fills the plan form with it, the person edits the list
   and plans, and the plan still needs its own authorization.
 - Today (B9) now reports `continues_without_you` per project: the authorized, running or
   interrupted operations.

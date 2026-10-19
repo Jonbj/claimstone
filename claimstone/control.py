@@ -1355,6 +1355,10 @@ def _flow_start(self: _Handler, params: dict[str, str], query: Any,
             'round': round_name}, 201 if created else 200
 
 
+# Sources whose answer is that a work has an open-access copy at a named location (resolve.py).
+OPEN_ACCESS_SOURCES = frozenset({'unpaywall', 'openalex', 'core', 'europe-pmc'})
+
+
 def _acquire_hosts(self: _Handler, params: dict[str, str], query: Any,
                    body: dict[str, Any]) -> tuple[Any, int]:
     """The hosts an `acquire` plan for this flow would need, read from what is recorded: the hosts
@@ -1379,6 +1383,8 @@ def _acquire_hosts(self: _Handler, params: dict[str, str], query: Any,
         if allowed(host):
             from_candidates[host] = from_candidates.get(host, 0) + 1
     refused: dict[str, set[str]] = {}
+    sources: dict[str, set[str]] = {}
+    declared: dict[str, set[str]] = {}
     for key, acquisition in attempted.items():
         for attempt in acquisition.get('attempts') or []:
             detail = str(attempt.get('detail') or '')
@@ -1386,6 +1392,13 @@ def _acquire_hosts(self: _Handler, params: dict[str, str], query: Any,
                 host = detail.split(' ', 1)[0].lower()
                 if allowed(host):
                     refused.setdefault(host, set()).add(key)
+                    sources.setdefault(host, set()).add(str(attempt.get('provenance') or 'unknown'))
+                    # Proposed, not granted: an open-access source named this very host as a location of
+                    # this work. A host reached only by a redirect from the DOI resolver is never proposed.
+                    if (attempt.get('provenance') in OPEN_ACCESS_SOURCES
+                            and attempt.get('oa_status') not in (None, 'closed')
+                            and net.host_of(str(attempt.get('request_url') or '')) == host):
+                        declared.setdefault(host, set()).add(key)
     in_scope = scope.candidates(store, selector)
     retryable: dict[str, int] = {}
     for key, acquisition in attempted.items():
@@ -1399,7 +1412,9 @@ def _acquire_hosts(self: _Handler, params: dict[str, str], query: Any,
     return {'pending_candidates': len(pending),
             'candidate_hosts': [{'host': host, 'candidates': n}
                                 for host, n in sorted(from_candidates.items())],
-            'refused_hosts': [{'host': host, 'candidates': len(keys)}
+            'refused_hosts': [{'host': host, 'candidates': len(keys),
+                               'sources': sorted(sources.get(host, ())),
+                               'open_access_candidates': len(declared.get(host, ()))}
                               for host, keys in sorted(refused.items())],
             'retryable_classes': [{'failure_class': name, 'candidates': n}
                                   for name, n in sorted(retryable.items())],

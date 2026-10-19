@@ -427,6 +427,21 @@ def test_interrupted_physical_request_is_never_reissued_automatically(tmp_path):
                         max_requests=2, run_label='retry')
 
 
+def test_a_web_locator_request_does_not_block_an_acquisition_plan(tmp_path):
+    """The locator's rows carry the candidate key but settle nothing in acquisitions.jsonl; counting them as
+    an unsettled acquisition blocked every retry of a work that had merely been looked up (found live)."""
+    project, store, flow = _fixture(tmp_path)
+    store.append('candidates.jsonl', {'candidate_key': 'doi:10.1/one',
+                                      'source_id': 'S01', 'source_class': 'ACA',
+                                      'round': 'new', 'url': 'https://example.org/paper.pdf'})
+    store.append('requests.jsonl', {'event': 'request_started', 'purpose': 'web_locator',
+                                   'campaign': 'web-locator-v1', 'candidate_key': 'doi:10.1/one',
+                                   'url': 'https://api.search.brave.com/res/v1/web/search'})
+    plan = operations.plan(project, store, flow['flow_id'], 'acquire',
+                           candidate_key='doi:10.1/one', allowed_hosts=['example.org'], max_requests=2)
+    assert plan['stage'] == 'acquire'
+
+
 def test_one_query_discovery_plan_is_bounded_and_replay_safe(tmp_path, monkeypatch):
     import socket
     import requests

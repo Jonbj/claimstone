@@ -46,6 +46,8 @@
     "suggested": "{count} candidates not yet attempted. Hosts of their URLs, filled in below: {hosts}",
     "refusedEarlier": "Refused earlier because the plan did not list them:",
     "addHost": "Add {host} ({count})",
+    "addProposed": "Add the hosts open-access sources named: {hosts}",
+    "proposedNote": "Unpaywall, OpenAlex, Europe PMC or CORE gave these hosts as the open-access location of works not yet read. You decide; planning asks no host anything.",
     "exactHosts": "Exact hosts, one per line",
     "allowedHosts": "Allowed hosts",
     "worstCase": "At most {count} requests, to: {hosts}",

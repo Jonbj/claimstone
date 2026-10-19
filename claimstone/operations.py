@@ -302,7 +302,10 @@ def plan(project: Project, store: Store, flow_id: str, stage: str, *,
                 raise OperationError('retry class does not match the candidate’s prior failure')
             settled_campaigns = {row.get('campaign') for row in store.read('acquisitions.jsonl')
                                  if row.get('candidate_key') == candidate_key}
+            # Only an acquisition request can be left without an outcome here: the web locator and the
+            # route probe tag their rows with the candidate too, and they settle nothing in this ledger.
             if any(row.get('event') == 'request_started' and
+                   row.get('purpose') in (None, 'acquisition') and
                    row.get('candidate_key') == candidate_key and
                    row.get('campaign') not in settled_campaigns
                    for row in store.read('requests.jsonl')):

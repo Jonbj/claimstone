@@ -46,6 +46,8 @@
     "suggested": "{count} candidati non ancora tentati. Host dei loro URL, già inseriti sotto: {hosts}",
     "refusedEarlier": "Rifiutati prima perché il piano non li elencava:",
     "addHost": "Aggiungi {host} ({count})",
+    "addProposed": "Aggiungi gli host indicati dalle fonti open access: {hosts}",
+    "proposedNote": "Unpaywall, OpenAlex, Europe PMC o CORE hanno dato questi host come posizione open access di opere non ancora lette. Decidi tu; pianificare non interroga nessun host.",
     "exactHosts": "Host esatti, uno per riga",
     "allowedHosts": "Host consentiti",
     "worstCase": "Al massimo {count} richieste verso: {hosts}",

@@ -5632,3 +5632,29 @@ decision, not an omission.
 
 **Instruments touched.** No new ledger and no changed row shape: `notifications.jsonl` is D153's, and the attempt
 row already carries `channel`. A new channel is a new way to fill the same ledger, so no existing figure moves.
+
+## D157 — A host an open-access source named is proposed to the plan, never granted to the project (2026-10-19)
+
+**What was measured.** In the live trial of `prova-esercizio-depressione-2`, 11 of 20 works stayed unread after the
+retry. The record says why: `EXCLUDED_HOST` was recorded against hosts the plan did not list. For two works the
+copy was named by Unpaywall or Europe PMC at a specific host (`pmc.ncbi.nlm.nih.gov`, `www.ebi.ac.uk`,
+`link.springer.com`, `osf.io`), with an open-access status and a licence, and the plan refused it before any
+request. The operator then found one of those PDFs by hand at the link the resolver had already named.
+
+**Decision.** `GET …/acquire-hosts` now says, for each refused host, which sources named it (`sources`) and for how
+many works an open-access source (`unpaywall`, `openalex`, `europe-pmc`, `core`) named **that very host** with an
+open-access status other than `closed` (`open_access_candidates`). The plan form offers one button that adds those
+hosts to the exact list. Planning still asks no host anything, and the plan still needs the operator's exact "yes".
+
+**What was refused.** A tool that edits the project's allowed hosts by itself. Whether a host may be fetched from is a
+policy with legal consequences and a pre-registration meaning; a discovery tool widening it would empty the
+`excluded_hosts` guarantee. Two cases are deliberately never proposed: a host reached only by a redirect from the DOI
+resolver (the resolver did not name it), and a location a source marked `closed`. Web-search leads (D145) are not
+open-access declarations about a DOI and stay separate.
+
+**A defect found on the way.** The web locator's request rows carry the candidate key, so the check "an earlier
+acquisition request has no outcome" counted them and blocked every retry of a work that had only been looked up. The
+check now reads only rows with purpose `acquisition` (or none, for rows written before the field existed).
+
+**Not done.** A project-level, dated approval of hosts that later plans reuse. It needs a ledger and a revoke path
+and is the next step if the per-plan button proves the right shape.

@@ -145,4 +145,34 @@ describe("network batch planning", () => {
     expect(writes[0]).toEqual({ stage: "acquire", apis: [], max_units: 4, max_requests_each: 3,
       per_query: 25, allowed_hosts: ["doi.org", "repo.example.org", "pmc.ncbi.nlm.nih.gov"] });
   });
+  it("adds in one click the hosts open-access sources named, and not the ones they did not", async () => {
+    const writes: unknown[] = [];
+    vi.stubGlobal("fetch", (url: string, init?: RequestInit) => {
+      if (url === "/control/v1/session") return json(200, { operator: {
+        id: "o", name: "Operator", role: "admin", must_change_password: false }, csrf_token: "tok" });
+      if (url.endsWith("/operations")) return json(200, { flow_id: "f1", operations: [] });
+      if (url.endsWith("/acquire-hosts")) return json(200, { pending_candidates: 2,
+        candidate_hosts: [{ host: "doi.org", candidates: 2 }],
+        refused_hosts: [
+          { host: "pmc.ncbi.nlm.nih.gov", candidates: 2, sources: ["unpaywall"], open_access_candidates: 2 },
+          { host: "linkinghub.elsevier.com", candidates: 5, sources: ["candidate"], open_access_candidates: 0 }] });
+      if (init?.method === "POST") {
+        writes.push(JSON.parse(String(init.body)));
+        return json(201, { batch_id: "b1", operation_ids: [], units: [], selected: 2, max_total_requests: 6 });
+      }
+      return json(404, { error: { code: "NOT_FOUND", message: "unknown" } });
+    });
+    render(<MemoryRouter><SessionProvider><OperationsPanel project="demo" flowId="f1"
+      namedRound hasCandidates /></SessionProvider></MemoryRouter>);
+    await screen.findByRole("button", { name: "Plan batch" });
+    fireEvent.change(screen.getByLabelText("Stage"), { target: { value: "acquire" } });
+    await screen.findByText("At most 6 requests, to: doi.org");
+    fireEvent.click(screen.getByRole("button", {
+      name: "Add the hosts open-access sources named: pmc.ncbi.nlm.nih.gov" }));
+    expect(screen.getByText("At most 6 requests, to: doi.org, pmc.ncbi.nlm.nih.gov")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Plan batch" }));
+    await waitFor(() => expect(writes).toHaveLength(1));
+    expect((writes[0] as { allowed_hosts: string[] }).allowed_hosts)
+      .toEqual(["doi.org", "pmc.ncbi.nlm.nih.gov"]);
+  });
 });

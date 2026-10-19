@@ -38,6 +38,10 @@ export default function PlanBatchForm({ project, flowId, hasCandidates, onPlanne
     () => (stage === "acquire" ? control.acquireHosts(project, flowId) : Promise.resolve(null)),
     [project, flowId, stage]);
   const suggested = suggestions.data;
+  // Hosts an open-access source named as the location of a work not read yet: proposed, never granted.
+  const proposedHosts = (suggested?.refused_hosts ?? [])
+    .filter((item) => (item.open_access_candidates ?? 0) > 0).map((item) => item.host);
+  const listedHosts = hostsText.split(/\r?\n/).map((h) => h.trim());
   useEffect(() => {
     if (stage !== "acquire" || !suggested || hostsTouched) return;
     setHostsText(suggested.candidate_hosts.map((item) => item.host).join("\n"));
@@ -136,6 +140,18 @@ export default function PlanBatchForm({ project, flowId, hasCandidates, onPlanne
           {suggested && suggested.refused_hosts.length > 0 ? (
             <div className="flex flex-col gap-1 text-sm">
               <p>{t("planBatch.refusedEarlier")}</p>
+              {proposedHosts.length > 0 ? (
+                <>
+                  <p className="text-muted-foreground">{t("planBatch.proposedNote")}</p>
+                  <button type="button" disabled={busy || proposedHosts.every((h) => listedHosts.includes(h))}
+                          onClick={() => { setHostsTouched(true);
+                            setHostsText((old) => [...old.split(/\r?\n/).map((h) => h.trim()).filter(Boolean),
+                              ...proposedHosts.filter((h) => !old.split(/\r?\n/).map((x) => x.trim()).includes(h))].join("\n")); }}
+                          className="min-h-11 self-start rounded-md border px-3 disabled:opacity-50">
+                    {t("planBatch.addProposed", { hosts: proposedHosts.join(", ") })}
+                  </button>
+                </>
+              ) : null}
               <ul className="flex flex-wrap gap-2">
                 {suggested.refused_hosts.map((item) => (
                   <li key={item.host}>

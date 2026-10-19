@@ -155,7 +155,33 @@ def test_acquire_hosts_are_suggested_from_the_record_and_never_include_excluded_
     assert got[2]["pending_candidates"] == 3
     assert got[2]["candidate_hosts"] == [{"host": "doi.org", "candidates": 2},
                                          {"host": "repo.example.org", "candidates": 1}]
-    assert got[2]["refused_hosts"] == [{"host": "pmc.ncbi.nlm.nih.gov", "candidates": 1}]
+    assert got[2]["refused_hosts"] == [{"host": "pmc.ncbi.nlm.nih.gov", "candidates": 1,
+                                        "sources": ["unknown"], "open_access_candidates": 0}]
+
+
+def test_refused_hosts_say_who_named_them_and_only_open_access_sources_count_as_a_proposal(ws):
+    def refusal(host, request_host, provenance, oa_status):
+        return {"failure_class": "EXCLUDED_HOST", "detail": f"{host} is outside this plan",
+                "request_url": f"https://{request_host}/x", "provenance": provenance, "oa_status": oa_status}
+
+    with _served(ws) as (base, prefix, headers):
+        flow_id = _start(base, prefix, headers)[2]["flow_id"]
+        for key in ("doi:1", "doi:2"):
+            _candidate(ws, key, "https://seen.example.org/p.pdf")
+            ws["store"].append("acquisitions.jsonl", {
+                "candidate_key": key, "failure_class": "EXCLUDED_HOST", "attempts": [
+                    refusal("pmc.ncbi.nlm.nih.gov", "pmc.ncbi.nlm.nih.gov", "unpaywall", "gold"),
+                    refusal("publisher.example.org", "doi.org", "candidate", "closed"),
+                    refusal("closed.example.org", "closed.example.org", "unpaywall", "closed"),
+                    # the resolver named doi.org; the publisher was only reached by redirect
+                    refusal("viaredirect.example.org", "doi.org", "unpaywall", "gold")]})
+        got = _request(f"{base}{prefix}/flows/{flow_id}/acquire-hosts",
+                       headers={"Cookie": headers["Cookie"]})
+    by_host = {item["host"]: item for item in got[2]["refused_hosts"]}
+    assert by_host["pmc.ncbi.nlm.nih.gov"] == {"host": "pmc.ncbi.nlm.nih.gov", "candidates": 2,
+                                               "sources": ["unpaywall"], "open_access_candidates": 2}
+    for host in ("publisher.example.org", "closed.example.org", "viaredirect.example.org"):
+        assert by_host[host]["open_access_candidates"] == 0
 
 
 def _candidate(ws, key, url):
