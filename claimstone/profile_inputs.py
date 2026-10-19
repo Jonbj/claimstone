@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from . import chunk_sets, admissibility, claim_records, claimgate, evidence, extract, model_call, review, scope
+from . import chunk_sets, admissibility, claim_records, claimgate, evidence, extract, model_call, review, scope, status
 from .config import Project
 from .store import Store
 
@@ -119,6 +119,33 @@ def collect(project: Project, store: Store, *, round_name: str | None,
         return {key: value for key, value in row.items()
                 if key not in ('harvested_at', 'reviewed_at', 'created_at')}
 
+    # A recorded notice binds to the profile of every question its source feeds (#12): the
+    # quote did not change, but the paper it was read from did. Only completed observations
+    # enter — `LOOKUP_FAILED` learned nothing — and only the verdict-relevant projection does:
+    # state and the notices' identity, never the wall clock, the campaign or the licence list,
+    # so re-observing the same answer leaves every hash where it was.
+    latest_status = status.latest(store)
+    status_by_source: dict[str, dict[str, Any]] = {}
+    if latest_status:
+        key_by_source: dict[str, str] = {}
+        for key, row in store.latest_by('candidates.jsonl', 'candidate_key').items():
+            if row.get('source_id'):
+                key_by_source[str(row['source_id'])] = str(key)
+        for key, row in admissibility.collapse(store).items():
+            if row.get('source_id'):
+                key_by_source.setdefault(str(row['source_id']), str(key))
+        for source_id, candidate_key in key_by_source.items():
+            observed = latest_status.get(candidate_key)
+            if not observed or observed.get('state') == status.LOOKUP_FAILED:
+                continue
+            status_by_source[source_id] = {
+                'state': observed.get('state'),
+                'notices': sorted(
+                    (str(n.get('type') or '').lower(), str(n.get('doi') or '').lower(),
+                     str(n.get('kind') or ''), str(n.get('updated') or ''))
+                    for n in observed.get('notices') or []),
+            }
+
     evidence_sha256 = {}
     for question in project.questions:
         mine = [row for row in claims if str(row.get('question_id')) == str(question.id)]
@@ -126,14 +153,24 @@ def collect(project: Project, store: Store, *, round_name: str | None,
         rejected = [row for row in rejections
                     if str((row.get('record') or {}).get('question_id') or row.get('question_id'))
                     == str(question.id)]
-        evidence_sha256[str(question.id)] = evidence._digest({
+        payload = {
             'claims': sorted((semantic(row) for row in mine), key=lambda row: str(row['claim_id'])),
             'reviews': {key: semantic(row) for key, row in reviews.items() if key in identifiers},
             'rejections': sorted((semantic(row) for row in rejected),
                                  key=lambda row: str(row.get('claim_id'))),
             'chunks': {key: semantic(row) for key, row in chunks.items()},
-        })
+        }
+        # Absent observations add no key at all, so within one profile_version the projection
+        # itself never churns a hash: the first observation that arrives is itself the change
+        # a signature must answer for. (The v5→v6 bump re-keys every hash once, deliberately:
+        # hashes over a new input class are not comparable with the old ones.)
+        question_status = {str(row.get('source_id')): status_by_source[str(row.get('source_id'))]
+                           for row in mine if str(row.get('source_id')) in status_by_source}
+        if question_status:
+            payload['statuses'] = question_status
+        evidence_sha256[str(question.id)] = evidence._digest(payload)
     return {'sources': sorted(sources), 'chunks': chunks, 'claims': claims, 'reviews': reviews,
             'rejections': rejections, 'completion': completion,
             'examined': len({str(row.get('source_id')) for row in chunks.values()}),
+            'status_observations': status_by_source,
             'evidence_sha256': evidence_sha256}

@@ -1,7 +1,7 @@
 # `profiles.jsonl` and `adjudications.jsonl` — the contract
 
 Stage 6 appends profiles; a person alone authorizes an adjudication. Historical rows are never rewritten.
-D45 introduced `profile_version 2`; D46 adds `profile_version 3`; D47 adds `profile_version 4`; D48 adds `profile_version 5`, independently of `decision_contract_version 1`.
+D45 introduced `profile_version 2`; D46 adds `profile_version 3`; D47 adds `profile_version 4`; D48 adds `profile_version 5`; D148 adds `profile_version 6`, which folds completed status observations into the evidence hash, independently of `decision_contract_version 1`.
 
 ## Profile identity and completeness
 

@@ -5383,3 +5383,28 @@ Unchanged: scheduler operations still plan one page per query, and no cursor is 
 budget is a CLI argument, not a project input, so it does not change a protocol digest. Unmeasured: how many
 additional candidates a second page returns on the trial's topics. D118 measured one identity on one query,
 not a rate, so the budget enables a measurement rather than asserting a gain.
+
+## D148 — A recorded notice binds to the signatures it can affect (2026-10-18)
+
+Closes the half of #12 that D142 left open, recording the question it deferred: *what a recorded notice
+does to a signed verdict.* Answer: exactly what any other change to the evidence does — it makes the
+signature stale, and it does so through the existing mechanism, not a new one.
+
+**The binding.** The per-question evidence hash (`profile_inputs`) now includes the **status projection**
+of every completed observation on a source that fed an *accepted* claim of that question: the state
+(`NOTICE_RECORDED`/`NO_NOTICE_RECORDED`) and the identity of each notice (type, DOI, kind, updated date).
+`LOOKUP_FAILED` is excluded — a failed lookup learned nothing — and so are the wall clock, the campaign
+and the licence list, so re-observing the same answer churns nothing. A notice on a source whose claims
+were all rejected, or that fed no claim at all, changes no hash: it cannot have informed any verdict. The
+profile row carries the same projection as `status_observations`, visible beside the counts it changed.
+
+**What a signer experiences.** A verdict signed before a notice appears is displayed stale, with both
+hashes, and re-signing is refused until the profile is rebuilt and read again — the path every other
+evidence change already takes. No verdict changes by itself, and no notice is ever converted into one:
+withdrawal is information for the person, not an automatic `CONTRADICTED`.
+
+**Instrument.** `profile_version 6`: hashes over a new input class are not comparable with v5 ones, so the
+bump re-keys every stored profile once (no verdict is signed anywhere today, which is when this is cheap).
+Within v6, a project with no observations hashes exactly as one that never observed: the `statuses` key
+exists only when an observation exists, so the first observation *is* the change, not the feature's
+arrival.
