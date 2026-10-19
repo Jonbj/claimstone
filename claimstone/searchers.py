@@ -20,7 +20,7 @@ from claimstone import ids, net
 from claimstone.store import sha256_text
 
 
-DISCOVERY_VERSION = 4
+DISCOVERY_VERSION = 5
 
 
 class SearchError(ValueError):
@@ -118,26 +118,25 @@ def openalex_query_url(term: str, *, per_page: int = 25, mode: str = 'search',
     return 'https://api.openalex.org/works?' + urllib.parse.urlencode(params)
 
 
-def search_openalex(
-    fetcher: net.FetcherLike, term: str, topic_id: str, *, per_page: int = 25
-) -> Iterator[dict[str, Any]]:
-    # Keep the frozen discovery-v4 request unchanged. The bounded URL builder
-    # above is for separately approved page/strategy probes.
-    url = (
-        'https://api.openalex.org/works?'
-        + urllib.parse.urlencode({
-            'search': term,
-            'per-page': per_page,
-            'mailto': net.contact_email(),
-            'select': 'id,doi,title,publication_year,primary_location,open_access,cited_by_count',
-        })
-    )
+def openalex_page(
+    fetcher: net.FetcherLike, term: str, topic_id: str, *, per_page: int = 25,
+    page: int | None = None, rank_offset: int = 0,
+) -> dict[str, Any]:
+    """One bounded page, its rows, and what its metadata says about the rest.
+
+    Page 1 is the frozen discovery-v4 request (`page=None`); later pages add only
+    `page=`, which D118 measured as a valid continuation. `rank_offset` keeps the
+    provider rank continuous across pages, so a query hit means the same position
+    whether the work came from page 1 or page 3.
+    """
+    url = openalex_query_url(term, per_page=per_page, page=page)
     payload, outcome = fetcher.get_json(url)
+    rows: list[dict[str, Any]] = []
     for rank, work in enumerate(records(payload, outcome, ("results",)), start=1):
         location = work.get("primary_location") or {}
         source = (location.get("source") or {}) if isinstance(location, dict) else {}
         landing = location.get("pdf_url") or location.get("landing_page_url") or work.get("id")
-        yield _row(
+        rows.append(_row(
             title=str(work.get("title") or "").strip(),
             url=str(landing or ""),
             doi=work.get("doi"),
@@ -151,8 +150,25 @@ def search_openalex(
             channel=CHANNEL_KEYWORD,
             is_oa=(work.get("open_access") or {}).get("is_oa"),
             citations=work.get("cited_by_count"),
-            extra={"openalex_work_id": work.get("id"), "query_rank": rank},
-        )
+            extra={"openalex_work_id": work.get("id"),
+                   "query_rank": rank + rank_offset},
+        ))
+    meta = payload.get("meta") if isinstance(payload, dict) else None
+    count = meta.get("count") if isinstance(meta, dict) else None
+    cursor = meta.get("next_cursor") if isinstance(meta, dict) else None
+    return {
+        "rows": rows,
+        # A count below the rows returned is inconsistent metadata and stays unknown (D113).
+        "total_available": count if type(count) is int and count >= len(rows) else None,
+        "next_cursor": cursor if isinstance(cursor, str) and cursor else None,
+    }
+
+
+def search_openalex(
+    fetcher: net.FetcherLike, term: str, topic_id: str, *, per_page: int = 25
+) -> Iterator[dict[str, Any]]:
+    """The one-page form, unchanged: its request bytes remain discovery-v4."""
+    yield from openalex_page(fetcher, term, topic_id, per_page=per_page)["rows"]
 
 
 def search_crossref(
