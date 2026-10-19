@@ -68,6 +68,7 @@ write to — several fields exist to prevent a specific defect and look optional
 | [`contracts/intake.md`](contracts/intake.md) | material an operator proposes, before any admission |
 | [`contracts/journey.md`](contracts/journey.md) | the guided research page the server computes for the portal |
 | [`contracts/new_project.md`](contracts/new_project.md) | the new-project wizard's drafts and routes |
+| [`contracts/notifications.md`](contracts/notifications.md) | the outbox of events that need a person, and the Telegram channel (D153) |
 
 ## Removed material
 

@@ -5524,3 +5524,68 @@ export already freezes; it adds no ledger and never includes raw bytes.
 **Instrument.** `EXPORT_VERSION` is 3, because the derived output set changed: an export made under
 version 2 has no `search_appendix.md` and does not verify under this code, while its recorded prefixes
 remain intact and a fresh export is a new identity. No other instrument constant changes.
+
+
+## D153 — Notifications are derived from the ledgers into one outbox, and Telegram is a channel on it (2026-10-18)
+
+Issue #5 asked for opt-in Telegram notices after the portal-side notifications existed. An inventory of the tree
+before writing code found the ten candidate events already recorded, across eight ledgers: operation plans and
+failures and batches in `operations.jsonl`/`operation_batches.jsonl`, signatures in `profiles.jsonl` and
+`adjudications.jsonl`, integrity in `ledger_repairs.jsonl` and `round_state`, retries in `acquisitions.jsonl` and
+`retry_policies.jsonl`, breaker openings in `requests.jsonl`, and the floor in `admissibility.admit`. What did not
+exist was any outbound row at all. The portal's "Today" page was the only signal, and it exists only while someone
+is looking at it.
+
+**Derived, not written by the stages.** An event is computed on demand from those ledgers into
+`store/<project>/notifications.jsonl`; no stage imports this module and no stage writes a row. The alternative — each
+stage appending a notification when it does something — was rejected on the measurement above: the facts are
+already rows, so a stage-written outbox is a second copy that can disagree with the first, and a stage that crashes
+between its ledger append and its notification append loses the message while the fact remains. Derivation is
+idempotent in the strong sense: re-running it sees the same rows and computes the same keys. The cost is that a
+notification is only as fresh as the last `notify` run, which is what a drain is for.
+
+**One ledger, three row kinds, one key.** `started`, `event`, `attempt`. `event_key` is `n1-` plus the SHA-256 of
+the canonical identity (event, reason, code, project, subject, ids, count, occurrence), so the same occurrence
+cannot be recorded twice by a restart, a second process, or a re-derivation. `Store.writer_lock` covers the
+read-then-append. Attempts are rows too, with an outcome and a cause; a send exception becomes an `attempt` row with
+`failure_class: EXCEPTION` rather than a silence, and the drain exits non-zero. The outbox holds at most 3 attempts
+per event per channel, waits 15 minutes between them, sends at most 20 messages per drain, and a different channel
+does not consume the event — issue #6's e-mail will read the same ledger.
+
+**No free text, structurally.** An event has a fixed field set: names from closed sets, ids, a count, and a `code`
+validated as an identifier. There is no title, quote, abstract or claim-text field, so "ids and counts only" is not
+a convention someone can forget; there is nowhere to put prose. `code` conveys a recorded cause at the class level
+(`OperationError`, `DOMAIN_BUDGET_EXHAUSTED`, `INTEGRITY`), and the full cause stays in the ledger the code points
+to.
+
+**"Needs a person" is the portal's own computation.** It is read from `portal_state.inbox_cards`, filtered to
+`today.REQUIRED_CATEGORIES` (`ADJUDICATION`, `INTEGRITY`, `PROTOCOL`). Re-implementing the predicate here would
+drift the moment an integrity check is added; reading the card means a new check reaches notifications by existing.
+Cards that only name a command do not notify. A protocol or registry binding that moved is an `integrity_error`
+with `code: PROTOCOL`: it stops everything else exactly as a damaged ledger does, and the code says which without
+putting prose in a message.
+
+**A start watermark, because history is not news.** State-derived events (waiting plans, signatures, integrity,
+a round below its floor) are sent on the first drain however old they are: that is what an operator turning
+notifications on needs. Occurrences (a retry that succeeded, a given-up candidate, a completed batch, a failure,
+a breaker) are filtered against a `started` row written by the first non-dry drain. Without it, enabling the switch
+on a project with a year of retries would send a year of messages. `--since` is the deliberate replay. A dry run
+writes nothing, including the start row, so a preview cannot later look like a sent message.
+
+**Telegram is a channel, not a control surface.** One chat, one host (`api.telegram.org`), one `sendMessage` POST,
+an explicit timeout, a descriptive User-Agent, no `getUpdates`, no reply handling, no commands. The token is part of
+Telegram's URL by design, which is why this is a small stdlib client and **not** `net.RecordingFetcher`: routing it
+through the recorder would put the token into `requests.jsonl` and its raw-body cache. Redirects are refused,
+because following one carries the token to another host. The token and chat id are redacted from every recorded
+cause. The switch is the presence of `CLAIMSTONE_TELEGRAM_BOT_TOKEN` and `CLAIMSTONE_TELEGRAM_CHAT_ID` in an
+environment file outside this public repository.
+
+**Deferred, not forgotten.** The issue's open questions: digest mode is not built — immediate, one message per
+event, is the conservative default and the per-drain limit bounds a burst; a digest is a new decision. Per-event
+opt-out and more than one recipient are not built. Notifications for the four policy/schedule ledgers and model-call
+batches are not derived yet: they have their own `planned` states and need their own occurrence identity. E-mail is
+#6 on the same outbox.
+
+**Instruments touched.** A new per-project ledger (`notifications.jsonl`) and a new command (`notify`). No existing
+row shape changed, so no existing figure moves. The decision number is D153 because D147–D152 are held by open
+branches; the gap is deliberate, not a missing entry.

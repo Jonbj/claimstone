@@ -116,6 +116,7 @@ Per project under `store/<project>/`:
 | `reviews.jsonl` | review | a second reader's verdict on one claim |
 | `profiles.jsonl`, `adjudications.jsonl` | synthesize / adjudicate | the evidence profile per question, and a person's signed verdict |
 | `registry.jsonl` | any command | one row per question-registry version seen, with its hash. A changed hash under an unchanged version refuses to run (invariant 5) |
+| `notifications.jsonl` | notify | the outbox: an event that needs a person (ids and counts only), and every send attempt with its outcome (D153) |
 
 The scheduler-era ledgers — operations, batches, network schedules, copy policies, local mandates,
 dossiers, worker heartbeats — follow the same append-only rule. Every ledger, core or scheduler,
