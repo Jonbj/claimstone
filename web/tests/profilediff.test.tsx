@@ -12,7 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/api";
 import type { ProfileDiff } from "@/lib/api-types";
 import ProfileDiffPanel from "@/components/ProfileDiffPanel";
-import emptyDiff from "./fixtures/projects/example-news-and-returns/flows/0df548e3743689e1a0dd099da697aee4842e8a573f1225a8da13fec128a248cd/questions/Q02.profile-diff.from-7056ff48a8e45f615aadc993d51035ac4add9a7686d5190f3fee1703f759f9c5&to-7056ff48a8e45f615aadc993d51035ac4add9a7686d5190f3fee1703f759f9c5.json";
+import emptyDiff from "./fixtures/projects/example-news-and-returns/flows/0df548e3743689e1a0dd099da697aee4842e8a573f1225a8da13fec128a248cd/questions/Q02.profile-diff.from-58d23c383a85968eb38f0f937b552a4a99bb42ba0d1f6092989c1d866c1abdc9&to-58d23c383a85968eb38f0f937b552a4a99bb42ba0d1f6092989c1d866c1abdc9.json";
 
 // A payload shaped as `portal_state.profile_diff` builds it: one added, one
 // removed (carrying the ledger's recorded reason), one changed (a re-worded
@@ -74,7 +74,7 @@ const fullDiff: ProfileDiff = {
 } as unknown as ProfileDiff;
 
 const CURRENT_SHA =
-  "7056ff48a8e45f615aadc993d51035ac4add9a7686d5190f3fee1703f759f9c5";
+  "58d23c383a85968eb38f0f937b552a4a99bb42ba0d1f6092989c1d866c1abdc9";
 
 vi.mock("@/lib/api", async (importOriginal) => {
   const real = await importOriginal<typeof import("@/lib/api")>();
@@ -207,7 +207,7 @@ describe("R5.4: ProfileDiffPanel", () => {
     // from and to sides carry the same hash.
     expect(
       (container.textContent ?? "").match(
-        /7056ff48a8e45f615aadc993d51035ac4add9a7686d5190f3fee1703f759f9c5/g,
+        /58d23c383a85968eb38f0f937b552a4a99bb42ba0d1f6092989c1d866c1abdc9/g,
       )?.length,
     ).toBe(2);
   });
