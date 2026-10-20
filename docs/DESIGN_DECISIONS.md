@@ -5698,3 +5698,28 @@ and is the next step if the per-plan button proves the right shape.
 nothing: every candidate was skipped with "direct URL and exact lowercase hosts are required", because a retry
 starts at the candidate's own URL (`doi.org`) and that host was not in the plan. `acquire-hosts` now returns
 `retry_hosts` (the own-URL host per retry class) and the form adds them when a retry class is ticked.
+
+## D158 — Candidates carry their authors, and a web-located copy must share one (2026-10-19)
+
+Closes the difference D145 kept on purpose in #4: *"the author-surname check is not possible yet: candidate rows
+carry no authors."* They do now, and the check runs.
+
+**discovery_version 6: candidate rows carry `authors`** — display names as the provider wrote them, first author
+first, capped at 20, empty for citation and manifest rows. All six keyword adapters parse them (OpenAlex
+`authorships`, Crossref `author`, arXiv Atom names, Europe PMC `authorString`, PubMed esummary names, CORE
+`authors`); the OpenAlex and Crossref `select` lists grow accordingly, which is the request-bytes change that
+makes this a version bump and not a field note. `candidate_key_version` is untouched: authors identify, they
+never key, and two rows that differ only in author spelling remain one candidate by DOI or title as before.
+
+**identity_check_version 2: the surnames must agree when both sides carry authors.** The parsed document's own
+authors are read where a parser can trust them — GROBID's TEI header and JATS `contrib-group`; HTML carries
+none. When the candidate and the document both name authors, a title that matches while *no* surname does is
+`WRONG_DOCUMENT`: same title, different people, different work — the exact edition/review confusion D145
+recorded as a known weakness. One rule covers every spelling the providers use (`ids.surname`: family part
+before a comma, else the last name-bearing token, folded by `normalize_title` so every script survives). Author
+agreement never rescues a failed title, and a side without authors leaves the title verdict standing, so an
+HTML copy or a metadata record without names judges exactly as it did under version 1.
+
+**What it does not do.** No merge, no deduplication, no ranking: the authors field is evidence for one check
+and a visible fact on the row. Nothing about the floor changes — a `WRONG_DOCUMENT` still confirms nothing and
+the bytes are still kept. The portal shows the field as it shows any other; no new page exists for it.

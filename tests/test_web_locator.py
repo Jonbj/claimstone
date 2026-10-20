@@ -78,6 +78,51 @@ def test_identity_passes_a_matching_title_and_separates_wrong_from_unverified():
     assert web_locator.identity_check("x", None)["failure_class"] == web_locator.IDENTITY_UNVERIFIED
 
 
+def test_a_matching_title_with_no_shared_surname_is_not_the_work():
+    """D158: same title, different people, different work — the edition/review confusion D145 recorded."""
+    row = web_locator.identity_check(
+        "Exercise as a treatment for depression: a meta-analysis",
+        "Exercise as a Treatment for Depression: A Meta-Analysis",
+        parsed_authors=["Klara Oswald", "Ming Li"],
+        candidate_authors=["Jane A. Smith", "Ravi Patel"])
+    assert not row["passed"] and row["failure_class"] == web_locator.WRONG_DOCUMENT
+    assert row["authors_checked"] is True and row["shared_surnames"] == 0
+    assert "no author surname" in row["reason"]
+
+
+def test_a_shared_surname_confirms_and_needs_only_one():
+    row = web_locator.identity_check(
+        "Exercise as a treatment for depression: a meta-analysis",
+        "Exercise as a treatment for depression: A Meta-Analysis",
+        parsed_authors=["Klara Oswald", "Jane van der Berg"],
+        candidate_authors=["Jane A. Smith", "van der Berg, Jane"])
+    assert row["passed"] and row["authors_checked"] is True and row["shared_surnames"] == 1
+    assert "surname" in row["reason"]
+
+
+def test_a_side_without_authors_leaves_the_title_verdict_standing():
+    """An HTML copy or a metadata record without names judges exactly as under version 1."""
+    for kwargs in ({"parsed_authors": []}, {"candidate_authors": []},
+                   {"parsed_authors": ["A Smith"], "candidate_authors": []}):
+        row = web_locator.identity_check("Sleep hygiene in adolescents", "Sleep hygiene in adolescents", **kwargs)
+        assert row["passed"] and row["authors_checked"] is False and row["shared_surnames"] is None
+
+
+def test_author_agreement_never_rescues_a_failed_title():
+    row = web_locator.identity_check("A completely different study", "Sleep hygiene in adolescents",
+                                     parsed_authors=["Jane Smith"], candidate_authors=["Jane Smith"])
+    assert not row["passed"] and row["failure_class"] == web_locator.WRONG_DOCUMENT
+    assert row["authors_checked"] is False, "the title failed first; surnames are not reached"
+
+
+def test_surname_reads_every_spelling_the_providers_use():
+    from claimstone import ids
+    for written in ("Jane A. Smith", "Smith, J.", "Smith JA", "smith", "JANE SMITH"):
+        assert ids.surname(written) == "smith", written
+    assert ids.surname("van der Berg, Jane") == "berg" == ids.surname("Jane van der Berg")
+    assert ids.surname("") == "" and ids.surname(None) == "" and ids.surname(",,") == ""
+
+
 def test_normalize_does_not_confirm_a_web_copy_of_another_work(tmp_path):
     store = Store("t", base=tmp_path)
     store.append("candidates.jsonl", {"candidate_key": "k:a", "title": "A completely different study about sleep"})
@@ -88,6 +133,23 @@ def test_normalize_does_not_confirm_a_web_copy_of_another_work(tmp_path):
     assert out[0]["fulltext_confirmed"] is False
     assert out[0]["failure_class"] in (web_locator.WRONG_DOCUMENT, web_locator.IDENTITY_UNVERIFIED)
     assert out[0]["identity_check"]["passed"] is False and out[0]["chunks"] == 0
+
+
+def test_normalize_refuses_a_same_title_copy_by_different_authors(tmp_path):
+    """The edition/review confusion D145 could not catch: the title matches, the people do not (D158)."""
+    store = Store("t", base=tmp_path)
+    store.append("candidates.jsonl", {
+        "candidate_key": "k:a", "title": "News versus Sentiment",
+        "authors": ["Klara Oswald", "Ming Li"]})
+    row = acquired("a", store)
+    row["provenance"] = "web_locator"
+    store.append("acquisitions.jsonl", row)
+    # The parsed TEI (tests/test_tei.DOC) carries the same title and different authors.
+    out = list(normalize.run(store, FakeGrobid()))
+    assert out[0]["fulltext_confirmed"] is False
+    assert out[0]["failure_class"] == web_locator.WRONG_DOCUMENT
+    check = out[0]["identity_check"]
+    assert check["authors_checked"] is True and check["shared_surnames"] == 0
 
 
 def test_a_catalogue_copy_is_not_subjected_to_the_web_identity_check(tmp_path):

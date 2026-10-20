@@ -5,7 +5,8 @@ from claimstone import net, resolve, searchers
 
 PAYLOAD = {"results": [
     {"id": 99, "doi": "10.1000/ABC", "title": "Exercise in mood", "yearPublished": 2018, "publisher": "Univ Press",
-     "documentType": ["research"], "downloadUrl": "https://repo.example.edu/files/abc.pdf", "journals": [{"title": "J Mood"}]},
+     "documentType": ["research"], "downloadUrl": "https://repo.example.edu/files/abc.pdf", "journals": [{"title": "J Mood"}],
+     "authors": [{"name": "Smith JA"}, {"name": "Patel R"}]},
     {"id": 100, "doi": "10.9999/zzz", "title": "Different work", "downloadUrl": "https://repo.example.edu/zzz.pdf"},
     {"id": 101, "doi": None, "title": "No file", "links": []},
 ]}
@@ -27,6 +28,7 @@ def test_search_rows_carry_the_download_address_and_flag_oa_only_when_a_file_is_
     assert first["url"] == "https://repo.example.edu/files/abc.pdf" and first["is_oa"] is True
     assert first["candidate_key"] == "doi:10.1000/abc" and first["venue"] == "J Mood" and first["venue_type"] == "research"
     assert first["source_api"] == "core" and first["core_id"] == "99"
+    assert first["authors"] == ["Smith JA", "Patel R"]
     assert nofile["is_oa"] is None and nofile["url"] == "https://core.ac.uk/works/101"
 
 

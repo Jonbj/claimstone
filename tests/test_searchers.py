@@ -18,6 +18,8 @@ OPENALEX_PAYLOAD = {"results": [{
                          "source": {"display_name": "Journal of Finance", "type": "journal"}},
     "open_access": {"is_oa": True},
     "cited_by_count": 42,
+    "authorships": [{"author": {"display_name": "Jane A. Smith"}},
+                    {"author": {"display_name": "Ravi Patel"}}],
 }]}
 
 CROSSREF_PAYLOAD = {"message": {"items": [{
@@ -28,6 +30,7 @@ CROSSREF_PAYLOAD = {"message": {"items": [{
     "URL": "https://doi.org/10.1234/def",
     "type": "journal-article",
     "is-referenced-by-count": 900,
+    "author": [{"given": "Halbert", "family": "White"}, {"family": "Kim"}],
 }]}}
 
 ARXIV_ATOM = b"""<?xml version="1.0"?>
@@ -36,6 +39,8 @@ ARXIV_ATOM = b"""<?xml version="1.0"?>
     <id>http://arxiv.org/abs/2401.01234v1</id>
     <title>Can ChatGPT Forecast Stock Price Movements?</title>
     <published>2024-01-02T00:00:00Z</published>
+    <author><name>Jane A. Smith</name></author>
+    <author><name>Ravi Patel</name></author>
   </entry>
 </feed>"""
 
@@ -49,6 +54,9 @@ def test_openalex_reports_the_venue_type_classify_needs():
     assert row["venue"] == "Journal of Finance"
     assert row["url"] == "https://repo.example/a.pdf"
     assert row["topic_id"] == "T02"
+    # D158: the row carries the authors the API named, and the select clause asks for them.
+    assert row["authors"] == ["Jane A. Smith", "Ravi Patel"]
+    assert "authorships" in fetcher.calls[-1]
     assert row["channel"] == "keyword"
     assert row["openalex_work_id"] == "https://openalex.org/W123"
     assert row["query_rank"] == 1
@@ -79,6 +87,9 @@ def test_crossref_asks_for_type_and_reports_it():
     assert row["venue_type"] == "journal-article"
     assert "type" in fetcher.calls[-1]
     assert row["year"] == 1999
+    # D158: given + family as the provider wrote them; a missing given is not a space.
+    assert row["authors"] == ["Halbert White", "Kim"]
+    assert "author" in fetcher.calls[-1]
 
 
 def test_arxiv_parses_atom_and_is_always_a_preprint_venue():
@@ -91,6 +102,7 @@ def test_arxiv_parses_atom_and_is_always_a_preprint_venue():
     assert rows[0]["is_oa"] is True
     assert rows[0]["arxiv_base_id"] == "2401.01234"
     assert rows[0]["arxiv_version"] == 1
+    assert rows[0]["authors"] == ["Jane A. Smith", "Ravi Patel"]
 
 
 def test_an_empty_payload_yields_nothing():

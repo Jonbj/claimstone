@@ -26,8 +26,12 @@ personal site stays unclassified until a person adds its host to the policy.
 **Leads become files only through an authorised plan.** The cascade appends `web_locator` locations last, for `ALLOWED` leads
 whose exact host an authorised plan named, and only for a project that declared `enabled: true`. A file so obtained is parsed
 like any other, and `normalize` then compares the document's own title with the candidate's (`identity_check`,
-`identity_check_version 1`): a clear mismatch is `WRONG_DOCUMENT`, a file with no readable title is `IDENTITY_UNVERIFIED`;
-neither is a confirmed document and neither counts toward the floor. The bytes are kept.
+`identity_check_version 2`): a clear mismatch is `WRONG_DOCUMENT`, a file with no readable title is `IDENTITY_UNVERIFIED`;
+neither is a confirmed document and neither counts toward the floor. The bytes are kept. Since version 2, when the candidate
+carries `authors` (discovery version 6) and the parsed document carries its own — TEI and JATS do, HTML does not — their
+surnames must also agree: a title that matches while no author surname does is `WRONG_DOCUMENT`, because same-title
+different-people is a different work. Author agreement never rescues a title that failed, and a side with no authors leaves
+the title verdict standing. The row records `authors_checked` and `shared_surnames`.
 
 ## Reporting the locator's share
 

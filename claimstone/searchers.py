@@ -20,7 +20,7 @@ from claimstone import ids, net
 from claimstone.store import sha256_text
 
 
-DISCOVERY_VERSION = 5
+DISCOVERY_VERSION = 6
 
 
 class SearchError(ValueError):
@@ -64,10 +64,15 @@ def _row(
     channel: str,
     is_oa: bool | None = None,
     citations: int | None = None,
+    authors: list[str] | None = None,
     extra: dict[str, Any] | None = None,
     candidate_key: str | None = None,
 ) -> dict[str, Any]:
     doi = ids.normalize_doi(doi)
+    # Display names as the provider wrote them, first author first. The identity check (#4)
+    # compares surnames, and nothing else reads this yet; capped because a 400-author
+    # consortium paper is not made more identifiable by its 400th name.
+    clean_authors = [str(name).strip() for name in authors or [] if str(name).strip()][:20]
     return {
         # An override exists for one caller. The citation channel keys on the reference stage 3 gave
         # it, because `candidate_key` prefers a DOI and resolution *adds* one — so a derived key would
@@ -88,6 +93,7 @@ def _row(
         "channel": channel,
         "is_oa": is_oa,
         "citations": citations,
+        "authors": clean_authors,
         "found_at": _now(),
         **(extra or {}),
     }
@@ -110,7 +116,7 @@ def openalex_query_url(term: str, *, per_page: int = 25, mode: str = 'search',
     if cursor is not None and (not isinstance(cursor, str) or not cursor):
         raise ValueError('OpenAlex cursor must be a nonempty string')
     params = {mode: term, 'per-page': per_page, 'mailto': net.contact_email(),
-              'select': 'id,doi,title,publication_year,primary_location,open_access,cited_by_count'}
+              'select': 'id,doi,title,publication_year,primary_location,open_access,cited_by_count,authorships'}
     if page is not None:
         params['page'] = page
     if cursor is not None:
@@ -150,6 +156,8 @@ def openalex_page(
             channel=CHANNEL_KEYWORD,
             is_oa=(work.get("open_access") or {}).get("is_oa"),
             citations=work.get("cited_by_count"),
+            authors=[str(((a or {}).get("author") or {}).get("display_name") or "").strip()
+                     for a in work.get("authorships") or []],
             extra={"openalex_work_id": work.get("id"),
                    "query_rank": rank + rank_offset},
         ))
@@ -176,7 +184,7 @@ def search_crossref(
 ) -> Iterator[dict[str, Any]]:
     url = "https://api.crossref.org/works?" + urllib.parse.urlencode(
         {"query.bibliographic": term, "rows": rows, "mailto": net.contact_email(),
-         "select": "DOI,title,issued,container-title,URL,type,is-referenced-by-count"}
+         "select": "DOI,title,issued,container-title,URL,type,is-referenced-by-count,author"}
     )
     payload, outcome = fetcher.get_json(url)
     for item in records(payload, outcome, ("message", "items")):
@@ -195,6 +203,8 @@ def search_crossref(
             topic_id=topic_id,
             channel=CHANNEL_KEYWORD,
             citations=item.get("is-referenced-by-count"),
+            authors=[f"{str(a.get('given') or '').strip()} {str(a.get('family') or '').strip()}".strip()
+                     for a in item.get("author") or [] if isinstance(a, dict)],
         )
 
 
@@ -239,6 +249,8 @@ def search_arxiv(
             topic_id=topic_id,
             channel=CHANNEL_KEYWORD,
             is_oa=True,
+            authors=[(name.text or "").strip()
+                     for name in entry.findall("a:author/a:name", ns)],
             extra={"arxiv_base_id": arxiv,
                    "arxiv_version": (int(version_match.group(1)) if version_match else None)},
         )
@@ -278,6 +290,9 @@ def search_europepmc(
             channel=CHANNEL_KEYWORD,
             is_oa=(item.get("isOpenAccess") == "Y") if item.get("isOpenAccess") in ("Y", "N") else None,
             citations=item.get("citedByCount") if isinstance(item.get("citedByCount"), int) else None,
+            # `authorString` is one "Family Initials, Family Initials" field in the lite result;
+            # split here so every adapter hands `_row` a list of display names.
+            authors=[part.strip() for part in str(item.get("authorString") or "").split(",") if part.strip()],
             extra={"europepmc_id": f"{source}:{ident}" if source and ident else None,
                    "pmid": item.get("pmid"), "pmcid": pmcid},
         )
@@ -375,6 +390,8 @@ def search_pubmed(
             # exist, not that it is open, so both counts stay unknown rather than inferred.
             is_oa=None,
             citations=None,
+            authors=[str(a.get("name") or "").strip()
+                     for a in record.get("authors") or [] if isinstance(a, dict)],
             extra={"pubmed_id": uid, "pmcid": pmcid},
         )
 
@@ -425,6 +442,8 @@ def search_core(
             channel=CHANNEL_KEYWORD,
             # CORE indexes repository deposits; the flag is set only when it names a file to download.
             is_oa=True if download else None,
+            authors=[str(a.get("name") or "").strip()
+                     for a in work.get("authors") or [] if isinstance(a, dict)],
             extra={"core_id": str(core_id) if core_id is not None else None},
         )
 

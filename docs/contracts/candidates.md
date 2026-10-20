@@ -10,6 +10,7 @@ whose `source_class` is null, which is invariant 6 enforced at the boundary rath
 |---|---|
 | `candidate_key` | identity: DOI, else folded title, else normalised URL |
 | `title`, `url`, `doi`, `year`, `venue` | the work, as the channel reported it |
+| `authors` | display names as the provider wrote them, first author first, capped at 20; empty for citation and manifest rows. Read by the web-locator identity check's surname comparison — nothing merges on it |
 | `venue_type` | what the API called the venue; only meaningful beside `source_api` |
 | `source_class` | assigned by the project's `assign_when` rules. **Null means no rule covered it** |
 | `source_api` | `openalex`, `crossref`, `arxiv`, `europepmc`, `pubmed`, `core`, `citation`, `manifest` |

@@ -12,6 +12,9 @@ ARTICLE = b'''<?xml version="1.0"?>
 <article xmlns:xlink="http://www.w3.org/1999/xlink">
  <front><journal-meta><journal-title>Not the article title</journal-title></journal-meta>
   <article-meta><title-group><article-title>A <italic>synthetic</italic> study</article-title></title-group>
+   <contrib-group><contrib contrib-type="author"><name><given>Jane A.</given><surname>Smith</surname></name></contrib>
+    <contrib contrib-type="author"><name><surname>Patel</surname></name></contrib></contrib-group>
+   <contrib-group><contrib contrib-type="editor"><name><given>Ed</given><surname>Itor</surname></name></contrib></contrib-group>
    <abstract><p>Abstract only.</p></abstract></article-meta></front>
  <body><p>Opening without a heading.</p><sec><title>Methods</title>
   <p>Before <bold>formatting</bold>, after <xref ref-type="bibr">1</xref>.</p>
@@ -53,6 +56,9 @@ def test_primary_structure_keeps_paragraphs_and_inline_text_separate():
         ("Appendix", ("Appendix evidence.",)),
     ]
     assert doc.body_chars == sum(len(p) for s in doc.sections for p in s.paragraphs)
+    # D158: the article's own authors feed the identity check's surname comparison; an editor
+    # in a second contrib-group is not an author and must not appear.
+    assert doc.authors == ("Jane A. Smith", "Patel")
 
 
 def test_table_spans_and_ragged_rows_preserve_column_positions():

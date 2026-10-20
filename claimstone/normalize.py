@@ -91,6 +91,8 @@ def run(
     references = _reference_rows(store)
     candidate_titles = {key: row.get("title")
                         for key, row in store.latest_by("candidates.jsonl", "candidate_key").items()}
+    candidate_authors = {key: row.get("authors")
+                         for key, row in store.latest_by("candidates.jsonl", "candidate_key").items()}
     attempted = 0
 
     allowed = scope.source_ids(store, selector) if selector is not None else None
@@ -176,7 +178,9 @@ def run(
             from claimstone import web_locator
 
             identity = web_locator.identity_check(
-                doc.title, candidate_titles.get(str(source.get("candidate_key"))))
+                doc.title, candidate_titles.get(str(source.get("candidate_key"))),
+                parsed_authors=getattr(doc, "authors", ()),
+                candidate_authors=candidate_authors.get(str(source.get("candidate_key"))) or ())
             if not identity["passed"]:
                 confirmed, reason = False, f"{identity['failure_class']}: {identity['reason']}"
         result = chunking.chunk_document(doc, source_id=source_id, thresholds=th) if confirmed \

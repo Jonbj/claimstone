@@ -6,7 +6,8 @@ from claimstone.config import SourceClass
 
 PAYLOAD = {"resultList": {"result": [
     {"id": "123", "source": "MED", "pmid": "123", "pmcid": "PMC9", "doi": "10.1000/XYZ", "title": "Exercise and mood.",
-     "pubYear": "2019", "journalTitle": "J Mood", "pubType": "journal article", "isOpenAccess": "Y", "citedByCount": 7},
+     "pubYear": "2019", "journalTitle": "J Mood", "pubType": "journal article", "isOpenAccess": "Y", "citedByCount": 7,
+     "authorString": "Smith JA, Patel R, Wong"},
     {"id": "PPR1", "source": "PPR", "title": "A preprint", "pubYear": "2024", "isOpenAccess": "N", "pubType": "preprint"},
 ]}}
 
@@ -31,7 +32,9 @@ def test_rows_carry_identifiers_open_access_and_the_pubtype_as_venue_type():
     assert first["is_oa"] is True and first["citations"] == 7 and first["pmcid"] == "PMC9"
     assert first["source_api"] == "europepmc" and first["europepmc_id"] == "MED:123"
     assert first["url"] == "https://doi.org/10.1000/xyz"
+    assert first["authors"] == ["Smith JA", "Patel R", "Wong"], "one authorString field, split into names (D158)"
     assert second["is_oa"] is False and second["url"] == "https://europepmc.org/article/PPR/PPR1"
+    assert second["authors"] == []
 
 
 def test_a_failed_or_malformed_response_is_a_named_failure_never_an_empty_success():
