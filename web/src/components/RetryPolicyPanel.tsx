@@ -33,7 +33,7 @@ function endOfDayUtc(text: string): string | null {
 const inRange = (value: number, lo: number, hi: number): boolean =>
   Number.isSafeInteger(value) && value >= lo && value <= hi;
 
-export default function RetryPolicyPanel({ project, flowId }: { project: string; flowId: string }) {
+export default function RetryPolicyPanel({ project, flowId, heading = true }: { project: string; flowId: string; heading?: boolean }) {
   const { t } = useLocale();
   const rows = useApi(() => control.retryPolicies(project, flowId), [project, flowId]);
   const policies = rows.data?.policies ?? [];
@@ -156,7 +156,7 @@ export default function RetryPolicyPanel({ project, flowId }: { project: string;
   }
 
   return <section aria-label={t("retryPolicy.heading")} className="mb-5 rounded-xl border border-border bg-card p-4">
-    <h2 className="font-semibold">{t("retryPolicy.heading")}</h2>
+    {heading ? <h2 className="font-semibold">{t("retryPolicy.heading")}</h2> : null}
     {rows.error ? <ErrorState error={rows.error} context="retry policies" /> : null}
     {rows.pending || rows.refreshing ? <Pending label={t("retryPolicy.loading")} /> : null}
     {rows.data && !rows.refreshing ? policies.length > 0 ? policies.map((policy) =>

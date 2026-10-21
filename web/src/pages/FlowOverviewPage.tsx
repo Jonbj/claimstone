@@ -7,7 +7,9 @@ import FloorPanel, { BlockedFloorPanel } from "@/components/FloorPanel";
 import InboxCards from "@/components/InboxCards";
 import JourneySteps from "@/components/JourneySteps";
 import { NeedsYou, RunningNote, TheQuestions, TheTopic } from "@/components/JourneySide";
+import Fold from "@/components/Fold";
 import OperationsPanel from "@/components/OperationsPanel";
+import ReadingPanel from "@/components/ReadingPanel";
 import WorkLocallyPanel from "@/components/WorkLocallyPanel";
 import RetryPolicyPanel from "@/components/RetryPolicyPanel";
 import OverviewKpis from "@/components/OverviewKpis";
@@ -23,6 +25,7 @@ import { BarList } from "@/components/tremor/BarList/BarList";
 import { useApi } from "@/hooks/useApi";
 import { usePoll } from "@/hooks/usePoll";
 import { api } from "@/lib/api";
+import { useLocale } from "@/lib/i18n";
 import { useOperator } from "@/lib/session";
 
 // Steps 2-7 are the pipeline; step 1 sits under Protocol and step 8 under Human reading.
@@ -36,6 +39,7 @@ const PIPELINE_STEPS = ["search", "copies", "documents", "annotate", "review", "
 // action is the server's own first card carrying a command, rendered verbatim.
 export default function FlowOverviewPage({ kind }: { kind: "f" | "u" }) {
   const operator = useOperator();
+  const { t } = useLocale();
   const { project: raw, sel: rawSel } = useParams();
   const project = raw ? decodeURIComponent(raw) : "";
   const sel = rawSel ? decodeURIComponent(rawSel) : "";
@@ -224,14 +228,21 @@ export default function FlowOverviewPage({ kind }: { kind: "f" | "u" }) {
             <>
               {kind === "f" && flowId ? <OperationsPanel project={project} flowId={flowId}
                 namedRound={data.selector.round !== null} hasCandidates={data.source_tracker.length > 0} /> : null}
-              {kind === "f" && flowId && operator ? <WorkLocallyPanel project={project} flowId={flowId} /> : null}
-              {kind === "f" && flowId && operator ? <RetryPolicyPanel project={project} flowId={flowId} /> : null}
               <RunningNote journey={data.journey} />
+              {kind === "f" && flowId && operator ? (
+                <Fold title={t("workLocally.heading")}><WorkLocallyPanel project={project} flowId={flowId} heading={false} /></Fold>
+              ) : null}
+              {kind === "f" && flowId && operator ? (
+                <Fold title={t("retryPolicy.heading")}><RetryPolicyPanel project={project} flowId={flowId} heading={false} /></Fold>
+              ) : null}
             </>
           ),
           reading: (
-            <JourneySteps journey={data.journey} rows={data.questions.rows} base={base}
-                          writable={kind === "f"} keys={["sign"]} heading="Human reading" bar={false} />
+            <>
+              <JourneySteps journey={data.journey} rows={data.questions.rows} base={base}
+                            writable={kind === "f"} keys={["sign"]} heading="Human reading" bar={false} />
+              <ReadingPanel rows={data.questions.rows} base={base} />
+            </>
           ),
         }}
       />

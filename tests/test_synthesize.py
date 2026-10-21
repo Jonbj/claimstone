@@ -255,3 +255,19 @@ def test_no_model_and_no_network_in_stage_six():
     names = _identifiers(synthesize) | _identifiers(evidence)
     for forbidden in ("requests", "urllib", "model_call", "runners", "subprocess", "socket"):
         assert forbidden not in names, forbidden
+
+
+def test_a_work_found_twice_is_counted_once_and_the_copy_stays_listed(tmp_path):
+    """D158. Read back from the store, not handed in: the same candidate rows feed two calls."""
+    title = "News tone and the cross-section of future returns in listed firms"
+    store = _store(tmp_path, claims=[claim(), claim(claim_id="c2", source_id="MET001", source_class="MET",
+                                                    chunk_id="MET001#c1")],
+                   reviews=[review("c1"), review("c2")])
+    store.append("candidates.jsonl", {"candidate_key": "ACA001", "title": title})
+    store.append("candidates.jsonl", {"candidate_key": "MET001", "title": title.upper()})
+    rows, _ = synthesize.preview(_project(tmp_path), store)
+    h02 = next(r for r in rows if r["question_id"] == "H02")
+    assert h02["direction_count"] == {"SUPPORTS": 1}
+    assert h02["coverage"]["sources"] == 1
+    assert [r.get("same_work_as") for r in h02["results"]] == [None, "ACA001"]
+    assert h02["work_groups"][0]["members"] == ["ACA001", "MET001"]

@@ -32,7 +32,7 @@ from __future__ import annotations
 import datetime as _dt
 from typing import Any, Mapping
 
-from . import admissibility, claimgate, evidence, profile_inputs
+from . import admissibility, claimgate, evidence, profile_inputs, works
 from .config import Project, check_registry_drift
 from .store import Store
 
@@ -116,8 +116,13 @@ def preview(
                     blocking.append(reason)
             if store.torn_tail:
                 blocking.append("torn_ledger_tail")
+            claim_sources = {str(c.get("source_id")) for c in inputs["claims"]
+                             if str(c.get("question_id")) == str(question.id)}
+            candidate_rows = list(store.read("candidates.jsonl"))
+            work_groups = works.groups(candidate_rows, claim_sources)
             row = evidence.profile(
-                question, claims=inputs["claims"], reviews=inputs["reviews"],
+                question, work_of=works.work_of(candidate_rows, claim_sources), work_groups=work_groups,
+                claims=inputs["claims"], reviews=inputs["reviews"],
                 rejections=inputs["rejections"], examined=inputs["examined"], roles=roles,
                 registry_version=project.registry_version, registry_sha256=project.registry_sha256,
                 provisional=bool(blocking), blocking=blocking)

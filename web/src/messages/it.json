@@ -86,6 +86,8 @@
     "priceOut": "Stima prezzo output (USD per milione di token)",
     "meteredInvalid": "Ogni importo deve essere almeno 0,01 e la riserva per chiamata non può superare il budget.",
     "explainMetered": "Questo consente al supervisore di eseguire le chiamate ai modelli per estrazione e revisione su Ollama Cloud, al massimo {count} in totale e mai oltre un budget di {budget} USD. Il testo dei documenti viene inviato a quel servizio e le chiamate sono a pagamento. Non invia richieste agli host scientifici, non emette verdetti, non firma nulla e può essere disattivato. I prezzi sono stime massime tue, non del fornitore; i limiti dell'account presso il fornitore restano il tetto effettivo.",
+    "reservation": "Ogni chiamata prenota {reserve} USD, quindi {count} chiamate prenotano fino a {total} USD; il tetto di {budget} USD deve coprirli. La riserva è un limite per una chiamata, non ciò che si spende.",
+    "reservationShort": "Il tetto non copre le prenotazioni: alza il tetto o riduci le chiamate o la riserva.",
     "budgetUsed": "Riservati {reserved} di {budget} USD",
     "cancel": "Annulla"
   },
@@ -941,5 +943,15 @@
     "batchId": "ID del lotto",
     "details": "Dettagli tecnici",
     "figures": "Dati"
+  },
+  "reading": {
+    "heading": "Profili di evidenza da leggere",
+    "direction": "Conteggio per direzione",
+    "coverage": "Fonti lette / esaminate",
+    "rejected": "Scartate dal controllo",
+    "awaitingReview": "In attesa di seconda lettura",
+    "blocking": "Impedisce ancora la firma",
+    "open": "Apri il profilo di evidenza",
+    "partialNote": "Costruito sotto la soglia di acquisizione: etichettato parziale, mai certificato completo"
   }
 }

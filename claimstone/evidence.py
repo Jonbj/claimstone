@@ -116,9 +116,16 @@ def profile(
     decision_contract_version: int = 1,
     provisional: bool = False,
     blocking: Sequence[str] = (),
+    work_of: Mapping[str, str] | None = None,
+    work_groups: Sequence[Mapping[str, Any]] = (),
 ) -> dict[str, Any]:
-    """Everything known about one question. No verdict, and no threshold that could become one."""
+    """Everything known about one question. No verdict, and no threshold that could become one.
+
+    `work_of` maps a source that is a second copy of a work to the source standing for that work (D158).
+    Its results stay listed, marked `same_work_as`, and are not counted: one study is one count.
+    """
     roles = dict(roles or {})
+    work_of = dict(work_of or {})
     kind = str(getattr(question, "kind", ""))
 
     mine = [c for c in claims if str(c.get("question_id")) == str(question.id)]
@@ -136,7 +143,11 @@ def profile(
             not_usable[verdict] = not_usable.get(verdict, 0) + 1
 
     results = [result_of(c, kind, role=roles.get(str(c.get("source_class")), ""))
+               | ({"same_work_as": work_of[str(c.get("source_id"))]}
+                  if str(c.get("source_id")) in work_of else {})
                for c in verified]
+    # A second copy of a work is shown and not counted; everything below counts the work once.
+    verified = [c for c in verified if str(c.get("source_id")) not in work_of]
     # Sorted so a rebuild produces the same bytes and therefore the same hash.
     results.sort(key=lambda r: (str(r.get("source_id")), str(r.get("claim_id"))))
 
@@ -174,6 +185,7 @@ def profile(
         "direction_count": dict(sorted(direction.items())),
         # Never a count of datasets. No string comparison establishes one.
         "linkage": "unestablished",
+        **({"work_groups": [dict(group) for group in work_groups]} if work_groups else {}),
         "sample_labels": sorted({str(c.get("sample")) for c in verified if c.get("sample")}),
         "coverage": {"sources": len(sources), "examined": examined},
         "sources": sources,

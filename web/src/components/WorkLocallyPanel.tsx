@@ -22,15 +22,15 @@ async function flowMandates(project: string, flowId: string): Promise<MandateSta
   return rows;
 }
 
-export default function WorkLocallyPanel({ project, flowId }: { project: string; flowId: string }) {
+export default function WorkLocallyPanel({ project, flowId, heading = true }: { project: string; flowId: string; heading?: boolean }) {
   const { t } = useLocale();
   const mandates = useApi(() => flowMandates(project, flowId), [project, flowId]);
   const [extract, setExtract] = useState("deepseek-v4.1-flash");
   const [review, setReview] = useState("mistral-large-3:675b");
-  const [callsText, setCallsText] = useState("100");
+  const [callsText, setCallsText] = useState("300");
   const [backend, setBackend] = useState<"ollama-cloud" | "llamacpp">("ollama-cloud");
-  const [budgetText, setBudgetText] = useState("50");
-  const [perCallText, setPerCallText] = useState("0.50");
+  const [budgetText, setBudgetText] = useState("30");
+  const [perCallText, setPerCallText] = useState("0.10");
   const [priceInText, setPriceInText] = useState("3.00");
   const [priceOutText, setPriceOutText] = useState("12.00");
   const [confirming, setConfirming] = useState<"enable" | string | null>(null);
@@ -40,9 +40,13 @@ export default function WorkLocallyPanel({ project, flowId }: { project: string;
   const calls = Number(callsText);
   const cents = (text: string) => Math.round(Number(text) * 100);
   const metered = backend === "ollama-cloud";
+  // The supervisor reserves `per call` for every call it plans and refuses to plan beyond the budget, so a
+  // budget below calls x reserve starts a mandate that can never run (found 2026-10-21): refuse it here.
+  const reservedCents = Number.isSafeInteger(calls) && calls >= 1 ? calls * cents(perCallText) : NaN;
+  const coversReservations = !metered || (Number.isFinite(reservedCents) && reservedCents <= cents(budgetText));
   const meteredValid = !metered || [budgetText, perCallText, priceInText, priceOutText].every(
     (text) => text.trim().length > 0 && Number.isSafeInteger(cents(text)) && cents(text) >= 1) &&
-    cents(perCallText) <= cents(budgetText);
+    cents(perCallText) <= cents(budgetText) && coversReservations;
   const valid = meteredValid && extract.trim().length > 0 && review.trim().length > 0 &&
     extract.trim() !== review.trim() && callsText.trim().length > 0 &&
     Number.isSafeInteger(calls) && calls >= 1;
@@ -78,7 +82,7 @@ export default function WorkLocallyPanel({ project, flowId }: { project: string;
   }
 
   return <section aria-label={t("workLocally.heading")} className="mb-5 rounded-xl border border-border bg-card p-4">
-    <h2 className="font-semibold">{t("workLocally.heading")}</h2>
+    {heading ? <h2 className="font-semibold">{t("workLocally.heading")}</h2> : null}
     {mandates.error ? <ErrorState error={mandates.error} context="local mandates" /> : null}
     {mandates.pending || mandates.refreshing ? <Pending label={t("workLocally.loading")} /> : null}
     {mandates.data && !mandates.refreshing ? active.length > 0 ? active.map((mandate) =>
@@ -131,6 +135,10 @@ export default function WorkLocallyPanel({ project, flowId }: { project: string;
                 onChange={(event) => setter(event.target.value)}
                 className="min-h-11 rounded-md border bg-background px-3" /></label>)}
           {meteredValid ? null : <p role="alert">{t("workLocally.meteredInvalid")}</p>}
+          <p role={coversReservations ? undefined : "alert"} data-reservation>{t("workLocally.reservation", {
+            count: callsText || "—", reserve: perCallText || "—",
+            total: Number.isFinite(reservedCents) ? (reservedCents / 100).toFixed(2) : "—", budget: budgetText || "—" })}
+            {coversReservations ? "" : ` ${t("workLocally.reservationShort")}`}</p>
           <p>{t("workLocally.explainMetered", { count: callsText || "—", budget: budgetText || "—" })}</p>
         </> : <p>{t("workLocally.explain", { count: callsText || "—" })}</p>}
         <button type="button" disabled={!valid || busy} onClick={() => setConfirming("enable")}

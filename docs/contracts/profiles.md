@@ -16,6 +16,7 @@ D45 introduced `profile_version 2`; D46 adds `profile_version 3`; D47 adds `prof
 | `acquisition` | found, obtained, confirmed, rate, basis, floor identity, finality and blocking reasons |
 | `evidence_sha256` | semantic digest of this question's claims, reviews, rejections and current scoped chunks |
 | `extraction` | per-kind `expected`, `unanswered`, `unharvested`, `unchunked_sources`, `unregated` |
+| `work_groups`, `results[].same_work_as` | present only when sources are one work by equal folded title (D158): the second copy is listed, marked and not counted in the direction count, class buckets or `coverage.sources` |
 | `provisional`, `blocking` | any outstanding acquisition, normalization, extraction, harvest or review prevents signing |
 | `profile_sha256` | digest of the whole row except this field and `built_at` |
 | `built_at` | UTC timestamp of the append; excluded from evidence identity |

@@ -86,6 +86,8 @@
     "priceOut": "Output price estimate (USD per million tokens)",
     "meteredInvalid": "Every amount must be at least 0.01 and the per-call reservation cannot exceed the budget.",
     "explainMetered": "This lets the supervisor run extraction and review model calls on Ollama Cloud, at most {count} in total and never above a budget of {budget} USD. Document text is sent to that service and calls are billed. It makes no request to scholarly hosts, gives no verdict, signs nothing, and can be disabled. Prices are your upper estimates, not the provider's; the provider's account limits remain the hard cap.",
+    "reservation": "Every call reserves {reserve} USD, so {count} calls reserve up to {total} USD; the budget of {budget} USD must cover that. The reserve is a ceiling for one call, not what is spent.",
+    "reservationShort": "The budget does not cover the reservations: raise the budget or lower the number of calls or the reserve.",
     "budgetUsed": "Reserved {reserved} of {budget} USD",
     "cancel": "Cancel"
   },
@@ -941,5 +943,15 @@
     "batchId": "Batch ID",
     "details": "Technical details",
     "figures": "Figures"
+  },
+  "reading": {
+    "heading": "Evidence profiles to read",
+    "direction": "Direction count",
+    "coverage": "Sources read / examined",
+    "rejected": "Rejected by the gate",
+    "awaitingReview": "Awaiting a second reader",
+    "blocking": "Still blocks signing",
+    "open": "Open the evidence profile",
+    "partialNote": "Built below the acquisition floor: labelled partial, never certified complete"
   }
 }

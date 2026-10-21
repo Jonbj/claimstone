@@ -5698,3 +5698,26 @@ and is the next step if the per-plan button proves the right shape.
 nothing: every candidate was skipped with "direct URL and exact lowercase hosts are required", because a retry
 starts at the candidate's own URL (`doi.org`) and that host was not in the plan. `acquire-hosts` now returns
 `retry_hosts` (the own-URL host per retry class) and the form adds them when a retry class is ticked.
+
+## D158 — One work found twice is counted once in a profile (2026-10-21; issue #13, second gap)
+
+**Measured.** In the second public-literature round (`prova-esercizio-depressione-2`, Q01) a paper reached the store twice:
+as `doi:10.3389/fphys.2026.1835186` from a DOI search and as a `title:` candidate from a Europe PMC page without a
+DOI. Both were acquired, normalized, extracted and reviewed, with identical review outcomes (7 `OVERSTATED`,
+3 `SUPPORTED`, 4 `NOT_APPLICABLE` each). The profile counted both: 9 sources, 28 `SUPPORTS`, 25 `QUALIFIES`. Counted
+once, it is 8 sources, 26 `SUPPORTS`, 24 `QUALIFIES`; the 3 results of the second copy stay listed.
+
+**Decision.** `claimstone/works.py` derives groups of sources that are one work, from one stated piece of evidence: the
+folded titles of their candidates are equal and at least 25 characters long (`basis: title_equal`). A profile marks a
+result of the second copy `same_work_as` (the group's representative, DOI-keyed when there is one), leaves it listed, and
+does not count it in `direction_count`, `by_class`, `sources` or `coverage.sources`. A profile with a group carries
+`work_groups`; one without gains no key, so no existing profile or signature changes a byte.
+
+**What was refused.** Rewriting a candidate key or a historical denominator (the issue asked for neither): `found` and
+`rate` still count both candidates, and the acquisition floor is untouched. Merging on near-equal titles
+(`discover.near_match` stays a note): a wrong merge removes a source's claims from the count, and the one false
+positive measured for that rule was a different paper. Grouping a preprint with its article by anything weaker than an
+equal title: that needs a person's `same_work` answer and is not built.
+
+**Not done.** Persons' `same_work`/`version_of` answers as a second kind of evidence for a group; candidates whose
+title differs by a subtitle or a version suffix are not grouped and stay counted twice.
