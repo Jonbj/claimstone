@@ -6,13 +6,17 @@ import { control } from "@/lib/control";
 import type { PlanBatchBody } from "@/lib/control";
 import { useLocale } from "@/lib/i18n";
 
+// `brave` needs two hosts: the search itself, and OpenAlex to confirm the DOI each result carries (D159).
 const API_HOSTS = {
-  openalex: "api.openalex.org",
-  crossref: "api.crossref.org",
-  arxiv: "export.arxiv.org",
-  europepmc: "www.ebi.ac.uk",
-  core: "api.core.ac.uk",
+  openalex: ["api.openalex.org"],
+  crossref: ["api.crossref.org"],
+  arxiv: ["export.arxiv.org"],
+  europepmc: ["www.ebi.ac.uk"],
+  core: ["api.core.ac.uk"],
+  brave: ["api.search.brave.com", "api.openalex.org"],
 } as const;
+// One search, up to 8 lookups, and the robots.txt of both hosts.
+const BRAVE_MIN_REQUESTS_EACH = 11;
 type Api = keyof typeof API_HOSTS;
 const RESOLVER_HOSTS = ["api.unpaywall.org", "api.openalex.org", "api.core.ac.uk"] as const;
 const RESOLVER_MIN_REQUESTS_EACH = 12;
@@ -57,10 +61,15 @@ export default function PlanBatchForm({ project, flowId, hasCandidates, onPlanne
         : suggested.suggested_max_requests_each);
     }
   }, [stage, suggested, requestsTouched, useApis]);
+  useEffect(() => {
+    if (stage === "discover" && apis.includes("brave") && !requestsTouched) {
+      setMaxRequestsEach((old) => Math.max(old, BRAVE_MIN_REQUESTS_EACH));
+    }
+  }, [stage, apis, requestsTouched]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [validation, setValidation] = useState<string | null>(null);
-  const hosts = stage === "discover" ? apis.map((api) => API_HOSTS[api])
+  const hosts = stage === "discover" ? [...new Set(apis.flatMap((api) => [...API_HOSTS[api]]))]
     : [...new Set([...hostsText.split(/\r?\n/).map((host) => host.trim()).filter(Boolean),
         ...(useApis ? RESOLVER_HOSTS : [])])];
   const positive = [maxUnits, maxRequestsEach, ...(stage === "discover" ? [perQuery] : [])]

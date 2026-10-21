@@ -59,6 +59,30 @@ describe("network batch planning", () => {
     expect(writes).toHaveLength(1);
   });
 
+  it("plans a web search with both hosts it needs and enough requests for the DOI lookups (D159)", async () => {
+    const writes: Array<{ url: string; body: unknown }> = [];
+    vi.stubGlobal("fetch", (url: string, init?: RequestInit) => {
+      if (url === "/control/v1/session") return json(200, { operator: {
+        id: "o", name: "Operator", role: "admin", must_change_password: false }, csrf_token: "tok" });
+      if (url.endsWith("/operations")) return json(200, { flow_id: "f1", operations: [] });
+      if (init?.method === "POST") {
+        writes.push({ url, body: JSON.parse(String(init.body)) });
+        return json(201, { batch_id: "b1", operation_ids: [], units: [], selected: 0, max_total_requests: 0 });
+      }
+      return json(404, { error: { code: "NOT_FOUND", message: "unknown" } });
+    });
+    render(<MemoryRouter><SessionProvider><OperationsPanel project="demo" flowId="f1"
+      namedRound hasCandidates /></SessionProvider></MemoryRouter>);
+    await screen.findByRole("button", { name: "Plan batch" });
+    fireEvent.click(screen.getByRole("checkbox", { name: "openalex" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "brave" }));
+    expect(screen.getByText("At most 55 requests, to: api.search.brave.com, api.openalex.org")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Plan batch" }));
+    await waitFor(() => expect(writes.length).toBe(1));
+    expect(writes[0].body).toEqual({ stage: "discover", apis: ["brave"],
+      allowed_hosts: ["api.search.brave.com", "api.openalex.org"], max_units: 5, max_requests_each: 11, per_query: 10 });
+  });
+
   it("accepts exact acquisition hosts, refuses wildcards, and shows server refusal", async () => {
     const writes: unknown[] = [];
     vi.stubGlobal("fetch", (url: string, init?: RequestInit) => {

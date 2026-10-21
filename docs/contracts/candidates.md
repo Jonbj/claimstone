@@ -12,8 +12,9 @@ whose `source_class` is null, which is invariant 6 enforced at the boundary rath
 | `title`, `url`, `doi`, `year`, `venue` | the work, as the channel reported it |
 | `venue_type` | what the API called the venue; only meaningful beside `source_api` |
 | `source_class` | assigned by the project's `assign_when` rules. **Null means no rule covered it** |
-| `source_api` | `openalex`, `crossref`, `arxiv`, `europepmc`, `pubmed`, `core`, `citation`, `manifest` |
-| `channel` | `keyword` or `citation` — the two channels D10 keeps independent |
+| `source_api` | `openalex`, `crossref`, `arxiv`, `europepmc`, `pubmed`, `core`, `citation`, `manifest`. A `web_search` row carries `openalex` here, the vocabulary its venue type is in; the query that found it is in `queries.jsonl` under `source_api: brave` |
+| `channel` | `keyword`, `citation` or `web_search`. The first two are the channels D10 keeps independent; `web_search` (D159) searches the topic's own terms, so it is *not* independent of `keyword` and no completeness figure may treat it as a second channel |
+| `found_by`, `web_url`, `web_title`, `resolution` | `web_search` only: `brave`; the page address and page title the DOI was read from; `BY_URL_DOI`. The row's `title`, `year`, `venue` and `venue_type` are OpenAlex's, never the page's |
 | `query`, `query_hash`, `topic_id` | which search found it, so a round is reproducible |
 | `cited_by`, `citations_in_corpus` | citation channel only: which corpus documents cite it |
 | `possible_duplicate_of` | a near-match on title. **A note. Nothing is ever merged on it** |

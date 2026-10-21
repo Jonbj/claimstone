@@ -169,8 +169,11 @@ def run(
                     pages_requested = 1
                     stop_reason = 'SINGLE_PAGE'
                     try:
+                        extra = ({'known_dois': {str(r['doi']) for r in store.latest_by(
+                            'candidates.jsonl', 'candidate_key').values() if r.get('doi')}}
+                            if api == 'brave' else {})
                         rows = list(searcher(logged, term, topic.id,
-                                             **{_limit_kw(api): per_query}))
+                                             **{_limit_kw(api): per_query}, **extra))
                     except (searchers.SearchError, AttributeError, IndexError,
                             KeyError, TypeError, ValueError) as exc:
                         from .store import LedgerCorrupt

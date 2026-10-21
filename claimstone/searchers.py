@@ -44,6 +44,7 @@ def records(payload, outcome, path):
 
 CHANNEL_KEYWORD = "keyword"
 CHANNEL_CITATION = "citation"
+CHANNEL_WEB = "web_search"
 
 
 def _now() -> str:
@@ -429,8 +430,77 @@ def search_core(
         )
 
 
+# --- Open-web search as a discovery channel (D159) -------------------------------------------------
+#
+# A web result is a page, not a work. It becomes a candidate only when its own address carries a DOI and
+# OpenAlex confirms that DOI is a work: the title, year, venue and venue type of the candidate are then
+# OpenAlex's, never the page's. Everything else is not a candidate, so a blog, a forum thread or a
+# product page cannot enter the denominator.
+
+BRAVE_MAX_COUNT = 20
+BRAVE_MAX_LOOKUPS = 8
+_PAGE_SUFFIX = re.compile(
+    r"(?:/(?:full|pdf|abstract|fulltext|epdf|figures|references|supplementary-material))+/?$"
+    r"|\.(?:pdf|full|abstract|xml)$", re.IGNORECASE)
+
+
+def doi_from_url(url: str) -> str | None:
+    """The DOI an address carries in its path, without a page suffix. Query and fragment are ignored."""
+    path = urllib.parse.urlsplit(str(url or "")).path
+    doi = ids.normalize_doi(path)
+    while doi:
+        trimmed = _PAGE_SUFFIX.sub("", doi)
+        if trimmed == doi:
+            break
+        doi = trimmed
+    return doi or None
+
+
+def search_brave(
+    fetcher: net.FetcherLike, term: str, topic_id: str, *, count: int = BRAVE_MAX_COUNT,
+    known_dois: frozenset[str] | set[str] = frozenset(), max_lookups: int = BRAVE_MAX_LOOKUPS,
+) -> Iterator[dict[str, Any]]:
+    """Brave Search results whose address carries a DOI that OpenAlex confirms as a work.
+
+    One search request, then at most `max_lookups` OpenAlex lookups, one per distinct DOI not already a
+    candidate. A DOI OpenAlex does not know is not a candidate; a later search that meets it asks again.
+    """
+    from claimstone import web_locator
+
+    payload, outcome = fetcher.get_json(web_locator.search_url(term, min(int(count), BRAVE_MAX_COUNT)))
+    if not outcome.ok:
+        raise SearchError(outcome.failure_class or 'LOOKUP_FAILED', outcome.detail)
+    if not isinstance(payload, dict) or "web" not in payload and "query" not in payload:
+        raise SearchError('INVALID_SEARCH_RESPONSE', 'unexpected Brave response')
+    looked_up: set[str] = set()
+    for item in web_locator.parse_results(payload):
+        doi = doi_from_url(item["url"])
+        if not doi or doi in known_dois or doi in looked_up:
+            continue
+        if len(looked_up) >= max_lookups:
+            break
+        looked_up.add(doi)
+        url = (f"https://api.openalex.org/works/doi:{urllib.parse.quote(doi, safe='/.')}?"
+               + urllib.parse.urlencode({"mailto": net.contact_email(), "select": WORK_SELECT}))
+        work, lookup = fetcher.get_json(url)
+        if not lookup.ok or not isinstance(work, dict) or not work:
+            continue
+        fields = _work_fields(work)
+        if fields["doi"] != doi or not fields["title"]:
+            continue
+        yield _row(
+            title=fields["title"], url=fields["url"] or f"https://doi.org/{doi}", doi=doi,
+            year=fields["year"], venue=fields["venue"], venue_type=fields["venue_type"],
+            source_api=fields["api"], query=term, topic_id=topic_id, channel=CHANNEL_WEB,
+            is_oa=fields["is_oa"], citations=fields["citations"],
+            extra={"found_by": "brave", "web_url": item["url"], "web_title": item["title"],
+                   "resolution": "BY_URL_DOI"},
+        )
+
+
 SEARCHERS = {"openalex": search_openalex, "crossref": search_crossref, "arxiv": search_arxiv,
-             "europepmc": search_europepmc, "core": search_core, "pubmed": search_pubmed}
+             "europepmc": search_europepmc, "core": search_core, "pubmed": search_pubmed,
+             "brave": search_brave}
 # What a run searches when nobody names an API: the three of discovery version 4. A newer adapter is
 # opt-in, so adding one never changes the request set of a round already planned (D141).
 DEFAULT_APIS = ("openalex", "crossref", "arxiv")
@@ -438,7 +508,7 @@ DEFAULT_APIS = ("openalex", "crossref", "arxiv")
 
 def _limit_kw(api: str) -> str:
     return {"openalex": "per_page", "crossref": "rows", "arxiv": "max_results",
-            "europepmc": "page_size", "core": "limit", "pubmed": "retmax"}[api]
+            "europepmc": "page_size", "core": "limit", "pubmed": "retmax", "brave": "count"}[api]
 
 
 # --- Resolving a reference into something fetchable ----------------------------------------------

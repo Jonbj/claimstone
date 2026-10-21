@@ -5721,3 +5721,31 @@ equal title: that needs a person's `same_work` answer and is not built.
 
 **Not done.** Persons' `same_work`/`version_of` answers as a second kind of evidence for a group; candidates whose
 title differs by a subtitle or a version suffix are not grouped and stay counted twice.
+
+## D159 — The open web as a discovery channel: a result is a candidate only through a DOI OpenAlex confirms (2026-10-21)
+
+The operator proposed running the web search at the start so the search base is enriched, not only after a copy is missing (D145). Measured
+need: in the second public-literature round 11 of 20 works were not obtained, and the works that were found came only from OpenAlex,
+Crossref and arXiv terms; a paper reachable on the web but missing from those indexes is invisible to the pipeline today.
+
+**Decision.** `brave` is a discovery API next to the others, opt-in (it is not in `DEFAULT_APIS`, so no planned round changes its
+request set). One query is the topic term. For each result whose *address* carries a DOI (query and fragment ignored, a page suffix such
+as `/full` or `.pdf` stripped), at most 8 per query, OpenAlex is asked about that DOI. Only a DOI OpenAlex returns as a work becomes a
+candidate, and its title, year, venue and venue type are OpenAlex's; the page's own title and address are kept beside them
+(`web_title`, `web_url`, `found_by: brave`, `resolution: BY_URL_DOI`). A DOI already a candidate costs no lookup. A result with no DOI in its
+address, or one OpenAlex does not know, is not a candidate and is not written anywhere except the request log: a blog, a forum thread or
+a vendor page cannot enter the denominator.
+
+**What was refused.** Admitting a web result by its page title, as D145 refuses for copies: the same reasoning (a web result carries no
+warrant that it is the work) applies to discovery, with the extra cost that a wrong candidate lowers the acquisition rate. A second
+independent channel for completeness: the channel searches the topic's terms, so it is a third source of the keyword kind and is labelled
+`web_search` so no figure counts it as independent of `keyword`.
+
+**Cost.** A planned query is at most 1 search + 8 lookups + the robots.txt of two hosts = 11 requests (the plan form suggests it), to
+`api.search.brave.com` and `api.openalex.org`, USD 0 on the account measured; the plan limits and storage terms of the search service are
+still unverified (D145). Each run needs the operator's exact yes on the figures, as every network plan does.
+
+**Not measured.** How many works this finds that the three default APIs do not. That is the first thing to measure on a real plan:
+requests, new DOIs, how many are new to `candidates.jsonl`, how many OpenAlex confirms. `discovery_version` is unchanged because the request set
+of every existing plan is. **Not built:** the series scheduler's source list (`web/src/lib/figures.ts`) does not offer `brave`, because it takes one host per
+source and this needs two.
