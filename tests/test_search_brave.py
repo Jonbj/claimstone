@@ -20,7 +20,8 @@ def work(doi, title):
     return {"id": "https://openalex.org/W1", "doi": f"https://doi.org/{doi}", "title": title,
             "publication_year": 2026, "primary_location": {"landing_page_url": f"https://doi.org/{doi}",
             "source": {"display_name": "A Journal", "type": "journal"}}, "open_access": {"is_oa": True},
-            "cited_by_count": 3}
+            "cited_by_count": 3,
+            "authorships": [{"author": {"display_name": "Jane Doe"}}, {"author": {"display_name": "Li Wei"}}]}
 
 
 def fetcher():
@@ -48,6 +49,7 @@ def test_only_results_with_a_doi_openalex_confirms_become_candidates_and_carry_o
     first = rows[0]
     assert first["title"] == "Isolated physical activity programs" and first["venue_type"] == "journal"
     assert first["source_api"] == "openalex" and first["channel"] == searchers.CHANNEL_WEB
+    assert first["authors"] == ["Jane Doe", "Li Wei"]
     assert first["found_by"] == "brave" and first["web_title"].endswith("Springer")
     # one search, then one lookup per distinct DOI: the blog was never looked up, the repeat was not asked twice
     assert len(f.calls) == 1 + 3 and sum(c.startswith(OA) for c in f.calls) == 3

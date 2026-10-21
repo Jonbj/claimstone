@@ -23,6 +23,7 @@ ESUMMARY_PAYLOAD = {"result": {
             {"idtype": "pmc", "id": "PMC9"},
         ],
         "pubtype": ["Journal Article", "Review"],
+        "authors": [{"name": "Smith JA"}, {"name": "Patel R"}],
     },
     "222": {
         "uid": "222", "pubdate": "2024", "source": "medRxiv",
@@ -90,6 +91,7 @@ def test_rows_carry_pubmed_identifiers_the_journal_and_the_pubtype_list():
     assert first["pubmed_id"] == "111" and first["pmcid"] == "PMC9"
     # E-utilities reports a PubMed record, not a licence: a PMC id is a copy, not an OA grant.
     assert first["is_oa"] is None and first["citations"] is None
+    assert first["authors"] == ["Smith JA", "Patel R"] and second["authors"] == []
     assert second["candidate_key"].startswith("title:a preprint")
     assert second["url"] == "https://pubmed.ncbi.nlm.nih.gov/222/"
     assert second["venue"] == "medRxiv" and second["venue_type"] == "Preprint"

@@ -63,6 +63,9 @@ class Document:
     tables: tuple[Table, ...]
     notes: tuple[Note, ...]
     references: tuple[Reference, ...]
+    # Empty for HTML documents, whose head carries no authors a parser can trust. The identity
+    # check treats "no authors on one side" as "not checkable on authors", never as a mismatch.
+    authors: tuple[str, ...] = ()
 
     @property
     def body_chars(self) -> int:
@@ -163,6 +166,14 @@ def parse(payload: bytes) -> Document:
         if div.tag == f"{NS}div"
     )
 
+    # The document's own authors, from the header GROBID fills: one persName per author, its
+    # surname is the family name the web-locator identity check compares (#4). A document with
+    # no readable authors carries none, and the check falls back to the title alone.
+    doc_authors = tuple(
+        " ".join(part for part in (
+            _text(pers.find(f"{NS}forename")), _text(pers.find(f"{NS}surname"))) if part)
+        for pers in root.findall(f".//{NS}titleStmt/{NS}author/{NS}persName")
+    )
     return Document(
         title=_text(root.find(f".//{NS}titleStmt/{NS}title")),
         abstract=_text(root.find(f".//{NS}abstract")),
@@ -172,4 +183,5 @@ def parse(payload: bytes) -> Document:
         references=tuple(
             _reference(entry) for entry in root.iter(f"{NS}biblStruct")
         ),
+        authors=tuple(name for name in doc_authors if name),
     )

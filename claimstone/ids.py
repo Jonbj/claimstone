@@ -42,6 +42,29 @@ def arxiv_id(value: str | None) -> str | None:
     return match.group(1) if match else None
 
 
+def surname(value: str | None) -> str:
+    """The comparison form of one author's family name.
+
+    Feeds the web-locator identity check (#4): candidate authors arrive as display names
+    ("Jane A. Smith"), family-first abbreviations ("Smith, J.", "Smith JA") or family-only
+    strings, and the parsed document carries TEI/JATS given + surname text. One rule covers
+    all of them: the family part is before a comma when one is there, otherwise the whole
+    string; initial tokens ("A.", "JA", "J.-A.") are dropped, because family-first metadata
+    ends in initials and display names carry them in the middle; the comparison key is the
+    last name-bearing token left — so "van der Berg, Jane" and "Jane van der Berg" both
+    compare as "berg", and "Smith JA" compares as "smith". Folded by `normalize_title`,
+    which keeps every script's letters (D138) and drops punctuation.
+    """
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    family = text.split(",", 1)[0] if "," in text else text
+    tokens = [token for token in re.split(r"\s+", family)
+              if token and not re.fullmatch(r"[A-ZÀ-ÖØ-Þ]{1,2}",
+                                            re.sub(r"[.\-]", "", token))]
+    return normalize_title(tokens[-1]) if tokens else ""
+
+
 def normalize_title(value: str | None) -> str:
     """Fold a title to a comparison key: case, accents on Latin letters, punctuation and spacing.
 

@@ -8,6 +8,8 @@ DOC = """<?xml version="1.0" encoding="UTF-8"?>
 <TEI xmlns="http://www.tei-c.org/ns/1.0">
   <teiHeader><fileDesc><titleStmt>
     <title level="a" type="main">News versus Sentiment</title>
+    <author><persName><forename>Jane A.</forename><surname>Smith</surname></persName></author>
+    <author><persName><forename>Ravi</forename><surname>Patel</surname></persName></author>
   </titleStmt>
   <profileDesc><abstract><div><p>We study whether news predicts returns.</p></div></abstract>
   </profileDesc></fileDesc></teiHeader>
@@ -50,6 +52,8 @@ def test_the_title_and_abstract_are_read():
     doc = tei.parse(DOC)
     assert doc.title == "News versus Sentiment"
     assert doc.abstract == "We study whether news predicts returns."
+    # D160: the document's own authors, from the header GROBID fills, not the bibliography's.
+    assert doc.authors == ("Jane A. Smith", "Ravi Patel")
 
 
 def test_sections_keep_their_paragraphs_apart():

@@ -5732,7 +5732,7 @@ Crossref and arXiv terms; a paper reachable on the web but missing from those in
 request set). One query is the topic term. For each result whose *address* carries a DOI (query and fragment ignored, a page suffix such
 as `/full` or `.pdf` stripped), at most 8 per query, OpenAlex is asked about that DOI. Only a DOI OpenAlex returns as a work becomes a
 candidate, and its title, year, venue and venue type are OpenAlex's; the page's own title and address are kept beside them
-(`web_title`, `web_url`, `found_by: brave`, `resolution: BY_URL_DOI`). A DOI already a candidate costs no lookup. A result with no DOI in its
+(`web_title`, `web_url`, `found_by: brave`, `resolution: BY_URL_DOI`), and its `authors` (D160) from OpenAlex's `authorships`, so a copy found for it later is held to the surname check. A DOI already a candidate costs no lookup. A result with no DOI in its
 address, or one OpenAlex does not know, is not a candidate and is not written anywhere except the request log: a blog, a forum thread or
 a vendor page cannot enter the denominator.
 
@@ -5749,3 +5749,28 @@ still unverified (D145). Each run needs the operator's exact yes on the figures,
 requests, new DOIs, how many are new to `candidates.jsonl`, how many OpenAlex confirms. `discovery_version` is unchanged because the request set
 of every existing plan is. **Not built:** the series scheduler's source list (`web/src/lib/figures.ts`) does not offer `brave`, because it takes one host per
 source and this needs two.
+
+## D160 — Candidates carry their authors, and a web-located copy must share one (2026-10-19; numbered D158 on its branch)
+
+Closes the difference D145 kept on purpose in #4: *"the author-surname check is not possible yet: candidate rows
+carry no authors."* They do now, and the check runs.
+
+**discovery_version 6: candidate rows carry `authors`** — display names as the provider wrote them, first author
+first, capped at 20, empty for citation and manifest rows. All six keyword adapters parse them (OpenAlex
+`authorships`, Crossref `author`, arXiv Atom names, Europe PMC `authorString`, PubMed esummary names, CORE
+`authors`); the OpenAlex and Crossref `select` lists grow accordingly, which is the request-bytes change that
+makes this a version bump and not a field note. `candidate_key_version` is untouched: authors identify, they
+never key, and two rows that differ only in author spelling remain one candidate by DOI or title as before.
+
+**identity_check_version 2: the surnames must agree when both sides carry authors.** The parsed document's own
+authors are read where a parser can trust them — GROBID's TEI header and JATS `contrib-group`; HTML carries
+none. When the candidate and the document both name authors, a title that matches while *no* surname does is
+`WRONG_DOCUMENT`: same title, different people, different work — the exact edition/review confusion D145
+recorded as a known weakness. One rule covers every spelling the providers use (`ids.surname`: family part
+before a comma, else the last name-bearing token, folded by `normalize_title` so every script survives). Author
+agreement never rescues a failed title, and a side without authors leaves the title verdict standing, so an
+HTML copy or a metadata record without names judges exactly as it did under version 1.
+
+**What it does not do.** No merge, no deduplication, no ranking: the authors field is evidence for one check
+and a visible fact on the row. Nothing about the floor changes — a `WRONG_DOCUMENT` still confirms nothing and
+the bytes are still kept. The portal shows the field as it shows any other; no new page exists for it.

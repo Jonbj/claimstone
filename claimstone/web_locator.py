@@ -32,7 +32,7 @@ from claimstone import ids, net
 from claimstone.store import sha256_text
 
 LOCATOR_VERSION = 1
-IDENTITY_CHECK_VERSION = 1
+IDENTITY_CHECK_VERSION = 2
 LEDGER = "web_locator.jsonl"
 PROVIDER = "brave"
 ENDPOINT = "https://api.search.brave.com/res/v1/web/search"
@@ -220,16 +220,42 @@ def fetch_locations(store, candidate_key: str, allowed_hosts) -> list[Any]:
 
 # --- identity -----------------------------------------------------------------------------------------
 
-def identity_check(parsed_title: str | None, candidate_title: str | None) -> dict[str, Any]:
-    """Is the file we read the work we asked for? Compared on the parsed document's own title.
+def identity_check(parsed_title: str | None, candidate_title: str | None,
+                   *, parsed_authors: list[str] | tuple[str, ...] | None = None,
+                   candidate_authors: list[str] | tuple[str, ...] | None = None) -> dict[str, Any]:
+    """Is the file we read the work we asked for? Compared on the parsed document's own title,
+    and — since v2, when both sides carry authors — on their surnames (#4: D145 called this
+    check impossible until candidates carried authors; discovery version 6 makes them carry
+    them).
 
     `passed` only on a title that matches; a title that is clearly different is `WRONG_DOCUMENT`, and a file
     whose title could not be read is `IDENTITY_UNVERIFIED` — not a mismatch, and still not accepted.
+    A title that matches while *no* author surname does — both sides naming authors — is also
+    `WRONG_DOCUMENT`: same title, different people, different work. Author agreement never
+    rescues a title that failed, and a side with no authors leaves the title verdict standing.
     """
     wanted = ids.normalize_title(candidate_title)
     got = ids.normalize_title(parsed_title)
     base = {"identity_check_version": IDENTITY_CHECK_VERSION, "threshold": TITLE_SIMILARITY,
             "candidate_title": candidate_title, "parsed_title": parsed_title}
+    title_row = _title_verdict(base, wanted, got, candidate_title, parsed_title)
+    if not title_row["passed"]:
+        return title_row | {"authors_checked": False, "shared_surnames": None}
+    surnames = {ids.surname(str(name)) for name in (candidate_authors or [])} - {""}
+    document = {ids.surname(str(name)) for name in (parsed_authors or [])} - {""}
+    if not surnames or not document:
+        return title_row | {"authors_checked": False, "shared_surnames": None}
+    shared = sorted(surnames & document)
+    if not shared:
+        return title_row | {"authors_checked": True, "shared_surnames": 0, "passed": False,
+                            "failure_class": WRONG_DOCUMENT,
+                            "reason": "titles match but no author surname does"}
+    return title_row | {"authors_checked": True, "shared_surnames": len(shared),
+                        "reason": f"{title_row['reason']}; {len(shared)} shared author surname(s)"}
+
+
+def _title_verdict(base: dict[str, Any], wanted: str, got: str,
+                   candidate_title: str | None, parsed_title: str | None) -> dict[str, Any]:
     if not wanted:
         return base | {"passed": False, "failure_class": IDENTITY_UNVERIFIED, "similarity": None,
                        "reason": "the candidate has no title to compare with"}
@@ -243,6 +269,7 @@ def identity_check(parsed_title: str | None, candidate_title: str | None) -> dic
     if len(lead_wanted) >= 25 and lead_wanted == lead_got:
         score = max(score, TITLE_SIMILARITY)
     if score >= TITLE_SIMILARITY:
-        return base | {"passed": True, "failure_class": None, "similarity": round(score, 3), "reason": "titles match"}
+        return base | {"passed": True, "failure_class": None, "similarity": round(score, 3),
+                       "reason": "titles match"}
     return base | {"passed": False, "failure_class": WRONG_DOCUMENT, "similarity": round(score, 3),
                    "reason": f"title similarity {score:.2f} is below {TITLE_SIMILARITY}"}

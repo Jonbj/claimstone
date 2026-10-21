@@ -216,5 +216,19 @@ def parse(payload: bytes) -> Document:
     sections = _sections(body) + (_sections(back) if back is not None else [])
     if not sections and not tables:
         raise JatsError("no readable body paragraphs or tables")
+    # The article's own authors: contrib-group/contrib of type author, given + surname. Feeds
+    # the web-locator identity check (#4); a record with no readable contribs carries none.
+    doc_authors = []
+    for group in _children(meta, "contrib-group"):
+        for contrib in _children(group, "contrib"):
+            if (contrib.get("contrib-type") or "author") != "author":
+                continue
+            name = _first(contrib, "name")
+            if name is None:
+                continue
+            parts = (_text(_first(name, "given")), _text(_first(name, "surname")))
+            if any(parts):
+                doc_authors.append(" ".join(part for part in parts if part))
     return Document(title, "\n\n".join(_text(node) for node in _children(meta, "abstract")),
-                    tuple(sections), tables, tuple(notes), tuple(references))
+                    tuple(sections), tables, tuple(notes), tuple(references),
+                    authors=tuple(doc_authors))
